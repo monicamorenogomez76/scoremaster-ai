@@ -1,0 +1,19 @@
+from pathlib import Path
+
+from backend.parsers.musicxml_parser import parse_musicxml
+from backend.rules.high_register import find_high_register
+
+
+def test_detects_high_register_demand():
+    score_path = Path(__file__).parents[2] / "test-scores" / "high_register.musicxml"
+
+    score = parse_musicxml(score_path)
+    findings = find_high_register(score)
+
+    assert len(findings) == 1
+    assert findings[0].code == "SL005"
+    assert findings[0].severity == "warning"
+    assert findings[0].instrument == "Clarinet"
+    assert findings[0].measure_range == "1"
+    assert findings[0].description == "High register demand"
+    assert findings[0].evidence["high_notes_count"] >= 3

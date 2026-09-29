@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScoreMasterAI</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #101827;
+        --panel: #1f2937;
+        --panel-alt: #111827;
+        --text: #f3f4f6;
+        --muted: #9ca3af;
+        --primary: #60a5fa;
+        --success: #34d399;
+        --danger: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(180deg, var(--bg), #0f172a);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .container {
+        width: min(920px, 92vw);
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 18px;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+        padding: 32px;
+      }
+      h1 { margin-top: 0; font-size: clamp(2rem, 3vw, 3rem); }
+      p { color: var(--muted); }
+      form {
+        display: grid;
+        gap: 18px;
+        margin-top: 24px;
+      }
+      input, textarea, button {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        padding: 12px 14px;
+        font-size: 1rem;
+      }
+      input[type="file"], textarea {
+        background: rgba(31, 41, 55, 0.7);
+        color: var(--text);
+      }
+      button {
+        background: var(--primary);
+        color: #0f172a;
+        border: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
+      .result {
+        margin-top: 20px;
+        background: var(--panel-alt);
+        border: 1px solid rgba(96, 165, 250, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+        white-space: pre-wrap;
+      }
+      .status { font-weight: 700; }
+      .meta { color: var(--muted); margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>ScoreMasterAI</h1>
+      <p>Sube una partitura MusicXML (.musicxml, .mxl o .xml válido) para analizar su dificultad, adaptación a la banda y plan de ensayo.</p>
+
+      <form id="upload-form">
+        <input id="file" type="file" accept=".musicxml,.mxl,.xml" required />
+        <textarea id="band-profile" rows="4" placeholder='{"Flute": 1, "Clarinet": 1}'></textarea>
+        <input id="total-minutes" type="number" min="10" value="60" aria-label="Minutos totales de ensayo" />
+        <button type="submit">Subir y analizar</button>
+      </form>
+
+      <div id="result" class="result" hidden></div>
+    </div>
+
+    <script>
+      const form = document.getElementById('upload-form');
+      const resultBox = document.getElementById('result');
+      const submitButton = form.querySelector('button[type="submit"]');
+      const submitLabel = submitButton.textContent;
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const fileInput = document.getElementById('file');
+        const file = fileInput.files[0];
+        if (!file) {
+          resultBox.hidden = false;
+          resultBox.textContent = 'Selecciona un archivo MusicXML.';
+          return;
+        }
+
+        const payload = new FormData();
+        payload.append('file', file);
+        resultBox.hidden = false;
+        resultBox.textContent = 'Analizando la partitura. Puede tardar unos segundos...';
+        submitButton.disabled = true;
+        submitButton.textContent = 'Analizando...';
+
+        try {
+          const profile = document.getElementById('band-profile').value.trim();
+          payload.append('band_profile', profile || '{}');
+          payload.append('total_minutes', document.getElementById('total-minutes').value || '60');
+
+          const response = await fetch('/analyze', { method: 'POST', body: payload });
+          const data = await response.json();
+
+          resultBox.hidden = false;
+          if (!response.ok) {
+            resultBox.textContent = 'Error: ' + (data.detail || JSON.stringify(data));
+            return;
+          }
+
+          const pretty = JSON.stringify(data, null, 2);
+          const status = document.createElement('div');
+          status.className = 'status';
+          status.textContent = 'Análisis completado';
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.textContent = 'Título: ' + (data.title || 'Sin título');
+          const details = document.createElement('pre');
+          details.textContent = pretty;
+          resultBox.replaceChildren(status, meta, details);
+        } catch (error) {
+          resultBox.hidden = false;
+          resultBox.textContent = 'Error en la solicitud: ' + error.message;
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = submitLabel;
+        }
+      });
+    </script>
+  </body>
+</html>
