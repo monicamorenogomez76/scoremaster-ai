@@ -222,15 +222,20 @@
       .score-rendering svg { max-width: none; height: auto; }
       .video-results { display: grid; gap: 8px; margin: 12px 0; }
       .video-result { display: grid; grid-template-columns: 144px minmax(0, 1fr); align-items: center; gap: 12px; width: 100%; padding: 8px; text-align: left; }
+      .video-result.is-selected { border-color: var(--primary); background: #edf5ef; color: var(--text); }
       .video-result img { display: block; width: 144px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; }
       .video-result-copy { display: grid; gap: 4px; min-width: 0; }
       .video-result-copy span { color: var(--muted); font-size: 0.88rem; }
       .video-player { width: min(800px, 100%); aspect-ratio: 16 / 9; margin-top: 16px; background: #000; }
       .video-player iframe { width: 100%; height: 100%; border: 0; }
       .video-search-fallback { display: grid; gap: 10px; margin-top: 12px; }
-      .video-search-link { color: #93c5fd; overflow-wrap: anywhere; }
+      .video-search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; max-width: 760px; margin: 10px 0 14px; }
+      .video-search-form input { min-width: 0; background: #fff; color: var(--text); }
+      .video-search-form button { width: auto; padding: 10px 15px; background: var(--primary); color: #fff; }
+      .video-selected-title { margin: 14px 0 0; font-size: .98rem; }
       .video-manual { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-      .video-manual input { min-width: 0; }
+      .video-manual input { min-width: 0; background: #fff; color: var(--text); }
+      .video-search-link { color: #93c5fd; overflow-wrap: anywhere; }
       .video-load { padding: 10px 14px; }
       .band-profile-editor {
         display: grid;
@@ -252,6 +257,8 @@
         .video-result { grid-template-columns: 104px minmax(0, 1fr); }
         .video-result img { width: 104px; }
         .video-manual { grid-template-columns: minmax(0, 1fr); }
+        .video-search-form { grid-template-columns: minmax(0, 1fr); }
+        .video-search-form button { width: 100%; }
         .score-dialog { padding: 12px; }
         .band-profile-rows { grid-template-columns: minmax(0, 1fr); }
       }
@@ -336,6 +343,10 @@
       .app-shell .dashboard-grid { margin: 0; }
       .app-shell .metric-card { border-color: var(--line); border-radius: 7px; background: #fff; }
       .app-shell .metric-card .label { color: var(--muted); letter-spacing: .07em; }
+      .app-shell .tree-node { border-color: #d3ded6; background: #fff; color: #24332b; }
+      .app-shell .tree-node:hover, .app-shell .tree-node:focus-visible { border-color: #20634f; background: #f6faf6; }
+      .app-shell .tree-node-support { color: #52645a; }
+      .app-shell .tree-node .tree-grade { padding: 4px 9px; border: 1px solid #b9d5c0; border-radius: 999px; background: #e8f2e9; color: #174f39; font-size: .8rem; }
       .app-shell .result-section { margin-top: 17px; padding: 0; border: 0; }
       .app-shell .result-section h2 { font-size: .98rem; }
       .app-shell .family-bar { background: #e6ece7; }
@@ -353,6 +364,9 @@
       .duration-field { display: grid; gap: 6px; color: var(--text); font-size: .88rem; font-weight: 600; }
       .duration-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
       .duration-input span { color: var(--muted); font-size: .88rem; font-weight: 500; }
+      .rehearsal-settings { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+      .rehearsal-settings .duration-field { width: min(340px, 100%); }
+      .rehearsal-settings button { width: auto; padding: 10px 14px; background: var(--primary); color: #fff; }
       @media (max-width: 820px) {
         .app-shell { grid-template-columns: minmax(0, 1fr); }
         .sidebar { position: fixed; z-index: 8; inset: 0 auto 0 0; width: min(274px, 84vw); min-height: 100vh; box-shadow: 14px 0 32px rgba(24,45,34,.12); transform: translateX(-105%); transition: transform 170ms ease; }
@@ -374,6 +388,9 @@
         .workspace { padding: 22px 15px 42px; }
         .overview-empty { grid-template-columns: minmax(0, 1fr); }
         .overview-empty .primary-action { width: 100%; }
+        .rehearsal-settings { align-items: stretch; flex-direction: column; }
+        .rehearsal-settings .duration-field { width: 100%; }
+        .rehearsal-settings button { width: 100%; }
         .view-heading { align-items: start; flex-direction: column; }
         .topbar { padding: 0 14px; }
         .topbar-meta { font-size: .72rem; }
@@ -455,9 +472,6 @@
                 <label class="file-field" for="file">Archivo de partitura
                   <input id="file" type="file" accept=".musicxml,.mxl,.xml" required />
                 </label>
-                <label class="duration-field" for="total-minutes">Duración prevista del ensayo
-                  <span class="duration-input"><input id="total-minutes" type="number" min="10" value="60" /><span>min</span></span>
-                </label>
                 <button type="submit">Subir y analizar</button>
               </form>
               <div id="result" class="analysis-status" hidden></div>
@@ -484,6 +498,12 @@
 
           <section class="app-view" data-view="rehearsal">
             <div class="view-heading"><div><p class="eyebrow">RehearsalAI</p><h1>Plan de ensayo</h1><p class="view-description">Bloques priorizados a partir de los pasajes detectados.</p></div></div>
+            <div class="rehearsal-settings surface">
+              <label class="duration-field" for="total-minutes">Duración prevista del ensayo
+                <span class="duration-input"><input id="total-minutes" type="number" min="10" value="60" /><span>minutos</span></span>
+              </label>
+              <button id="recalculate-rehearsal" type="button">Recalcular ensayo</button>
+            </div>
             <div id="rehearsal-content" class="view-content empty-workspace"><h2>Aún no hay plan</h2><p>Analiza una partitura para generar bloques de ensayo.</p></div>
           </section>
 
@@ -534,6 +554,7 @@
       const bandProfileEditor = document.getElementById('band-profile-editor');
       const bandProfileRows = document.getElementById('band-profile-rows');
       const updateAnalysisButton = document.getElementById('update-analysis');
+      const recalculateRehearsalButton = document.getElementById('recalculate-rehearsal');
       let currentScoreFile = null;
       let notationSourcePromise = null;
       let activeNotationPassage = null;
@@ -962,80 +983,127 @@
           .filter((word) => word && !titleWords.has(word.toLowerCase()))
           .join(' ');
         const queryTerms = [scoreTitle, composer || filenameDetails];
-        const query = queryTerms.filter(Boolean).join(' ').trim();
-        const status = appendText(section, 'p', 'result-supporting', 'Buscando vídeos relacionados…');
+        const initialQuery = queryTerms.filter(Boolean).join(' ').trim();
+        const searchForm = document.createElement('form');
+        searchForm.className = 'video-search-form';
+        const searchInput = document.createElement('input');
+        searchInput.type = 'search';
+        searchInput.maxLength = 200;
+        searchInput.value = initialQuery;
+        searchInput.placeholder = 'Buscar otra versión u obra';
+        searchInput.setAttribute('aria-label', 'Buscar vídeos por obra o compositor');
+        const searchButton = document.createElement('button');
+        searchButton.type = 'submit';
+        searchButton.textContent = 'Buscar';
+        searchForm.append(searchInput, searchButton);
+        section.append(searchForm);
+
+        const status = appendText(section, 'p', 'result-supporting', 'Buscando coincidencias…');
+        const selectedTitle = appendText(section, 'h3', 'video-selected-title', '');
         const player = document.createElement('div');
         player.className = 'video-player';
         player.hidden = true;
         section.append(player);
-        try {
-          const response = await fetch('/youtube/search?query=' + encodeURIComponent(query));
-          if (!response.ok) throw new Error('No se pudo completar la búsqueda de YouTube.');
-          const result = await response.json();
-          status.textContent = result.videos.length
-            ? 'Elige un resultado para reproducirlo aquí.'
-            : 'No hay resultados integrados disponibles; puedes abrir la búsqueda en YouTube.';
-          if (result.videos.length) {
-            const list = document.createElement('div');
-            list.className = 'video-results';
-            result.videos.forEach((video) => {
-              const button = document.createElement('button');
-              button.type = 'button';
-              button.className = 'video-result';
-              const thumbnail = document.createElement('img');
-              thumbnail.src = video.thumbnail;
-              thumbnail.alt = '';
-              thumbnail.loading = 'lazy';
-              const copy = document.createElement('span');
-              copy.className = 'video-result-copy';
-              appendText(copy, 'strong', '', video.title);
-              appendText(copy, 'span', '', video.channel);
-              button.append(thumbnail, copy);
-              button.addEventListener('click', () => {
-                player.hidden = false;
-                renderYouTubePlayer(player, video.video_id);
-              });
-              list.append(button);
-            });
-            section.insertBefore(list, player);
-          } else {
-            const fallback = document.createElement('div');
-            fallback.className = 'video-search-fallback';
-            const link = document.createElement('a');
-            link.className = 'video-search-link';
-            link.href = result.search_url;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.textContent = 'Buscar “' + query + '” en YouTube';
-            fallback.append(link);
-            const manual = document.createElement('div');
-            manual.className = 'video-manual';
-            const input = document.createElement('input');
-            input.type = 'url';
-            input.placeholder = 'Pega aquí un enlace de YouTube para reproducirlo';
-            input.setAttribute('aria-label', 'Enlace de vídeo de YouTube');
-            const loadButton = document.createElement('button');
-            loadButton.type = 'button';
-            loadButton.className = 'video-load';
-            loadButton.textContent = 'Reproducir aquí';
-            loadButton.addEventListener('click', () => {
-              const videoId = parseYouTubeVideoId(input.value);
-              if (!videoId) {
-                input.setCustomValidity('Introduce un enlace válido de YouTube.');
-                input.reportValidity();
-                return;
-              }
-              input.setCustomValidity('');
-              player.hidden = false;
-              renderYouTubePlayer(player, videoId);
-            });
-            manual.append(input, loadButton);
-            fallback.append(manual);
-            section.append(fallback);
-          }
-        } catch (error) {
-          status.textContent = error.message || 'Búsqueda de vídeo no disponible.';
+        const results = document.createElement('div');
+        results.className = 'video-results';
+        section.append(results);
+        const fallback = document.createElement('div');
+        fallback.className = 'video-search-fallback';
+        section.append(fallback);
+
+        function selectVideo(video, buttons) {
+          player.hidden = false;
+          renderYouTubePlayer(player, video.video_id);
+          selectedTitle.textContent = video.title;
+          buttons.forEach((button) => {
+            const selected = button.dataset.videoId === video.video_id;
+            button.classList.toggle('is-selected', selected);
+            button.setAttribute('aria-pressed', String(selected));
+          });
         }
+
+        async function search(query) {
+          const normalizedQuery = query.trim().slice(0, 200);
+          if (!normalizedQuery) return;
+          searchInput.value = normalizedQuery;
+          status.textContent = 'Buscando “' + normalizedQuery + '”…';
+          selectedTitle.textContent = '';
+          player.hidden = true;
+          player.replaceChildren();
+          results.replaceChildren();
+          fallback.replaceChildren();
+
+          try {
+            const response = await fetch('/youtube/search?query=' + encodeURIComponent(normalizedQuery));
+            if (!response.ok) throw new Error('No se pudo completar la búsqueda de YouTube.');
+            const result = await response.json();
+            if (result.videos.length) {
+              status.textContent = 'Reproduciendo la mejor coincidencia. Elige otra versión para cambiarla.';
+              const buttons = result.videos.map((video) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'video-result';
+                button.dataset.videoId = video.video_id;
+                button.setAttribute('aria-pressed', 'false');
+                const thumbnail = document.createElement('img');
+                thumbnail.src = video.thumbnail;
+                thumbnail.alt = '';
+                thumbnail.loading = 'lazy';
+                const copy = document.createElement('span');
+                copy.className = 'video-result-copy';
+                appendText(copy, 'strong', '', video.title);
+                appendText(copy, 'span', '', video.channel);
+                button.append(thumbnail, copy);
+                button.addEventListener('click', () => selectVideo(video, buttons));
+                results.append(button);
+                return button;
+              });
+              selectVideo(result.videos[0], buttons);
+            } else {
+              status.textContent = 'No hay coincidencias integradas. Busca en YouTube o pega aquí un enlace.';
+              const link = document.createElement('a');
+              link.className = 'video-search-link';
+              link.href = result.search_url;
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              link.textContent = 'Abrir búsqueda de “' + normalizedQuery + '” en YouTube';
+              fallback.append(link, manual);
+            }
+          } catch (error) {
+            status.textContent = error.message || 'Búsqueda de vídeo no disponible.';
+          }
+        }
+
+        searchForm.addEventListener('submit', (event) => {
+          event.preventDefault();
+          search(searchInput.value);
+        });
+
+        const manual = document.createElement('div');
+        manual.className = 'video-manual';
+        const manualInput = document.createElement('input');
+        manualInput.type = 'url';
+        manualInput.placeholder = 'Pega aquí un enlace de YouTube para reproducirlo';
+        manualInput.setAttribute('aria-label', 'Enlace de vídeo de YouTube');
+        const manualButton = document.createElement('button');
+        manualButton.type = 'button';
+        manualButton.className = 'video-load';
+        manualButton.textContent = 'Reproducir enlace';
+        manualButton.addEventListener('click', () => {
+          const videoId = parseYouTubeVideoId(manualInput.value);
+          if (!videoId) {
+            manualInput.setCustomValidity('Introduce un enlace válido de YouTube.');
+            manualInput.reportValidity();
+            return;
+          }
+          manualInput.setCustomValidity('');
+          player.hidden = false;
+          renderYouTubePlayer(player, videoId);
+          selectedTitle.textContent = 'Vídeo elegido manualmente';
+        });
+        manual.append(manualInput, manualButton);
+        fallback.append(manual);
+        search(initialQuery);
       }
 
       function renderDifficultyTree(section, difficulty, criticalPassages) {
@@ -1376,6 +1444,14 @@
       });
 
       updateAnalysisButton.addEventListener('click', async () => {
+        await analyzeFile(currentScoreFile, readBandProfile(), false);
+      });
+
+      recalculateRehearsalButton.addEventListener('click', async () => {
+        if (!currentScoreFile) {
+          setActiveView('analyze');
+          return;
+        }
         await analyzeFile(currentScoreFile, readBandProfile(), false);
       });
     </script>
