@@ -56,6 +56,11 @@ navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
 El archivo original se conserva en el navegador solo durante la sesión de
 análisis y no se persiste en el servidor.
 
+En «Analizar partitura», «Revisar partitura completa» abre todas las voces de la
+obra cargada. Permite revisar toda la obra en páginas de cuatro compases con
+controles Anterior/Siguiente y zoom. La reproducción de audio está disponible
+en la vista de pasajes por instrumento.
+
 La búsqueda integrada de vídeos usa YouTube Data API v3. Para activar resultados
 reproducibles dentro de la aplicación, configura `YOUTUBE_API_KEY` como variable
 de entorno del servidor. La clave nunca debe incluirse en el HTML, enviarse al

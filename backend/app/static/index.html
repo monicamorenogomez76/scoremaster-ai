@@ -475,6 +475,7 @@
                 <button type="submit">Subir y analizar</button>
               </form>
               <div id="result" class="analysis-status" hidden></div>
+              <button id="full-score-open" class="passage-open" type="button" disabled>Revisar partitura completa</button>
             </div>
           </section>
 
@@ -770,7 +771,7 @@
 
       function filterMusicXmlPassage(source, instrumentName, measureRange) {
         const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
-        const partMatch = instrumentName.match(/^(.*)\s+(\d+)$/);
+        const partMatch = instrumentName && instrumentName.match(/^(.*)\s+(\d+)$/);
         const sourceInstrumentName = partMatch ? partMatch[1] : instrumentName;
         let selectedStaffNumber = partMatch ? Number(partMatch[2]) : null;
         const documentXml = new DOMParser().parseFromString(source, 'application/xml');
@@ -782,7 +783,7 @@
         const directChild = (parent, name) => Array.from(parent.children)
           .find((element) => element.localName === name);
         const scoreParts = descendants(documentXml, 'score-part');
-        const matchingParts = scoreParts.filter((part) => {
+        const matchingParts = instrumentName === null ? scoreParts : scoreParts.filter((part) => {
           const name = directChild(part, 'part-name');
           return name && name.textContent.trim() === sourceInstrumentName;
         });
@@ -810,7 +811,7 @@
           }
           const scorePartName = scoreParts.find((entry) => entry.getAttribute('id') === part.getAttribute('id'));
           const nameElement = scorePartName && directChild(scorePartName, 'part-name');
-          if (nameElement) nameElement.textContent = instrumentName;
+          if (nameElement && instrumentName !== null) nameElement.textContent = instrumentName;
           let previousAttributes = null;
           let firstRetained = true;
           Array.from(part.children).filter((element) => element.localName === 'measure').forEach((measure) => {
@@ -876,6 +877,8 @@
 
       async function openNotationPassage(instrument, measureRange) {
         await stopPassageAudio();
+        document.getElementById('passage-play').hidden = false;
+        document.getElementById('passage-stop').hidden = false;
         const dialog = document.getElementById('notation-dialog');
         const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
         activeNotationPassage = { instrument, firstMeasure, lastMeasure, pageStart: firstMeasure, zoom: 1 };
@@ -929,8 +932,33 @@
         document.getElementById('notation-zoom-label').textContent = Math.round(state.zoom * 100) + '%';
         container.scrollTop = 0;
         container.scrollLeft = 0;
-        status.textContent = 'Notación original · tonalidad escrita del MusicXML · ' + displayInstrumentName(state.instrument);
+        status.textContent = 'Notación original · tonalidad escrita del MusicXML · ' +
+          (state.instrument === null ? 'Todas las voces' : displayInstrumentName(state.instrument));
       }
+
+      document.getElementById('full-score-open').addEventListener('click', async () => {
+        await stopPassageAudio();
+        const dialog = document.getElementById('notation-dialog');
+        document.getElementById('notation-title').textContent = 'Partitura completa · todas las voces';
+        document.getElementById('passage-play').hidden = true;
+        document.getElementById('passage-stop').hidden = true;
+        if (!dialog.open) dialog.showModal();
+        try {
+          const source = await loadNotationSource();
+          const xml = new DOMParser().parseFromString(source, 'application/xml');
+          const numbers = Array.from(xml.getElementsByTagName('*'))
+            .filter((element) => element.localName === 'measure')
+            .map((element) => Number.parseInt(element.getAttribute('number'), 10))
+            .filter(Number.isFinite);
+          if (!numbers.length) throw new Error('No se encontraron compases en la partitura.');
+          const firstMeasure = Math.min(...numbers);
+          activeNotationPassage = { instrument: null, firstMeasure,
+            lastMeasure: Math.max(...numbers), pageStart: firstMeasure, zoom: 1, source };
+          await renderNotationPage();
+        } catch (error) {
+          document.getElementById('notation-status').textContent = error.message;
+        }
+      });
 
       document.getElementById('notation-prev').addEventListener('click', () => {
         if (!activeNotationPassage) return;
@@ -1473,6 +1501,7 @@
         const file = document.getElementById('file').files[0];
         currentScoreFile = file;
         await stopPassageAudio();
+        document.getElementById('full-score-open').disabled = !file;
         notationSourcePromise = null;
         await analyzeFile(file, readBandProfile());
       });
