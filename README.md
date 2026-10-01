@@ -31,8 +31,19 @@ La interfaz ofrece navegación por vistas y una entrada de demostración. No hay
 autenticación real ni persistencia de cuentas: la sesión y la plantilla son locales
 al navegador y temporales.
 
-El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
-de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
+ScoreLint detecta densidad rítmica (SL003), intervalos amplios (SL004), registro
+agudo (SL002) y bloques de ocho o más compases activos sin silencios (SL005).
+Estos últimos aparecen entre los pasajes críticos y aportan dos puntos al
+indicador de avisos. El análisis de continuidad se comparte con la dimensión
+de resistencia de la dificultad por instrumento.
+
+La resistencia es una aproximación por compases: cualquier silencio explícito
+o compás vacío corta el bloque. No estima fatiga física, duración en segundos,
+respiraciones ni descansos entre voces simultáneas. SL002 sustituye al antiguo
+código SL005 del aviso de registro agudo para seguir el catálogo del proyecto.
+
+Para ejecutar las pruebas desde la carpeta del proyecto:
+`python -m pytest -q` (con las dependencias de `requirements.txt` instaladas).
 
 ## Partitura y vídeos
 
