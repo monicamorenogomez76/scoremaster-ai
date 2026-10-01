@@ -27,6 +27,10 @@ Proyecto de TFM del Máster de Desarrollo con IA de BigSchool.
 El MVP incluye análisis determinista de dificultad, compatibilidad de plantilla,
 plan de ensayo y un cuadro de mando por familias, instrumentos y pasajes críticos.
 
+La interfaz ofrece navegación por vistas y una entrada de demostración. No hay
+autenticación real ni persistencia de cuentas: la sesión y la plantilla son locales
+al navegador y temporales.
+
 ## Partitura y vídeos
 
 Los pasajes críticos se pueden abrir como notación MusicXML renderizada en el
