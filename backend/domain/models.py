@@ -22,9 +22,18 @@ class ScorePart:
 
 
 @dataclass(frozen=True)
+class TempoMark:
+	measure_number: int
+	offset_quarters: float
+	beats_per_minute: float
+	beat_unit_quarters: float
+
+
+@dataclass(frozen=True)
 class Score:
 	title: str
 	parts: tuple[ScorePart, ...]
+	tempo_marks: tuple[TempoMark, ...] = ()
 
 
 @dataclass(frozen=True)

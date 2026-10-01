@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.analyzers.band_fit import compute_band_fit
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_plan import build_rehearsal_plan
+from backend.analyzers.tempo import compute_tempo_metrics
 from backend.parsers.musicxml_parser import parse_musicxml
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -95,6 +96,7 @@ def analyze_score(
             "title": score.title,
             "parts": [part.name for part in score.parts],
             "difficulty": difficulty,
+            "tempo": compute_tempo_metrics(score),
             "band_fit": band_fit,
             "rehearsal_plan": rehearsal_plan,
         }

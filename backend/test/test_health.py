@@ -42,6 +42,7 @@ def test_analyze_score_endpoint_returns_summary():
     payload = response.json()
     assert payload["title"]
     assert payload["difficulty"]["overall_score"] >= 0
+    assert payload["tempo"]["tempo_mark_count"] == 0
     assert payload["band_fit"]["status"] in {"ok", "warning", "critical"}
     assert "segments" in payload["rehearsal_plan"]
 

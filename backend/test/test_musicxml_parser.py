@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from music21 import duration, note, stream, tempo
+
 from backend.parsers.musicxml_parser import parse_musicxml
 
 
@@ -38,3 +40,28 @@ def test_parses_multiple_measures_and_rest_events():
     assert [(note.pitch, note.duration_quarters, note.is_rest) for note in part.measures[1].notes] == [
         ("E4", 2.0, False),
     ]
+
+
+def test_parses_numeric_tempo_marks_and_pulse_units(tmp_path):
+    score_stream = stream.Score()
+    part = stream.Part()
+    first_measure = stream.Measure(number=1)
+    first_measure.insert(0, tempo.MetronomeMark(number=72))
+    first_measure.append(note.Note("C4", quarterLength=1))
+    second_measure = stream.Measure(number=2)
+    second_measure.insert(
+        0,
+        tempo.MetronomeMark(number=120, referent=duration.Duration(0.5)),
+    )
+    second_measure.append(note.Note("D4", quarterLength=1))
+    part.append([first_measure, second_measure])
+    score_stream.append(part)
+    score_path = tmp_path / "tempo.musicxml"
+    score_stream.write("musicxml", fp=score_path)
+
+    score = parse_musicxml(score_path)
+
+    assert [
+        (mark.measure_number, mark.offset_quarters, mark.beats_per_minute, mark.beat_unit_quarters)
+        for mark in score.tempo_marks
+    ] == [(1, 0.0, 72.0, 1.0), (2, 0.0, 120.0, 0.5)]
