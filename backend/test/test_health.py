@@ -26,6 +26,10 @@ def test_root_serves_upload_page():
     assert "ScoreMasterAI" in response.text
     assert "Subir" in response.text or "subir" in response.text
     assert "Analizando la partitura" in response.text
+    assert "Dificultad" in response.text
+    assert "Adaptación a la banda" in response.text
+    assert "Plan de ensayo" in response.text
+    assert "JSON.stringify(data, null, 2)" not in response.text
 
 
 def test_analyze_score_endpoint_returns_summary():
