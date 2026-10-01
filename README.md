@@ -31,6 +31,9 @@ La interfaz ofrece navegación por vistas y una entrada de demostración. No hay
 autenticación real ni persistencia de cuentas: la sesión y la plantilla son locales
 al navegador y temporales.
 
+El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
+de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
+
 ## Partitura y vídeos
 
 Los pasajes críticos se pueden abrir como notación MusicXML renderizada en el

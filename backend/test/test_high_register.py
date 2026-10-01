@@ -11,7 +11,7 @@ def test_detects_high_register_demand():
     findings = find_high_register(score)
 
     assert len(findings) == 1
-    assert findings[0].code == "SL005"
+    assert findings[0].code == "SL002"
     assert findings[0].severity == "warning"
     assert findings[0].instrument == "Clarinet"
     assert findings[0].measure_range == "1"
