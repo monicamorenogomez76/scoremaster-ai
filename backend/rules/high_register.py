@@ -21,7 +21,7 @@ def find_high_register(score: Score) -> list[Finding]:
             if len(high_notes) >= high_register_threshold:
                 findings.append(
                     Finding(
-                        code="SL005",
+                        code="SL002",
                         severity="warning",
                         instrument=part.name,
                         measure_range=str(measure.number),

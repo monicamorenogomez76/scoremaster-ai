@@ -16,6 +16,7 @@ from backend.rules.large_intervals import find_large_intervals
 
 
 RULE_WEIGHTS = {
+    "SL002": 2,
     "SL003": 2,
     "SL004": 3,
     "SL005": 2,
