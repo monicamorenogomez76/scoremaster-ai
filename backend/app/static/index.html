@@ -112,19 +112,6 @@
       .result-section h2 { margin: 0 0 12px; font-size: 1.1rem; }
       .result-metric { margin: 0; font-size: 1.5rem; font-weight: 700; }
       .result-supporting { margin: 6px 0 0; color: var(--muted); }
-      .family-row {
-        display: grid;
-        gap: 8px;
-        margin-top: 12px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(148, 163, 184, 0.14);
-      }
-      .family-header {
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        color: var(--text);
-      }
       .family-bar {
         height: 10px;
         border-radius: 999px;
@@ -150,6 +137,56 @@
       .result-list { margin: 12px 0 0; padding: 0; list-style: none; }
       .result-list li { padding: 10px 0; border-top: 1px solid rgba(148, 163, 184, 0.14); }
       .result-empty { color: var(--muted); }
+      .tree-nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0 16px;
+        color: var(--muted);
+      }
+      .tree-nav button {
+        width: auto;
+        padding: 4px 0;
+        border: 0;
+        background: transparent;
+        color: var(--primary);
+        text-align: left;
+      }
+      .tree-node-list { display: grid; gap: 8px; }
+      .tree-node {
+        display: grid;
+        gap: 8px;
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 8px;
+        background: rgba(17, 24, 39, 0.62);
+        color: var(--text);
+        text-align: left;
+      }
+      .tree-node:hover, .tree-node:focus-visible {
+        border-color: var(--primary);
+        outline: none;
+      }
+      .tree-node-head, .tree-node-support {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .tree-node-support, .tree-support { color: var(--muted); font-size: 0.9rem; }
+      .tree-grade { color: #fbbf24; white-space: nowrap; }
+      .tree-instrument-details { margin-top: 8px; }
+      .tree-dimensions { display: grid; gap: 10px; margin: 16px 0; }
+      .tree-dimension { display: grid; grid-template-columns: minmax(130px, 1fr) 2fr auto; gap: 12px; align-items: center; }
+      .tree-dimension .family-bar { height: 8px; }
+      .tree-passage-heading { margin-top: 20px !important; }
+      .tree-passage-title { display: block; margin-bottom: 6px; }
+      @media (max-width: 640px) {
+        .tree-dimension { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; }
+        .tree-dimension .family-bar { grid-column: 1 / -1; grid-row: 2; }
+      }
       @media (max-width: 640px) {
         .result-summary { grid-template-columns: minmax(0, 1fr); }
         .dashboard-grid { grid-template-columns: minmax(0, 1fr); }
@@ -164,7 +201,7 @@
 
       <form id="upload-form">
         <input id="file" type="file" accept=".musicxml,.mxl,.xml" required />
-        <textarea id="band-profile" rows="4" placeholder='{"Flute": 1, "Clarinet": 1}'></textarea>
+        <textarea id="band-profile" rows="4" placeholder='{"Flauta": 3, "Clarinete en Si bemol": 1}'></textarea>
         <input id="total-minutes" type="number" min="10" value="60" aria-label="Minutos totales de ensayo" />
         <button type="submit">Subir y analizar</button>
       </form>
@@ -193,10 +230,60 @@
         SL004: 'Intervalos amplios',
         SL005: 'Registro agudo'
       };
+      const familyLabelsEs = {
+        woodwinds: 'Viento madera',
+        brass: 'Viento metal',
+        strings: 'Cuerda',
+        percussion: 'Percusión',
+        keyboard: 'Teclas',
+        other: 'Otros'
+      };
+      const instrumentLabelsEs = {
+        'Piccolo': 'Flautín', 'Flute': 'Flauta', 'Oboe': 'Oboe',
+        'Clarinet': 'Clarinete', 'B♭ Clarinet': 'Clarinete en Si bemol',
+        'Bb Clarinet': 'Clarinete en Si bemol', 'Alto Clarinet': 'Clarinete alto',
+        'Bass Clarinet': 'Clarinete bajo', 'Bassoon': 'Fagot',
+        'Alto Saxophone': 'Saxofón alto', 'Tenor Saxophone': 'Saxofón tenor',
+        'Baritone Saxophone': 'Saxofón barítono', 'B♭ Trumpet': 'Trompeta en Si bemol',
+        'Bb Trumpet': 'Trompeta en Si bemol', 'Horn in F': 'Trompa en Fa',
+        'Trumpet': 'Trompeta', 'Trombone': 'Trombón', 'Euphonium': 'Bombardino',
+        'Tuba': 'Tuba', 'Double Bass': 'Contrabajo', 'Timpani': 'Timbales',
+        'Xylophone': 'Xilófono', 'Glockenspiel': 'Glockenspiel', 'Chimes': 'Campanas tubulares',
+        'Concert Bass Drum': 'Bombo', 'Bass Drum': 'Bombo',
+        'Concert Snare Drum': 'Caja', 'Snare Drum': 'Caja',
+        'Crash Cymbal': 'Platos', 'Suspended Cymbal': 'Plato suspendido',
+        'Tambourine': 'Pandereta', 'Triangle': 'Triángulo', 'Marimba': 'Marimba'
+      };
+      const bandProfileNames = {
+        'Flautín': 'Piccolo', 'Flauta': 'Flute', 'Oboe': 'Oboe',
+        'Clarinete': 'Clarinet', 'Clarinete en Si bemol': 'B♭ Clarinet',
+        'Clarinete alto': 'Alto Clarinet', 'Clarinete bajo': 'Bass Clarinet',
+        'Fagot': 'Bassoon', 'Saxofón alto': 'Alto Saxophone',
+        'Saxofón tenor': 'Tenor Saxophone', 'Saxofón barítono': 'Baritone Saxophone',
+        'Trompeta en Si bemol': 'B♭ Trumpet', 'Trompa en Fa': 'Horn in F',
+        'Trombón': 'Trombone', 'Bombardino': 'Euphonium', 'Tuba': 'Tuba',
+        'Contrabajo': 'Double Bass', 'Timbales': 'Timpani', 'Xilófono': 'Xylophone',
+        'Glockenspiel': 'Glockenspiel', 'Campanas tubulares': 'Chimes',
+        'Bombo': 'Concert Bass Drum', 'Caja': 'Concert Snare Drum',
+        'Plato suspendido': 'Suspended Cymbal', 'Platos': 'Crash Cymbal',
+        'Pandereta': 'Tambourine', 'Triángulo': 'Triangle', 'Marimba': 'Marimba'
+      };
+      const dimensionLabelsEs = {
+        range: 'Tesitura', register: 'Registro extremo', intervals: 'Saltos',
+        density: 'Densidad de ataques', endurance: 'Continuidad', tempo: 'Tempo'
+      };
       const rehearsalReasons = {
         'High rhythmic density in the selected passage.': 'Alta densidad rítmica en este pasaje.',
         'Default rehearsal block.': 'Bloque general de ensayo.'
       };
+
+      function displayInstrumentName(instrument, details = {}) {
+        return details.instrument_label_es || instrumentLabelsEs[instrument] || instrument;
+      }
+
+      function displayFamilyName(family, details = {}) {
+        return details.label_es || familyLabelsEs[family] || family;
+      }
 
       function appendText(parent, tagName, className, value) {
         const element = document.createElement(tagName);
@@ -225,6 +312,164 @@
         return section;
       }
 
+      function renderDifficultyTree(section, difficulty, criticalPassages) {
+        const familyEntries = Object.entries(difficulty.by_family || {});
+        const instrumentEntries = difficulty.by_instrument || {};
+        const shell = document.createElement('div');
+        const navigation = document.createElement('nav');
+        navigation.className = 'tree-nav';
+        navigation.setAttribute('aria-label', 'Ruta de dificultad');
+        const content = document.createElement('div');
+        shell.append(navigation, content);
+        section.append(shell);
+
+        let selectedFamily = null;
+        let selectedInstrument = null;
+
+        function render() {
+          navigation.replaceChildren();
+          content.replaceChildren();
+
+          const rootButton = document.createElement('button');
+          rootButton.type = 'button';
+          rootButton.textContent = 'Todas las familias';
+          rootButton.setAttribute('aria-current', selectedFamily ? 'false' : 'page');
+          rootButton.addEventListener('click', () => {
+            selectedFamily = null;
+            selectedInstrument = null;
+            render();
+          });
+          navigation.append(rootButton);
+
+          if (!selectedFamily) {
+            const orderedFamilies = familyEntries.sort((left, right) =>
+              (right[1].grade || 1) - (left[1].grade || 1) || right[1].score - left[1].score
+            );
+            if (orderedFamilies.length === 0) {
+              appendText(content, 'p', 'result-empty', 'No se encontraron instrumentos en la partitura.');
+              return;
+            }
+            const list = document.createElement('div');
+            list.className = 'tree-node-list';
+            orderedFamilies.forEach(([family, details]) => {
+              const node = document.createElement('button');
+              node.type = 'button';
+              node.className = 'tree-node';
+              const head = document.createElement('span');
+              head.className = 'tree-node-head';
+              appendText(head, 'span', '', displayFamilyName(family, details));
+              appendText(head, 'strong', 'tree-grade', 'Grado ' + (details.grade || 1));
+              const sub = document.createElement('span');
+              sub.className = 'tree-node-support';
+              appendText(sub, 'span', '', (details.instruments || []).length + ' instrumentos');
+              appendText(sub, 'span', '', (criticalPassages.filter((passage) => passage.family === family).length) + ' pasajes');
+              const bar = document.createElement('div');
+              bar.className = 'family-bar';
+              const fill = document.createElement('span');
+              fill.style.width = Math.max(12, (details.grade || 1) * 20) + '%';
+              bar.append(fill);
+              node.append(head, bar, sub);
+              node.addEventListener('click', () => {
+                selectedFamily = family;
+                selectedInstrument = null;
+                render();
+              });
+              list.append(node);
+            });
+            content.append(list);
+            return;
+          }
+
+          const familyDetails = difficulty.by_family[selectedFamily] || {};
+          const familyButton = document.createElement('button');
+          familyButton.type = 'button';
+          familyButton.textContent = displayFamilyName(selectedFamily, familyDetails);
+          familyButton.setAttribute('aria-current', selectedInstrument ? 'false' : 'page');
+          familyButton.addEventListener('click', () => {
+            selectedInstrument = null;
+            render();
+          });
+          navigation.append(document.createTextNode('›'), familyButton);
+
+          if (!selectedInstrument) {
+            const instruments = (familyDetails.instruments || []).map((name) => [name, instrumentEntries[name] || {}]);
+            instruments.sort((left, right) =>
+              (right[1].grade || 1) - (left[1].grade || 1) || right[1].difficulty_score - left[1].difficulty_score
+            );
+            if (instruments.length === 0) {
+              appendText(content, 'p', 'result-empty', 'No hay instrumentos clasificados en esta familia.');
+              return;
+            }
+            const list = document.createElement('div');
+            list.className = 'tree-node-list';
+            instruments.forEach(([name, details]) => {
+              const node = document.createElement('button');
+              node.type = 'button';
+              node.className = 'tree-node';
+              const head = document.createElement('span');
+              head.className = 'tree-node-head';
+              appendText(head, 'span', '', displayInstrumentName(name, details));
+              appendText(head, 'strong', 'tree-grade', 'Grado ' + (details.grade || 1));
+              const count = criticalPassages.filter((passage) => passage.instrument === name).length;
+              appendText(node, 'span', 'tree-node-support', count + (count === 1 ? ' pasaje crítico' : ' pasajes críticos'));
+              node.prepend(head);
+              node.addEventListener('click', () => {
+                selectedInstrument = name;
+                render();
+              });
+              list.append(node);
+            });
+            content.append(list);
+            return;
+          }
+
+          const details = instrumentEntries[selectedInstrument] || {};
+          appendText(navigation, 'span', '', '› ' + displayInstrumentName(selectedInstrument, details));
+          appendText(content, 'h3', 'result-metric', displayInstrumentName(selectedInstrument, details));
+          appendText(content, 'p', 'tree-grade tree-instrument-details', 'Grado ' + (details.grade || 1) + ' · índice ' + (details.difficulty_score ?? 0) + ' / 5');
+
+          const dimensions = document.createElement('div');
+          dimensions.className = 'tree-dimensions';
+          Object.entries(details.dimensions || {}).forEach(([dimension, value]) => {
+            const row = document.createElement('div');
+            row.className = 'tree-dimension';
+            appendText(row, 'span', '', dimensionLabelsEs[dimension] || dimension);
+            const bar = document.createElement('div');
+            bar.className = 'family-bar';
+            const fill = document.createElement('span');
+            fill.style.width = Math.max(0, Math.min(100, Number(value) * 20)) + '%';
+            bar.append(fill);
+            row.append(bar);
+            appendText(row, 'strong', '', Number(value).toFixed(1));
+            dimensions.append(row);
+          });
+          content.append(dimensions);
+
+          appendText(content, 'h3', 'tree-passage-heading', 'Pasajes a revisar');
+          const passages = criticalPassages.filter((passage) => passage.instrument === selectedInstrument);
+          if (passages.length === 0) {
+            appendText(content, 'p', 'result-empty', 'No se han detectado pasajes críticos para este instrumento.');
+            return;
+          }
+          const passageList = document.createElement('ul');
+          passageList.className = 'result-list';
+          passages.forEach((passage) => {
+            const item = document.createElement('li');
+            appendText(item, 'strong', 'tree-passage-title', 'Compases ' + passage.measure_range);
+            (passage.findings || []).forEach((code) => {
+              const tag = document.createElement('span');
+              tag.className = 'pill';
+              tag.textContent = findingLabels[code] || code;
+              item.append(tag);
+            });
+            passageList.append(item);
+          });
+          content.append(passageList);
+        }
+
+        render();
+      }
+
       function renderAnalysis(data) {
         const summary = document.createElement('div');
         summary.className = 'result-summary';
@@ -233,7 +478,6 @@
 
         const difficulty = data.difficulty || {};
         const familyEntries = Object.entries(difficulty.by_family || {});
-        const maxFamilyScore = Math.max(...familyEntries.map(([, details]) => Number(details.score || 0)), 1);
         const criticalPassages = difficulty.critical_passages || [];
 
         const dashboard = document.createElement('div');
@@ -241,70 +485,30 @@
 
         const overallCard = document.createElement('div');
         overallCard.className = 'metric-card';
-        overallCard.innerHTML = '<div class="label">Dificultad</div><div class="value">' + (difficulty.overall_score ?? 0) + '</div><div class="subvalue">Nivel: ' + (difficultyLabels[difficulty.level] || 'Sin clasificar') + '</div>';
+        appendText(overallCard, 'div', 'label', 'Grado de la obra');
+        appendText(overallCard, 'div', 'value', 'Grado ' + (difficulty.grade || 1));
+        appendText(overallCard, 'div', 'subvalue', 'Estimación provisional · máximo por instrumento');
         dashboard.append(overallCard);
 
         const passagesCard = document.createElement('div');
         passagesCard.className = 'metric-card';
-        passagesCard.innerHTML = '<div class="label">Pasajes críticos</div><div class="value">' + criticalPassages.length + '</div><div class="subvalue">Agrupados por instrumento y familia</div>';
+        appendText(passagesCard, 'div', 'label', 'Pasajes críticos');
+        appendText(passagesCard, 'div', 'value', String(criticalPassages.length));
+        appendText(passagesCard, 'div', 'subvalue', 'Agrupados por instrumento');
         dashboard.append(passagesCard);
 
         const familyCard = document.createElement('div');
         familyCard.className = 'metric-card';
-        familyCard.innerHTML = '<div class="label">Familias</div><div class="value">' + familyEntries.length + '</div><div class="subvalue">Secciones con mayor carga</div>';
+        appendText(familyCard, 'div', 'label', 'Familias');
+        appendText(familyCard, 'div', 'value', String(familyEntries.length));
+        appendText(familyCard, 'div', 'subvalue', 'Secciones de la partitura');
         dashboard.append(familyCard);
 
         resultBox.append(dashboard);
         resultBox.append(summary);
 
-        const difficultySection = createSection(summary, 'Dificultad');
-        const difficultyCards = Object.entries(difficulty.by_instrument || {}).map(([instrument, details]) => {
-          const findings = (details.findings || []).map((code) => findingLabels[code] || code).join(', ');
-          return instrument + ': ' + details.score + (findings ? ' · ' + findings : '');
-        });
-        appendList(difficultySection, difficultyCards, 'No se detectaron dificultades por instrumento.');
-
-        const familySection = createSection(summary, 'Familias');
-        if (familyEntries.length === 0) {
-          appendText(familySection, 'p', 'result-empty', 'No hay familias con hallazgos relevantes.');
-        } else {
-          familyEntries.forEach(([family, details]) => {
-            const row = document.createElement('div');
-            row.className = 'family-row';
-            const header = document.createElement('div');
-            header.className = 'family-header';
-            header.innerHTML = '<span>' + family + '</span><strong>' + (details.score || 0) + '</strong>';
-            const bar = document.createElement('div');
-            bar.className = 'family-bar';
-            const fill = document.createElement('span');
-            fill.style.width = Math.max(12, Math.round(((details.score || 0) / maxFamilyScore) * 100)) + '%';
-            bar.append(fill);
-            row.append(header, bar);
-            const badges = document.createElement('div');
-            (details.instruments || []).forEach((instrument) => {
-              const pill = document.createElement('span');
-              pill.className = 'pill';
-              pill.textContent = instrument;
-              badges.append(pill);
-            });
-            row.append(badges);
-            familySection.append(row);
-          });
-        }
-
-        const passagesSection = createSection(summary, 'Pasajes críticos', true);
-        if (criticalPassages.length === 0) {
-          appendText(passagesSection, 'p', 'result-empty', 'No hay pasajes críticos detectados.');
-        } else {
-          const passageList = document.createElement('ul');
-          passageList.className = 'result-list';
-          criticalPassages.forEach((passage) => {
-            const item = document.createElement('li');
-            item.innerHTML = '<strong>' + passage.instrument + '</strong> · ' + passage.family + ' · compases ' + passage.measure_range + ' · score ' + passage.score + '<br>' + (passage.findings || []).map((code) => '<span class="pill">' + (findingLabels[code] || code) + '</span>').join('');
-            passageList.append(item);
-          });
-          passagesSection.append(passageList);
-        }
+        const explorerSection = createSection(summary, 'Dificultad por familias e instrumentos', true);
+        renderDifficultyTree(explorerSection, difficulty, criticalPassages);
 
         const bandFit = data.band_fit || {};
         const bandSection = createSection(summary, 'Adaptación a la banda');
@@ -321,10 +525,11 @@
           bandStatusLabels[bandFit.status] || 'Estado no disponible'
         );
         const bandIssues = (bandFit.issues || []).map((issue) => {
+          const instrument = displayInstrumentName(issue.instrument);
           if (issue.available === 0) {
-            return issue.instrument + ': falta en la plantilla; se necesita ' + issue.required + '.';
+            return instrument + ': falta en la plantilla; se necesita ' + issue.required + '.';
           }
-          return issue.instrument + ': hay ' + issue.available + ' músicos y se necesitan ' + issue.required + '.';
+          return instrument + ': hay ' + issue.available + ' músicos y se necesitan ' + issue.required + '.';
         });
         appendList(bandSection, bandIssues, 'La plantilla cubre los instrumentos requeridos.');
 
@@ -338,9 +543,12 @@
         );
         const segments = (rehearsal.segments || []).map((segment) => {
           const reason = rehearsalReasons[segment.reason] || segment.reason || 'Pasaje seleccionado para trabajar.';
-          return segment.instrument + ' · compás ' + segment.measure_range + ' · ' + segment.minutes + ' min · ' + reason;
+          return displayInstrumentName(segment.instrument) + ' · compás ' + segment.measure_range + ' · ' + segment.minutes + ' min · ' + reason;
         });
-        appendList(rehearsalSection, segments, 'No hay bloques de ensayo disponibles.');
+        appendList(rehearsalSection, segments.slice(0, 10), 'No hay bloques de ensayo disponibles.');
+        if (segments.length > 10) {
+          appendText(rehearsalSection, 'p', 'result-supporting', (segments.length - 10) + ' bloques adicionales no mostrados.');
+        }
       }
 
       form.addEventListener('submit', async (event) => {
@@ -362,7 +570,11 @@
 
         try {
           const profile = document.getElementById('band-profile').value.trim();
-          payload.append('band_profile', profile || '{}');
+          const profileEntries = Object.entries(JSON.parse(profile || '{}')).map(([instrument, count]) => [
+            bandProfileNames[instrument] || instrument,
+            count
+          ]);
+          payload.append('band_profile', JSON.stringify(Object.fromEntries(profileEntries)));
           payload.append('total_minutes', document.getElementById('total-minutes').value || '60');
 
           const response = await fetch('/analyze', { method: 'POST', body: payload });

@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from backend.analyzers.difficulty import compute_difficulty_score
-from backend.domain.models import Score, ScoreMeasure, ScoreNote, ScorePart
+from backend.analyzers.instrument_difficulty import compute_instrument_difficulty
+from backend.domain.models import Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
 from backend.parsers.musicxml_parser import parse_musicxml
 
 
@@ -13,8 +14,11 @@ def test_compute_difficulty_score_aggregates_rule_findings():
 
     assert result["overall_score"] >= 2
     assert result["level"] in {"moderate", "high", "very_high"}
+    assert 1 <= result["grade"] <= 5
     assert "Clarinet" in result["by_instrument"]
     assert result["by_instrument"]["Clarinet"]["score"] >= 2
+    assert result["by_instrument"]["Clarinet"]["instrument_label_es"] == "Clarinete"
+    assert 1 <= result["by_instrument"]["Clarinet"]["grade"] <= 5
 
 
 def test_compute_difficulty_score_groups_critical_passages_by_instrument_and_family():
@@ -80,3 +84,30 @@ def test_compute_difficulty_score_groups_critical_passages_by_instrument_and_fam
     assert result["critical_passages"][0]["measure_range"] == "10-11"
     assert "woodwinds" in result["by_family"]
     assert result["by_family"]["woodwinds"]["score"] >= 2
+    assert result["by_family"]["woodwinds"]["label_es"] == "Viento madera"
+
+
+def test_duplicate_instrument_parts_keep_the_most_difficult_line():
+    easy_part = ScorePart(
+        name="Flute",
+        measures=(ScoreMeasure(1, (ScoreNote("C5", 2.0), ScoreNote("D5", 2.0))),),
+    )
+    demanding_measures = tuple(
+        ScoreMeasure(
+            number=number,
+            notes=tuple(ScoreNote(pitch, 0.25) for pitch in ("C2", "C7") * 4),
+        )
+        for number in range(1, 11)
+    )
+    demanding_part = ScorePart(name="Flute", measures=demanding_measures)
+    score = Score(
+        title="Duplicate instrument parts",
+        parts=(demanding_part, easy_part),
+        tempo_marks=(TempoMark(1, 0.0, 300.0, 1.0),),
+    )
+
+    result = compute_difficulty_score(score)
+    expected = compute_instrument_difficulty(demanding_part, tempo_bpm=300.0)
+
+    assert result["by_instrument"]["Flute"]["grade"] == expected["grade"]
+    assert result["by_instrument"]["Flute"]["difficulty_score"] == expected["difficulty_score"]

@@ -61,7 +61,29 @@ def test_parses_numeric_tempo_marks_and_pulse_units(tmp_path):
 
     score = parse_musicxml(score_path)
 
+    assert score.parts[0].name == "Part 1"
     assert [
         (mark.measure_number, mark.offset_quarters, mark.beats_per_minute, mark.beat_unit_quarters)
         for mark in score.tempo_marks
     ] == [(1, 0.0, 72.0, 1.0), (2, 0.0, 120.0, 0.5)]
+
+
+def test_parses_unpitched_percussion_attacks(tmp_path):
+    score_stream = stream.Score()
+    percussion_part = stream.Part()
+    percussion_part.partName = "Concert Bass Drum"
+    measure = stream.Measure(number=1)
+    unpitched_note = note.Unpitched()
+    unpitched_note.duration = duration.Duration(0.5)
+    measure.append(unpitched_note)
+    percussion_part.append(measure)
+    score_stream.append(percussion_part)
+    score_path = tmp_path / "percussion.musicxml"
+    score_stream.write("musicxml", fp=score_path)
+
+    score = parse_musicxml(score_path)
+
+    assert score.parts[0].name == "Concert Bass Drum"
+    assert [(event.pitch, event.duration_quarters, event.is_rest) for event in score.parts[0].measures[0].notes] == [
+        (None, 0.5, False),
+    ]

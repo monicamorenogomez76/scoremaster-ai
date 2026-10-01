@@ -13,7 +13,11 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
     parts = []
     tempo_marks = set()
     for part_index, parsed_part in enumerate(parsed_score.parts, start=1):
-        part_name = parsed_part.partName or parsed_part.id or "Part {}".format(part_index)
+        part_name = parsed_part.partName
+        if not part_name and isinstance(parsed_part.id, str):
+            part_name = parsed_part.id
+        if not part_name:
+            part_name = "Part {}".format(part_index)
         measures = []
         source_measures = parsed_part.getElementsByClass(stream.Measure)
 
@@ -49,6 +53,14 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
                             pitch=None,
                             duration_quarters=float(element.duration.quarterLength),
                             is_rest=True,
+                        )
+                    )
+                elif isinstance(element, note.Unpitched):
+                    notes.append(
+                        ScoreNote(
+                            pitch=None,
+                            duration_quarters=float(element.duration.quarterLength),
+                            is_rest=False,
                         )
                     )
             measures.append(ScoreMeasure(number=measure_number, notes=tuple(notes)))
