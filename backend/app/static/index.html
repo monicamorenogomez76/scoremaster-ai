@@ -524,6 +524,11 @@
         <button id="notation-close" class="score-close" type="button" aria-label="Cerrar partitura">Cerrar</button>
       </div>
       <div id="notation-score" class="score-rendering"></div>
+      <div class="score-tools">
+        <button id="passage-play" class="score-tool" type="button">Escuchar instrumento</button>
+        <button id="passage-stop" class="score-tool" type="button">Detener</button>
+        <span id="playback-status" role="status" aria-live="polite"></span>
+      </div>
       <div class="score-toolbar" aria-label="Controles de partitura">
         <button id="notation-prev" class="score-tool" type="button" aria-label="Compases anteriores">Anterior</button>
         <span id="notation-page-label" class="score-page-label"></span>
@@ -559,6 +564,24 @@
       let notationSourcePromise = null;
       let activeNotationPassage = null;
       const measuresPerNotationPage = 4;
+      const audioModule = import('/static/playback.js');
+      const audioStatus = document.getElementById('playback-status');
+      async function stopPassageAudio() {
+        (await audioModule).stopPlayback();
+        audioStatus.textContent = '';
+      }
+      document.getElementById('passage-play').addEventListener('click', async () => {
+        if (!currentScoreFile || !activeNotationPassage) return;
+        try {
+          await (await audioModule).playPassage(currentScoreFile, activeNotationPassage,
+            (message) => { audioStatus.textContent = message; });
+        } catch (error) {
+          await stopPassageAudio();
+          audioStatus.textContent = error.message || 'No se pudo cargar el sonido. Comprueba la conexión a Internet.';
+        }
+      });
+      document.getElementById('passage-stop').addEventListener('click', stopPassageAudio);
+      document.getElementById('notation-dialog').addEventListener('close', stopPassageAudio);
 
       function showDemoWorkspace() {
         sessionStorage.setItem('scoremaster-demo-session', 'active');
@@ -852,6 +875,7 @@
       }
 
       async function openNotationPassage(instrument, measureRange) {
+        await stopPassageAudio();
         const dialog = document.getElementById('notation-dialog');
         const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
         activeNotationPassage = { instrument, firstMeasure, lastMeasure, pageStart: firstMeasure, zoom: 1 };
@@ -1264,6 +1288,15 @@
             viewButton.textContent = 'Ver partitura';
             viewButton.addEventListener('click', () => openNotationPassage(selectedInstrument, passage.measure_range));
             actions.append(viewButton);
+            const listenButton = document.createElement('button');
+            listenButton.type = 'button';
+            listenButton.className = 'passage-open';
+            listenButton.textContent = 'Escuchar';
+            listenButton.addEventListener('click', async () => {
+              await openNotationPassage(selectedInstrument, passage.measure_range);
+              document.getElementById('passage-play').click();
+            });
+            actions.append(listenButton);
             item.append(actions);
             passageList.append(item);
           });
@@ -1439,6 +1472,7 @@
         event.preventDefault();
         const file = document.getElementById('file').files[0];
         currentScoreFile = file;
+        await stopPassageAudio();
         notationSourcePromise = null;
         await analyzeFile(file, readBandProfile());
       });

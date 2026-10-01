@@ -36,6 +36,21 @@ de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
 
 ## Partitura y vídeos
 
+Cada pasaje crítico ofrece «Escuchar» para reproducir únicamente esa parte con
+muestras General MIDI mediante [smplr](https://github.com/danigb/smplr), versión
+1.1.0. «Detener» y cerrar la partitura interrumpen el audio. La reproducción usa
+altura de concierto, acordes, silencios, ligaduras y cambios de tempo del
+MusicXML; sin tempo se indica el valor por defecto de negra = 120. Se reproduce
+el rango escrito una vez, sin desarrollar repeticiones ni aplicar expresividad.
+Los timbres son aproximados; bombardino usa tuba y clarinetes graves usan
+clarinete. Si no se reconoce el timbre se usa piano y se indica en pantalla.
+La percusión sin altura todavía no se reproduce y se avisa si se omite.
+
+El navegador necesita Internet para descargar el módulo y las muestras; la
+partitura no se envía al proveedor de sonidos. El endpoint `/playback` procesa
+temporalmente el archivo y limita la subida a 8 MB, el contenido descomprimido a
+20 MB y el pasaje a 10 000 notas.
+
 Los pasajes críticos se pueden abrir como notación MusicXML renderizada en el
 navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
 El archivo original se conserva en el navegador solo durante la sesión de
