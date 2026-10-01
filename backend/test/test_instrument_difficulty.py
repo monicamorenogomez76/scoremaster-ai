@@ -31,6 +31,11 @@ def test_instrument_labels_only_name_a_transposition_when_the_score_does():
     assert instrument_label_es("B♭ Clarinet") == "Clarinete en Si bemol"
 
 
+def test_numbered_clarinet_parts_keep_family_and_part_number_label():
+    assert classify_instrument_family("B♭ Clarinet 2") == "woodwinds"
+    assert instrument_label_es("B♭ Clarinet 2") == "Clarinete en Si bemol 2"
+
+
 def test_instrument_difficulty_uses_each_instruments_register_profile():
     high_tuba = compute_instrument_difficulty(_part("Tuba", ("C6", "D6")))
     high_flute = compute_instrument_difficulty(_part("Flute", ("C6", "D6")))

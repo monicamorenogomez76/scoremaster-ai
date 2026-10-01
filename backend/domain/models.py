@@ -34,6 +34,7 @@ class Score:
 	title: str
 	parts: tuple[ScorePart, ...]
 	tempo_marks: tuple[TempoMark, ...] = ()
+	composer: Optional[str] = None
 
 
 @dataclass(frozen=True)

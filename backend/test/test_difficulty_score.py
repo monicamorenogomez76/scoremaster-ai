@@ -111,3 +111,41 @@ def test_duplicate_instrument_parts_keep_the_most_difficult_line():
 
     assert result["by_instrument"]["Flute"]["grade"] == expected["grade"]
     assert result["by_instrument"]["Flute"]["difficulty_score"] == expected["difficulty_score"]
+
+
+def test_work_grade_uses_family_percentile_without_hiding_instrument_outlier():
+    active_measures = tuple(
+        ScoreMeasure(
+            number=number,
+            notes=tuple(
+                ScoreNote("C5" if index % 2 == 0 else "G5", 1.5)
+                for index in range(8)
+            ),
+        )
+        for number in range(1, 9)
+    )
+    severe_snare = ScorePart(
+        name="Concert Snare Drum",
+        measures=tuple(
+            ScoreMeasure(
+                number=number,
+                notes=tuple(ScoreNote(None, 0.25) for _ in range(8)),
+            )
+            for number in range(1, 11)
+        ),
+    )
+    score = Score(
+        title="Percussion outlier calibration",
+        parts=tuple(
+            ScorePart(name=name, measures=active_measures)
+            for name in ("Timpani", "Xylophone", "Glockenspiel", "Chimes")
+        ) + (severe_snare,),
+        tempo_marks=(TempoMark(1, 0.0, 300.0, 1.0),),
+    )
+
+    result = compute_difficulty_score(score)
+
+    assert result["by_instrument"]["Concert Snare Drum"]["grade"] == 5
+    assert result["by_family"]["percussion"]["grade"] == 4
+    assert result["grade"] == 4
+    assert result["grade_method"] == "family_percentile_80"

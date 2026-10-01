@@ -121,7 +121,12 @@ def _normalize_instrument(instrument: str) -> str:
 
 def _profile_key(instrument: str) -> str:
     normalized = _normalize_instrument(instrument)
+    normalized = re.sub(r"\s+\d+$", "", normalized)
     return INSTRUMENT_ALIASES.get(normalized, normalized)
+
+
+def canonical_instrument_name(instrument: str) -> str:
+    return re.sub(r"\s+\d+$", "", instrument).strip()
 
 
 def classify_instrument_family(instrument: str) -> str:
@@ -149,11 +154,16 @@ def family_label_es(family: str) -> str:
 
 def instrument_label_es(instrument: str) -> str:
     normalized = _normalize_instrument(instrument)
-    if normalized in {"bb clarinet", "b flat clarinet"}:
-        return "Clarinete en Si bemol"
+    suffix_match = re.search(r"\s+(\d+)$", normalized)
+    part_number = suffix_match.group(1) if suffix_match else None
+    instrument_name = re.sub(r"\s+\d+$", "", normalized)
+    if instrument_name in {"bb clarinet", "b flat clarinet"}:
+        label = "Clarinete en Si bemol"
+        return "{} {}".format(label, part_number) if part_number else label
     key = _profile_key(instrument)
     if key in INSTRUMENT_LABELS_ES:
-        return INSTRUMENT_LABELS_ES[key]
+        label = INSTRUMENT_LABELS_ES[key]
+        return "{} {}".format(label, part_number) if part_number else label
     if key.endswith(" drum"):
         return "Percusión"
     return instrument
@@ -184,7 +194,7 @@ def _longest_active_run(part: ScorePart) -> int:
     return longest
 
 
-def _grade(score: float) -> int:
+def grade_from_score(score: float) -> int:
     if score < 1.5:
         return 1
     if score < 2.5:
@@ -247,7 +257,7 @@ def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = Non
         "family": family,
         "family_label_es": family_label_es(family),
         "instrument_label_es": instrument_label_es(part.name),
-        "grade": _grade(score),
+        "grade": grade_from_score(score),
         "difficulty_score": round(score, 2),
         "dimensions": {key: round(value, 2) for key, value in sorted(dimensions.items())},
     }
