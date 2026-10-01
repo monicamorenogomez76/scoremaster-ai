@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import math
+
 from backend.domain.models import Score
 from backend.analyzers.instrument_difficulty import (
     classify_instrument_family,
     compute_instrument_difficulty,
     family_label_es,
+    grade_from_score,
     instrument_label_es,
 )
 from backend.rules.high_density import find_high_rhythm_density
@@ -38,6 +41,14 @@ def _measure_numbers(measure_range: str) -> tuple[int, int]:
         return int(start_text), int(end_text)
     value = int(measure_range)
     return value, value
+
+
+def _percentile(values: list[float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = max(0, min(len(ordered) - 1, math.ceil(percentile * len(ordered)) - 1))
+    return ordered[index]
 
 
 def _collapse_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -89,10 +100,10 @@ def compute_difficulty_score(score: Score) -> dict:
         }
         family_entry = by_family.setdefault(
             analysis["family"],
-            {"score": 0, "instruments": set(), "findings": [], "grade": 1},
+            {"score": 0, "instruments": set(), "findings": [], "difficulty_scores": []},
         )
         family_entry["instruments"].add(instrument)
-        family_entry["grade"] = max(family_entry["grade"], analysis["grade"])
+        family_entry["difficulty_scores"].append(analysis["difficulty_score"])
 
     for finding in findings:
         instrument_entry = by_instrument.setdefault(
@@ -105,7 +116,7 @@ def compute_difficulty_score(score: Score) -> dict:
         family = _instrument_family(finding.instrument)
         family_entry = by_family.setdefault(
             family,
-            {"score": 0, "instruments": set(), "findings": [], "grade": 1},
+            {"score": 0, "instruments": set(), "findings": [], "difficulty_scores": []},
         )
         family_entry["score"] += RULE_WEIGHTS.get(finding.code, 1)
         family_entry["instruments"].add(finding.instrument)
@@ -139,8 +150,12 @@ def compute_difficulty_score(score: Score) -> dict:
     overall_score = sum(
         RULE_WEIGHTS.get(finding.code, 1) for finding in findings
     )
+    family_grades = {
+        family: grade_from_score(_percentile(details["difficulty_scores"], 0.8))
+        for family, details in by_family.items()
+    }
     overall_grade = max(
-        (analysis["grade"] for analysis in instrument_analyses.values()),
+        family_grades.values(),
         default=1,
     )
 
@@ -148,7 +163,7 @@ def compute_difficulty_score(score: Score) -> dict:
         "overall_score": overall_score,
         "level": _difficulty_level(overall_score),
         "grade": overall_grade,
-        "grade_method": "highest_instrument",
+        "grade_method": "family_percentile_80",
         "by_instrument": {
             instrument: {
                 **details,
@@ -162,7 +177,7 @@ def compute_difficulty_score(score: Score) -> dict:
             family: {
                 "label_es": family_label_es(family),
                 "score": details["score"],
-                "grade": details["grade"],
+                "grade": family_grades[family],
                 "instruments": sorted(details["instruments"]),
                 "findings": sorted(set(details["findings"])),
             }

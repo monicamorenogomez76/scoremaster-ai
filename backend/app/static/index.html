@@ -183,9 +183,77 @@
       .tree-dimension .family-bar { height: 8px; }
       .tree-passage-heading { margin-top: 20px !important; }
       .tree-passage-title { display: block; margin-bottom: 6px; }
+      .passage-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+      .passage-open, .video-result, .video-load {
+        width: auto;
+        border: 1px solid rgba(96, 165, 250, 0.42);
+        border-radius: 8px;
+        background: rgba(96, 165, 250, 0.12);
+        color: var(--text);
+      }
+      .passage-open { padding: 7px 10px; font-size: 0.88rem; }
+      .score-dialog {
+        width: min(1100px, 94vw);
+        max-width: none;
+        max-height: 92vh;
+        padding: 20px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 12px;
+        background: #f8fafc;
+        color: #172033;
+      }
+      .score-dialog::backdrop { background: rgba(3, 7, 18, 0.78); }
+      .score-dialog-head { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+      .score-dialog-head h2 { margin: 0; font-size: 1.25rem; }
+      .score-close { width: 40px; padding: 8px; background: #e2e8f0; color: #172033; }
+      .score-dialog-status { color: #475569; margin: 8px 0 12px; }
+      .score-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+      .score-tool {
+        width: auto;
+        min-width: 42px;
+        padding: 7px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #fff;
+        color: #172033;
+      }
+      .score-page-label { flex: 1; min-width: 180px; color: #475569; text-align: center; font-size: 0.9rem; }
+      .score-rendering { max-height: 72vh; overflow: auto; background: #fff; border: 1px solid #cbd5e1; }
+      .score-rendering svg { max-width: none; height: auto; }
+      .video-results { display: grid; gap: 8px; margin: 12px 0; }
+      .video-result { display: grid; grid-template-columns: 144px minmax(0, 1fr); align-items: center; gap: 12px; width: 100%; padding: 8px; text-align: left; }
+      .video-result img { display: block; width: 144px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; }
+      .video-result-copy { display: grid; gap: 4px; min-width: 0; }
+      .video-result-copy span { color: var(--muted); font-size: 0.88rem; }
+      .video-player { width: min(800px, 100%); aspect-ratio: 16 / 9; margin-top: 16px; background: #000; }
+      .video-player iframe { width: 100%; height: 100%; border: 0; }
+      .video-search-fallback { display: grid; gap: 10px; margin-top: 12px; }
+      .video-search-link { color: #93c5fd; overflow-wrap: anywhere; }
+      .video-manual { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+      .video-manual input { min-width: 0; }
+      .video-load { padding: 10px 14px; }
+      .band-profile-editor {
+        display: grid;
+        gap: 12px;
+        margin: 0;
+        padding: 14px 0;
+        border: 0;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+      }
+      .band-profile-editor[hidden] { display: none; }
+      .band-profile-editor legend { padding: 0 8px 0 0; font-weight: 700; }
+      .band-profile-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+      .band-profile-row { display: grid; grid-template-columns: minmax(0, 1fr) 88px; align-items: center; gap: 12px; }
+      .band-profile-row input { padding: 8px 10px; }
+      .band-profile-update { max-width: 260px; }
       @media (max-width: 640px) {
         .tree-dimension { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; }
         .tree-dimension .family-bar { grid-column: 1 / -1; grid-row: 2; }
+        .video-result { grid-template-columns: 104px minmax(0, 1fr); }
+        .video-result img { width: 104px; }
+        .video-manual { grid-template-columns: minmax(0, 1fr); }
+        .score-dialog { padding: 12px; }
+        .band-profile-rows { grid-template-columns: minmax(0, 1fr); }
       }
       @media (max-width: 640px) {
         .result-summary { grid-template-columns: minmax(0, 1fr); }
@@ -193,6 +261,7 @@
         .result-section--wide { grid-column: auto; }
       }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.9.2/build/opensheetmusicdisplay.min.js" defer></script>
   </head>
   <body>
     <div class="container">
@@ -201,19 +270,50 @@
 
       <form id="upload-form">
         <input id="file" type="file" accept=".musicxml,.mxl,.xml" required />
-        <textarea id="band-profile" rows="4" placeholder='{"Flauta": 3, "Clarinete en Si bemol": 1}'></textarea>
         <input id="total-minutes" type="number" min="10" value="60" aria-label="Minutos totales de ensayo" />
         <button type="submit">Subir y analizar</button>
+        <fieldset id="band-profile-editor" class="band-profile-editor" hidden>
+          <legend>Plantilla de la banda</legend>
+          <p class="result-supporting">Indica cuántos músicos tienes asignados a cada parte.</p>
+          <div id="band-profile-rows" class="band-profile-rows"></div>
+          <button id="update-analysis" class="band-profile-update" type="button">Actualizar análisis</button>
+        </fieldset>
       </form>
 
       <div id="result" class="result" hidden></div>
     </div>
+
+    <dialog id="notation-dialog" class="score-dialog" aria-labelledby="notation-title">
+      <div class="score-dialog-head">
+        <div>
+          <h2 id="notation-title">Partitura del pasaje</h2>
+          <p id="notation-status" class="score-dialog-status">Selecciona un pasaje para abrir la partitura.</p>
+        </div>
+        <button id="notation-close" class="score-close" type="button" aria-label="Cerrar partitura">Cerrar</button>
+      </div>
+      <div id="notation-score" class="score-rendering"></div>
+      <div class="score-toolbar" aria-label="Controles de partitura">
+        <button id="notation-prev" class="score-tool" type="button" aria-label="Compases anteriores">Anterior</button>
+        <span id="notation-page-label" class="score-page-label"></span>
+        <button id="notation-next" class="score-tool" type="button" aria-label="Compases siguientes">Siguiente</button>
+        <button id="notation-zoom-out" class="score-tool" type="button" aria-label="Reducir partitura">−</button>
+        <output id="notation-zoom-label">100%</output>
+        <button id="notation-zoom-in" class="score-tool" type="button" aria-label="Ampliar partitura">+</button>
+      </div>
+    </dialog>
 
     <script>
       const form = document.getElementById('upload-form');
       const resultBox = document.getElementById('result');
       const submitButton = form.querySelector('button[type="submit"]');
       const submitLabel = submitButton.textContent;
+      const bandProfileEditor = document.getElementById('band-profile-editor');
+      const bandProfileRows = document.getElementById('band-profile-rows');
+      const updateAnalysisButton = document.getElementById('update-analysis');
+      let currentScoreFile = null;
+      let notationSourcePromise = null;
+      let activeNotationPassage = null;
+      const measuresPerNotationPage = 4;
       const difficultyLabels = {
         low: 'Baja',
         moderate: 'Moderada',
@@ -278,7 +378,18 @@
       };
 
       function displayInstrumentName(instrument, details = {}) {
-        return details.instrument_label_es || instrumentLabelsEs[instrument] || instrument;
+        if (details.instrument_label_es) return details.instrument_label_es;
+        const partMatch = instrument.match(/^(.*)\s+(\d+)$/);
+        const baseName = partMatch ? partMatch[1] : instrument;
+        const displayName = instrumentLabelsEs[baseName] || baseName;
+        return partMatch ? displayName + ' ' + partMatch[2] : displayName;
+      }
+
+      function apiInstrumentName(instrument) {
+        const partMatch = instrument.match(/^(.*)\s+(\d+)$/);
+        const baseName = partMatch ? partMatch[1] : instrument;
+        const apiName = bandProfileNames[baseName] || baseName;
+        return partMatch ? apiName + ' ' + partMatch[2] : apiName;
       }
 
       function displayFamilyName(family, details = {}) {
@@ -310,6 +421,358 @@
         appendText(section, 'h2', '', title);
         parent.append(section);
         return section;
+      }
+
+      function readBandProfile() {
+        return Object.fromEntries(Array.from(bandProfileRows.querySelectorAll('input[data-instrument]')).map((input) => [
+          apiInstrumentName(input.dataset.instrument),
+          Math.max(0, Number.parseInt(input.value || '0', 10) || 0)
+        ]));
+      }
+
+      function renderBandProfile(parts, previousProfile = {}) {
+        bandProfileRows.replaceChildren();
+        const instruments = Array.from(new Set(parts));
+        instruments.forEach((instrument) => {
+          const row = document.createElement('label');
+          row.className = 'band-profile-row';
+          appendText(row, 'span', '', displayInstrumentName(instrument));
+          const count = document.createElement('input');
+          count.type = 'number';
+          count.min = '0';
+          count.step = '1';
+          count.value = String(previousProfile[apiInstrumentName(instrument)] ?? 1);
+          count.dataset.instrument = instrument;
+          count.setAttribute('aria-label', 'Músicos para ' + displayInstrumentName(instrument));
+          row.append(count);
+          bandProfileRows.append(row);
+        });
+        bandProfileEditor.hidden = instruments.length === 0;
+      }
+
+      function parseMeasureRange(value) {
+        const values = String(value).split('-').map((part) => Number.parseInt(part, 10));
+        if (!values.length || values.some((number) => !Number.isFinite(number))) {
+          throw new Error('El rango de compases del pasaje no es válido.');
+        }
+        return [values[0], values[1] || values[0]];
+      }
+
+      function filterMusicXmlPassage(source, instrumentName, measureRange) {
+        const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
+        const partMatch = instrumentName.match(/^(.*)\s+(\d+)$/);
+        const sourceInstrumentName = partMatch ? partMatch[1] : instrumentName;
+        let selectedStaffNumber = partMatch ? Number(partMatch[2]) : null;
+        const documentXml = new DOMParser().parseFromString(source, 'application/xml');
+        if (documentXml.querySelector('parsererror')) {
+          throw new Error('No se pudo interpretar el MusicXML original.');
+        }
+        const descendants = (parent, name) => Array.from(parent.getElementsByTagName('*'))
+          .filter((element) => element.localName === name);
+        const directChild = (parent, name) => Array.from(parent.children)
+          .find((element) => element.localName === name);
+        const scoreParts = descendants(documentXml, 'score-part');
+        const matchingParts = scoreParts.filter((part) => {
+          const name = directChild(part, 'part-name');
+          return name && name.textContent.trim() === sourceInstrumentName;
+        });
+        if (matchingParts.length > 1 && selectedStaffNumber) {
+          const selectedPart = matchingParts[selectedStaffNumber - 1];
+          matchingParts.forEach((part) => {
+            if (part !== selectedPart) part.parentNode.removeChild(part);
+          });
+          selectedStaffNumber = null;
+        }
+        const selectedIds = new Set(matchingParts.map((part) => part.getAttribute('id')));
+        if (selectedIds.size === 0) {
+          throw new Error('No se encontró el instrumento dentro del MusicXML.');
+        }
+
+        scoreParts.forEach((part) => {
+          if (!selectedIds.has(part.getAttribute('id'))) part.parentNode.removeChild(part);
+        });
+        const scorePartsData = descendants(documentXml, 'part');
+        let retainedMeasures = 0;
+        scorePartsData.forEach((part) => {
+          if (!selectedIds.has(part.getAttribute('id'))) {
+            part.parentNode.removeChild(part);
+            return;
+          }
+          const scorePartName = scoreParts.find((entry) => entry.getAttribute('id') === part.getAttribute('id'));
+          const nameElement = scorePartName && directChild(scorePartName, 'part-name');
+          if (nameElement) nameElement.textContent = instrumentName;
+          let previousAttributes = null;
+          let firstRetained = true;
+          Array.from(part.children).filter((element) => element.localName === 'measure').forEach((measure) => {
+            const measureNumber = Number.parseInt(measure.getAttribute('number'), 10);
+            const attributes = directChild(measure, 'attributes');
+            if (attributes) previousAttributes = attributes.cloneNode(true);
+            if (measureNumber < firstMeasure || measureNumber > lastMeasure) {
+              part.removeChild(measure);
+              return;
+            }
+            if (firstRetained && !attributes && previousAttributes) {
+              const print = directChild(measure, 'print');
+              measure.insertBefore(previousAttributes.cloneNode(true), print ? print.nextSibling : measure.firstChild);
+            }
+            if (selectedStaffNumber) {
+              const currentAttributes = directChild(measure, 'attributes');
+              if (currentAttributes) {
+                Array.from(currentAttributes.children).forEach((element) => {
+                  if (element.localName === 'staves') element.textContent = '1';
+                  if (['clef', 'staff-details', 'key', 'transpose'].includes(element.localName) && element.hasAttribute('number')) {
+                    if (Number(element.getAttribute('number')) !== selectedStaffNumber) {
+                      currentAttributes.removeChild(element);
+                    } else {
+                      element.setAttribute('number', '1');
+                    }
+                  }
+                });
+              }
+              Array.from(measure.children).forEach((element) => {
+                if (!['note', 'direction'].includes(element.localName)) return;
+                const staff = directChild(element, 'staff');
+                const eventStaff = Number(staff ? staff.textContent : '1');
+                if (eventStaff !== selectedStaffNumber) {
+                  measure.removeChild(element);
+                } else if (staff) {
+                  staff.textContent = '1';
+                }
+              });
+            }
+            firstRetained = false;
+            retainedMeasures += 1;
+          });
+        });
+        if (retainedMeasures === 0) {
+          throw new Error('El rango solicitado no contiene compases renderizables.');
+        }
+        return new XMLSerializer().serializeToString(documentXml);
+      }
+
+      async function loadNotationSource() {
+        if (!currentScoreFile) throw new Error('Vuelve a subir la partitura para abrir este pasaje.');
+        if (!notationSourcePromise) {
+          const payload = new FormData();
+          payload.append('file', currentScoreFile);
+          notationSourcePromise = fetch('/notation-source', { method: 'POST', body: payload })
+            .then(async (response) => {
+              if (!response.ok) throw new Error('No se pudo recuperar la partitura original.');
+              return response.text();
+            });
+        }
+        return notationSourcePromise;
+      }
+
+      async function openNotationPassage(instrument, measureRange) {
+        const dialog = document.getElementById('notation-dialog');
+        const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
+        activeNotationPassage = { instrument, firstMeasure, lastMeasure, pageStart: firstMeasure, zoom: 1 };
+        document.getElementById('notation-title').textContent = displayInstrumentName(instrument) + ' · compases ' + measureRange;
+        if (!dialog.open) dialog.showModal();
+        try {
+          activeNotationPassage.source = await loadNotationSource();
+          await renderNotationPage();
+        } catch (error) {
+          document.getElementById('notation-status').textContent = error.message || 'No se pudo representar este pasaje.';
+        }
+      }
+
+      async function renderNotationPage() {
+        const state = activeNotationPassage;
+        const status = document.getElementById('notation-status');
+        const container = document.getElementById('notation-score');
+        const endMeasure = Math.min(state.pageStart + measuresPerNotationPage - 1, state.lastMeasure);
+        const pageLabel = document.getElementById('notation-page-label');
+        const previousButton = document.getElementById('notation-prev');
+        const nextButton = document.getElementById('notation-next');
+        previousButton.disabled = state.pageStart <= state.firstMeasure;
+        nextButton.disabled = endMeasure >= state.lastMeasure;
+        pageLabel.textContent = 'Mostrando compases ' + state.pageStart + '–' + endMeasure + ' de ' + state.firstMeasure + '–' + state.lastMeasure;
+        status.textContent = 'Renderizando notación original…';
+        container.replaceChildren();
+
+        const display = window.opensheetmusicdisplay;
+        if (!display || !display.OpenSheetMusicDisplay) {
+          throw new Error('El motor de notación no está disponible. Comprueba la conexión a Internet.');
+        }
+        const passageXml = filterMusicXmlPassage(
+          state.source,
+          state.instrument,
+          state.pageStart + '-' + endMeasure
+        );
+        const renderer = new display.OpenSheetMusicDisplay(container, {
+          autoResize: true,
+          backend: 'svg',
+          drawTitle: false,
+          drawPartNames: true,
+          drawMeasureNumbers: true
+        });
+        await renderer.load(passageXml);
+        renderer.render();
+        const svg = container.querySelector('svg');
+        if (svg) {
+          svg.style.width = (state.zoom * 100) + '%';
+          svg.style.maxWidth = 'none';
+        }
+        document.getElementById('notation-zoom-label').textContent = Math.round(state.zoom * 100) + '%';
+        container.scrollTop = 0;
+        container.scrollLeft = 0;
+        status.textContent = 'Notación original · tonalidad escrita del MusicXML · ' + displayInstrumentName(state.instrument);
+      }
+
+      document.getElementById('notation-prev').addEventListener('click', () => {
+        if (!activeNotationPassage) return;
+        activeNotationPassage.pageStart = Math.max(
+          activeNotationPassage.firstMeasure,
+          activeNotationPassage.pageStart - measuresPerNotationPage
+        );
+        renderNotationPage().catch((error) => {
+          document.getElementById('notation-status').textContent = error.message;
+        });
+      });
+      document.getElementById('notation-next').addEventListener('click', () => {
+        if (!activeNotationPassage) return;
+        activeNotationPassage.pageStart += measuresPerNotationPage;
+        renderNotationPage().catch((error) => {
+          document.getElementById('notation-status').textContent = error.message;
+        });
+      });
+      document.getElementById('notation-zoom-out').addEventListener('click', () => {
+        if (!activeNotationPassage) return;
+        activeNotationPassage.zoom = Math.max(0.75, activeNotationPassage.zoom - 0.1);
+        renderNotationPage().catch((error) => {
+          document.getElementById('notation-status').textContent = error.message;
+        });
+      });
+      document.getElementById('notation-zoom-in').addEventListener('click', () => {
+        if (!activeNotationPassage) return;
+        activeNotationPassage.zoom = Math.min(1.5, activeNotationPassage.zoom + 0.1);
+        renderNotationPage().catch((error) => {
+          document.getElementById('notation-status').textContent = error.message;
+        });
+      });
+      document.getElementById('notation-close').addEventListener('click', () => {
+        document.getElementById('notation-dialog').close();
+      });
+
+      function renderYouTubePlayer(container, videoId) {
+        if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return false;
+        const frame = document.createElement('iframe');
+        frame.src = 'https://www.youtube-nocookie.com/embed/' + videoId;
+        frame.title = 'Vídeo de YouTube seleccionado';
+        frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+        frame.allowFullscreen = true;
+        frame.loading = 'lazy';
+        frame.referrerPolicy = 'strict-origin-when-cross-origin';
+        container.replaceChildren(frame);
+        return true;
+      }
+
+      function parseYouTubeVideoId(value) {
+        try {
+          const url = new URL(value.trim());
+          const host = url.hostname.toLowerCase();
+          let videoId = '';
+          if (host === 'youtu.be') videoId = url.pathname.slice(1).split('/')[0];
+          if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'].includes(host)) {
+            if (url.pathname === '/watch') videoId = url.searchParams.get('v') || '';
+            else videoId = url.pathname.match(/^\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})/)?.[1] || '';
+          }
+          return /^[A-Za-z0-9_-]{11}$/.test(videoId) ? videoId : null;
+        } catch (_error) {
+          return null;
+        }
+      }
+
+      async function renderYouTubeSearch(section, title, composer) {
+        const fileTitle = currentScoreFile
+          ? currentScoreFile.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim()
+          : '';
+        const scoreTitle = title && title !== 'Untitled score' ? title : fileTitle;
+        const titleWords = new Set(scoreTitle.toLowerCase().split(/\s+/));
+        const filenameDetails = fileTitle
+          .split(/\s+/)
+          .filter((word) => word && !titleWords.has(word.toLowerCase()))
+          .join(' ');
+        const queryTerms = [scoreTitle, composer || filenameDetails];
+        if (!composer && fileTitle && !filenameDetails && fileTitle.toLowerCase() !== scoreTitle.toLowerCase()) {
+          queryTerms.push(fileTitle);
+        }
+        const query = queryTerms.filter(Boolean).join(' ').trim();
+        const status = appendText(section, 'p', 'result-supporting', 'Buscando vídeos relacionados…');
+        const player = document.createElement('div');
+        player.className = 'video-player';
+        player.hidden = true;
+        section.append(player);
+        try {
+          const response = await fetch('/youtube/search?query=' + encodeURIComponent(query));
+          if (!response.ok) throw new Error('No se pudo completar la búsqueda de YouTube.');
+          const result = await response.json();
+          status.textContent = result.videos.length
+            ? 'Elige un resultado para reproducirlo aquí.'
+            : 'No hay resultados integrados disponibles; puedes abrir la búsqueda en YouTube.';
+          if (result.videos.length) {
+            const list = document.createElement('div');
+            list.className = 'video-results';
+            result.videos.forEach((video) => {
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.className = 'video-result';
+              const thumbnail = document.createElement('img');
+              thumbnail.src = video.thumbnail;
+              thumbnail.alt = '';
+              thumbnail.loading = 'lazy';
+              const copy = document.createElement('span');
+              copy.className = 'video-result-copy';
+              appendText(copy, 'strong', '', video.title);
+              appendText(copy, 'span', '', video.channel);
+              button.append(thumbnail, copy);
+              button.addEventListener('click', () => {
+                player.hidden = false;
+                renderYouTubePlayer(player, video.video_id);
+              });
+              list.append(button);
+            });
+            section.insertBefore(list, player);
+          } else {
+            const fallback = document.createElement('div');
+            fallback.className = 'video-search-fallback';
+            const link = document.createElement('a');
+            link.className = 'video-search-link';
+            link.href = result.search_url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = 'Buscar “' + query + '” en YouTube';
+            fallback.append(link);
+            const manual = document.createElement('div');
+            manual.className = 'video-manual';
+            const input = document.createElement('input');
+            input.type = 'url';
+            input.placeholder = 'Pega aquí un enlace de YouTube para reproducirlo';
+            input.setAttribute('aria-label', 'Enlace de vídeo de YouTube');
+            const loadButton = document.createElement('button');
+            loadButton.type = 'button';
+            loadButton.className = 'video-load';
+            loadButton.textContent = 'Reproducir aquí';
+            loadButton.addEventListener('click', () => {
+              const videoId = parseYouTubeVideoId(input.value);
+              if (!videoId) {
+                input.setCustomValidity('Introduce un enlace válido de YouTube.');
+                input.reportValidity();
+                return;
+              }
+              input.setCustomValidity('');
+              player.hidden = false;
+              renderYouTubePlayer(player, videoId);
+            });
+            manual.append(input, loadButton);
+            fallback.append(manual);
+            section.append(fallback);
+          }
+        } catch (error) {
+          status.textContent = error.message || 'Búsqueda de vídeo no disponible.';
+        }
       }
 
       function renderDifficultyTree(section, difficulty, criticalPassages) {
@@ -456,12 +919,21 @@
           passages.forEach((passage) => {
             const item = document.createElement('li');
             appendText(item, 'strong', 'tree-passage-title', 'Compases ' + passage.measure_range);
+            const actions = document.createElement('div');
+            actions.className = 'passage-actions';
             (passage.findings || []).forEach((code) => {
               const tag = document.createElement('span');
               tag.className = 'pill';
               tag.textContent = findingLabels[code] || code;
-              item.append(tag);
+              actions.append(tag);
             });
+            const viewButton = document.createElement('button');
+            viewButton.type = 'button';
+            viewButton.className = 'passage-open';
+            viewButton.textContent = 'Ver partitura';
+            viewButton.addEventListener('click', () => openNotationPassage(selectedInstrument, passage.measure_range));
+            actions.append(viewButton);
+            item.append(actions);
             passageList.append(item);
           });
           content.append(passageList);
@@ -475,6 +947,7 @@
         summary.className = 'result-summary';
         resultBox.replaceChildren();
         appendText(resultBox, 'h2', 'result-title', data.title || 'Partitura sin título');
+        if (data.composer) appendText(resultBox, 'p', 'result-supporting', 'Compositor: ' + data.composer);
 
         const difficulty = data.difficulty || {};
         const familyEntries = Object.entries(difficulty.by_family || {});
@@ -487,7 +960,7 @@
         overallCard.className = 'metric-card';
         appendText(overallCard, 'div', 'label', 'Grado de la obra');
         appendText(overallCard, 'div', 'value', 'Grado ' + (difficulty.grade || 1));
-        appendText(overallCard, 'div', 'subvalue', 'Estimación provisional · máximo por instrumento');
+        appendText(overallCard, 'div', 'subvalue', 'Estimación provisional · percentil 80 por familia');
         dashboard.append(overallCard);
 
         const passagesCard = document.createElement('div');
@@ -509,6 +982,9 @@
 
         const explorerSection = createSection(summary, 'Dificultad por familias e instrumentos', true);
         renderDifficultyTree(explorerSection, difficulty, criticalPassages);
+
+        const videoSection = createSection(summary, 'Vídeos en YouTube', true);
+        renderYouTubeSearch(videoSection, data.title || '', data.composer || '');
 
         const bandFit = data.band_fit || {};
         const bandSection = createSection(summary, 'Adaptación a la banda');
@@ -551,10 +1027,7 @@
         }
       }
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const fileInput = document.getElementById('file');
-        const file = fileInput.files[0];
+      async function analyzeFile(file, bandProfile) {
         if (!file) {
           resultBox.hidden = false;
           resultBox.textContent = 'Selecciona un archivo MusicXML.';
@@ -569,12 +1042,7 @@
         submitButton.textContent = 'Analizando...';
 
         try {
-          const profile = document.getElementById('band-profile').value.trim();
-          const profileEntries = Object.entries(JSON.parse(profile || '{}')).map(([instrument, count]) => [
-            bandProfileNames[instrument] || instrument,
-            count
-          ]);
-          payload.append('band_profile', JSON.stringify(Object.fromEntries(profileEntries)));
+          payload.append('band_profile', JSON.stringify(bandProfile));
           payload.append('total_minutes', document.getElementById('total-minutes').value || '60');
 
           const response = await fetch('/analyze', { method: 'POST', body: payload });
@@ -586,7 +1054,21 @@
             return;
           }
 
+          const partNames = data.parts || [];
+          const completedProfile = Object.fromEntries(partNames.map((instrument) => {
+            const apiName = apiInstrumentName(instrument);
+            return [apiName, bandProfile[apiName] ?? 1];
+          }));
+          const profileNeedsDefaults = partNames.some((instrument) =>
+            bandProfile[apiInstrumentName(instrument)] === undefined
+          );
+          if (profileNeedsDefaults) {
+            renderBandProfile(partNames, completedProfile);
+            return await analyzeFile(file, completedProfile);
+          }
+
           renderAnalysis(data);
+          renderBandProfile(partNames, completedProfile);
         } catch (error) {
           resultBox.hidden = false;
           resultBox.textContent = 'Error en la solicitud: ' + error.message;
@@ -594,6 +1076,18 @@
           submitButton.disabled = false;
           submitButton.textContent = submitLabel;
         }
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const file = document.getElementById('file').files[0];
+        currentScoreFile = file;
+        notationSourcePromise = null;
+        await analyzeFile(file, readBandProfile());
+      });
+
+      updateAnalysisButton.addEventListener('click', async () => {
+        await analyzeFile(currentScoreFile, readBandProfile());
       });
     </script>
   </body>
