@@ -420,6 +420,10 @@
         .topbar-meta { font-size: .72rem; }
       }
 
+      .passage-transport { position: sticky; top: 0; z-index: 1; padding: 12px; background: #f3f5fb; border: 1px solid var(--line); border-radius: 14px; margin: 0 0 16px; }
+      .passage-transport .score-tool { display: inline-flex; align-items: center; gap: 8px; border-radius: 12px; min-height: 44px; }
+      .passage-transport svg { width: 20px; height: 20px; fill: currentColor; }
+      #passage-play { background: var(--primary); color: white; border-color: var(--primary); }
       /* Shared visual language: quiet surfaces, clear actions and keyboard focus. */
       body { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       button, input, select, textarea { min-height: 44px; }
@@ -621,12 +625,12 @@
         </div>
         <button id="notation-close" class="score-close" type="button" aria-label="Cerrar partitura">Cerrar</button>
       </div>
-      <div id="notation-score" class="score-rendering"></div>
-      <div class="score-tools">
-        <button id="passage-play" class="score-tool" type="button">Escuchar instrumento</button>
-        <button id="passage-stop" class="score-tool" type="button">Detener</button>
-        <span id="playback-status" role="status" aria-live="polite"></span>
+      <div class="score-tools passage-transport" role="group" aria-label="Reproducción del pasaje">
+        <button id="passage-play" class="score-tool" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l13-8z"/></svg>Reproducir</button>
+        <button id="passage-stop" class="score-tool" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>Detener</button>
+        <span id="playback-status" class="loading-status" role="status" aria-live="polite"></span>
       </div>
+      <div id="notation-score" class="score-rendering"></div>
       <div class="score-toolbar" aria-label="Controles de partitura">
         <button id="notation-prev" class="score-tool" type="button" aria-label="Compases anteriores">Anterior</button>
         <span id="notation-page-label" class="score-page-label"></span>
@@ -674,18 +678,28 @@
         });
       }
       const audioStatus = document.getElementById('playback-status');
+      let passageLoadVersion = 0;
       async function stopPassageAudio() {
+        passageLoadVersion++;
         (await audioModule).stopPlayback();
+        document.getElementById('passage-play').disabled = false;
+        audioStatus.setAttribute('aria-busy', 'false');
         audioStatus.textContent = '';
       }
       document.getElementById('passage-play').addEventListener('click', async () => {
         if (!currentScoreFile || !activeNotationPassage) return;
+        const version = ++passageLoadVersion;
+        const button = document.getElementById('passage-play');
+        button.disabled = true; audioStatus.setAttribute('aria-busy', 'true');
+        audioStatus.textContent = 'Cargando sonidos del pasaje…';
         try {
           await (await audioModule).playPassage(currentScoreFile, activeNotationPassage,
-            (message) => { audioStatus.textContent = message; });
+            (message) => { if (version === passageLoadVersion) { audioStatus.textContent = message; audioStatus.setAttribute('aria-busy', String(/Preparando|Cargando/.test(message))); } });
         } catch (error) {
-          await stopPassageAudio();
+          if (version !== passageLoadVersion) return;
           audioStatus.textContent = error.message || 'No se pudo cargar el sonido. Comprueba la conexión a Internet.';
+        } finally {
+          if (version === passageLoadVersion) { button.disabled = false; audioStatus.setAttribute('aria-busy', 'false'); }
         }
       });
       document.getElementById('passage-stop').addEventListener('click', stopPassageAudio);
@@ -1407,18 +1421,9 @@
             const viewButton = document.createElement('button');
             viewButton.type = 'button';
             viewButton.className = 'passage-open';
-            viewButton.textContent = 'Ver partitura';
+            viewButton.textContent = 'Ver pasaje';
             viewButton.addEventListener('click', () => openNotationPassage(selectedInstrument, passage.measure_range));
             actions.append(viewButton);
-            const listenButton = document.createElement('button');
-            listenButton.type = 'button';
-            listenButton.className = 'passage-open';
-            listenButton.textContent = 'Escuchar';
-            listenButton.addEventListener('click', async () => {
-              await openNotationPassage(selectedInstrument, passage.measure_range);
-              document.getElementById('passage-play').click();
-            });
-            actions.append(listenButton);
             item.append(actions);
             passageList.append(item);
           });
