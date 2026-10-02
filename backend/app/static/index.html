@@ -817,14 +817,24 @@
           Array.from(part.children).filter((element) => element.localName === 'measure').forEach((measure) => {
             const measureNumber = Number.parseInt(measure.getAttribute('number'), 10);
             const attributes = directChild(measure, 'attributes');
-            if (attributes) previousAttributes = attributes.cloneNode(true);
+            if (attributes) {
+              if (!previousAttributes) previousAttributes = attributes.cloneNode(true);
+              else Array.from(attributes.children).forEach((element) => {
+                const inherited = Array.from(previousAttributes.children).find((candidate) =>
+                  candidate.localName === element.localName &&
+                  candidate.getAttribute('number') === element.getAttribute('number'));
+                if (inherited) previousAttributes.replaceChild(element.cloneNode(true), inherited);
+                else previousAttributes.append(element.cloneNode(true));
+              });
+            }
             if (measureNumber < firstMeasure || measureNumber > lastMeasure) {
               part.removeChild(measure);
               return;
             }
-            if (firstRetained && !attributes && previousAttributes) {
+            if (firstRetained && previousAttributes) {
               const print = directChild(measure, 'print');
-              measure.insertBefore(previousAttributes.cloneNode(true), print ? print.nextSibling : measure.firstChild);
+              if (attributes) measure.replaceChild(previousAttributes.cloneNode(true), attributes);
+              else measure.insertBefore(previousAttributes.cloneNode(true), print ? print.nextSibling : measure.firstChild);
             }
             if (selectedStaffNumber) {
               const currentAttributes = directChild(measure, 'attributes');
