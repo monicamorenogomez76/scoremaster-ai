@@ -57,7 +57,8 @@ export function createScoreView({ getSource, getFile, filter }) {
     staging.style.position = 'absolute'; staging.style.visibility = 'hidden';
     container.append(staging);
     try {
-      const xml = filter(state.source, null, state.pageStart + '-' + end);
+      const pageXml = filter(state.source, null, state.pageStart + '-' + end);
+      const xml = pageXml.trimStart().startsWith('<?xml') ? pageXml : '<?xml version="1.0" encoding="UTF-8"?>\n' + pageXml;
       const OSMD = window.opensheetmusicdisplay?.OpenSheetMusicDisplay;
       if (!OSMD) throw new Error('No se pudo cargar el visor. Comprueba la conexión a Internet.');
       const display = new OSMD(staging, { autoResize: false, backend: 'svg', drawTitle: false,
