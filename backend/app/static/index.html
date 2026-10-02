@@ -223,12 +223,23 @@
       .embedded-score { margin-top: 24px; padding: 20px; background: #f8fafc; color: #172033; border: 1px solid #cbd5e1; border-radius: 12px; }
       .embedded-score:fullscreen { overflow: auto; padding: 24px; }
       .embedded-score h2 { margin: 0 0 14px; }
+      .instrument-assignment { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+      .instrument-assignment[hidden] { display: none; }
+      .instrument-assignment p { grid-column: 1 / -1; }
+      .instrument-assignment select { background: white; color: #172033; }
+      .embedded-score[hidden] { display: none; }
+      .embedded-score .score-tool { width: 40px; height: 40px; padding: 8px; border: 0; border-radius: 8px; background: #e8edf4; color: #334155; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; }
+      .embedded-score .score-tool:hover { background: #dce5f0; }
+      .embedded-score .transport-primary { background: #2563eb; color: white; border-radius: 50%; }
+      .embedded-score .transport-primary:hover { background: #1d4ed8; }
+      .embedded-score .score-tool svg { width: 24px; height: 24px; fill: currentColor; }
+      .embedded-score .score-tool:disabled { opacity: .4; }
       .ensemble-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 0; }
       .ensemble-toolbar label { display: flex; align-items: center; gap: 6px; margin: 0; }
       .ensemble-toolbar input[type=range] { width: 110px; margin: 0; padding: 0; }
       .ensemble-toolbar select { padding: 6px; background: white; color: #172033; }
       #ensemble-seek { width: 100%; margin: 0 0 12px; padding: 0; }
-      #full-score-rendering { height: 75vh; min-height: 500px; overflow: auto; background: white; border: 1px solid #cbd5e1; }
+      #full-score-rendering { display: flex; justify-content: center; align-items: flex-start; padding: 16px; box-sizing: border-box; height: 70vh; min-height: 320px; overflow: auto; background: white; border: 1px solid #cbd5e1; }
       #full-score-rendering svg { max-width: none; }
       .loading-status[aria-busy=true]::before { content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 2px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: loading-spin 1s linear infinite; }
       @keyframes loading-spin { to { transform: rotate(360deg); } }
@@ -485,28 +496,30 @@
                   <input id="file" type="file" accept=".musicxml,.mxl,.xml" required />
                 </label>
                 <button type="submit">Subir y analizar</button>
+                <button id="new-score" type="button" class="score-tool">Nueva partitura</button>
+                <div id="instrument-assignment" class="instrument-assignment" hidden></div>
               </form>
               <div id="result" class="analysis-status" hidden></div>
             </div>
-            <section id="embedded-score" class="embedded-score" aria-label="Partitura completa y reproductor">
+            <section id="embedded-score" hidden class="embedded-score" aria-label="Partitura completa y reproductor">
               <h2>Partitura completa</h2>
               <div class="ensemble-toolbar" aria-label="Reproducción de todas las voces">
-                <button id="ensemble-play" class="score-tool" type="button" disabled>▶ Reproducir</button>
-                <button id="ensemble-stop" class="score-tool" type="button" disabled>■ Detener</button>
+                <button id="ensemble-play" class="score-tool transport-primary" type="button" aria-label="Reproducir" title="Reproducir" disabled>▶</button>
+                <button id="ensemble-stop" class="score-tool" type="button" aria-label="Detener" title="Detener" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg></button>
                 <output id="ensemble-time">0:00 / 0:00</output>
                 <label>Velocidad <select id="ensemble-speed"><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1" selected>100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option></select></label>
                 <label>Volumen <input id="ensemble-volume" type="range" min="0" max="100" value="50" aria-label="Volumen de reproducción" /></label>
-                <button id="score-fullscreen" class="score-tool" type="button">Pantalla completa</button>
+                <button id="score-fullscreen" class="score-tool" type="button" aria-label="Pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v2H5v5H3zm11 0h7v7h-2V5h-5zM3 14h2v5h5v2H3zm16 0h2v7h-7v-2h5z"/></svg></button>
               </div>
               <input id="ensemble-seek" type="range" min="0" max="1" step="0.1" value="0" disabled aria-label="Posición de reproducción" />
               <p id="ensemble-status" class="loading-status" role="status" aria-live="polite">Todas las voces · sonidos aproximados de instrumentos.</p>
               <p id="full-score-status" class="loading-status" role="status" aria-live="polite">Sube una partitura para verla aquí.</p>
               <div class="score-toolbar" aria-label="Navegación de la partitura completa">
-                <button id="score-prev" class="score-tool" type="button" disabled>Anterior</button>
+                <button id="score-prev" class="score-tool" type="button" aria-label="Página anterior" title="Página anterior" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4-8 8 8 8 2-2-6-6 6-6z"/></svg></button>
                 <span id="score-page" class="score-page-label"></span>
-                <button id="score-next" class="score-tool" type="button" disabled>Siguiente</button>
+                <button id="score-next" class="score-tool" type="button" aria-label="Página siguiente" title="Página siguiente" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8-2-2 6-6-6-6z"/></svg></button>
                 <button id="score-zoom-out" class="score-tool" type="button">−</button>
-                <output id="score-zoom-label">100 %</output>
+                <button id="score-fit" class="score-tool" type="button" title="Ajustar página" aria-label="Ajustar página"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button><output id="score-zoom-label">Auto</output>
                 <button id="score-zoom-in" class="score-tool" type="button">+</button>
               </div>
               <div id="full-score-rendering"></div>
@@ -600,10 +613,11 @@
       let activeNotationPassage = null;
       const measuresPerNotationPage = 4;
       const audioModule = import('/static/playback.js');
-      const scoreViewPromise = import('/static/score-view.js').then(({ createScoreView }) =>
+      const scoreViewPromise = import('/static/score-view.js?v=2').then(({ createScoreView }) =>
         createScoreView({ getSource: loadNotationSource, getFile: () => currentScoreFile, filter: filterMusicXmlPassage }));
       function loadEmbeddedScore() {
-        scoreViewPromise.then((view) => view.load()).catch(() => {
+        const file = currentScoreFile, version = selectionVersion;
+        scoreViewPromise.then((view) => { if (file && file === currentScoreFile && version === selectionVersion) return view.load(); }).catch(() => {
           const status = document.getElementById('full-score-status');
           status.textContent = 'No se pudo cargar el visor. Puedes volver a intentarlo recargando la página.';
           status.setAttribute('aria-busy', 'false');
@@ -1481,6 +1495,9 @@
           return;
         }
 
+        const version = selectionVersion;
+        const controller = new AbortController();
+        analysisController?.abort(); analysisController = controller;
         const payload = new FormData();
         payload.append('file', file);
         resultBox.hidden = false;
@@ -1492,8 +1509,9 @@
           payload.append('band_profile', JSON.stringify(bandProfile));
           payload.append('total_minutes', document.getElementById('total-minutes').value || '60');
 
-          const response = await fetch('/analyze', { method: 'POST', body: payload });
+          const response = await fetch('/analyze', { method: 'POST', body: payload, signal: controller.signal });
           const data = await response.json();
+          if (version !== selectionVersion) return;
 
           resultBox.hidden = false;
           if (!response.ok) {
@@ -1515,26 +1533,102 @@
           }
 
           renderAnalysis(data);
+          loadEmbeddedScore();
           renderBandProfile(partNames, completedProfile);
           if (navigateToOverview) setActiveView('analyze');
         } catch (error) {
+          if (version !== selectionVersion || error.name === 'AbortError') return;
           resultBox.hidden = false;
           resultBox.textContent = 'Error en la solicitud: ' + error.message;
         } finally {
-          submitButton.disabled = false;
-          submitButton.textContent = submitLabel;
+          if (version === selectionVersion) { submitButton.disabled = false; submitButton.textContent = submitLabel; }
         }
       }
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const file = document.getElementById('file').files[0];
-        currentScoreFile = file;
+        if (!file) return;
+        if (currentScoreFile !== file && !assignmentSource) { currentScoreFile = file; notationSourcePromise = null; }
+        (await scoreViewPromise).clear();
         await stopPassageAudio();
-        notationSourcePromise = null;
-        loadEmbeddedScore();
-        await analyzeFile(file, readBandProfile());
+        await applyInstrumentAssignments();
+        await analyzeFile(currentScoreFile, readBandProfile());
       });
+
+      let assignmentSource = null, selectionVersion = 0, analysisController = null;
+      const assignmentPanel = document.getElementById('instrument-assignment');
+      const instrumentChoices = [['Flute',74],['Piccolo',73],['Oboe',69],['Clarinet',72],['Bass Clarinet',72],['Bassoon',71],['Alto Saxophone',66],['Tenor Saxophone',67],['Baritone Saxophone',68],['Trumpet',57],['Horn',61],['Trombone',58],['Euphonium',59],['Tuba',59],['Timpani',48],['Glockenspiel',10],['Xylophone',14],['Snare Drum',null],['Bass Drum',null],['Cymbals',null]];
+      async function resetScore(clearFile = true) {
+        selectionVersion++; analysisController?.abort(); submitButton.disabled = false; submitButton.textContent = submitLabel;
+        assignmentSource = null; currentScoreFile = null; notationSourcePromise = null;
+        (await scoreViewPromise).clear(); await stopPassageAudio();
+        if (clearFile) form.reset();
+        assignmentPanel.replaceChildren(); assignmentPanel.hidden = true;
+        bandProfileRows.replaceChildren(); bandProfileEditor.hidden = true;
+        for (const id of ['difficulty-content','band-content','rehearsal-content','videos-content']) {
+          const target = document.getElementById(id);
+          if (target) { target.replaceChildren(); appendText(target, 'p', 'result-empty', 'Analiza una nueva partitura para ver los resultados.'); }
+        }
+        document.getElementById('overview-result').hidden = true;
+        document.getElementById('overview-priority').hidden = true;
+        document.getElementById('overview-empty').hidden = false;
+        resultBox.hidden = true; setActiveView('analyze');
+      }
+      document.getElementById('new-score').addEventListener('click', () => resetScore());
+      document.getElementById('file').addEventListener('change', async () => {
+        const file = document.getElementById('file').files[0];
+        await resetScore(false); if (!file) return;
+        currentScoreFile = file; const version = selectionVersion;
+        submitButton.disabled = true; resultBox.hidden = false; resultBox.textContent = 'Cargando datos de instrumentos…';
+        try {
+          const source = await loadNotationSource(); if (version !== selectionVersion) return;
+          const xml = new DOMParser().parseFromString(source, 'application/xml');
+          const parts = Array.from(xml.querySelectorAll('score-part'));
+          const generic = parts.filter(part => /^(voice|part|instrument|voz)(\s+\d+)?$/i.test(part.querySelector('part-name')?.textContent.trim() || ''));
+          if (generic.length) {
+            assignmentSource = xml; assignmentPanel.hidden = false;
+            appendText(assignmentPanel, 'p', '', 'El archivo no identifica estos instrumentos. Asígnalos para analizar y escuchar sus sonidos correctos.');
+            for (const part of generic) {
+              const label = document.createElement('label'); label.textContent = 'Parte ' + (parts.indexOf(part) + 1) + ' '; const select = document.createElement('select'); select.dataset.partId = part.id;
+              const empty = document.createElement('option'); empty.value = ''; empty.textContent = 'Sin identificar'; select.append(empty);
+              for (const [name] of instrumentChoices) { const option = document.createElement('option'); option.value = name; option.textContent = displayInstrumentName(name); select.append(option); }
+              const metadataName = part.querySelector('instrument-name')?.textContent;
+              if (instrumentChoices.some(([name]) => name === metadataName)) select.value = metadataName;
+              label.append(select); assignmentPanel.append(label);
+            }
+          }
+          resultBox.hidden = true;
+        } catch (error) { if (version === selectionVersion) resultBox.textContent = error.message; }
+        finally { if (version === selectionVersion) submitButton.disabled = false; }
+      });
+      async function applyInstrumentAssignments() {
+        if (!assignmentSource) return;
+        const mappedSource = assignmentSource.cloneNode(true);
+        for (const select of assignmentPanel.querySelectorAll('select')) {
+          if (!select.value) continue;
+          const part = Array.from(mappedSource.querySelectorAll('score-part')).find(part => part.id === select.dataset.partId);
+          part.querySelector('part-name').textContent = select.value;
+          const abbreviation = part.querySelector('part-abbreviation'); if (abbreviation) abbreviation.textContent = select.value;
+          const instrument = part.querySelector('instrument-name'); if (instrument) instrument.textContent = select.value;
+          const program = instrumentChoices.find(([name]) => name === select.value)[1];
+          const midi = part.querySelector('midi-program'); if (midi && program) midi.textContent = program;
+          if (!program) {
+            if (midi) midi.textContent = '1';
+            const channel = part.querySelector('midi-channel'); if (channel) channel.textContent = '10';
+            const midiInstrument = part.querySelector('midi-instrument');
+            if (midiInstrument) {
+              let unpitched = midiInstrument.querySelector('midi-unpitched');
+              if (!unpitched) { unpitched = mappedSource.createElement('midi-unpitched'); midiInstrument.append(unpitched); }
+              unpitched.textContent = { 'Snare Drum': 39, 'Bass Drum': 36, 'Cymbals': 50 }[select.value];
+            }
+          }
+        }
+        const source = new XMLSerializer().serializeToString(mappedSource);
+        // Labels and timbres apply to a session copy; preserve the selected original file.
+        currentScoreFile = new File([source], document.getElementById('file').files[0].name.replace(/\.(mxl|xml)$/i, '.musicxml'), { type: 'application/xml' });
+        notationSourcePromise = Promise.resolve(source);
+      }
 
       updateAnalysisButton.addEventListener('click', async () => {
         await analyzeFile(currentScoreFile, readBandProfile(), false);
