@@ -104,3 +104,35 @@ def test_rests_and_default_tempo(tmp_path):
     result = build_playback(path, 'Flute', 1, 1)
     assert result['events'][0]['time'] == 1
     assert result['default_tempo']
+
+
+def test_full_score_has_all_parts_on_one_clock(tmp_path):
+    result = build_playback(make_score(tmp_path), '', 0, 999999)
+    assert result['duration'] == 8
+    assert [track['instrument'] for track in result['tracks']] == ['Flute', 'Clarinet']
+    assert result['tracks'][0]['events'][0]['time'] == 4
+    assert result['tracks'][1]['events'][0]['time'] == 0
+    assert result['tracks'][1]['events'][0]['duration'] == 8
+
+
+def test_full_score_endpoint_without_solo_parameters(tmp_path):
+    path = make_score(tmp_path)
+    response = TestClient(app).post('/playback', files={'file': ('score.musicxml', path.read_bytes())})
+    assert response.status_code == 200
+    assert len(response.json()['tracks']) == 2
+
+
+def test_identified_unpitched_percussion_is_in_timeline(tmp_path):
+    score = stream.Score()
+    part = stream.Part()
+    part.partName = 'Snare Drum'
+    part.insert(0, instrument.SnareDrum())
+    m = stream.Measure(number=1)
+    m.append(note.Unpitched(quarterLength=1))
+    part.append(m)
+    score.append(part)
+    path = tmp_path / 'percussion.musicxml'
+    score.write('musicxml', fp=path)
+    result = build_playback(path, '', 0, 999999)
+    assert result['tracks'][0]['percussion'][0]['note'] == 38
+    assert result['tracks'][0]['skipped_unpitched'] == 0

@@ -44,22 +44,25 @@ MusicXML; sin tempo se indica el valor por defecto de negra = 120. Se reproduce
 el rango escrito una vez, sin desarrollar repeticiones ni aplicar expresividad.
 Los timbres son aproximados; bombardino usa tuba y clarinetes graves usan
 clarinete. Si no se reconoce el timbre se usa piano y se indica en pantalla.
-La percusión sin altura todavía no se reproduce y se avisa si se omite.
+La percusión reconocida usa sonidos sintetizados aproximados; se avisa cuando
+una parte sin altura no se puede interpretar.
 
 El navegador necesita Internet para descargar el módulo y las muestras; la
 partitura no se envía al proveedor de sonidos. El endpoint `/playback` procesa
 temporalmente el archivo y limita la subida a 8 MB, el contenido descomprimido a
-20 MB y el pasaje a 10 000 notas.
+20 MB, el pasaje a 10 000 eventos y el conjunto a 150 000 eventos.
 
 Los pasajes críticos se pueden abrir como notación MusicXML renderizada en el
 navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
 El archivo original se conserva en el navegador solo durante la sesión de
 análisis y no se persiste en el servidor.
 
-En «Analizar partitura», «Revisar partitura completa» abre todas las voces de la
-obra cargada. Permite revisar toda la obra en páginas de cuatro compases con
-controles Anterior/Siguiente y zoom. La reproducción de audio está disponible
-en la vista de pasajes por instrumento.
+En «Analizar partitura», la partitura completa aparece directamente en un visor
+grande incrustado, con todas las voces, páginas de cuatro compases, zoom y pantalla
+completa. Incluye reproducción del conjunto, pausa, detener, posición, velocidad
+y volumen. El visor y los sonidos muestran «Cargando…» durante su preparación;
+la carga del audio se puede cancelar con Detener. El audio se programa por pequeñas
+ventanas de tiempo para evitar preparar todos los sonidos simultáneamente.
 
 La búsqueda integrada de vídeos usa YouTube Data API v3. Para activar resultados
 reproducibles dentro de la aplicación, configura `YOUTUBE_API_KEY` como variable

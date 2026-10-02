@@ -86,9 +86,9 @@ def notation_source(file: UploadFile = File(...)):
 @app.post("/playback")
 def playback(
     file: UploadFile = File(...),
-    instrument: str = Form(..., min_length=1, max_length=200),
-    first_measure: int = Form(..., ge=0),
-    last_measure: int = Form(..., ge=0),
+    instrument: str = Form("", max_length=200),
+    first_measure: int = Form(0, ge=0),
+    last_measure: int = Form(999999, ge=0),
 ):
     if last_measure < first_measure:
         raise HTTPException(status_code=400, detail="El rango de compases no es válido.")
