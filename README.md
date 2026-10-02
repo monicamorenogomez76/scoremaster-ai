@@ -95,3 +95,18 @@ PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node ba
 
 Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`.
 La descarga del visor necesita conexión a Internet.
+
+### Diseño de la interfaz
+
+La interfaz usa un logo SVG propio, una paleta azul/violeta, superficies claras,
+controles con iconos y gráficos de grado por familia sobre una escala explícita
+de 1 a 5. Los valores también aparecen como texto. Las acciones principales y
+secundarias se distinguen visualmente, el foco del teclado permanece visible y
+los controles del reproductor tienen áreas de 44 × 44 píxeles. Se respeta la
+preferencia de movimiento reducido.
+
+El diseño se orienta por [WCAG 2.2](https://www.w3.org/TR/WCAG22/) y
+[Material Design 3](https://m3.material.io/). Playwright comprueba escritorio y
+móvil, ausencia de desbordamiento horizontal, el tamaño del botón de reproducción
+y el foco al navegar con Tab. Esto no constituye una auditoría completa de
+conformidad WCAG.

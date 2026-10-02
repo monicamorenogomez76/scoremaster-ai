@@ -14,7 +14,7 @@ const upload = async name => {
 try {
   await page.goto(process.env.SCOREMASTER_URL || 'http://127.0.0.1:8005');
   await page.locator('#enter-demo').click();
-  await page.getByRole('button', { name: '02 Analizar partitura' }).click();
+  await page.locator('[data-view-target=analyze]').click();
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
   await upload('Flute');
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
@@ -25,6 +25,11 @@ try {
     return svg.width <= box.width && svg.height <= box.height;
   });
   assert.equal(fits, true, 'page must fit viewport');
+  await page.screenshot({ path: '/tmp/scoremaster-redesign-score.png', fullPage: true, animations: 'disabled' });
+  await page.locator('[data-view-target=overview]').click();
+  assert.equal(await page.locator('.family-chart').isVisible(), true);
+  await page.screenshot({ path: '/tmp/scoremaster-redesign-dashboard.png', fullPage: true, animations: 'disabled' });
+  await page.locator('[data-view-target=analyze]').click();
   await page.locator('#new-score').click();
   await page.waitForFunction(() => document.querySelector('#file').files.length === 0);
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
@@ -46,6 +51,19 @@ try {
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
   assert.equal(await page.locator('#instrument-assignment').isVisible(), false);
   assert.deepEqual(errors, []);
-  await page.screenshot({ path: '/tmp/scoremaster-workflow.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/scoremaster-workflow.png', fullPage: true, animations: 'disabled' });
   console.log('PASS: replacing file clears previous score without page errors');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await upload('Flute');
+  await page.locator('#upload-form button[type=submit]').click();
+  await page.waitForFunction(() => document.querySelector('#full-score-rendering svg') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false', { timeout: 45000 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'mobile must not overflow horizontally');
+  const size = await page.locator('#ensemble-play').boundingBox();
+  assert.ok(size.width >= 44 && size.height >= 44, 'transport has a usable touch target');
+  await page.locator('#ensemble-play').focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  assert.notEqual(await page.locator('#ensemble-play').evaluate(button => getComputedStyle(button).outlineStyle), 'none');
+  await page.screenshot({ path: '/tmp/scoremaster-redesign-mobile.png', fullPage: true, animations: 'disabled' });
+  console.log('PASS: mobile layout, touch target and keyboard focus');
 } finally { await browser.close(); }
