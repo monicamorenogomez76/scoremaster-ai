@@ -1,0 +1,985 @@
+{
+  "algorithm_version": "legacy-v1",
+  "audio": {
+    "default_tempo": true,
+    "duration": 1.0,
+    "measures": [
+      {
+        "number": 1,
+        "time": 0.0
+      }
+    ],
+    "tempo_map": [
+      {
+        "bpm": 120.0,
+        "quarter": 0.0,
+        "time": 0.0
+      }
+    ],
+    "tracks": [
+      {
+        "events": [
+          {
+            "duration": 0.5,
+            "note": 60.0,
+            "time": 0.0
+          },
+          {
+            "duration": 0.5,
+            "note": 62.0,
+            "time": 0.5
+          }
+        ],
+        "instrument": "Clarinet",
+        "percussion": [],
+        "program": null,
+        "skipped_unpitched": 0
+      }
+    ]
+  },
+  "baseline_version": "baseline-v1",
+  "cases": {
+    "Clarinet-C6-1-bars": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 0
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 0.4,
+            "dimensions": {
+              "density": 1.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 0.0,
+              "register": 0.0,
+              "tempo": 2.07
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 0
+          }
+        },
+        "critical_passages": [],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "low",
+        "overall_score": 0
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 15,
+            "priority": "high",
+            "reason": "Default rehearsal block."
+          }
+        ],
+        "total_minutes": 15
+      }
+    },
+    "Clarinet-C6-16-bars": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [
+              "SL005"
+            ],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 2
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 1.05,
+            "dimensions": {
+              "density": 1.0,
+              "endurance": 5.0,
+              "intervals": 0.0,
+              "range": 0.0,
+              "register": 0.0,
+              "tempo": 2.07
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL005"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 2
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL005"
+            ],
+            "instrument": "Clarinet",
+            "instrument_label_es": "Clarinete",
+            "measure_range": "1-16",
+            "score": 2
+          }
+        ],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "moderate",
+        "overall_score": 2
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 15,
+            "priority": "high",
+            "reason": "Default rehearsal block."
+          }
+        ],
+        "total_minutes": 15
+      }
+    },
+    "Clarinet-C6-8-bars": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [
+              "SL005"
+            ],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 2
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 1.05,
+            "dimensions": {
+              "density": 1.0,
+              "endurance": 5.0,
+              "intervals": 0.0,
+              "range": 0.0,
+              "register": 0.0,
+              "tempo": 2.07
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL005"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 2
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL005"
+            ],
+            "instrument": "Clarinet",
+            "instrument_label_es": "Clarinete",
+            "measure_range": "1-8",
+            "score": 2
+          }
+        ],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "moderate",
+        "overall_score": 2
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 15,
+            "priority": "high",
+            "reason": "Default rehearsal block."
+          }
+        ],
+        "total_minutes": 15
+      }
+    },
+    "Trumpet-C4-1-bars": {
+      "analysis": {
+        "by_family": {
+          "brass": {
+            "findings": [],
+            "grade": 1,
+            "instruments": [
+              "Trumpet"
+            ],
+            "label_es": "Viento metal",
+            "score": 0
+          }
+        },
+        "by_instrument": {
+          "Trumpet": {
+            "difficulty_score": 0.52,
+            "dimensions": {
+              "density": 1.14,
+              "endurance": 0.71,
+              "intervals": 0.0,
+              "range": 0.0,
+              "register": 0.0,
+              "tempo": 2.07
+            },
+            "family": "brass",
+            "family_label_es": "Viento metal",
+            "findings": [],
+            "grade": 1,
+            "instrument_label_es": "Trompeta en Si bemol",
+            "score": 0
+          }
+        },
+        "critical_passages": [],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "low",
+        "overall_score": 0
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Trumpet",
+            "measure_range": "1",
+            "minutes": 15,
+            "priority": "high",
+            "reason": "Default rehearsal block."
+          }
+        ],
+        "total_minutes": 15
+      }
+    },
+    "Trumpet-C4-16-bars": {
+      "analysis": {
+        "by_family": {
+          "brass": {
+            "findings": [
+              "SL005"
+            ],
+            "grade": 1,
+            "instruments": [
+              "Trumpet"
+            ],
+            "label_es": "Viento metal",
+            "score": 2
+          }
+        },
+        "by_instrument": {
+          "Trumpet": {
+            "difficulty_score": 1.38,
+            "dimensions": {
+              "density": 1.14,
+              "endurance": 5.0,
+              "intervals": 0.0,
+              "range": 0.0,
+              "register": 0.0,
+              "tempo": 2.07
+            },
+            "family": "brass",
+            "family_label_es": "Viento metal",
+            "findings": [
+              "SL005"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Trompeta en Si bemol",
+            "score": 2
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "brass",
+            "family_label_es": "Viento metal",
+            "findings": [
+              "SL005"
+            ],
+            "instrument": "Trumpet",
+            "instrument_label_es": "Trompeta en Si bemol",
+            "measure_range": "1-16",
+            "score": 2
+          }
+        ],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "moderate",
+        "overall_score": 2
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Trumpet",
+            "measure_range": "1",
+            "minutes": 15,
+            "priority": "high",
+            "reason": "Default rehearsal block."
+          }
+        ],
+        "total_minutes": 15
+      }
+    },
+    "Trumpet-C4-8-bars": {
+      "analysis": {
+        "by_family": {
+          "brass": {
+            "findings": [
+              "SL005"
+            ],
+            "grade": 1,
+            "instruments": [
+              "Trumpet"
+            ],
+            "label_es": "Viento metal",
+            "score": 2
+          }
+        },
+        "by_instrument": {
+          "Trumpet": {
+            "difficulty_score": 1.38,
+            "dimensions": {
+              "density": 1.14,
+              "endurance": 5.0,
+              "intervals": 0.0,
+              "range": 0.0,
+              "register": 0.0,
+              "tempo": 2.07
+            },
+            "family": "brass",
+            "family_label_es": "Viento metal",
+            "findings": [
+              "SL005"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Trompeta en Si bemol",
+            "score": 2
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "brass",
+            "family_label_es": "Viento metal",
+            "findings": [
+              "SL005"
+            ],
+            "instrument": "Trumpet",
+            "instrument_label_es": "Trompeta en Si bemol",
+            "measure_range": "1-8",
+            "score": 2
+          }
+        ],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "moderate",
+        "overall_score": 2
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Trumpet",
+            "measure_range": "1",
+            "minutes": 15,
+            "priority": "high",
+            "reason": "Default rehearsal block."
+          }
+        ],
+        "total_minutes": 15
+      }
+    },
+    "fast-elsewhere": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 0
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 0.54,
+            "dimensions": {
+              "density": 1.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 0.0,
+              "register": 0.0,
+              "tempo": 5.0
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 0
+          }
+        },
+        "critical_passages": [],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "low",
+        "overall_score": 0
+      }
+    },
+    "high_density.musicxml": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [
+              "SL003"
+            ],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 2
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 1.15,
+            "dimensions": {
+              "density": 4.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 0.97,
+              "register": 0.0
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL003"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 2
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL003"
+            ],
+            "instrument": "Clarinet",
+            "instrument_label_es": "Clarinete",
+            "measure_range": "1",
+            "score": 2
+          }
+        ],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "moderate",
+        "overall_score": 2
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 10,
+            "priority": "high",
+            "reason": "High rhythmic density in the selected passage."
+          }
+        ],
+        "total_minutes": 15
+      },
+      "sha256": "819dfa595f768ddcfd2506bd5d21b0b01501a8afe8152eb258e22b156b25185a"
+    },
+    "high_register.musicxml": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [
+              "SL002",
+              "SL003",
+              "SL004"
+            ],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 7
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 1.35,
+            "dimensions": {
+              "density": 4.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 1.94,
+              "register": 0.0
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL002",
+              "SL003",
+              "SL004"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 7
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL002",
+              "SL003",
+              "SL004"
+            ],
+            "instrument": "Clarinet",
+            "instrument_label_es": "Clarinete",
+            "measure_range": "1",
+            "score": 7
+          }
+        ],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "high",
+        "overall_score": 7
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 10,
+            "priority": "high",
+            "reason": "High rhythmic density in the selected passage."
+          }
+        ],
+        "total_minutes": 15
+      },
+      "sha256": "43b9a9214f43ac9706b618c38aa8c3f24dfba9b4ed9f4bfb1f9e6b5d0e34d34c"
+    },
+    "large_intervals.musicxml": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [
+              "SL002",
+              "SL003",
+              "SL004"
+            ],
+            "grade": 2,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 7
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 1.5,
+            "dimensions": {
+              "density": 4.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 2.64,
+              "register": 0.0
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL002",
+              "SL003",
+              "SL004"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 7
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL002",
+              "SL003",
+              "SL004"
+            ],
+            "instrument": "Clarinet",
+            "instrument_label_es": "Clarinete",
+            "measure_range": "1",
+            "score": 7
+          }
+        ],
+        "grade": 2,
+        "grade_method": "family_percentile_80",
+        "level": "high",
+        "overall_score": 7
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 10,
+            "priority": "high",
+            "reason": "High rhythmic density in the selected passage."
+          }
+        ],
+        "total_minutes": 15
+      },
+      "sha256": "97ae3502dfacad783d2398c8eaa00a0163c92dd8f3e74098151ecf0b15bd0a3b"
+    },
+    "measure_with_rest.musicxml": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 0
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 0.43,
+            "dimensions": {
+              "density": 1.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 0.56,
+              "register": 0.0
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 0
+          }
+        },
+        "critical_passages": [],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "low",
+        "overall_score": 0
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 15,
+            "priority": "high",
+            "reason": "Default rehearsal block."
+          }
+        ],
+        "total_minutes": 15
+      },
+      "sha256": "b1b674f0e9605c184ad5e598e251c119f284a9296d1b4102333b6951781822ae"
+    },
+    "minimal.musicxml": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 0
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 0.58,
+            "dimensions": {
+              "density": 2.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 0.28,
+              "register": 0.0
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 0
+          }
+        },
+        "critical_passages": [],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "low",
+        "overall_score": 0
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 15,
+            "priority": "high",
+            "reason": "Default rehearsal block."
+          }
+        ],
+        "total_minutes": 15
+      },
+      "sha256": "286851fd556f77cfe4c808ab08bd3836354b4b864daa76fe0dbb95f03da60764"
+    },
+    "stepwise-sixteenths-160": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [
+              "SL003"
+            ],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 2
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 1.48,
+            "dimensions": {
+              "density": 5.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 0.69,
+              "register": 0.0,
+              "tempo": 5.0
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL003"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 2
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL003"
+            ],
+            "instrument": "Clarinet",
+            "instrument_label_es": "Clarinete",
+            "measure_range": "1",
+            "score": 2
+          }
+        ],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "moderate",
+        "overall_score": 2
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 10,
+            "priority": "high",
+            "reason": "High rhythmic density in the selected passage."
+          }
+        ],
+        "total_minutes": 15
+      }
+    },
+    "stepwise-sixteenths-60": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [
+              "SL003"
+            ],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 2
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 1.34,
+            "dimensions": {
+              "density": 5.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 0.69,
+              "register": 0.0,
+              "tempo": 2.07
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL003"
+            ],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 2
+          }
+        },
+        "critical_passages": [
+          {
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [
+              "SL003"
+            ],
+            "instrument": "Clarinet",
+            "instrument_label_es": "Clarinete",
+            "measure_range": "1",
+            "score": 2
+          }
+        ],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "moderate",
+        "overall_score": 2
+      },
+      "rehearsal": {
+        "segments": [
+          {
+            "instrument": "Clarinet",
+            "measure_range": "1",
+            "minutes": 10,
+            "priority": "high",
+            "reason": "High rhythmic density in the selected passage."
+          }
+        ],
+        "total_minutes": 15
+      }
+    },
+    "sustained-slow": {
+      "analysis": {
+        "by_family": {
+          "woodwinds": {
+            "findings": [],
+            "grade": 1,
+            "instruments": [
+              "Clarinet"
+            ],
+            "label_es": "Viento madera",
+            "score": 0
+          }
+        },
+        "by_instrument": {
+          "Clarinet": {
+            "difficulty_score": 0.4,
+            "dimensions": {
+              "density": 1.0,
+              "endurance": 0.62,
+              "intervals": 0.0,
+              "range": 0.0,
+              "register": 0.0,
+              "tempo": 2.07
+            },
+            "family": "woodwinds",
+            "family_label_es": "Viento madera",
+            "findings": [],
+            "grade": 1,
+            "instrument_label_es": "Clarinete",
+            "score": 0
+          }
+        },
+        "critical_passages": [],
+        "grade": 1,
+        "grade_method": "family_percentile_80",
+        "level": "low",
+        "overall_score": 0
+      }
+    }
+  },
+  "grade_scale": "1-5",
+  "human_labels": null,
+  "instruments": {
+    "Bass Clarinet": {
+      "canonical": "Bass Clarinet",
+      "family": "woodwinds"
+    },
+    "Clarinete": {
+      "canonical": "Clarinete",
+      "family": "woodwinds"
+    },
+    "Clarinete bajo": {
+      "canonical": "Clarinete bajo",
+      "family": "woodwinds"
+    },
+    "Clarinetto": {
+      "canonical": "Clarinetto",
+      "family": "woodwinds"
+    },
+    "Corno inglés": {
+      "canonical": "Corno inglés",
+      "family": "other"
+    },
+    "English Horn": {
+      "canonical": "English Horn",
+      "family": "woodwinds"
+    },
+    "Horn in F": {
+      "canonical": "Horn in F",
+      "family": "brass"
+    },
+    "Saxofón alto": {
+      "canonical": "Saxofón alto",
+      "family": "woodwinds"
+    },
+    "Trompa": {
+      "canonical": "Trompa",
+      "family": "other"
+    },
+    "Voice": {
+      "canonical": "Voice",
+      "family": "other"
+    }
+  },
+  "technical_index_scale": "0-5"
+}
