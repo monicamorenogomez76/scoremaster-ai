@@ -51,6 +51,9 @@ def capture():
     instruments = {name: {'canonical': canonical_instrument_name(name),
                           'family': classify_instrument_family(name)} for name in names}
     audio = build_playback(ROOT / 'test-scores' / 'minimal.musicxml', '', 0, 999999)
+    # The legacy capture records the original track contract; identity fields came later.
+    audio['tracks'] = [{key: value for key, value in track.items() if key not in ('canonical_id', 'sound')}
+                       for track in audio['tracks']]
     return {'baseline_version': 'baseline-v1', 'algorithm_version': 'legacy-v1',
             'grade_scale': '1-5', 'technical_index_scale': '0-5',
             'human_labels': None, 'cases': cases, 'instruments': instruments, 'audio': audio}

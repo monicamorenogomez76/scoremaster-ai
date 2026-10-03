@@ -61,7 +61,7 @@ def read_part_metadata(content: bytes) -> dict[str, PartMetadata]:
     return metadata
 
 
-def _metadata_for(parsed_part, declared: dict[str, PartMetadata]) -> PartMetadata:
+def metadata_for_part(parsed_part, declared: dict[str, PartMetadata]) -> PartMetadata:
     """music21 keeps the MusicXML part id in `groups` ("P1"), or "P1-Staff2" for each staff of a
     multi-staff part; staves of one part share its metadata."""
     for candidate in (*getattr(parsed_part, "groups", ()), parsed_part.id):
@@ -155,7 +155,7 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
                     )
             measures.append(ScoreMeasure(number=measure_number, notes=tuple(notes)))
 
-        parts.append(ScorePart(name=part_name, measures=tuple(measures), metadata=_metadata_for(parsed_part, declared_metadata)))
+        parts.append(ScorePart(name=part_name, measures=tuple(measures), metadata=metadata_for_part(parsed_part, declared_metadata)))
 
     return Score(
         title=title or "Untitled score",

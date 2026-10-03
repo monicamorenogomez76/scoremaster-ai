@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v2",
+ "version": "instrument-catalog-v3",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -16,7 +16,8 @@
     "ottavino",
     "picc",
     "picc fl"
-   ]
+   ],
+   "sound": "piccolo"
   },
   {
    "id": "flute",
@@ -32,7 +33,8 @@
     "flauto",
     "fl",
     "c flute"
-   ]
+   ],
+   "sound": "flute"
   },
   {
    "id": "flute.alto",
@@ -46,7 +48,8 @@
     "alto flute",
     "flauta alto",
     "flauto contralto"
-   ]
+   ],
+   "sound": "flute"
   },
   {
    "id": "oboe",
@@ -60,7 +63,8 @@
     "oboe",
     "ob",
     "hautbois"
-   ]
+   ],
+   "sound": "oboe"
   },
   {
    "id": "english_horn",
@@ -77,7 +81,8 @@
     "corno inglese",
     "eng hn",
     "e hn"
-   ]
+   ],
+   "sound": "english_horn"
   },
   {
    "id": "bassoon",
@@ -93,7 +98,8 @@
     "fagotto",
     "bsn",
     "bn"
-   ]
+   ],
+   "sound": "bassoon"
   },
   {
    "id": "contrabassoon",
@@ -109,7 +115,8 @@
     "contrafagot",
     "contrafagotto",
     "cbsn"
-   ]
+   ],
+   "sound": "bassoon"
   },
   {
    "id": "clarinet.eb",
@@ -129,7 +136,8 @@
     "clarinetto in mib",
     "clarinetto piccolo",
     "eb cl"
-   ]
+   ],
+   "sound": "clarinet"
   },
   {
    "id": "clarinet.bb",
@@ -153,7 +161,8 @@
     "cl",
     "bb cl",
     "clar"
-   ]
+   ],
+   "sound": "clarinet"
   },
   {
    "id": "clarinet.a",
@@ -168,7 +177,8 @@
     "a clarinet",
     "clarinete en la",
     "clarinetto in la"
-   ]
+   ],
+   "sound": "clarinet"
   },
   {
    "id": "clarinet.alto",
@@ -184,7 +194,8 @@
     "clarinete alto",
     "clarinetto contralto",
     "alto cl"
-   ]
+   ],
+   "sound": "clarinet"
   },
   {
    "id": "clarinet.bass",
@@ -202,7 +213,8 @@
     "b cl",
     "bass cl",
     "bcl"
-   ]
+   ],
+   "sound": "clarinet"
   },
   {
    "id": "clarinet.contrabass",
@@ -217,7 +229,8 @@
     "bb contrabass clarinet",
     "clarinete contrabajo",
     "clarinetto contrabbasso"
-   ]
+   ],
+   "sound": "clarinet"
   },
   {
    "id": "saxophone.soprano",
@@ -234,7 +247,8 @@
     "saxo soprano",
     "sassofono soprano",
     "s sax"
-   ]
+   ],
+   "sound": "soprano_sax"
   },
   {
    "id": "saxophone.alto",
@@ -253,7 +267,8 @@
     "saxo alto",
     "sassofono contralto",
     "a sax"
-   ]
+   ],
+   "sound": "alto_sax"
   },
   {
    "id": "saxophone.tenor",
@@ -271,7 +286,8 @@
     "saxo tenor",
     "sassofono tenore",
     "t sax"
-   ]
+   ],
+   "sound": "tenor_sax"
   },
   {
    "id": "saxophone.baritone",
@@ -293,7 +309,8 @@
     "b sax",
     "baritone",
     "baritono"
-   ]
+   ],
+   "sound": "baritone_sax"
   },
   {
    "id": "horn.f",
@@ -315,7 +332,8 @@
     "cor",
     "hn",
     "hrn"
-   ]
+   ],
+   "sound": "french_horn"
   },
   {
    "id": "trumpet.bb",
@@ -336,7 +354,8 @@
     "tromba in sib",
     "tpt",
     "trp"
-   ]
+   ],
+   "sound": "trumpet"
   },
   {
    "id": "trumpet.c",
@@ -351,7 +370,8 @@
     "trumpet in c",
     "trompeta en do",
     "tromba in do"
-   ]
+   ],
+   "sound": "trumpet"
   },
   {
    "id": "cornet.bb",
@@ -368,7 +388,8 @@
     "corneta",
     "cornetta",
     "cnt"
-   ]
+   ],
+   "sound": "trumpet"
   },
   {
    "id": "flugelhorn.bb",
@@ -385,7 +406,8 @@
     "fliscorno",
     "flicorno",
     "flghn"
-   ]
+   ],
+   "sound": "trumpet"
   },
   {
    "id": "trombone.tenor",
@@ -403,7 +425,8 @@
     "trombone tenore",
     "tbn",
     "trb"
-   ]
+   ],
+   "sound": "trombone"
   },
   {
    "id": "trombone.bass",
@@ -419,7 +442,8 @@
     "trombone basso",
     "b tbn",
     "bass tbn"
-   ]
+   ],
+   "sound": "trombone"
   },
   {
    "id": "euphonium",
@@ -435,7 +459,8 @@
     "eufonio",
     "flicorno basso",
     "euph"
-   ]
+   ],
+   "sound": "tuba"
   },
   {
    "id": "baritone_horn",
@@ -448,7 +473,8 @@
    "aliases": [
     "baritone horn",
     "flicorno baritono"
-   ]
+   ],
+   "sound": "tuba"
   },
   {
    "id": "tuba",
@@ -462,7 +488,8 @@
     "tuba",
     "bass tuba",
     "tba"
-   ]
+   ],
+   "sound": "tuba"
   },
   {
    "id": "sousaphone",
@@ -475,7 +502,8 @@
    "aliases": [
     "sousaphone",
     "sousafono"
-   ]
+   ],
+   "sound": "tuba"
   },
   {
    "id": "double_bass",
@@ -492,7 +520,8 @@
     "contrabajo",
     "contrabbasso",
     "cb"
-   ]
+   ],
+   "sound": "contrabass"
   },
   {
    "id": "electric_bass",
@@ -508,7 +537,8 @@
     "bajo electrico",
     "5 str electric bass",
     "el bass"
-   ]
+   ],
+   "sound": "electric_bass_finger"
   },
   {
    "id": "guitar.electric",
@@ -524,7 +554,8 @@
     "chitarra elettrica",
     "e gtr",
     "el gtr"
-   ]
+   ],
+   "sound": "electric_guitar_clean"
   },
   {
    "id": "guitar.acoustic",
@@ -539,7 +570,8 @@
     "guitarra acustica",
     "chitarra acustica",
     "ac gtr"
-   ]
+   ],
+   "sound": "acoustic_guitar_nylon"
   },
   {
    "id": "cello",
@@ -554,7 +586,8 @@
     "violoncello",
     "violonchelo",
     "vc"
-   ]
+   ],
+   "sound": "cello"
   },
   {
    "id": "piano",
@@ -568,7 +601,8 @@
     "piano",
     "pianoforte",
     "pno"
-   ]
+   ],
+   "sound": "acoustic_grand_piano"
   },
   {
    "id": "harp",
@@ -581,7 +615,8 @@
    "aliases": [
     "harp",
     "arpa"
-   ]
+   ],
+   "sound": "orchestral_harp"
   },
   {
    "id": "timpani",
@@ -596,7 +631,8 @@
     "timbales",
     "timpano",
     "timp"
-   ]
+   ],
+   "sound": "timpani"
   },
   {
    "id": "snare_drum",
@@ -614,7 +650,8 @@
     "caja",
     "tamburo",
     "s d"
-   ]
+   ],
+   "sound": null
   },
   {
    "id": "bass_drum",
@@ -630,7 +667,8 @@
     "bombo",
     "gran cassa",
     "b d"
-   ]
+   ],
+   "sound": null
   },
   {
    "id": "crash_cymbals",
@@ -647,7 +685,8 @@
     "cymbals",
     "platos",
     "piatti"
-   ]
+   ],
+   "sound": null
   },
   {
    "id": "suspended_cymbal",
@@ -662,7 +701,8 @@
     "sus cym",
     "plato suspendido",
     "piatto sospeso"
-   ]
+   ],
+   "sound": null
   },
   {
    "id": "drum_set",
@@ -678,7 +718,8 @@
     "drum kit",
     "drums",
     "bateria"
-   ]
+   ],
+   "sound": null
   },
   {
    "id": "tambourine",
@@ -693,7 +734,8 @@
     "pandereta",
     "tamburello",
     "tamb"
-   ]
+   ],
+   "sound": null
   },
   {
    "id": "triangle",
@@ -708,7 +750,8 @@
     "triangulo",
     "triangolo",
     "trgl"
-   ]
+   ],
+   "sound": null
   },
   {
    "id": "glockenspiel",
@@ -725,7 +768,8 @@
     "bell lyra",
     "lira",
     "glock"
-   ]
+   ],
+   "sound": "glockenspiel"
   },
   {
    "id": "xylophone",
@@ -739,7 +783,8 @@
     "xylophone",
     "xilofono",
     "xylo"
-   ]
+   ],
+   "sound": "xylophone"
   },
   {
    "id": "marimba",
@@ -752,7 +797,8 @@
    "aliases": [
     "marimba",
     "mrb"
-   ]
+   ],
+   "sound": "marimba"
   },
   {
    "id": "vibraphone",
@@ -767,7 +813,8 @@
     "vibrafono",
     "vibes",
     "vib"
-   ]
+   ],
+   "sound": "vibraphone"
   },
   {
    "id": "chimes",
@@ -782,7 +829,9 @@
     "tubular bells",
     "campanas tubulares",
     "campane tubolari"
-   ]
+   ],
+   "sound": "tubular_bells"
   }
- ]
+ ],
+ "sound_note": "sound: FluidR3_GM soundfont used for playback; unpitched percussion has none because the player synthesises it"
 }

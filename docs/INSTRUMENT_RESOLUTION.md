@@ -45,8 +45,11 @@ dificultad y el audio todavía usan el nombre de la parte: es la segunda parte d
 La dificultad por instrumento ya usa la identidad resuelta: la familia es la sección del
 catálogo y el perfil es el existente para esa identidad (`PROFILE_BY_CANONICAL_ID`), sin
 perfiles nuevos. Las partes sin identidad mantienen la clasificación anterior por nombre,
-y el baseline legacy sigue idéntico. BandFit (agrupar por identidad cambia la plantilla de
-la interfaz) y el timbre del audio quedan para PR posteriores.
+y el baseline legacy sigue idéntico. El audio también la usa: cada identidad del catálogo declara su `sound` General MIDI
+(`instrument-catalog-v3`; la percusión sin altura no tiene, la sintetiza el reproductor),
+`/playback` devuelve `canonical_id` y `sound` por pista y el reproductor prioriza `sound`
+sobre el programa MIDI y el nombre. BandFit (agrupar por identidad cambia la plantilla de
+la interfaz) queda para el paso 09.
 Con las partituras locales: 75 partes `resolved`, 2 `review`, 35 `unknown` (partes
 «Voice») y ningún conflicto ni clasificación incorrecta.
 
