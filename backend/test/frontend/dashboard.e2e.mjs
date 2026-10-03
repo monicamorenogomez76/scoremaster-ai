@@ -19,6 +19,26 @@ try {
   assert.equal(await page.locator('[data-view-target=overview]').getAttribute('aria-current'), 'page');
   console.log('PASS: demo session and navigation state');
 
+  const sharedNames = await page.evaluate(() => {
+    const part = (id, step) => `<part id="${id}"><measure number="1"><attributes><divisions>1</divisions></attributes><note><pitch><step>${step}</step><octave>4</octave></pitch><duration>4</duration></note></measure></part>`;
+    const xml = '<score-partwise><part-list>' + ['P1', 'P2', 'P3'].map(id => `<score-part id="${id}"><part-name>Voice</part-name></score-part>`).join('') +
+      '</part-list>' + part('P1', 'C') + part('P2', 'D') + part('P3', 'E') + '</score-partwise>';
+    const result = new DOMParser().parseFromString(window.scoremasterWorkspace.filterPassage(xml, 'Voice 3', '1'), 'application/xml');
+    return { declared: [...result.querySelectorAll('score-part')].map(node => node.id), parts: [...result.querySelectorAll('part')].map(node => node.id),
+      step: result.querySelector('step').textContent };
+  });
+  assert.deepEqual(sharedNames, { declared: ['P3'], parts: ['P3'], step: 'E' }, 'a numbered part keeps only that part and its notes');
+  const literalNames = await page.evaluate(() => {
+    const part = (id, step) => `<part id="${id}"><measure number="1"><attributes><divisions>1</divisions></attributes><note><pitch><step>${step}</step><octave>4</octave></pitch><duration>4</duration></note></measure></part>`;
+    const xml = '<score-partwise><part-list><score-part id="P1"><part-name>B♭ Cornet 1</part-name></score-part>' +
+      '<score-part id="P2"><part-name>B♭ Cornet 2</part-name></score-part><score-part id="P3"><part-name>Trombone 3 &amp;\nBass Trombone</part-name></score-part>' +
+      '</part-list>' + part('P1', 'C') + part('P2', 'D') + part('P3', 'E') + '</score-partwise>';
+    const pick = name => new DOMParser().parseFromString(window.scoremasterWorkspace.filterPassage(xml, name, '1'), 'application/xml').querySelector('part').id;
+    return [pick('B♭ Cornet 2'), pick('Trombone 3 & Bass Trombone')];
+  });
+  assert.deepEqual(literalNames, ['P2', 'P3'], 'numbers and line breaks inside part names still find the part');
+  console.log('PASS: passages of parts sharing a name contain only the selected part');
+
   await page.locator('[data-view-target=analyze]').click();
   await page.locator('#file').setInputFiles({ name: 'high_density.musicxml', mimeType: 'application/xml', buffer: fixture });
   await waitIdle();

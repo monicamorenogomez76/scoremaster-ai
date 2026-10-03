@@ -7,11 +7,11 @@ export function parseMeasureRange(value) {
   return [values[0], values[1] || values[0]];
 }
 
+// Part names are compared as the analysis reports them: whitespace and line breaks collapsed.
+const normalizeName = text => text.replace(/\s+/g, ' ').trim();
+
 export function filterMusicXmlPassage(source, instrumentName, measureRange) {
   const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
-  const partMatch = instrumentName && instrumentName.match(/^(.*)\s+(\d+)$/);
-  const sourceInstrumentName = partMatch ? partMatch[1] : instrumentName;
-  let selectedStaffNumber = partMatch ? Number(partMatch[2]) : null;
   const documentXml = new DOMParser().parseFromString(source, 'application/xml');
   if (documentXml.querySelector('parsererror')) {
     throw new Error('No se pudo interpretar el MusicXML original.');
@@ -21,15 +21,26 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
   const directChild = (parent, name) => Array.from(parent.children)
     .find((element) => element.localName === name);
   const scoreParts = descendants(documentXml, 'score-part');
-  const matchingParts = instrumentName === null ? scoreParts : scoreParts.filter((part) => {
+  const named = (target) => scoreParts.filter((part) => {
     const name = directChild(part, 'part-name');
-    return name && name.textContent.trim() === sourceInstrumentName;
+    return name && normalizeName(name.textContent) === target;
   });
+  let matchingParts = scoreParts, selectedStaffNumber = null;
+  if (instrumentName !== null) {
+    // A part literally named "B♭ Cornet 2" wins; otherwise the trailing number selects
+    // a staff of a multi-staff part, or one of several parts sharing a name.
+    const exact = named(normalizeName(instrumentName));
+    const partMatch = normalizeName(instrumentName).match(/^(.*)\s+(\d+)$/);
+    if (exact.length === 1 || !partMatch) {
+      matchingParts = exact;
+    } else {
+      matchingParts = named(partMatch[1]);
+      selectedStaffNumber = Number(partMatch[2]);
+    }
+  }
   if (matchingParts.length > 1 && selectedStaffNumber) {
     const selectedPart = matchingParts[selectedStaffNumber - 1];
-    matchingParts.forEach((part) => {
-      if (part !== selectedPart) part.parentNode.removeChild(part);
-    });
+    matchingParts = selectedPart ? [selectedPart] : [];
     selectedStaffNumber = null;
   }
   const selectedIds = new Set(matchingParts.map((part) => part.getAttribute('id')));

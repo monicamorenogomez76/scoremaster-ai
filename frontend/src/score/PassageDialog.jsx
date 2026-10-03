@@ -70,7 +70,9 @@ export function PassageDialog({ ref, session }) {
       const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
       const state = { instrument, firstMeasure, lastMeasure, zoom: 1 };
       passage.current = state;
-      show({ title: displayInstrumentName(instrument) + ' · compases ' + measureRange });
+      // Never show the previous passage while the new one loads.
+      container.current.replaceChildren();
+      show({ title: displayInstrumentName(instrument) + ' · compases ' + measureRange, status: 'Cargando el pasaje completo…', range: '' });
       if (!dialog.current.open) dialog.current.showModal();
       try {
         state.source = await session.loadSource();

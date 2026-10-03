@@ -7,7 +7,9 @@ export function createScoreSession(request = (...args) => fetch(...args)) {
     // Changes whenever the selected score changes, so late results can be discarded.
     getVersion: () => version,
     setFile(next, knownSource = null) {
-      file = next; source = knownSource ? Promise.resolve(knownSource) : null; version++;
+      if (knownSource) source = Promise.resolve(knownSource);
+      else if (next !== file) source = null;
+      file = next; version++;
     },
     clear() { file = null; source = null; version++; },
     loadSource() {

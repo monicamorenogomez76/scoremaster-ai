@@ -40,6 +40,9 @@ test('score source is fetched once per file and retried after a failure', async 
   assert.equal(await session.loadSource(), '<score/>');
   assert.equal(await session.loadSource(), '<score/>');
   assert.equal(calls.length, 2);
+  session.setFile(session.getFile());
+  assert.equal(await session.loadSource(), '<score/>');
+  assert.equal(calls.length, 2, 'analysing the same file reuses its source');
   session.setFile({ name: 'b.musicxml' }, '<known/>');
   assert.equal(await session.loadSource(), '<known/>');
   assert.equal(calls.length, 2, 'a locally mapped score is not downloaded again');
