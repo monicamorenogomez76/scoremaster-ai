@@ -124,3 +124,6 @@ feedback y revisión LLM todavía no están implementados en esta entrega docume
 
 El [baseline reproducible](evaluation/README.md) captura el comportamiento legacy
 antes de cambiar sus reglas: `python -m evaluation.baseline`.
+
+El [arranque de PostgreSQL](docs/POSTGRESQL.md) requiere `.env` y conserva los
+datos en un volumen. En esta entrega todavía no se guardan análisis en la base.
