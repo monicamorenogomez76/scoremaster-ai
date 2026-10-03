@@ -5,6 +5,7 @@ let pendingRequest;
 const wholeScoreCache = new WeakMap();
 let generation = 0;
 let library;
+const SMPLR_URL = 'https://unpkg.com/smplr@1.1.0/dist/index.mjs';
 
 const programs = {
   0: 'acoustic_grand_piano', 9: 'glockenspiel', 11: 'vibraphone',
@@ -109,7 +110,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
     throw new Error('La partitura no contiene notas reproducibles.');
   }
   onStatus('Cargando sonidos de los instrumentos… La primera carga puede tardar.');
-  library ||= import('https://unpkg.com/smplr@1.1.0/dist/index.mjs').catch((error) => { library = null; throw error; });
+  library ||= import(/* @vite-ignore */ SMPLR_URL).catch((error) => { library = null; throw error; });
   const { Soundfont } = await library;
   if (token !== generation) return null;
   const master = ctx.createGain();

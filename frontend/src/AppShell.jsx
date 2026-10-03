@@ -1,9 +1,10 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { BandView } from './BandView.jsx';
 import { DifficultyView } from './DifficultyView.jsx';
 import { OverviewView } from './OverviewView.jsx';
 import { RehearsalView } from './RehearsalView.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
+import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
 
 const views = [
@@ -15,29 +16,7 @@ const views = [
   ['videos', 'Vídeos', 'M4 5h16v14H4zM10 9l5 3-5 3z'],
 ];
 
-// Moves a node owned by the legacy adapter into the React tree; React never renders its children.
-function LegacyNode({ id }) {
-  const host = useRef(null);
-  useLayoutEffect(() => {
-    const node = document.getElementById(id), home = node.parentNode;
-    host.current.append(node);
-    return () => home.append(node);
-  }, [id]);
-  return <div ref={host} />;
-}
-
-// Video search stays in the legacy adapter until the viewer migration.
-function VideoSearch({ workspace, title, composer }) {
-  const host = useRef(null);
-  useEffect(() => {
-    const container = host.current;
-    workspace.renderVideos(container, title, composer);
-    return () => container.replaceChildren();
-  }, [workspace, title, composer]);
-  return <div ref={host} />;
-}
-
-export function AppShell({ hidden, workspace, view, onNavigate, onSignOut, upload, analysis, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate }) {
+export function AppShell({ hidden, view, onNavigate, onSignOut, upload, analysis, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onOpenPassage, scoreViewer }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = analysis?.data;
   const go = name => { setMenuOpen(false); onNavigate(name); };
@@ -71,10 +50,10 @@ export function AppShell({ hidden, workspace, view, onNavigate, onSignOut, uploa
         <View name="analyze" active={view} eyebrow="ScoreLint" title="Analizar partitura"
           description="Carga MusicXML para calcular la dificultad y localizar pasajes críticos.">
           <div id="upload-root" className="surface"><UploadWorkspace upload={upload} /></div>
-          <LegacyNode id="embedded-score" />
+          {scoreViewer}
         </View>
 
-        <DifficultyView key={analysis?.revision ?? 0} active={view} data={data} onOpenPassage={workspace.openPassage} />
+        <DifficultyView key={analysis?.revision ?? 0} active={view} data={data} onOpenPassage={onOpenPassage} />
         <BandView active={view} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onRecalculate} busy={busy} />
         <RehearsalView active={view} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} />
 
@@ -84,7 +63,7 @@ export function AppShell({ hidden, workspace, view, onNavigate, onSignOut, uploa
             ? <div id="videos-content" className="view-content">
                 <section className="result-section result-section--wide">
                   <h2>Vídeos relacionados con {data.title || 'la obra'}</h2>
-                  <VideoSearch workspace={workspace} title={data.title || ''} composer={data.composer || ''} />
+                  <VideoSearch key={analysis.fileName} title={data.title || ''} composer={data.composer || ''} fileName={analysis.fileName} />
                 </section>
               </div>
             : <div id="videos-content" className="view-content empty-workspace"><h2>Aún no hay vídeos</h2><p>Analiza una partitura para buscar grabaciones relacionadas.</p></div>}

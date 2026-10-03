@@ -1,7 +1,10 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from './AppShell.jsx';
 import { LoginScreen } from './LoginScreen.jsx';
 import { initialBandDraft, readBandProfile } from './labels.js';
+import { FullScoreViewer } from './score/FullScoreViewer.jsx';
+import { filterMusicXmlPassage } from './score/musicxml-passage.js';
+import { PassageDialog } from './score/PassageDialog.jsx';
 import { useScoreAnalysis } from './useScoreAnalysis.js';
 
 const SESSION_KEY = 'scoremaster-demo-session';
@@ -13,13 +16,39 @@ function writeDemoSession(active) {
   try { if (active) sessionStorage.setItem(SESSION_KEY, 'active'); else sessionStorage.removeItem(SESSION_KEY); } catch { /* session stays in memory */ }
 }
 
-export function App({ workspace }) {
+export function App({ session }) {
   const [signedIn, setSignedIn] = useState(readDemoSession);
   const [view, setView] = useState('overview');
   // revision changes with every successful analysis so explorers restart from the top.
   const [analysis, setAnalysis] = useState(null);
   const [bandDraft, setBandDraft] = useState({});
   const [minutes, setMinutes] = useState('60');
+  const fullScore = useRef(null), passage = useRef(null);
+
+  // Score file, notation and audio shared by the upload workflow and both viewers.
+  const workspace = useMemo(() => ({
+    getFile: session.getFile,
+    setFile: session.setFile,
+    loadSource: session.loadSource,
+    async reset() { session.clear(); fullScore.current.clear(); passage.current.stop(); },
+    async prepareAnalysis() { fullScore.current.clear(); passage.current.stop(); },
+    showScore() { fullScore.current.load(); },
+    openPassage(instrument, measureRange) { fullScore.current.stop(); return passage.current.open(instrument, measureRange); },
+  }), [session]);
+
+  // Diagnostic handle used by the browser tests to load synthetic scores and passages.
+  useEffect(() => {
+    window.scoremasterWorkspace = {
+      loadSource: workspace.loadSource,
+      setFile: workspace.setFile,
+      openPassage: workspace.openPassage,
+      getPassage: () => passage.current.getPassage(),
+      highlightPassageMeasure: measure => passage.current.highlight(measure),
+      filterPassage: filterMusicXmlPassage,
+      loadScore: () => fullScore.current.load(),
+    };
+    return () => { delete window.scoremasterWorkspace; };
+  }, [workspace]);
 
   const navigate = useCallback(name => {
     setView(name);
@@ -30,20 +59,22 @@ export function App({ workspace }) {
     getProfile: () => readBandProfile(analysis?.data.parts, bandDraft),
     onReset: () => { setAnalysis(null); setBandDraft({}); navigate('analyze'); },
     onAnalysis: (data, profile, shouldNavigate) => {
-      setAnalysis(previous => ({ data, revision: (previous?.revision || 0) + 1 }));
+      setAnalysis(previous => ({ data, fileName: session.getFile()?.name || '', revision: (previous?.revision || 0) + 1 }));
       setBandDraft(initialBandDraft(data.parts, profile));
       if (shouldNavigate) navigate('analyze');
     },
   });
-  const recalculate = () => (workspace.getFile() ? upload.recalculate() : navigate('analyze'));
+  const recalculate = () => (session.getFile() ? upload.recalculate() : navigate('analyze'));
 
   const enterDemo = () => { writeDemoSession(true); setSignedIn(true); navigate('overview'); };
   const leaveDemo = () => { writeDemoSession(false); setSignedIn(false); };
 
   return <>
     <LoginScreen hidden={signedIn} onEnter={enterDemo} />
-    <AppShell hidden={!signedIn} workspace={workspace} view={view} onNavigate={navigate} onSignOut={leaveDemo}
+    <AppShell hidden={!signedIn} view={view} onNavigate={navigate} onSignOut={leaveDemo}
       upload={upload} analysis={analysis} bandDraft={bandDraft} onBandDraftChange={setBandDraft}
-      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} />
+      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onOpenPassage={workspace.openPassage}
+      scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
+    <PassageDialog ref={passage} session={session} />
   </>;
 }

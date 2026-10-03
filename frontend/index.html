@@ -15,68 +15,6 @@
     <div id="root"></div>
     <noscript>ScoreMasterAI necesita JavaScript para analizar partituras.</noscript>
 
-    <!-- Viewer nodes owned by the legacy adapter; React moves them into the analysis view. -->
-    <div id="legacy-nodes" hidden>
-      <section id="embedded-score" hidden class="embedded-score" aria-label="Partitura completa y reproductor">
-        <h2>Partitura completa</h2>
-        <div class="ensemble-toolbar" aria-label="Reproducción de todas las voces">
-          <button id="ensemble-play" class="score-tool transport-primary" type="button" aria-label="Reproducir" title="Reproducir" disabled>▶</button>
-          <button id="ensemble-stop" class="score-tool" type="button" aria-label="Detener" title="Detener" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg></button>
-          <output id="ensemble-time">0:00 / 0:00</output>
-          <label>Velocidad <select id="ensemble-speed"><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1" selected>100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option></select></label>
-          <label>Volumen <input id="ensemble-volume" type="range" min="0" max="100" value="50" aria-label="Volumen de reproducción" /></label>
-          <button id="score-fullscreen" class="score-tool" type="button" aria-label="Pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v2H5v5H3zm11 0h7v7h-2V5h-5zM3 14h2v5h5v2H3zm16 0h2v7h-7v-2h5z"/></svg></button>
-        </div>
-        <input id="ensemble-seek" type="range" min="0" max="1" step="0.1" value="0" disabled aria-label="Posición de reproducción" />
-        <p id="ensemble-status" class="loading-status" role="status" aria-live="polite">Todas las voces · sonidos aproximados de instrumentos.</p>
-        <p id="full-score-status" class="loading-status" role="status" aria-live="polite">Sube una partitura para verla aquí.</p>
-        <div class="score-toolbar" aria-label="Navegación de la partitura completa">
-          <button id="score-prev" class="score-tool" type="button" aria-label="Página anterior" title="Página anterior" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4-8 8 8 8 2-2-6-6 6-6z"/></svg></button>
-          <span id="score-page" class="score-page-label"></span>
-          <button id="score-next" class="score-tool" type="button" aria-label="Página siguiente" title="Página siguiente" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8-2-2 6-6-6-6z"/></svg></button>
-          <button id="score-zoom-out" class="score-tool" type="button" aria-label="Reducir zoom" title="Reducir zoom">−</button>
-          <button id="score-fit" class="score-tool" type="button" title="Ajustar al ancho" aria-label="Ajustar al ancho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button><output id="score-zoom-label">Auto</output>
-          <button id="score-zoom-in" class="score-tool" type="button" aria-label="Ampliar zoom" title="Ampliar zoom">+</button>
-        </div>
-        <div id="full-score-rendering"></div>
-      </section>
-    </div>
-
-    <dialog id="notation-dialog" class="score-dialog" aria-labelledby="notation-title">
-      <div id="passage-view" class="passage-view">
-      <div class="score-dialog-head">
-        <div>
-          <h2 id="notation-title">Partitura del pasaje</h2>
-          <p id="notation-status" class="score-dialog-status">Selecciona un pasaje para abrir la partitura.</p>
-        </div>
-        <button id="notation-close" class="score-tool score-close" type="button" aria-label="Cerrar partitura" title="Cerrar partitura"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 4 6 6 6-6 2 2-6 6 6 6-2 2-6-6-6 6-2-2 6-6-6-6z"/></svg></button>
-      </div>
-      <div class="ensemble-toolbar passage-transport" role="group" aria-label="Reproducción del pasaje">
-        <button id="passage-play" class="score-tool transport-primary" type="button" aria-label="Reproducir" title="Reproducir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l13-8z"/></svg></button>
-        <button id="passage-stop" class="score-tool" type="button" aria-label="Detener" title="Detener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg></button>
-        <output id="passage-time">0:00 / 0:00</output>
-        <label>Velocidad <select id="passage-speed"><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1" selected>100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option></select></label>
-        <label>Volumen <input id="passage-volume" type="range" min="0" max="100" value="50" aria-label="Volumen del pasaje" /></label>
-        <button id="passage-fullscreen" class="score-tool" type="button" aria-label="Pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v2H5v5H3zm11 0h7v7h-2V5h-5zM3 14h2v5h5v2H3zm16 0h2v7h-7v-2h5z"/></svg></button>
-      </div>
-      <input id="passage-seek" type="range" min="0" max="1" step="0.1" value="0" disabled aria-label="Posición del pasaje" />
-      <div class="passage-progress">
-        <output id="passage-position" class="score-page-label" aria-live="polite"></output>
-        <span id="playback-status" class="loading-status" role="status" aria-live="polite"></span>
-      </div>
-      <div id="notation-score" class="score-rendering"></div>
-      <div class="score-toolbar" aria-label="Controles de partitura">
-        <button id="notation-prev" class="score-tool" type="button" aria-label="Compases anteriores">Anterior</button>
-        <span id="notation-page-label" class="score-page-label"></span>
-        <button id="notation-next" class="score-tool" type="button" aria-label="Compases siguientes">Siguiente</button>
-        <button id="notation-zoom-out" class="score-tool" type="button" aria-label="Reducir zoom" title="Reducir zoom">−</button>
-        <button id="notation-fit" class="score-tool" type="button" aria-label="Ajustar al ancho" title="Ajustar al ancho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button>
-        <output id="notation-zoom-label">100%</output>
-        <button id="notation-zoom-in" class="score-tool" type="button" aria-label="Ampliar zoom" title="Ampliar zoom">+</button>
-      </div>
-      </div>
-    </dialog>
-
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

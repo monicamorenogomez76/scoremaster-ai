@@ -1,8 +1,10 @@
-# Frontend React — migración incremental
+# Frontend React
 
 React 19.3.0 y Vite 8.3.2, con versiones exactas y `package-lock.json`. Node
-20.19+ o 22.12+; Docker construye con Node 24. React y ReactDOM se empaquetan
-localmente: no se descargan desde un CDN durante la consulta.
+20.19+ o 22.12+; Docker construye con Node 24. React, ReactDOM y el motor de
+reproducción se empaquetan localmente. El motor de notación OpenSheetMusicDisplay
+1.9.2 y las muestras smplr/FluidR3_GM se descargan de sus CDN públicos; la partitura
+nunca se envía a esos proveedores.
 
 ## Arranque
 
@@ -24,29 +26,35 @@ Docker compila el frontend en una etapa Node y copia solo el build a la etapa
 Python; no necesita Node instalado en el equipo ni en la imagen final. El contexto
 excluye dependencias locales, credenciales y partituras de prueba.
 
-## Qué está migrado
+## Estructura
 
 - `App.jsx`: sesión demo, vista activa, resultado del análisis, plantilla y duración.
   La sesión demo es una comodidad local en `sessionStorage`, no autenticación.
-- `AppShell.jsx`: barra lateral, menú móvil, cabecera y vistas.
+- `AppShell.jsx`, `View.jsx`, `LoginScreen.jsx`: barra lateral, menú móvil, cabecera y vistas.
 - `OverviewView.jsx`, `DifficultyView.jsx`, `BandView.jsx`, `RehearsalView.jsx`:
   resumen, explorador familia → instrumento → pasaje, BandFit y plan de ensayo.
-  «Actualizar análisis» y «Recalcular ensayo» recalculan sin abandonar la vista.
 - `UploadWorkspace.jsx` y `useScoreAnalysis.js`: formulario, asignaciones,
   solicitudes, cancelación y descarte de respuestas anteriores.
-- `labels.js`: textos en castellano de instrumentos, familias, findings, BandFit y
-  ensayo; funciones puras con pruebas en `backend/test/frontend/labels.test.mjs`.
+- `labels.js`: textos en castellano de instrumentos, familias, findings, BandFit y ensayo.
 - `instrument-session.js`: modifica una copia temporal del XML; conserva el archivo
   seleccionado y la instrumentación no identificada cuando no hay confirmación.
+- `score/`: visores y audio.
+  - `score-session.js`: archivo seleccionado y su MusicXML, descargado una vez por archivo.
+  - `FullScoreViewer.jsx` y `full-score-renderer.js`: partitura completa en páginas de
+    cuatro compases. React dibuja los controles; el renderer solo gestiona la notación
+    OpenSheetMusicDisplay dentro de su contenedor.
+  - `PassageDialog.jsx`: pasaje completo de un instrumento con desplazamiento interno.
+  - `useTransport.js` y `TransportBar.jsx`: ciclo de reproducción y controles comunes a
+    ambos visores. La posición y el volumen usan listeners nativos para no volver a
+    renderizar 20 veces por segundo.
+  - `playback.js`, `playback-guide.js`, `musicxml-passage.js`: motor de audio, guía de
+    compás y extracción de pasajes, sin dependencias de React.
+- `videos/`: búsqueda de vídeos a través del servidor e inserción con
+  `youtube-nocookie.com`. Solo se admiten identificadores y enlaces de YouTube válidos.
 
-`legacy-workspace.js` es el adaptador temporal para el visor completo, el diálogo
-del pasaje con su audio y la búsqueda de vídeos. Sus nodos se declaran en
-`index.html` dentro de `#legacy-nodes`; `AppShell` los mueve a la vista de análisis
-y React nunca renderiza sus hijos. El adaptador ya no modifica vistas de React.
-
-Queda una PR: visores, audio y vídeos. No se considera terminado el frontend React
-hasta eliminar el adaptador. Las reglas del backend, PostgreSQL y el renderer de
-audio mantienen su implementación actual.
+`window.scoremasterWorkspace` es un acceso de diagnóstico para las pruebas de
+navegador: permite cargar partituras y pasajes sintéticos. No amplía permisos: solo
+actúa sobre la sesión local del navegador.
 
 ## Verificación
 
