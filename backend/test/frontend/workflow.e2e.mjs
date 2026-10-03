@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch();
@@ -66,4 +67,26 @@ try {
   assert.notEqual(await page.locator('#ensemble-play').evaluate(button => getComputedStyle(button).outlineStyle), 'none');
   await page.screenshot({ path: '/tmp/scoremaster-redesign-mobile.png', fullPage: true, animations: 'disabled' });
   console.log('PASS: mobile layout, touch target and keyboard focus');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.locator('#file').setInputFiles({ name: 'high_density.musicxml', mimeType: 'application/xml', buffer: readFileSync(new URL('../../../test-scores/high_density.musicxml', import.meta.url)) });
+  await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
+  await page.locator('#upload-form button[type=submit]').click();
+  await page.waitForFunction(() => document.querySelector('#full-score-rendering svg') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false');
+  await page.locator('[data-view-target=difficulty]').click();
+  await page.locator('#difficulty-content .tree-node').first().click();
+  await page.locator('#difficulty-content .tree-node').first().click();
+  assert.equal(await page.getByRole('button', { name: 'Escuchar', exact: true }).count(), 0);
+  assert.ok(await page.getByRole('button', { name: 'Ver pasaje', exact: true }).count() > 0);
+  let autoplayRequests = 0;
+  page.on('request', request => { if (request.url().endsWith('/playback')) autoplayRequests++; });
+  await page.getByRole('button', { name: 'Ver pasaje', exact: true }).first().click();
+  await page.waitForFunction(() => document.querySelector('#notation-score svg'));
+  assert.equal(await page.locator('#passage-play').isVisible(), true);
+  assert.equal(await page.locator('#passage-stop').isVisible(), true);
+  const controls = await page.locator('.passage-transport').boundingBox(), notation = await page.locator('#notation-score').boundingBox();
+  assert.ok(controls.y < notation.y, 'playback controls appear before the score');
+  assert.equal(autoplayRequests, 0, 'opening a passage never starts playback');
+  await page.locator('#notation-close').click();
+  assert.equal(await page.locator('#notation-dialog').isVisible(), false);
+  console.log('PASS: one passage action opens notation with playback controls and no autoplay');
 } finally { await browser.close(); }
