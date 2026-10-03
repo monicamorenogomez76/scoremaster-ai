@@ -5,3 +5,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Partituras comerciales y documentos privados para pruebas manuales
+test-scores/local/
+Documentacion-TFM*.pdf
