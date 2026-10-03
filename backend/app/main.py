@@ -77,7 +77,10 @@ def health():
 
 @app.get("/")
 def root():
-    return FileResponse(BASE_DIR / "static" / "index.html")
+    frontend = BASE_DIR / "static" / "frontend" / "index.html"
+    if not frontend.is_file():
+        raise HTTPException(status_code=503, detail="Compila el frontend: npm --prefix frontend ci y npm --prefix frontend run build.")
+    return FileResponse(frontend)
 
 
 @app.get("/youtube/search")

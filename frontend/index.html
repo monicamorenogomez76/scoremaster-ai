@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScoreMasterAI</title>
+    <link rel="icon" href="/static/brand.svg" type="image/svg+xml" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.9.2/build/opensheetmusicdisplay.min.js" defer></script>
+  </head>
+  <body>
+    <section id="login-screen" class="login-screen">
+      <div class="login-brand">
+        <div class="login-brand-mark"><img class="brand-logo" src="/static/brand.svg" alt="" width="44" height="44" /><span>ScoreMaster</span></div>
+        <div class="login-brand-copy">
+          <p class="eyebrow">Análisis de repertorio</p>
+          <h1>Un espacio de trabajo para tu banda.</h1>
+          <p>Evalúa partituras, encuentra los pasajes que requieren atención y organiza el ensayo desde una sola aplicación.</p>
+        </div>
+        <div class="login-brand-meta"><span>ScoreLint</span><span>BandFit</span><span>RehearsalAI</span></div>
+      </div>
+      <div class="login-panel">
+        <div class="login-card">
+          <p class="eyebrow">Acceso de demostración</p>
+          <h2>Bienvenida</h2>
+          <p>Explora el análisis musical determinista y sus herramientas de ensayo.</p>
+          <button id="enter-demo" class="login-demo-button" type="button">Entrar en modo demo</button>
+          <div class="login-note">Esta demo no usa cuentas reales. La plantilla solo se conserva mientras dure la sesión.</div>
+        </div>
+      </div>
+    </section>
+
+    <div id="app-shell" class="app-shell" hidden>
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-brand"><img class="brand-logo" src="/static/brand.svg" alt="" width="44" height="44" /><span>ScoreMaster</span></div>
+        <p class="nav-label">Espacio de trabajo</p>
+        <nav class="app-nav" aria-label="Navegación principal">
+          <button class="nav-item" type="button" data-view-target="overview"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v10h-6v-6H9v6H3z"/></svg></span>Inicio</button>
+          <button class="nav-item" type="button" data-view-target="analyze"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5zM9 11h6M9 15h6"/></svg></span>Analizar partitura</button>
+          <button class="nav-item" type="button" data-view-target="difficulty"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20V7"/></svg></span>Dificultad</button>
+          <button class="nav-item" type="button" data-view-target="band"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 4a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.8"/></svg></span>Mi banda</button>
+          <button class="nav-item" type="button" data-view-target="rehearsal"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M16 3v4M3 10h18M4 5h16v16H4zM8 14h3M8 17h7"/></svg></span>Plan de ensayo</button>
+          <button class="nav-item" type="button" data-view-target="videos"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM10 9l5 3-5 3z"/></svg></span>Vídeos</button>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="demo-identity"><strong>Sesión de demo</strong><span>Plantilla temporal · análisis guardados</span></div>
+          <button id="sign-out" class="sign-out" type="button">Salir de la demo</button>
+        </div>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <button id="mobile-menu-button" class="mobile-menu-button" type="button" aria-label="Abrir menú" aria-expanded="false">Menú</button>
+          <p id="current-page-title" class="topbar-title">Inicio</p>
+          <span class="topbar-meta">Modo demo</span>
+        </header>
+        <main class="workspace">
+          <section class="app-view is-active" data-view="overview">
+            <div class="view-heading"><div><p class="eyebrow">Espacio de trabajo</p><h1>Resumen</h1><p class="view-description">Estado de la partitura y prioridades del ensayo.</p></div></div>
+            <div id="overview-empty" class="overview-empty surface">
+              <div><h2>Empieza con una partitura</h2><p>Sube un archivo MusicXML para ver la dificultad, los pasajes críticos y el ajuste a tu plantilla.</p></div>
+              <button class="primary-action" type="button" data-open-view="analyze">Analizar partitura</button>
+            </div>
+            <div id="overview-result" hidden>
+              <h2 id="overview-score-title" class="overview-title"></h2>
+              <p id="overview-composer" class="result-supporting"></p>
+              <div id="overview-metrics"></div>
+            </div>
+            <div id="overview-priority" class="overview-empty surface" hidden>
+              <div><p class="eyebrow">Pasaje prioritario</p><h2 id="overview-priority-title"></h2><p id="overview-priority-detail"></p></div>
+              <button id="open-priority" class="primary-action" type="button">Ver pasajes</button>
+            </div>
+          </section>
+
+          <section class="app-view" data-view="analyze">
+            <div class="view-heading"><div><p class="eyebrow">ScoreLint</p><h1>Analizar partitura</h1><p class="view-description">Carga MusicXML para calcular la dificultad y localizar pasajes críticos.</p></div></div>
+            <div id="upload-root" class="surface"><p role="status">Cargando formulario de partitura…</p></div>
+            <section id="embedded-score" hidden class="embedded-score" aria-label="Partitura completa y reproductor">
+              <h2>Partitura completa</h2>
+              <div class="ensemble-toolbar" aria-label="Reproducción de todas las voces">
+                <button id="ensemble-play" class="score-tool transport-primary" type="button" aria-label="Reproducir" title="Reproducir" disabled>▶</button>
+                <button id="ensemble-stop" class="score-tool" type="button" aria-label="Detener" title="Detener" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg></button>
+                <output id="ensemble-time">0:00 / 0:00</output>
+                <label>Velocidad <select id="ensemble-speed"><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1" selected>100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option></select></label>
+                <label>Volumen <input id="ensemble-volume" type="range" min="0" max="100" value="50" aria-label="Volumen de reproducción" /></label>
+                <button id="score-fullscreen" class="score-tool" type="button" aria-label="Pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v2H5v5H3zm11 0h7v7h-2V5h-5zM3 14h2v5h5v2H3zm16 0h2v7h-7v-2h5z"/></svg></button>
+              </div>
+              <input id="ensemble-seek" type="range" min="0" max="1" step="0.1" value="0" disabled aria-label="Posición de reproducción" />
+              <p id="ensemble-status" class="loading-status" role="status" aria-live="polite">Todas las voces · sonidos aproximados de instrumentos.</p>
+              <p id="full-score-status" class="loading-status" role="status" aria-live="polite">Sube una partitura para verla aquí.</p>
+              <div class="score-toolbar" aria-label="Navegación de la partitura completa">
+                <button id="score-prev" class="score-tool" type="button" aria-label="Página anterior" title="Página anterior" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4-8 8 8 8 2-2-6-6 6-6z"/></svg></button>
+                <span id="score-page" class="score-page-label"></span>
+                <button id="score-next" class="score-tool" type="button" aria-label="Página siguiente" title="Página siguiente" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8-2-2 6-6-6-6z"/></svg></button>
+                <button id="score-zoom-out" class="score-tool" type="button" aria-label="Reducir zoom" title="Reducir zoom">−</button>
+                <button id="score-fit" class="score-tool" type="button" title="Ajustar al ancho" aria-label="Ajustar al ancho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button><output id="score-zoom-label">Auto</output>
+                <button id="score-zoom-in" class="score-tool" type="button" aria-label="Ampliar zoom" title="Ampliar zoom">+</button>
+              </div>
+              <div id="full-score-rendering"></div>
+            </section>
+          </section>
+
+          <section class="app-view" data-view="difficulty">
+            <div class="view-heading"><div><p class="eyebrow">ScoreLint</p><h1>Dificultad y pasajes</h1><p class="view-description">Explora de la familia al instrumento y abre la partitura en el pasaje señalado.</p></div></div>
+            <div id="difficulty-content" class="view-content empty-workspace"><h2>Aún no hay análisis</h2><p>Analiza una partitura para consultar la dificultad y abrir sus pasajes en notación.</p></div>
+          </section>
+
+          <section class="app-view" data-view="band">
+            <div class="view-heading"><div><p class="eyebrow">BandFit</p><h1>Mi banda</h1><p class="view-description">Ajusta el número de músicos para cada parte de la obra.</p></div></div>
+            <div id="band-profile-editor" class="band-profile-editor surface" hidden>
+              <fieldset>
+                <legend>Plantilla de esta obra</legend>
+                <p class="result-supporting">Una plaza inicial por parte. Los cambios son temporales en esta demo.</p>
+                <div id="band-profile-rows" class="band-profile-rows"></div>
+                <button id="update-analysis" class="band-profile-update" type="button">Actualizar análisis</button>
+              </fieldset>
+            </div>
+            <div id="band-content" class="view-content empty-workspace"><h2>Aún no hay plantilla</h2><p>Analiza una obra para cargar sus partes y asignar músicos.</p></div>
+          </section>
+
+          <section class="app-view" data-view="rehearsal">
+            <div class="view-heading"><div><p class="eyebrow">RehearsalAI</p><h1>Plan de ensayo</h1><p class="view-description">Bloques priorizados a partir de los pasajes detectados.</p></div></div>
+            <div class="rehearsal-settings surface">
+              <label class="duration-field" for="total-minutes">Duración prevista del ensayo
+                <span class="duration-input"><input id="total-minutes" type="number" min="10" value="60" /><span>minutos</span></span>
+              </label>
+              <button id="recalculate-rehearsal" type="button">Recalcular ensayo</button>
+            </div>
+            <div id="rehearsal-content" class="view-content empty-workspace"><h2>Aún no hay plan</h2><p>Analiza una partitura para generar bloques de ensayo.</p></div>
+          </section>
+
+          <section class="app-view" data-view="videos">
+            <div class="view-heading"><div><p class="eyebrow">Repertorio</p><h1>Vídeos relacionados</h1><p class="view-description">Busca grabaciones para la obra analizada.</p></div></div>
+            <div id="videos-content" class="view-content empty-workspace"><h2>Aún no hay vídeos</h2><p>Analiza una partitura para buscar grabaciones relacionadas.</p></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <dialog id="notation-dialog" class="score-dialog" aria-labelledby="notation-title">
+      <div id="passage-view" class="passage-view">
+      <div class="score-dialog-head">
+        <div>
+          <h2 id="notation-title">Partitura del pasaje</h2>
+          <p id="notation-status" class="score-dialog-status">Selecciona un pasaje para abrir la partitura.</p>
+        </div>
+        <button id="notation-close" class="score-tool score-close" type="button" aria-label="Cerrar partitura" title="Cerrar partitura"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 4 6 6 6-6 2 2-6 6 6 6-2 2-6-6-6 6-2-2 6-6-6-6z"/></svg></button>
+      </div>
+      <div class="ensemble-toolbar passage-transport" role="group" aria-label="Reproducción del pasaje">
+        <button id="passage-play" class="score-tool transport-primary" type="button" aria-label="Reproducir" title="Reproducir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l13-8z"/></svg></button>
+        <button id="passage-stop" class="score-tool" type="button" aria-label="Detener" title="Detener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg></button>
+        <output id="passage-time">0:00 / 0:00</output>
+        <label>Velocidad <select id="passage-speed"><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1" selected>100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option></select></label>
+        <label>Volumen <input id="passage-volume" type="range" min="0" max="100" value="50" aria-label="Volumen del pasaje" /></label>
+        <button id="passage-fullscreen" class="score-tool" type="button" aria-label="Pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v2H5v5H3zm11 0h7v7h-2V5h-5zM3 14h2v5h5v2H3zm16 0h2v7h-7v-2h5z"/></svg></button>
+      </div>
+      <input id="passage-seek" type="range" min="0" max="1" step="0.1" value="0" disabled aria-label="Posición del pasaje" />
+      <div class="passage-progress">
+        <output id="passage-position" class="score-page-label" aria-live="polite"></output>
+        <span id="playback-status" class="loading-status" role="status" aria-live="polite"></span>
+      </div>
+      <div id="notation-score" class="score-rendering"></div>
+      <div class="score-toolbar" aria-label="Controles de partitura">
+        <button id="notation-prev" class="score-tool" type="button" aria-label="Compases anteriores">Anterior</button>
+        <span id="notation-page-label" class="score-page-label"></span>
+        <button id="notation-next" class="score-tool" type="button" aria-label="Compases siguientes">Siguiente</button>
+        <button id="notation-zoom-out" class="score-tool" type="button" aria-label="Reducir zoom" title="Reducir zoom">−</button>
+        <button id="notation-fit" class="score-tool" type="button" aria-label="Ajustar al ancho" title="Ajustar al ancho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button>
+        <output id="notation-zoom-label">100%</output>
+        <button id="notation-zoom-in" class="score-tool" type="button" aria-label="Ampliar zoom" title="Ampliar zoom">+</button>
+      </div>
+      </div>
+    </dialog>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

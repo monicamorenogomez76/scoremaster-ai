@@ -5,3 +5,5 @@ __pycache__/
 .env
 .env.*
 !.env.example
+frontend/node_modules/
+backend/app/static/frontend/
