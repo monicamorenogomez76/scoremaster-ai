@@ -16,6 +16,7 @@ const familyLabelsEs = {
   strings: 'Cuerda',
   percussion: 'Percusión',
   keyboard: 'Teclas',
+  rhythm: 'Sección rítmica',
   other: 'Otros'
 };
 const instrumentLabelsEs = {
