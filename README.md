@@ -32,8 +32,10 @@ El flujo de trabajo y las pautas de cambios están en [CONTRIBUTING.md](CONTRIBU
 El MVP incluye análisis determinista de dificultad, compatibilidad de plantilla,
 plan de ensayo y un cuadro de mando por familias, instrumentos y pasajes críticos.
 
-La migración a React está en revisión: formulario de carga/análisis, estados y
-cancelación. Dashboard y visores siguen con el adaptador temporal hasta sus PR.
+La interfaz se está migrando a React. Ya están en React el acceso demo, la
+navegación, la carga y el análisis, el resumen, la dificultad, la plantilla y el
+plan de ensayo. Los visores, el audio y los vídeos siguen en el adaptador temporal
+hasta su PR.
 Ver [arquitectura y arranque del frontend](frontend/README.md). Para ejecutar con
 Python, compilar primero con `npm --prefix frontend ci` y
 `npm --prefix frontend run build`; Docker lo hace durante la construcción.
@@ -107,6 +109,7 @@ con Chromium y partituras sintéticas. Con el servidor local activo:
 npm install --prefix /tmp/scoremaster-browser-tests @playwright/test
 /tmp/scoremaster-browser-tests/node_modules/.bin/playwright install chromium
 PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/workflow.e2e.mjs
+PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/dashboard.e2e.mjs
 ```
 
 Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`.

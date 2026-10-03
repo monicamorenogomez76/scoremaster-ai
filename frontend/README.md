@@ -26,23 +26,27 @@ excluye dependencias locales, credenciales y partituras de prueba.
 
 ## Qué está migrado
 
-- `UploadWorkspace.jsx`: formulario, asignaciones y estado accesible de carga/error.
-- `useScoreAnalysis.js`: selección, solicitudes, cancelación y descarte de respuestas
-  anteriores. Mantiene la plantilla inicial de una plaza por parte del flujo legacy.
+- `App.jsx`: sesión demo, vista activa, resultado del análisis, plantilla y duración.
+  La sesión demo es una comodidad local en `sessionStorage`, no autenticación.
+- `AppShell.jsx`: barra lateral, menú móvil, cabecera y vistas.
+- `OverviewView.jsx`, `DifficultyView.jsx`, `BandView.jsx`, `RehearsalView.jsx`:
+  resumen, explorador familia → instrumento → pasaje, BandFit y plan de ensayo.
+  «Actualizar análisis» y «Recalcular ensayo» recalculan sin abandonar la vista.
+- `UploadWorkspace.jsx` y `useScoreAnalysis.js`: formulario, asignaciones,
+  solicitudes, cancelación y descarte de respuestas anteriores.
+- `labels.js`: textos en castellano de instrumentos, familias, findings, BandFit y
+  ensayo; funciones puras con pruebas en `backend/test/frontend/labels.test.mjs`.
 - `instrument-session.js`: modifica una copia temporal del XML; conserva el archivo
   seleccionado y la instrumentación no identificada cuando no hay confirmación.
-- `main.jsx`: monta una raíz React para la carga.
-- `index.html` y `styles.css`: mantienen el diseño y la estructura de las vistas.
 
-El [montaje parcial de React](https://react.dev/reference/react-dom/client/createRoot#rendering-a-page-partially-built-with-react)
-permite esta transición. `legacy-workspace.js` es un adaptador temporal para
-dashboard, navegación, plantilla, ensayo, vídeos y visores. React no manipula su
-DOM y el adaptador no modifica el formulario gestionado por React. Los botones
-de recalcular delegan sus solicitudes al controlador React.
+`legacy-workspace.js` es el adaptador temporal para el visor completo, el diálogo
+del pasaje con su audio y la búsqueda de vídeos. Sus nodos se declaran en
+`index.html` dentro de `#legacy-nodes`; `AppShell` los mueve a la vista de análisis
+y React nunca renderiza sus hijos. El adaptador ya no modifica vistas de React.
 
-Quedan dos PR: dashboard y después visores/audio. No se considera terminado el
-frontend React hasta eliminar el adaptador y migrar esas vistas. Las reglas del
-backend, PostgreSQL y el renderer de audio mantienen su implementación actual.
+Queda una PR: visores, audio y vídeos. No se considera terminado el frontend React
+hasta eliminar el adaptador. Las reglas del backend, PostgreSQL y el renderer de
+audio mantienen su implementación actual.
 
 ## Verificación
 
@@ -52,9 +56,12 @@ Compilar antes de ejecutar las pruebas Python que consultan `/`. Con Uvicorn en
 ```sh
 SCOREMASTER_URL=http://127.0.0.1:8006 PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/react-upload.e2e.mjs
 SCOREMASTER_URL=http://127.0.0.1:8006 PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/workflow.e2e.mjs
+SCOREMASTER_URL=http://127.0.0.1:8006 PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/dashboard.e2e.mjs
 node --test backend/test/frontend/*.test.mjs
 ```
 
 El recorrido React usa únicamente una partitura sintética; simula fallos 503,
 respuestas no JSON y una respuesta tardía tras cancelar. El recorrido compartido
-comprueba asignación, reinicio, móvil, pasaje completo y guía de reproducción.
+comprueba asignación, reinicio, móvil, pasaje completo y guía de reproducción. El
+recorrido del dashboard comprueba sesión demo, recálculo de BandFit y ensayo,
+explorador de dificultad, menú móvil y salida de la demo.

@@ -1,9 +1,8 @@
 import React, { useRef } from 'react';
 import { instrumentChoices } from './instrument-session.js';
-import { useScoreAnalysis } from './useScoreAnalysis.js';
+import { displayInstrumentName } from './labels.js';
 
-export function UploadWorkspace({ workspace }) {
-  const upload = useScoreAnalysis(workspace);
+export function UploadWorkspace({ upload }) {
   const input = useRef(null);
   const { state, parts, assignments } = upload;
   return <>
@@ -22,7 +21,7 @@ export function UploadWorkspace({ workspace }) {
           <select data-part-id={part.id} value={assignments[part.id] || ''} disabled={state.busy}
             onChange={event => upload.setAssignments(previous => ({ ...previous, [part.id]: event.target.value }))}>
             <option value="">Sin identificar</option>
-            {instrumentChoices.map(([name]) => <option key={name} value={name}>{workspace.displayInstrumentName(name)}</option>)}
+            {instrumentChoices.map(([name]) => <option key={name} value={name}>{displayInstrumentName(name)}</option>)}
           </select>
         </label>)}
       </div>
