@@ -20,6 +20,16 @@ Decisiones musicales de la autora, para contexto de banda:
 - «Trombone 3» es un trombón tenor; una parte compartida «Trombone 3 & Bass Trombone»
   queda `UNKNOWN` para confirmación humana. «Cymbal» a secas también.
 
+**Paso 07 integrado en código (metadatos del parser):** cada `ScorePart` conserva en
+`metadata` (`PartMetadata`) lo que declara el MusicXML, sin interpretarlo: `part_id`,
+nombre original con espacios normalizados, abreviatura, `instrument-name`,
+`instrument-sound`, programas y canales MIDI tal como aparecen (1–128 y 1–16), la primera
+`<transpose>` (`chromatic`, `diatonic`, `octave-change`) y el número de pentagrama cuando
+music21 divide una parte de varios pentagramas. Se lee directamente del XML con
+ElementTree; el parser rechaza documentos con `<!ENTITY>` y acepta `.mxl` aunque el
+archivo tenga extensión `.musicxml`. Los cambios de transposición posteriores al
+primer `<transpose>` todavía no se modelan.
+
 Con las partituras locales de prueba (no versionadas), 49 de 52 nombres se resuelven
 y ninguno se clasifica incorrectamente. Todavía no lo consumen BandFit, la dificultad
 ni el audio: eso corresponde al resolver determinista (paso 08).

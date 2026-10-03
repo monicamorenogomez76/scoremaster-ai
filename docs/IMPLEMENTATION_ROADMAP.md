@@ -30,8 +30,8 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 03 | PostgreSQL en desarrollo | Integrado en PR #19: Compose, healthcheck y volumen |
 | 04 | Migraciones y repositorio de análisis | Integrado: PR #21; SQLAlchemy, Alembic y pruebas PostgreSQL |
 | 05 | Guardado desde el análisis | Integrado: PR #22; ID, resultados y configuración persistidos |
-| 06 | Catálogo canónico | Preparado para revisión |
-| 07 | Metadatos del parser | Pendiente |
+| 06 | Catálogo canónico | Integrado: PR #28 |
+| 07 | Metadatos del parser | Preparado para revisión |
 | 08 | Resolver determinista | Pendiente |
 | 09 | Confirmación humana | Pendiente |
 | 10 | Tiempos y ataques musicales | Pendiente |
