@@ -36,7 +36,8 @@ de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
 
 ## Partitura y vídeos
 
-Cada pasaje crítico ofrece «Escuchar» para reproducir únicamente esa parte con
+Cada pasaje crítico ofrece una única acción «Ver pasaje». Su visor incluye
+«Reproducir» y «Detener» para escuchar únicamente esa parte con
 muestras General MIDI mediante [smplr](https://github.com/danigb/smplr), versión
 1.1.0. «Detener» y cerrar la partitura interrumpen el audio. La reproducción usa
 altura de concierto, acordes, silencios, ligaduras y cambios de tempo del
