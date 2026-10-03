@@ -83,8 +83,9 @@ def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
                        'events': events, 'percussion': percussion, 'skipped_unpitched': skipped})
     shared = {'duration': round(seconds_at(end) - origin, 6),
               'default_tempo': not any(offset <= start for offset in marks),
-              'measures': [{'number': int(m.number or i), 'time': seconds_at(float(m.offset))}
-                           for i, m in enumerate(named_parts[0][0].getElementsByClass(stream.Measure), 1)],
+              'measures': [{'number': int(m.number or i), 'time': round(seconds_at(float(m.offset)) - origin, 6)}
+                           for i, m in enumerate(named_parts[0][0].getElementsByClass(stream.Measure), 1)
+                           if start <= float(m.offset) < end],
               'tempo_map': [{'quarter': offset, 'time': seconds_at(offset), 'bpm': bpm}
                             for offset, bpm in boundaries]}
     if instrument_name:

@@ -40,6 +40,7 @@ def test_solo_range_chords_and_tempo_from_other_part(tmp_path):
     result = build_playback(path, 'Flute', 2, 2)
     assert result['program'] == 73
     assert result['duration'] == 4
+    assert result['measures'] == [{'number': 2, 'time': 0}]
     assert result['events'] == [
         {'note': 72, 'time': 0, 'duration': 2},
         {'note': 76, 'time': 2, 'duration': 2},
@@ -136,3 +137,23 @@ def test_identified_unpitched_percussion_is_in_timeline(tmp_path):
     result = build_playback(path, '', 0, 999999)
     assert result['tracks'][0]['percussion'][0]['note'] == 38
     assert result['tracks'][0]['skipped_unpitched'] == 0
+
+
+def test_passage_measure_clock_starts_at_zero_with_tempo_change(tmp_path):
+    score = stream.Score()
+    part = stream.Part()
+    part.partName = 'Flute'
+    for number in (69, 70, 71):
+        m = stream.Measure(number=number)
+        if number == 69:
+            m.insert(0, tempo.MetronomeMark(number=60))
+        if number == 70:
+            m.insert(0, tempo.MetronomeMark(number=120))
+        m.insert(0, note.Note('C5', quarterLength=4))
+        part.append(m)
+    score.append(part)
+    path = tmp_path / 'measure-clock.musicxml'
+    score.write('musicxml', fp=path)
+    data = build_playback(path, 'Flute', 70, 71)
+    assert data['measures'] == [{'number': 70, 'time': 0}, {'number': 71, 'time': 2}]
+    assert data['events'][0]['time'] == 0

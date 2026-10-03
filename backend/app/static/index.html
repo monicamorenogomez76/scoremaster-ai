@@ -194,9 +194,11 @@
       }
       .passage-open { padding: 7px 10px; font-size: 0.88rem; }
       .score-dialog {
-        width: min(1100px, 94vw);
+        width: calc(100vw - 24px);
+        height: calc(100dvh - 24px);
+        box-sizing: border-box;
         max-width: none;
-        max-height: 92vh;
+        max-height: none;
         padding: 20px;
         border: 1px solid rgba(148, 163, 184, 0.35);
         border-radius: 12px;
@@ -229,16 +231,16 @@
       .instrument-assignment p { grid-column: 1 / -1; }
       .instrument-assignment select { background: white; color: #172033; }
       .embedded-score[hidden] { display: none; }
-      .embedded-score .score-tool { width: 40px; height: 40px; padding: 8px; border: 0; border-radius: 8px; background: #e8edf4; color: #334155; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; }
-      .embedded-score .score-tool:hover { background: #dce5f0; }
-      .embedded-score .transport-primary { background: #2563eb; color: white; border-radius: 50%; }
-      .embedded-score .transport-primary:hover { background: #1d4ed8; }
-      .embedded-score .score-tool svg { width: 24px; height: 24px; fill: currentColor; }
-      .embedded-score .score-tool:disabled { opacity: .4; }
+      :is(.embedded-score, .score-dialog) .score-tool { width: 40px; height: 40px; padding: 8px; border: 0; border-radius: 8px; background: #e8edf4; color: #334155; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; }
+      :is(.embedded-score, .score-dialog) .score-tool:hover { background: #dce5f0; }
+      :is(.embedded-score, .score-dialog) .transport-primary { background: #2563eb; color: white; border-radius: 50%; }
+      :is(.embedded-score, .score-dialog) .transport-primary:hover { background: #1d4ed8; }
+      :is(.embedded-score, .score-dialog) .score-tool svg { width: 24px; height: 24px; fill: currentColor; }
+      :is(.embedded-score, .score-dialog) .score-tool:disabled { opacity: .4; }
       .ensemble-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 0; }
       .ensemble-toolbar label { display: flex; align-items: center; gap: 6px; margin: 0; }
       .ensemble-toolbar input[type=range] { width: 110px; margin: 0; padding: 0; }
-      .ensemble-toolbar select { padding: 6px; background: white; color: #172033; }
+      .ensemble-toolbar select { padding: 6px; background: white; color: #172033; border: 1px solid var(--line); border-radius: 12px; }
       #ensemble-seek { width: 100%; margin: 0 0 12px; padding: 0; }
       #full-score-rendering { display: flex; justify-content: center; align-items: flex-start; padding: 16px; box-sizing: border-box; height: 70vh; min-height: 320px; overflow: auto; background: white; border: 1px solid #cbd5e1; }
       #full-score-rendering svg { max-width: none; }
@@ -420,10 +422,30 @@
         .topbar-meta { font-size: .72rem; }
       }
 
-      .passage-transport { position: sticky; top: 0; z-index: 1; padding: 12px; background: #f3f5fb; border: 1px solid var(--line); border-radius: 14px; margin: 0 0 16px; }
-      .passage-transport .score-tool { display: inline-flex; align-items: center; gap: 8px; border-radius: 12px; min-height: 44px; }
-      .passage-transport svg { width: 20px; height: 20px; fill: currentColor; }
-      #passage-play { background: var(--primary); color: white; border-color: var(--primary); }
+      .score-dialog[open] { display: flex; flex-direction: column; overflow: hidden; padding: 16px; margin: auto; }
+      .passage-view { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px; }
+      .passage-view:fullscreen { height: 100dvh; width: 100vw; padding: 16px; box-sizing: border-box; background: #f8fafc; }
+      .score-dialog-head { flex: 0 0 auto; }
+      .score-dialog-head > div { min-width: 0; }
+      .score-dialog-head h2 { overflow-wrap: anywhere; }
+      .score-dialog-status { margin: 4px 0 0; font-size: .85rem; }
+      .score-dialog .score-close { flex-shrink: 0; }
+      .score-dialog .ensemble-toolbar { flex: 0 0 auto; padding: 10px 14px; }
+      .score-dialog .score-tool[hidden] { display: none; }
+      #notation-score { flex: 1; min-height: 0; max-height: none; border-radius: 12px; }
+      .score-dialog .score-toolbar { flex: 0 0 auto; margin: 0; }
+      #passage-seek { width: 100%; margin: 0; padding: 0; min-height: 18px; }
+      #passage-time { font-variant-numeric: tabular-nums; font-weight: 600; }
+      .passage-progress { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; flex: 0 0 auto; }
+      #passage-position { flex: none; min-width: 0; text-align: left; }
+      @media (max-width: 640px) {
+        .score-dialog[open] { width: calc(100vw - 12px); height: calc(100dvh - 12px); padding: 10px; }
+        .score-dialog-head h2 { font-size: 1rem; }
+        .score-dialog-status { display: none; }
+        .score-dialog .ensemble-toolbar { padding: 8px; gap: 8px; }
+        .score-dialog .ensemble-toolbar input[type=range] { width: 70px; }
+        #notation-page-label { min-width: 0; text-align: left; font-size: .8rem; }
+      }
       /* Shared visual language: quiet surfaces, clear actions and keyboard focus. */
       body { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       button, input, select, textarea { min-height: 44px; }
@@ -455,9 +477,9 @@
       #new-score { background: white; border: 1px solid var(--line); color: var(--text); }
       .embedded-score { background: #fff; }
       .ensemble-toolbar { padding: 14px; gap: 16px; background: #f3f5fb; border: 1px solid var(--line); border-radius: 16px; }
-      .embedded-score .score-tool { width: 44px; height: 44px; border-radius: 12px; }
-      .embedded-score .transport-primary { background: var(--primary); border-radius: 50%; }
-      .embedded-score .transport-primary:hover { background: #4338ca; }
+      :is(.embedded-score, .score-dialog) .score-tool { width: 44px; height: 44px; border-radius: 12px; }
+      :is(.embedded-score, .score-dialog) .transport-primary { background: var(--primary); border-radius: 50%; }
+      :is(.embedded-score, .score-dialog) .transport-primary:hover { background: #4338ca; }
       #ensemble-time { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
       input[type=range] { accent-color: var(--primary); }
       .loading-status { font-size: .85rem; color: var(--muted); }
@@ -573,7 +595,7 @@
                 <span id="score-page" class="score-page-label"></span>
                 <button id="score-next" class="score-tool" type="button" aria-label="Página siguiente" title="Página siguiente" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8-2-2 6-6-6-6z"/></svg></button>
                 <button id="score-zoom-out" class="score-tool" type="button" aria-label="Reducir zoom" title="Reducir zoom">−</button>
-                <button id="score-fit" class="score-tool" type="button" title="Ajustar página" aria-label="Ajustar página"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button><output id="score-zoom-label">Auto</output>
+                <button id="score-fit" class="score-tool" type="button" title="Ajustar al ancho" aria-label="Ajustar al ancho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button><output id="score-zoom-label">Auto</output>
                 <button id="score-zoom-in" class="score-tool" type="button" aria-label="Ampliar zoom" title="Ampliar zoom">+</button>
               </div>
               <div id="full-score-rendering"></div>
@@ -618,16 +640,25 @@
     </div>
 
     <dialog id="notation-dialog" class="score-dialog" aria-labelledby="notation-title">
+      <div id="passage-view" class="passage-view">
       <div class="score-dialog-head">
         <div>
           <h2 id="notation-title">Partitura del pasaje</h2>
           <p id="notation-status" class="score-dialog-status">Selecciona un pasaje para abrir la partitura.</p>
         </div>
-        <button id="notation-close" class="score-close" type="button" aria-label="Cerrar partitura">Cerrar</button>
+        <button id="notation-close" class="score-tool score-close" type="button" aria-label="Cerrar partitura" title="Cerrar partitura"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 4 6 6 6-6 2 2-6 6 6 6-2 2-6-6-6 6-2-2 6-6-6-6z"/></svg></button>
       </div>
-      <div class="score-tools passage-transport" role="group" aria-label="Reproducción del pasaje">
-        <button id="passage-play" class="score-tool" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l13-8z"/></svg>Reproducir</button>
-        <button id="passage-stop" class="score-tool" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>Detener</button>
+      <div class="ensemble-toolbar passage-transport" role="group" aria-label="Reproducción del pasaje">
+        <button id="passage-play" class="score-tool transport-primary" type="button" aria-label="Reproducir" title="Reproducir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l13-8z"/></svg></button>
+        <button id="passage-stop" class="score-tool" type="button" aria-label="Detener" title="Detener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg></button>
+        <output id="passage-time">0:00 / 0:00</output>
+        <label>Velocidad <select id="passage-speed"><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1" selected>100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option></select></label>
+        <label>Volumen <input id="passage-volume" type="range" min="0" max="100" value="50" aria-label="Volumen del pasaje" /></label>
+        <button id="passage-fullscreen" class="score-tool" type="button" aria-label="Pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v2H5v5H3zm11 0h7v7h-2V5h-5zM3 14h2v5h5v2H3zm16 0h2v7h-7v-2h5z"/></svg></button>
+      </div>
+      <input id="passage-seek" type="range" min="0" max="1" step="0.1" value="0" disabled aria-label="Posición del pasaje" />
+      <div class="passage-progress">
+        <output id="passage-position" class="score-page-label" aria-live="polite"></output>
         <span id="playback-status" class="loading-status" role="status" aria-live="polite"></span>
       </div>
       <div id="notation-score" class="score-rendering"></div>
@@ -635,9 +666,11 @@
         <button id="notation-prev" class="score-tool" type="button" aria-label="Compases anteriores">Anterior</button>
         <span id="notation-page-label" class="score-page-label"></span>
         <button id="notation-next" class="score-tool" type="button" aria-label="Compases siguientes">Siguiente</button>
-        <button id="notation-zoom-out" class="score-tool" type="button" aria-label="Reducir partitura">−</button>
+        <button id="notation-zoom-out" class="score-tool" type="button" aria-label="Reducir zoom" title="Reducir zoom">−</button>
+        <button id="notation-fit" class="score-tool" type="button" aria-label="Ajustar al ancho" title="Ajustar al ancho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button>
         <output id="notation-zoom-label">100%</output>
-        <button id="notation-zoom-in" class="score-tool" type="button" aria-label="Ampliar partitura">+</button>
+        <button id="notation-zoom-in" class="score-tool" type="button" aria-label="Ampliar zoom" title="Ampliar zoom">+</button>
+      </div>
       </div>
     </dialog>
 
@@ -665,9 +698,9 @@
       let currentScoreFile = null;
       let notationSourcePromise = null;
       let activeNotationPassage = null;
-      const measuresPerNotationPage = 4;
-      const audioModule = import('/static/playback.js');
-      const scoreViewPromise = import('/static/score-view.js?v=2').then(({ createScoreView }) =>
+      const audioModule = import('/static/playback.js?v=5');
+      const guideModule = import('/static/playback-guide.js');
+      const scoreViewPromise = import('/static/score-view.js?v=5').then(({ createScoreView }) =>
         createScoreView({ getSource: loadNotationSource, getFile: () => currentScoreFile, filter: filterMusicXmlPassage }));
       function loadEmbeddedScore() {
         const file = currentScoreFile, version = selectionVersion;
@@ -679,22 +712,61 @@
       }
       const audioStatus = document.getElementById('playback-status');
       let passageLoadVersion = 0;
+      const passageSeek = document.getElementById('passage-seek');
+      const passageClock = seconds => Math.floor(seconds / 60) + ':' + String(Math.floor(seconds % 60)).padStart(2, '0');
+      function setPassagePlayIcon(playing) {
+        const button = document.getElementById('passage-play');
+        if (button.getAttribute('aria-label') === (playing ? 'Pausar' : 'Reproducir')) return;
+        button.innerHTML = playing ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l13-8z"/></svg>';
+        button.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
+        button.title = playing ? 'Pausar' : 'Reproducir';
+      }
       async function stopPassageAudio() {
         passageLoadVersion++;
         (await audioModule).stopPlayback();
         document.getElementById('passage-play').disabled = false;
         audioStatus.setAttribute('aria-busy', 'false');
         audioStatus.textContent = '';
+        document.getElementById('passage-position').textContent = '';
+        activeNotationPassage?.renderer?.cursor?.hide();
+        if (activeNotationPassage) { activeNotationPassage.transport = null; activeNotationPassage.playing = false; activeNotationPassage.currentMeasure = undefined; }
+        setPassagePlayIcon(false);
+        passageSeek.disabled = true; passageSeek.value = 0;
+        document.getElementById('passage-time').textContent = '0:00 / 0:00';
       }
       document.getElementById('passage-play').addEventListener('click', async () => {
         if (!currentScoreFile || !activeNotationPassage) return;
+        if (activeNotationPassage.transport) {
+          if (activeNotationPassage.playing) activeNotationPassage.transport.pause();
+          else await activeNotationPassage.transport.play();
+          return;
+        }
         const version = ++passageLoadVersion;
         const button = document.getElementById('passage-play');
         button.disabled = true; audioStatus.setAttribute('aria-busy', 'true');
         audioStatus.textContent = 'Cargando sonidos del pasaje…';
         try {
-          await (await audioModule).playPassage(currentScoreFile, activeNotationPassage,
+          const passage = activeNotationPassage;
+          const transport = await (await audioModule).preparePlayback(currentScoreFile, passage,
             (message) => { if (version === passageLoadVersion) { audioStatus.textContent = message; audioStatus.setAttribute('aria-busy', String(/Preparando|Cargando/.test(message))); } });
+          if (!transport || version !== passageLoadVersion) return;
+          passage.transport = transport;
+          transport.setSpeed(Number(document.getElementById('passage-speed').value));
+          transport.setVolume(Number(document.getElementById('passage-volume').value) / 100);
+          passageSeek.max = transport.duration; passageSeek.disabled = false;
+          const { highlightMeasure } = await guideModule;
+          let lastMeasure;
+          transport.subscribe(state => {
+            if (version !== passageLoadVersion) return;
+            passage.playing = state.playing; setPassagePlayIcon(state.playing);
+            passageSeek.value = state.position;
+            document.getElementById('passage-time').textContent = passageClock(state.position) + ' / ' + passageClock(state.duration);
+            if (state.currentMeasure === lastMeasure) return;
+            lastMeasure = state.currentMeasure; passage.currentMeasure = state.currentMeasure;
+            document.getElementById('passage-position').textContent = 'Compás ' + state.currentMeasure + ' de ' + passage.firstMeasure + '–' + passage.lastMeasure;
+            highlightMeasure(passage.renderer, state.currentMeasure, document.getElementById('notation-score'));
+          });
+          await transport.play();
         } catch (error) {
           if (version !== passageLoadVersion) return;
           audioStatus.textContent = error.message || 'No se pudo cargar el sonido. Comprueba la conexión a Internet.';
@@ -703,7 +775,23 @@
         }
       });
       document.getElementById('passage-stop').addEventListener('click', stopPassageAudio);
-      document.getElementById('notation-dialog').addEventListener('close', stopPassageAudio);
+      passageSeek.addEventListener('change', () => activeNotationPassage?.transport?.seek(Number(passageSeek.value)));
+      document.getElementById('passage-speed').addEventListener('change', event => activeNotationPassage?.transport?.setSpeed(Number(event.target.value)));
+      document.getElementById('passage-volume').addEventListener('input', event => activeNotationPassage?.transport?.setVolume(Number(event.target.value) / 100));
+      document.getElementById('passage-fullscreen').addEventListener('click', async () => {
+        try {
+          if (document.fullscreenElement) await document.exitFullscreen();
+          else await document.getElementById('passage-view').requestFullscreen();
+          await renderNotationPage();
+        } catch (_) { audioStatus.textContent = 'La pantalla completa no está disponible en este navegador.'; }
+      });
+      document.getElementById('notation-fit').addEventListener('click', () => {
+        if (activeNotationPassage) { activeNotationPassage.zoom = 1; renderNotationPage(); }
+      });
+      document.getElementById('notation-dialog').addEventListener('close', async () => {
+        await stopPassageAudio();
+        if (document.fullscreenElement === document.getElementById('passage-view')) await document.exitFullscreen();
+      });
 
       function showDemoWorkspace() {
         sessionStorage.setItem('scoremaster-demo-session', 'active');
@@ -1029,14 +1117,16 @@
         const state = activeNotationPassage;
         const status = document.getElementById('notation-status');
         const container = document.getElementById('notation-score');
-        const endMeasure = Math.min(state.pageStart + measuresPerNotationPage - 1, state.lastMeasure);
+        const endMeasure = state.lastMeasure;
         const pageLabel = document.getElementById('notation-page-label');
         const previousButton = document.getElementById('notation-prev');
         const nextButton = document.getElementById('notation-next');
-        previousButton.disabled = state.pageStart <= state.firstMeasure;
-        nextButton.disabled = endMeasure >= state.lastMeasure;
-        pageLabel.textContent = 'Mostrando compases ' + state.pageStart + '–' + endMeasure + ' de ' + state.firstMeasure + '–' + state.lastMeasure;
-        status.textContent = 'Renderizando notación original…';
+        previousButton.hidden = true;
+        nextButton.hidden = true;
+        pageLabel.textContent = 'Pasaje completo · compases ' + state.firstMeasure + '–' + endMeasure + ' · ' + (endMeasure - state.firstMeasure + 1) + ' compases · desplázate para revisarlos';
+        status.textContent = 'Cargando el pasaje completo…';
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+        if (state !== activeNotationPassage || !document.getElementById('notation-dialog').open) return;
         container.replaceChildren();
 
         const display = window.opensheetmusicdisplay;
@@ -1053,39 +1143,29 @@
           backend: 'svg',
           drawTitle: false,
           drawPartNames: true,
-          drawMeasureNumbers: true
+          drawMeasureNumbers: true,
+          cursorsOptions: [{ type: 3, color: '#6366f1', alpha: .25, follow: false }]
         });
         await renderer.load(passageXml);
+        if (state !== activeNotationPassage || !document.getElementById('notation-dialog').open) return;
         renderer.render();
+        state.renderer = renderer;
         const svg = container.querySelector('svg');
         if (svg) {
           svg.style.width = (state.zoom * 100) + '%';
           svg.style.maxWidth = 'none';
+          renderer.playbackScale = svg.getBoundingClientRect().width / Number.parseFloat(svg.getAttribute('width'));
         }
         document.getElementById('notation-zoom-label').textContent = Math.round(state.zoom * 100) + '%';
         container.scrollTop = 0;
         container.scrollLeft = 0;
+        if (state.currentMeasure !== undefined && state.transport) {
+          (await guideModule).highlightMeasure(renderer, state.currentMeasure, container);
+        }
         status.textContent = 'Notación original · tonalidad escrita del MusicXML · ' +
-          (state.instrument === null ? 'Todas las voces' : displayInstrumentName(state.instrument));
+          (state.instrument === null ? 'Todas las voces' : displayInstrumentName(state.instrument)) + ' · audio en sonido real (instrumentos transpositores)';
       }
 
-      document.getElementById('notation-prev').addEventListener('click', () => {
-        if (!activeNotationPassage) return;
-        activeNotationPassage.pageStart = Math.max(
-          activeNotationPassage.firstMeasure,
-          activeNotationPassage.pageStart - measuresPerNotationPage
-        );
-        renderNotationPage().catch((error) => {
-          document.getElementById('notation-status').textContent = error.message;
-        });
-      });
-      document.getElementById('notation-next').addEventListener('click', () => {
-        if (!activeNotationPassage) return;
-        activeNotationPassage.pageStart += measuresPerNotationPage;
-        renderNotationPage().catch((error) => {
-          document.getElementById('notation-status').textContent = error.message;
-        });
-      });
       document.getElementById('notation-zoom-out').addEventListener('click', () => {
         if (!activeNotationPassage) return;
         activeNotationPassage.zoom = Math.max(0.75, activeNotationPassage.zoom - 0.1);

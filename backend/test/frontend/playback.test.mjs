@@ -4,12 +4,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 function harness() {
-  const starts = [], callbacks = new Set(), instruments = [];
+  const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [];
   const audio = { currentTime: 0, sampleRate: 100, resume: async () => {},
     createGain: () => ({ gain: {}, connect() {}, disconnect() {} }),
     createDynamicsCompressor: () => ({ connect() {}, disconnect() {} }),
     createBuffer: () => ({ getChannelData: () => new Float32Array(200) }) };
-  const data = { duration: 10, tracks: [
+  const data = { duration: 10, measures: [{ number: 70, time: 0 }, { number: 71, time: 4 }], tracks: [
     { instrument: 'Flute', program: 73, events: [{ note: 72, time: 0, duration: 4 }] },
     { instrument: 'Clarinet', program: 71, events: [{ note: 60, time: 0, duration: 2 }, { note: 62, time: 4, duration: 2 }] }
   ] };
@@ -20,6 +20,7 @@ function harness() {
     setInterval: (callback) => { callbacks.add(callback); return callback; },
     clearInterval: (callback) => callbacks.delete(callback),
     fakeSoundfont: (_, options) => {
+      optionsUsed.push(options);
       const result = { ready: Promise.resolve(), stopCount: 0, disposeCount: 0,
         start: (event) => starts.push({ instrument: options.instrument, ...event }),
         stop() { this.stopCount++; }, dispose() { this.disposeCount++; } };
@@ -30,7 +31,7 @@ function harness() {
     .replace(/export /g, '')
     .replace(/import\('https:\/\/unpkg[^']+'\)/, 'Promise.resolve({ Soundfont: fakeSoundfont })');
   vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage });', scope);
-  return { api: scope.exports, starts, audio, callbacks, instruments,
+  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed,
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
 
@@ -50,7 +51,7 @@ test('pause and seek restore held notes; speed adjusts remaining duration', asyn
   assert.equal(h.callbacks.size, 0);
   t.seek(3); t.setSpeed(.5); await t.play();
   const last = h.starts.at(-1);
-  assert.equal(last.instrument, 'flute'); assert.equal(last.duration, 2);
+  assert.equal(last.instrument, 'flute'); assert.equal(last.duration + last.ampRelease, 2);
   h.api.stopPlayback(); assert.equal(h.callbacks.size, 0);
   assert.ok(h.instruments.every((instrument) => instrument.disposeCount === 1));
 });
@@ -59,4 +60,35 @@ test('natural completion clears scheduler and allows replay', async () => {
   const h = harness(), t = await h.api.preparePlayback({}, null);
   await t.play(); h.tick(10.1); assert.equal(h.callbacks.size, 0);
   await t.play(); assert.equal(h.callbacks.size, 1); t.dispose();
+});
+
+test('measure guide follows audio position including seek and speed changes', async () => {
+  const h = harness(), t = await h.api.preparePlayback({}, null);
+  let current;
+  t.subscribe(state => current = state.currentMeasure);
+  assert.equal(current, 70);
+  await t.play(); h.tick(4.1);
+  assert.equal(current, 71);
+  t.pause(); t.seek(1); assert.equal(current, 70);
+  t.setSpeed(2); await t.play(); h.tick(6.1); assert.equal(current, 71);
+  t.stop(); assert.equal(current, 70);
+});
+
+test('sample release ends at the written note end without spilling into rests', async () => {
+  const h = harness(), t = await h.api.preparePlayback({}, null);
+  await t.play();
+  const flute = h.starts.find(e => e.instrument === 'flute');
+  const clarinet = h.starts.find(e => e.instrument === 'clarinet');
+  assert.equal(flute.duration + flute.ampRelease, 4);
+  assert.equal(clarinet.duration + clarinet.ampRelease, 2);
+  assert.ok(clarinet.ampRelease <= .008);
+  t.stop();
+});
+
+test('pitched samples never use the external loops that introduce extra tones', async () => {
+  const h = harness(), t = await h.api.preparePlayback({}, null);
+  assert.ok(h.optionsUsed.every(options => options.loadLoopData === false));
+  await t.play();
+  assert.ok(h.starts.every(event => event.loop === false));
+  t.stop();
 });
