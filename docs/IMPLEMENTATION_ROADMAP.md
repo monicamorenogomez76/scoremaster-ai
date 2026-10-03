@@ -21,8 +21,8 @@ No hay todavía base de datos ni proveedor LLM. El audio actual ya usa muestras 
 
 | Entrega | Objetivo | Estado |
 |---|---|---|
-| 01 | Especificación consolidada | Implementada en esta PR |
-| 02 | Baseline reproducible | Pendiente |
+| 01 | Especificación consolidada | Integrada: PR #17 |
+| 02 | Baseline reproducible | Implementado: 15 casos, 10 nombres y eventos de audio |
 | 03 | PostgreSQL en desarrollo | Pendiente |
 | 04 | Migraciones y repositorio de análisis | Pendiente |
 | 05 | Guardado desde el análisis | Pendiente |

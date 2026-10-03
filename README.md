@@ -121,3 +121,6 @@ conformidad WCAG.
 El [plan de PR pequeñas](docs/IMPLEMENTATION_ROADMAP.md) y las
 [especificaciones](docs/README.md) describen lo previsto. PostgreSQL, grados 1–6,
 feedback y revisión LLM todavía no están implementados en esta entrega documental.
+
+El [baseline reproducible](evaluation/README.md) captura el comportamiento legacy
+antes de cambiar sus reglas: `python -m evaluation.baseline`.
