@@ -220,6 +220,18 @@
       .score-page-label { flex: 1; min-width: 180px; color: #475569; text-align: center; font-size: 0.9rem; }
       .score-rendering { max-height: 72vh; overflow: auto; background: #fff; border: 1px solid #cbd5e1; }
       .score-rendering svg { max-width: none; height: auto; }
+      .embedded-score { margin-top: 24px; padding: 20px; background: #f8fafc; color: #172033; border: 1px solid #cbd5e1; border-radius: 12px; }
+      .embedded-score:fullscreen { overflow: auto; padding: 24px; }
+      .embedded-score h2 { margin: 0 0 14px; }
+      .ensemble-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 0; }
+      .ensemble-toolbar label { display: flex; align-items: center; gap: 6px; margin: 0; }
+      .ensemble-toolbar input[type=range] { width: 110px; margin: 0; padding: 0; }
+      .ensemble-toolbar select { padding: 6px; background: white; color: #172033; }
+      #ensemble-seek { width: 100%; margin: 0 0 12px; padding: 0; }
+      #full-score-rendering { height: 75vh; min-height: 500px; overflow: auto; background: white; border: 1px solid #cbd5e1; }
+      #full-score-rendering svg { max-width: none; }
+      .loading-status[aria-busy=true]::before { content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 2px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: loading-spin 1s linear infinite; }
+      @keyframes loading-spin { to { transform: rotate(360deg); } }
       .video-results { display: grid; gap: 8px; margin: 12px 0; }
       .video-result { display: grid; grid-template-columns: 144px minmax(0, 1fr); align-items: center; gap: 12px; width: 100%; padding: 8px; text-align: left; }
       .video-result.is-selected { border-color: var(--primary); background: #edf5ef; color: var(--text); }
@@ -321,7 +333,7 @@
       .topbar-title { margin: 0; font-size: .94rem; font-weight: 650; }
       .topbar-meta { color: var(--muted); font-size: .8rem; }
       .mobile-menu-button { display: none; width: auto; padding: 8px 10px; border: 1px solid var(--line); background: #fff; color: var(--text); }
-      .workspace { width: min(1320px, 100%); margin: 0 auto; padding: 32px clamp(18px, 3.5vw, 48px) 60px; }
+      .workspace { width: min(1700px, 100%); margin: 0 auto; padding: 32px clamp(18px, 3.5vw, 48px) 60px; }
       .app-view { display: none; }
       .app-view.is-active { display: block; animation: view-in 160ms ease-out; }
       @keyframes view-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -476,6 +488,29 @@
               </form>
               <div id="result" class="analysis-status" hidden></div>
             </div>
+            <section id="embedded-score" class="embedded-score" aria-label="Partitura completa y reproductor">
+              <h2>Partitura completa</h2>
+              <div class="ensemble-toolbar" aria-label="Reproducción de todas las voces">
+                <button id="ensemble-play" class="score-tool" type="button" disabled>▶ Reproducir</button>
+                <button id="ensemble-stop" class="score-tool" type="button" disabled>■ Detener</button>
+                <output id="ensemble-time">0:00 / 0:00</output>
+                <label>Velocidad <select id="ensemble-speed"><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1" selected>100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option></select></label>
+                <label>Volumen <input id="ensemble-volume" type="range" min="0" max="100" value="50" aria-label="Volumen de reproducción" /></label>
+                <button id="score-fullscreen" class="score-tool" type="button">Pantalla completa</button>
+              </div>
+              <input id="ensemble-seek" type="range" min="0" max="1" step="0.1" value="0" disabled aria-label="Posición de reproducción" />
+              <p id="ensemble-status" class="loading-status" role="status" aria-live="polite">Todas las voces · sonidos aproximados de instrumentos.</p>
+              <p id="full-score-status" class="loading-status" role="status" aria-live="polite">Sube una partitura para verla aquí.</p>
+              <div class="score-toolbar" aria-label="Navegación de la partitura completa">
+                <button id="score-prev" class="score-tool" type="button" disabled>Anterior</button>
+                <span id="score-page" class="score-page-label"></span>
+                <button id="score-next" class="score-tool" type="button" disabled>Siguiente</button>
+                <button id="score-zoom-out" class="score-tool" type="button">−</button>
+                <output id="score-zoom-label">100 %</output>
+                <button id="score-zoom-in" class="score-tool" type="button">+</button>
+              </div>
+              <div id="full-score-rendering"></div>
+            </section>
           </section>
 
           <section class="app-view" data-view="difficulty">
@@ -565,6 +600,15 @@
       let activeNotationPassage = null;
       const measuresPerNotationPage = 4;
       const audioModule = import('/static/playback.js');
+      const scoreViewPromise = import('/static/score-view.js').then(({ createScoreView }) =>
+        createScoreView({ getSource: loadNotationSource, getFile: () => currentScoreFile, filter: filterMusicXmlPassage }));
+      function loadEmbeddedScore() {
+        scoreViewPromise.then((view) => view.load()).catch(() => {
+          const status = document.getElementById('full-score-status');
+          status.textContent = 'No se pudo cargar el visor. Puedes volver a intentarlo recargando la página.';
+          status.setAttribute('aria-busy', 'false');
+        });
+      }
       const audioStatus = document.getElementById('playback-status');
       async function stopPassageAudio() {
         (await audioModule).stopPlayback();
@@ -770,7 +814,7 @@
 
       function filterMusicXmlPassage(source, instrumentName, measureRange) {
         const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
-        const partMatch = instrumentName.match(/^(.*)\s+(\d+)$/);
+        const partMatch = instrumentName && instrumentName.match(/^(.*)\s+(\d+)$/);
         const sourceInstrumentName = partMatch ? partMatch[1] : instrumentName;
         let selectedStaffNumber = partMatch ? Number(partMatch[2]) : null;
         const documentXml = new DOMParser().parseFromString(source, 'application/xml');
@@ -782,7 +826,7 @@
         const directChild = (parent, name) => Array.from(parent.children)
           .find((element) => element.localName === name);
         const scoreParts = descendants(documentXml, 'score-part');
-        const matchingParts = scoreParts.filter((part) => {
+        const matchingParts = instrumentName === null ? scoreParts : scoreParts.filter((part) => {
           const name = directChild(part, 'part-name');
           return name && name.textContent.trim() === sourceInstrumentName;
         });
@@ -810,20 +854,30 @@
           }
           const scorePartName = scoreParts.find((entry) => entry.getAttribute('id') === part.getAttribute('id'));
           const nameElement = scorePartName && directChild(scorePartName, 'part-name');
-          if (nameElement) nameElement.textContent = instrumentName;
+          if (nameElement && instrumentName !== null) nameElement.textContent = instrumentName;
           let previousAttributes = null;
           let firstRetained = true;
           Array.from(part.children).filter((element) => element.localName === 'measure').forEach((measure) => {
             const measureNumber = Number.parseInt(measure.getAttribute('number'), 10);
             const attributes = directChild(measure, 'attributes');
-            if (attributes) previousAttributes = attributes.cloneNode(true);
+            if (attributes) {
+              if (!previousAttributes) previousAttributes = attributes.cloneNode(true);
+              else Array.from(attributes.children).forEach((element) => {
+                const inherited = Array.from(previousAttributes.children).find((candidate) =>
+                  candidate.localName === element.localName &&
+                  candidate.getAttribute('number') === element.getAttribute('number'));
+                if (inherited) previousAttributes.replaceChild(element.cloneNode(true), inherited);
+                else previousAttributes.append(element.cloneNode(true));
+              });
+            }
             if (measureNumber < firstMeasure || measureNumber > lastMeasure) {
               part.removeChild(measure);
               return;
             }
-            if (firstRetained && !attributes && previousAttributes) {
+            if (firstRetained && previousAttributes) {
               const print = directChild(measure, 'print');
-              measure.insertBefore(previousAttributes.cloneNode(true), print ? print.nextSibling : measure.firstChild);
+              if (attributes) measure.replaceChild(previousAttributes.cloneNode(true), attributes);
+              else measure.insertBefore(previousAttributes.cloneNode(true), print ? print.nextSibling : measure.firstChild);
             }
             if (selectedStaffNumber) {
               const currentAttributes = directChild(measure, 'attributes');
@@ -875,7 +929,10 @@
       }
 
       async function openNotationPassage(instrument, measureRange) {
+        (await scoreViewPromise).stop();
         await stopPassageAudio();
+        document.getElementById('passage-play').hidden = false;
+        document.getElementById('passage-stop').hidden = false;
         const dialog = document.getElementById('notation-dialog');
         const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
         activeNotationPassage = { instrument, firstMeasure, lastMeasure, pageStart: firstMeasure, zoom: 1 };
@@ -929,7 +986,8 @@
         document.getElementById('notation-zoom-label').textContent = Math.round(state.zoom * 100) + '%';
         container.scrollTop = 0;
         container.scrollLeft = 0;
-        status.textContent = 'Notación original · tonalidad escrita del MusicXML · ' + displayInstrumentName(state.instrument);
+        status.textContent = 'Notación original · tonalidad escrita del MusicXML · ' +
+          (state.instrument === null ? 'Todas las voces' : displayInstrumentName(state.instrument));
       }
 
       document.getElementById('notation-prev').addEventListener('click', () => {
@@ -1458,7 +1516,7 @@
 
           renderAnalysis(data);
           renderBandProfile(partNames, completedProfile);
-          if (navigateToOverview) setActiveView('overview');
+          if (navigateToOverview) setActiveView('analyze');
         } catch (error) {
           resultBox.hidden = false;
           resultBox.textContent = 'Error en la solicitud: ' + error.message;
@@ -1474,6 +1532,7 @@
         currentScoreFile = file;
         await stopPassageAudio();
         notationSourcePromise = null;
+        loadEmbeddedScore();
         await analyzeFile(file, readBandProfile());
       });
 
