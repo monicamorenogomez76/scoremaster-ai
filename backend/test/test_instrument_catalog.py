@@ -204,7 +204,7 @@ def test_catalog_integrity():
     assert len(entries) >= 40, "covers the usual concert band instrumentation"
     ids = [entry.canonical_id for entry in entries]
     assert len(ids) == len(set(ids)), "canonical ids are unique"
-    sections = {"woodwinds", "brass", "strings", "percussion", "keyboard"}
+    sections = {"woodwinds", "brass", "strings", "percussion", "keyboard", "rhythm"}
     seen = {}
     for entry in entries:
         assert entry.section in sections, entry.canonical_id
@@ -213,3 +213,23 @@ def test_catalog_integrity():
             assert alias == normalize_instrument_name(alias), "aliases are stored normalized: " + alias
             assert alias not in seen, "alias {} used by {} and {}".format(alias, seen.get(alias), entry.canonical_id)
             seen[alias] = entry.canonical_id
+
+
+@pytest.mark.parametrize("name, canonical_id", [
+    ("5-str. Electric Bass", "electric_bass"),
+    ("Bajo eléctrico", "electric_bass"),
+    ("Electric Guitar", "guitar.electric"),
+    ("Guitarra eléctrica", "guitar.electric"),
+    ("Acoustic Guitar", "guitar.acoustic"),
+    ("Guitarra acústica", "guitar.acoustic"),
+])
+def test_rhythm_section_instruments(name, canonical_id):
+    identity = match_instrument_name(name).identity
+    assert identity.canonical_id == canonical_id
+    assert identity.section == "rhythm"
+
+
+def test_unqualified_guitar_stays_unknown_and_drum_set_stays_in_percussion():
+    assert match_instrument_name("Guitar").identity is None
+    assert match_instrument_name("Guitarra").identity is None
+    assert match_instrument_name("Drumset").identity.section == "percussion"

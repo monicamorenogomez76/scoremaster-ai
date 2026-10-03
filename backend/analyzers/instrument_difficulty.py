@@ -96,6 +96,7 @@ FAMILY_LABELS_ES = {
     "strings": "Cuerda",
     "percussion": "Percusión",
     "keyboard": "Teclas",
+    "rhythm": "Sección rítmica",
     "other": "Otros",
 }
 
@@ -138,6 +139,8 @@ FAMILY_WEIGHTS = {
     "keyboard": {"range": 0.20, "register": 0.15, "intervals": 0.20, "density": 0.25, "endurance": 0.15, "tempo": 0.05},
     "other": {"range": 0.20, "register": 0.20, "intervals": 0.20, "density": 0.20, "endurance": 0.15, "tempo": 0.05},
 }
+# Neutral weights until expert data allows calibrating the rhythm section (author's decision).
+FAMILY_WEIGHTS["rhythm"] = dict(FAMILY_WEIGHTS["other"])
 
 
 def _normalize_instrument(instrument: str) -> str:

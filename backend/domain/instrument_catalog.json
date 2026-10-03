@@ -1,6 +1,6 @@
 {
- "version": "instrument-catalog-v1",
- "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone",
+ "version": "instrument-catalog-v2",
+ "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
    "id": "piccolo",
@@ -496,7 +496,7 @@
   },
   {
    "id": "electric_bass",
-   "section": "strings",
+   "section": "rhythm",
    "family": "bass_guitar",
    "variant": "electric",
    "transposition": null,
@@ -508,6 +508,37 @@
     "bajo electrico",
     "5 str electric bass",
     "el bass"
+   ]
+  },
+  {
+   "id": "guitar.electric",
+   "section": "rhythm",
+   "family": "guitar",
+   "variant": "electric",
+   "transposition": null,
+   "label_es": "Guitarra eléctrica",
+   "label_en": "Electric Guitar",
+   "aliases": [
+    "electric guitar",
+    "guitarra electrica",
+    "chitarra elettrica",
+    "e gtr",
+    "el gtr"
+   ]
+  },
+  {
+   "id": "guitar.acoustic",
+   "section": "rhythm",
+   "family": "guitar",
+   "variant": "acoustic",
+   "transposition": null,
+   "label_es": "Guitarra acústica",
+   "label_en": "Acoustic Guitar",
+   "aliases": [
+    "acoustic guitar",
+    "guitarra acustica",
+    "chitarra acustica",
+    "ac gtr"
    ]
   },
   {

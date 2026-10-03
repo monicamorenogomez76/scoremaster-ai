@@ -5,7 +5,7 @@
 ## Estado de implementación
 
 **Paso 06 integrado en código (catálogo canónico):** `backend/domain/instrument_catalog.json`
-contiene 46 identidades con sección, familia, variante, transposición, etiquetas y
+contiene 48 identidades con sección, familia, variante, transposición, etiquetas y
 aliases en español, inglés e italiano. `backend/domain/instrument_catalog.py` normaliza
 el nombre (minúsculas, acentos, `♭`/`flat` → `b`, puntuación), separa los números de
 parte (`2`, `II`, `2nd`, `1 & 2`, `1/2`) y busca el alias **exacto**: no hay coincidencia
@@ -17,6 +17,9 @@ Decisiones musicales de la autora, para contexto de banda:
 - «Trumpet»/«Trompeta» es en Si♭; «Horn»/«Trompa» es la trompa en Fa, otro instrumento.
 - «Baritone»/«Barítono» a secas es el saxofón barítono; «Baritone Horn» es el bombardino barítono.
 - «Requinto» es el clarinete en Mi♭.
+- El bajo eléctrico y las guitarras eléctrica y acústica forman la **sección rítmica**, con pesos
+  de dificultad neutros (los de «Otros») hasta poder calibrarlos; la batería sigue en percusión.
+  «Guitar»/«Guitarra» sin tipo queda `UNKNOWN` (catálogo `instrument-catalog-v2`).
 - «Trombone 3» es un trombón tenor; una parte compartida «Trombone 3 & Bass Trombone»
   queda `UNKNOWN` para confirmación humana. «Cymbal» a secas también.
 

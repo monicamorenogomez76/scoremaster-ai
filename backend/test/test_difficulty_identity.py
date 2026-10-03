@@ -48,3 +48,11 @@ def test_metadata_proposed_identity_is_used_when_the_name_is_generic():
 def test_unresolved_parts_keep_the_previous_behaviour():
     family, _, _ = numbers("Voice", PartMetadata(part_id="P1", part_name="Voice", instrument_names=("Voice Oohs",)))
     assert family == "other"
+
+
+def test_rhythm_section_uses_neutral_weights_until_calibrated():
+    from backend.analyzers.instrument_difficulty import compute_instrument_difficulty as compute
+    bass = compute(ScorePart("Electric Bass", PASSAGE), tempo_bpm=120)
+    assert bass["family"] == "rhythm"
+    assert bass["family_label_es"] == "Sección rítmica"
+    assert numbers("Electric Bass")[1:] == numbers("Voice")[1:]
