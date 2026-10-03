@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from music21 import pitch
 
 from backend.domain.models import ScorePart
+from backend.analyzers.endurance import longest_active_run
 
 
 @dataclass(frozen=True)
@@ -181,19 +182,6 @@ def _measure_attack_density(measure) -> float:
     return attacks / max(2.0, measure_length / 2.0)
 
 
-def _longest_active_run(part: ScorePart) -> int:
-    longest = current = 0
-    for measure in part.measures:
-        active = any(not event.is_rest for event in measure.notes)
-        has_rest = any(event.is_rest for event in measure.notes)
-        if active and not has_rest:
-            current += 1
-            longest = max(longest, current)
-        else:
-            current = 0
-    return longest
-
-
 def grade_from_score(score: float) -> int:
     if score < 1.5:
         return 1
@@ -239,7 +227,7 @@ def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = Non
 
     if part.measures:
         dimensions["endurance"] = _clamp(
-            _longest_active_run(part) / profile.endurance_measures * 5
+            longest_active_run(part) / profile.endurance_measures * 5
         )
 
     if tempo_bpm is not None and tempo_bpm > 0:

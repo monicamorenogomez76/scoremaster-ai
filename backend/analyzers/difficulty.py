@@ -13,6 +13,7 @@ from backend.analyzers.instrument_difficulty import (
 from backend.rules.high_density import find_high_rhythm_density
 from backend.rules.high_register import find_high_register
 from backend.rules.large_intervals import find_large_intervals
+from backend.rules.endurance import find_long_passages_without_rest
 
 
 RULE_WEIGHTS = {
@@ -73,6 +74,7 @@ def compute_difficulty_score(score: Score) -> dict:
     findings.extend(find_high_rhythm_density(score))
     findings.extend(find_large_intervals(score))
     findings.extend(find_high_register(score))
+    findings.extend(find_long_passages_without_rest(score))
 
     by_instrument: dict[str, dict] = {}
     by_family: dict[str, dict] = {}
