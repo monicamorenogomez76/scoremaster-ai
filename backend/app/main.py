@@ -6,8 +6,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from xml.etree import ElementTree
-from zipfile import BadZipFile, ZipFile, is_zipfile
+from zipfile import ZipFile, is_zipfile
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
@@ -23,6 +22,7 @@ from backend.app.dependencies import STORAGE_UNAVAILABLE, close_analysis_engine,
 from backend.application.analysis_repository import AnalysisRepository
 from backend.application.save_analysis import save_analysis
 from backend.parsers.musicxml_parser import parse_musicxml
+from backend.parsers.musicxml_source import extract_musicxml
 from backend.parsers.playback import build_playback
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -40,32 +40,11 @@ app = FastAPI(title="ScoreMasterAI API", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 
-def _extract_musicxml(content: bytes) -> bytes | None:
-    try:
-        if is_zipfile(io.BytesIO(content)):
-            with ZipFile(io.BytesIO(content)) as archive:
-                container = ElementTree.fromstring(archive.read("META-INF/container.xml"))
-                rootfile = next(
-                    element for element in container.iter()
-                    if element.tag.rsplit("}", 1)[-1] == "rootfile"
-                )
-                score_xml = archive.read(rootfile.attrib["full-path"])
-        else:
-            score_xml = content
-        root = ElementTree.fromstring(score_xml)
-    except (BadZipFile, ElementTree.ParseError, KeyError, StopIteration, OSError):
-        return None
-
-    if root.tag.rsplit("}", 1)[-1] not in {"score-partwise", "score-timewise"}:
-        return None
-    return score_xml
-
-
 def _musicxml_suffix(content: bytes, extension: str):
     is_compressed = is_zipfile(io.BytesIO(content))
     if extension == ".mxl" and not is_compressed:
         return None
-    if _extract_musicxml(content) is None:
+    if extract_musicxml(content) is None:
         return None
     return ".mxl" if is_compressed else extension
 
@@ -95,7 +74,7 @@ def notation_source(file: UploadFile = File(...)):
     extension = Path(file.filename).suffix.lower()
     if extension not in {".musicxml", ".mxl", ".xml"}:
         raise HTTPException(status_code=400, detail="Expected a MusicXML file upload.")
-    source = _extract_musicxml(file.file.read())
+    source = extract_musicxml(file.file.read())
     if source is None:
         raise HTTPException(status_code=400, detail="Uploaded file is not valid MusicXML.")
     return Response(content=source, media_type="application/vnd.recordare.musicxml+xml")
@@ -117,7 +96,7 @@ def playback(
         with ZipFile(io.BytesIO(content)) as archive:
             if sum(item.file_size for item in archive.infolist()) > 20 * 1024 * 1024:
                 raise HTTPException(status_code=413, detail="La partitura descomprimida supera 20 MB.")
-    source = _extract_musicxml(content)
+    source = extract_musicxml(content)
     if source is None or b"<!ENTITY" in source:
         raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.")
     with NamedTemporaryFile(suffix=".musicxml") as temporary:

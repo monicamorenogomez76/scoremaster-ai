@@ -16,9 +16,32 @@ class ScoreMeasure:
 
 
 @dataclass(frozen=True)
+class PartTransposition:
+	"""MusicXML <transpose>: interval from written to sounding pitch."""
+	chromatic: int
+	diatonic: Optional[int] = None
+	octave_change: int = 0
+
+
+@dataclass(frozen=True)
+class PartMetadata:
+	"""What the MusicXML declares about a part, kept verbatim for later resolution."""
+	part_id: Optional[str] = None
+	part_name: Optional[str] = None
+	part_abbreviation: Optional[str] = None
+	instrument_names: tuple[str, ...] = ()
+	instrument_sounds: tuple[str, ...] = ()
+	midi_programs: tuple[int, ...] = ()
+	midi_channels: tuple[int, ...] = ()
+	transposition: Optional[PartTransposition] = None
+	staff_number: Optional[int] = None
+
+
+@dataclass(frozen=True)
 class ScorePart:
 	name: str
 	measures: tuple[ScoreMeasure, ...]
+	metadata: PartMetadata = PartMetadata()
 
 
 @dataclass(frozen=True)

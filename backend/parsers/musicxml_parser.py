@@ -1,15 +1,90 @@
 from pathlib import Path
 import re
-from typing import Union
+from dataclasses import replace
+from typing import Optional, Union
 from collections import Counter
+from xml.etree import ElementTree
 
 from music21 import converter, note, stream, tempo
 
-from backend.domain.models import Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
+from backend.parsers.musicxml_source import extract_musicxml
+from backend.domain.models import PartMetadata, PartTransposition, Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
+
+
+def _text(element) -> Optional[str]:
+    if element is None:
+        return None
+    return " ".join("".join(element.itertext()).split()) or None
+
+
+def _integers(elements) -> tuple[int, ...]:
+    values = []
+    for element in elements:
+        try:
+            values.append(int(_text(element)))
+        except (TypeError, ValueError):
+            continue
+    return tuple(values)
+
+
+def _transposition(transpose) -> Optional[PartTransposition]:
+    chromatic = _integers(transpose.iter("chromatic"))
+    if not chromatic:
+        return None
+    diatonic = _integers(transpose.iter("diatonic"))
+    octave_change = _integers(transpose.iter("octave-change"))
+    return PartTransposition(chromatic[0], diatonic[0] if diatonic else None, octave_change[0] if octave_change else 0)
+
+
+def read_part_metadata(content: bytes) -> dict[str, PartMetadata]:
+    """Declared metadata of every <score-part>, keyed by part id, without interpreting it.
+
+    Only the first <transpose> of each part is kept; later transposition changes are not modelled yet.
+    """
+    root = ElementTree.fromstring(content)
+    metadata = {}
+    for score_part in root.iter("score-part"):
+        texts = lambda name: tuple(value for value in map(_text, score_part.iter(name)) if value)
+        metadata[score_part.get("id")] = PartMetadata(
+            part_id=score_part.get("id"),
+            part_name=_text(score_part.find("part-name")),
+            part_abbreviation=_text(score_part.find("part-abbreviation")),
+            instrument_names=texts("instrument-name"),
+            instrument_sounds=texts("instrument-sound"),
+            midi_programs=_integers(score_part.iter("midi-program")),
+            midi_channels=_integers(score_part.iter("midi-channel")),
+        )
+    for part in root.iter("part"):
+        transpose = next(part.iter("transpose"), None)
+        if part.get("id") in metadata and transpose is not None:
+            metadata[part.get("id")] = replace(metadata[part.get("id")], transposition=_transposition(transpose))
+    return metadata
+
+
+def _metadata_for(parsed_part, declared: dict[str, PartMetadata]) -> PartMetadata:
+    """music21 keeps the MusicXML part id in `groups` ("P1"), or "P1-Staff2" for each staff of a
+    multi-staff part; staves of one part share its metadata."""
+    for candidate in (*getattr(parsed_part, "groups", ()), parsed_part.id):
+        if not isinstance(candidate, str):
+            continue
+        staff = re.match(r"^(.*)-Staff(\d+)$", candidate)
+        if staff and staff.group(1) in declared:
+            return replace(declared[staff.group(1)], staff_number=int(staff.group(2)))
+        if candidate in declared:
+            return declared[candidate]
+    return PartMetadata()
 
 
 def parse_musicxml(source: Union[str, Path]) -> Score:
-    parsed_score = converter.parse(str(source), format="musicxml")
+    score_xml = extract_musicxml(Path(source).read_bytes())
+    if score_xml is None:
+        raise ValueError("The file is not a MusicXML score.")
+    # Entity declarations enable expansion attacks; real MusicXML scores do not need them.
+    if b"<!ENTITY" in score_xml:
+        raise ValueError("MusicXML with entity declarations is not accepted.")
+    declared_metadata = read_part_metadata(score_xml)
+    # music21 receives the extracted document, so the file extension does not matter.
+    parsed_score = converter.parse(score_xml, format="musicxml")
     title = parsed_score.metadata.title if parsed_score.metadata else ""
     composer = parsed_score.metadata.composer if parsed_score.metadata else None
 
@@ -80,7 +155,7 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
                     )
             measures.append(ScoreMeasure(number=measure_number, notes=tuple(notes)))
 
-        parts.append(ScorePart(name=part_name, measures=tuple(measures)))
+        parts.append(ScorePart(name=part_name, measures=tuple(measures), metadata=_metadata_for(parsed_part, declared_metadata)))
 
     return Score(
         title=title or "Untitled score",
