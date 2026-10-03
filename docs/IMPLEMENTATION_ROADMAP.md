@@ -21,7 +21,7 @@ La corrección del audio del clarinete, el pasaje completo y los controles compa
 
 ## Entregas
 
-Los números 01–25 identifican pasos del plan, no números de GitHub. Los pasos 04 y 05 están integrados en las PR #21 y #22. Antes del paso 06 se retoma la arquitectura frontend React aprobada.
+Los números 01–25 identifican pasos del plan, no números de GitHub. Los pasos 04 y 05 están integrados en las PR #21 y #22. La transición a React está integrada (PR #23, #25 y #26) y GitHub Actions valida cada PR antes del paso 06.
 
 | Entrega | Objetivo | Estado |
 |---|---|---|
@@ -87,7 +87,7 @@ Tres PR independientes, revisadas antes del commit:
 |---|---|---|
 | React 1 | Build reproducible, carga/análisis, asignaciones, estados y cancelación | Integrada: PR #23 |
 | React 2 | Dashboard, dificultad, BandFit, ensayo y navegación | Integrada: PR #25 |
-| React 3 | Visores, vídeos y reproducción; retirada del adaptador temporal | Preparada para revisión |
+| React 3 | Visores, vídeos y reproducción; retirada del adaptador temporal | Integrada: PR #26 |
 
 Se conserva el diseño y se verifica cada recorrido con Playwright. La primera
 PR monta React en el formulario mediante un adaptador temporal para las vistas

@@ -113,6 +113,21 @@ PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node ba
 Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`.
 La descarga del visor necesita conexión a Internet.
 
+### Integración continua
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) se ejecuta en
+cada pull request y en cada push a `main`, con permisos de solo lectura:
+
+- **tests**: build del frontend, pruebas unitarias de Node y pytest con PostgreSQL 17
+  real (`TEST_DATABASE_URL`), de modo que las pruebas de persistencia no se omiten.
+- **e2e**: migra la base, arranca Uvicorn y ejecuta los recorridos Playwright de carga,
+  visores y panel con Chromium. Las muestras de sonido se sustituyen; el visor
+  OpenSheetMusicDisplay se descarga de su CDN.
+- **docker**: valida `docker-compose.yml` y construye la imagen de producción.
+
+La base de PostgreSQL del CI es temporal y usa credenciales desechables definidas
+en el propio workflow; no requiere secretos del repositorio.
+
 ### Diseño de la interfaz
 
 La interfaz usa un logo SVG propio, una paleta azul/violeta, superficies claras,
