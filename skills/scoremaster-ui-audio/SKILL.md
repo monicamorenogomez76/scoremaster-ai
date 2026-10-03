@@ -13,11 +13,11 @@ Trabaja únicamente en la petición activa. Antes de cambiar comportamiento, pre
 
 ## Archivos de referencia
 
-Revisa `frontend/README.md`, `frontend/index.html` y `frontend/src/`; `score-view.js`, `playback.js` y `playback-guide.js` en `backend/app/static/`; `backend/parsers/playback.py`, `README.md`, `docs/SCORE_VIEWER.md` y `docs/REALISTIC_AUDIO.md` según el cambio.
+Revisa `frontend/README.md`, `frontend/src/` (visores y audio en `frontend/src/score/`, vídeos en `frontend/src/videos/`); `backend/parsers/playback.py`, `README.md`, `docs/SCORE_VIEWER.md` y `docs/REALISTIC_AUDIO.md` según el cambio.
 
 ## Procedimiento
 
-- Trabaja sobre la interfaz React de `frontend/`, compilada con Vite y servida por FastAPI. Visores, audio y vídeos siguen en `legacy-workspace.js` hasta su PR de migración; no los migres por una edición de UX.
+- Trabaja sobre la interfaz React de `frontend/`, compilada con Vite y servida por FastAPI. Mantén OpenSheetMusicDisplay y el motor de audio fuera del estado de React: los componentes dibujan controles y los renderers gestionan la notación.
 - Explica dificultad, adecuación a la banda y ensayo en lenguaje de músico. Mantén escalas visibles, evidencias accesibles y modo demo reconocible; no representes una sesión local como autenticación real.
 - Conserva el archivo original durante la sesión y aplica asignaciones instrumentales a una copia. Nueva partitura y cambio de archivo deben limpiar análisis, visor y audio anteriores.
 - Respeta el ciclo de audio: carga cancelable, reproducción, pausa, detener y cierre. Evita eventos duplicados y callbacks obsoletos al cambiar de obra o cerrar el visor.

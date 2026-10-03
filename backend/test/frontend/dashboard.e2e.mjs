@@ -73,6 +73,24 @@ try {
   console.log('PASS: mobile menu opens, navigates and closes');
 
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.route('**/youtube/search?*', route => route.fulfill({ contentType: 'application/json',
+    body: JSON.stringify({ videos: [], search_url: 'https://www.youtube.com/results?search_query=High+Density+Study' }) }));
+  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=videos]').click();
+  const videos = page.locator('#videos-content');
+  await videos.getByRole('button', { name: 'Buscar' }).click();
+  await videos.getByRole('link', { name: /Abrir búsqueda de “High Density Study”/ }).waitFor();
+  const manualLink = videos.getByLabel('Enlace de vídeo de YouTube');
+  await manualLink.fill('https://example.com/watch?v=dQw4w9WgXcQ');
+  await videos.getByRole('button', { name: 'Reproducir enlace' }).click();
+  assert.equal(await manualLink.evaluate(input => input.validity.valid), false, 'non-YouTube links are rejected');
+  assert.equal(await videos.locator('iframe').count(), 0);
+  await manualLink.fill('https://youtu.be/dQw4w9WgXcQ');
+  await videos.getByRole('button', { name: 'Reproducir enlace' }).click();
+  assert.equal(await videos.locator('iframe').getAttribute('src'), 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+  await page.unroute('**/youtube/search?*');
+  console.log('PASS: video search falls back to a YouTube link and plays only valid links');
+
   await page.locator('#sign-out').click();
   assert.equal(await page.locator('#login-screen').isVisible(), true);
   await page.reload();

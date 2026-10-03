@@ -32,10 +32,8 @@ El flujo de trabajo y las pautas de cambios están en [CONTRIBUTING.md](CONTRIBU
 El MVP incluye análisis determinista de dificultad, compatibilidad de plantilla,
 plan de ensayo y un cuadro de mando por familias, instrumentos y pasajes críticos.
 
-La interfaz se está migrando a React. Ya están en React el acceso demo, la
-navegación, la carga y el análisis, el resumen, la dificultad, la plantilla y el
-plan de ensayo. Los visores, el audio y los vídeos siguen en el adaptador temporal
-hasta su PR.
+La interfaz está construida con React y Vite: acceso demo, navegación, carga y
+análisis, resumen, dificultad, plantilla, plan de ensayo, visores, audio y vídeos.
 Ver [arquitectura y arranque del frontend](frontend/README.md). Para ejecutar con
 Python, compilar primero con `npm --prefix frontend ci` y
 `npm --prefix frontend run build`; Docker lo hace durante la construcción.

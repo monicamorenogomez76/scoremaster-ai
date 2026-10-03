@@ -38,11 +38,10 @@ def test_root_serves_upload_page():
     response = client.get("/")
     assert response.status_code == 200
     assert "ScoreMasterAI" in response.text
-    # React renders the workspace; the page ships its mount point, bundle and viewer nodes.
+    # React renders the whole workspace; the page ships its mount point, bundle and engine.
     assert '<div id="root"></div>' in response.text
     assert "/static/frontend/assets/" in response.text
-    assert 'id="embedded-score"' in response.text
-    assert 'id="notation-dialog"' in response.text
+    assert "opensheetmusicdisplay" in response.text
     assert "JSON.stringify(data, null, 2)" not in response.text
 
 

@@ -116,7 +116,7 @@ try {
   const retained = await page.evaluate(() => new DOMParser().parseFromString(window.scoremasterWorkspace.filterPassage(window.scoremasterWorkspace.getPassage().source, 'Flute', '70-114'), 'application/xml').querySelectorAll('measure').length);
   assert.equal(retained, 45);
   assert.equal(await page.evaluate(() => window.scoremasterWorkspace.getPassage().renderer.Sheet.SourceMeasures.length), 45, 'all bars reach the renderer');
-  await page.evaluate(async () => { const { highlightMeasure } = await import('/static/playback-guide.js'); highlightMeasure(window.scoremasterWorkspace.getPassage().renderer, 114, document.getElementById('notation-score')); });
+  await page.evaluate(() => window.scoremasterWorkspace.highlightPassageMeasure(114));
   assert.equal(await page.evaluate(() => window.scoremasterWorkspace.getPassage().renderer.cursor.Iterator.CurrentMeasureIndex), 44);
   assert.equal(await page.evaluate(() => window.scoremasterWorkspace.getPassage().renderer.cursor.Hidden), false);
   await page.locator('#passage-play').click();

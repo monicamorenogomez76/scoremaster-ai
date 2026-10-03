@@ -86,8 +86,8 @@ Tres PR independientes, revisadas antes del commit:
 | PR de transición | Alcance | Estado |
 |---|---|---|
 | React 1 | Build reproducible, carga/análisis, asignaciones, estados y cancelación | Integrada: PR #23 |
-| React 2 | Dashboard, dificultad, BandFit, ensayo y navegación | Preparada para revisión |
-| React 3 | Visores, vídeos y reproducción; retirada del adaptador temporal | Pendiente |
+| React 2 | Dashboard, dificultad, BandFit, ensayo y navegación | Integrada: PR #25 |
+| React 3 | Visores, vídeos y reproducción; retirada del adaptador temporal | Preparada para revisión |
 
 Se conserva el diseño y se verifica cada recorrido con Playwright. La primera
 PR monta React en el formulario mediante un adaptador temporal para las vistas

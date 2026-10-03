@@ -27,9 +27,9 @@ function harness() {
       instruments.push(result); return result;
     }
   };
-  const source = readFileSync(new URL('../../app/static/playback.js', import.meta.url), 'utf8')
+  const source = readFileSync(new URL('../../../frontend/src/score/playback.js', import.meta.url), 'utf8')
     .replace(/export /g, '')
-    .replace(/import\('https:\/\/unpkg[^']+'\)/, 'Promise.resolve({ Soundfont: fakeSoundfont })');
+    .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont })');
   vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage });', scope);
   return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed,
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
