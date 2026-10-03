@@ -22,6 +22,11 @@ Proyecto de TFM del Máster de Desarrollo con IA de BigSchool.
 - Documentación actualizada con cada cambio.
 - Ejecución sin API key mediante un modo demo identificado claramente.
 
+El flujo de trabajo y las pautas de cambios están en [CONTRIBUTING.md](CONTRIBUTING.md).
+[AGENTS.md](AGENTS.md) asigna cada tipo de tarea a una skill del asistente de
+`skills/`. Las partituras comerciales para pruebas manuales van en
+`test-scores/local/`, que no se versiona.
+
 ## Estado
 
 El MVP incluye análisis determinista de dificultad, compatibilidad de plantilla,
