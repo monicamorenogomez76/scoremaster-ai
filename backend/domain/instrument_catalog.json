@@ -1,0 +1,757 @@
+{
+ "version": "instrument-catalog-v1",
+ "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone",
+ "instruments": [
+  {
+   "id": "piccolo",
+   "section": "woodwinds",
+   "family": "flute",
+   "variant": "piccolo",
+   "transposition": null,
+   "label_es": "Flautín",
+   "label_en": "Piccolo",
+   "aliases": [
+    "piccolo",
+    "flautin",
+    "ottavino",
+    "picc",
+    "picc fl"
+   ]
+  },
+  {
+   "id": "flute",
+   "section": "woodwinds",
+   "family": "flute",
+   "variant": "concert",
+   "transposition": null,
+   "label_es": "Flauta",
+   "label_en": "Flute",
+   "aliases": [
+    "flute",
+    "flauta",
+    "flauto",
+    "fl",
+    "c flute"
+   ]
+  },
+  {
+   "id": "flute.alto",
+   "section": "woodwinds",
+   "family": "flute",
+   "variant": "alto",
+   "transposition": "G",
+   "label_es": "Flauta alto",
+   "label_en": "Alto Flute",
+   "aliases": [
+    "alto flute",
+    "flauta alto",
+    "flauto contralto"
+   ]
+  },
+  {
+   "id": "oboe",
+   "section": "woodwinds",
+   "family": "oboe",
+   "variant": "oboe",
+   "transposition": null,
+   "label_es": "Oboe",
+   "label_en": "Oboe",
+   "aliases": [
+    "oboe",
+    "ob",
+    "hautbois"
+   ]
+  },
+  {
+   "id": "english_horn",
+   "section": "woodwinds",
+   "family": "oboe",
+   "variant": "english_horn",
+   "transposition": "F",
+   "label_es": "Corno inglés",
+   "label_en": "English Horn",
+   "aliases": [
+    "english horn",
+    "cor anglais",
+    "corno ingles",
+    "corno inglese",
+    "eng hn",
+    "e hn"
+   ]
+  },
+  {
+   "id": "bassoon",
+   "section": "woodwinds",
+   "family": "bassoon",
+   "variant": "bassoon",
+   "transposition": null,
+   "label_es": "Fagot",
+   "label_en": "Bassoon",
+   "aliases": [
+    "bassoon",
+    "fagot",
+    "fagotto",
+    "bsn",
+    "bn"
+   ]
+  },
+  {
+   "id": "contrabassoon",
+   "section": "woodwinds",
+   "family": "bassoon",
+   "variant": "contrabassoon",
+   "transposition": null,
+   "label_es": "Contrafagot",
+   "label_en": "Contrabassoon",
+   "aliases": [
+    "contrabassoon",
+    "double bassoon",
+    "contrafagot",
+    "contrafagotto",
+    "cbsn"
+   ]
+  },
+  {
+   "id": "clarinet.eb",
+   "section": "woodwinds",
+   "family": "clarinet",
+   "variant": "eb",
+   "transposition": "Eb",
+   "label_es": "Requinto",
+   "label_en": "E♭ Clarinet",
+   "aliases": [
+    "eb clarinet",
+    "clarinet in eb",
+    "requinto",
+    "clarinete en mib",
+    "clarinete mib",
+    "clarinete en mi bemol",
+    "clarinetto in mib",
+    "clarinetto piccolo",
+    "eb cl"
+   ]
+  },
+  {
+   "id": "clarinet.bb",
+   "section": "woodwinds",
+   "family": "clarinet",
+   "variant": "soprano",
+   "transposition": "Bb",
+   "label_es": "Clarinete en Si bemol",
+   "label_en": "B♭ Clarinet",
+   "aliases": [
+    "clarinet",
+    "bb clarinet",
+    "clarinet in bb",
+    "clarinete",
+    "clarinete sib",
+    "clarinete en sib",
+    "clarinete en si bemol",
+    "clarinetto",
+    "clarinetto in sib",
+    "clarinetto in si bemolle",
+    "cl",
+    "bb cl",
+    "clar"
+   ]
+  },
+  {
+   "id": "clarinet.a",
+   "section": "woodwinds",
+   "family": "clarinet",
+   "variant": "a",
+   "transposition": "A",
+   "label_es": "Clarinete en La",
+   "label_en": "Clarinet in A",
+   "aliases": [
+    "clarinet in a",
+    "a clarinet",
+    "clarinete en la",
+    "clarinetto in la"
+   ]
+  },
+  {
+   "id": "clarinet.alto",
+   "section": "woodwinds",
+   "family": "clarinet",
+   "variant": "alto",
+   "transposition": "Eb",
+   "label_es": "Clarinete alto",
+   "label_en": "Alto Clarinet",
+   "aliases": [
+    "alto clarinet",
+    "eb alto clarinet",
+    "clarinete alto",
+    "clarinetto contralto",
+    "alto cl"
+   ]
+  },
+  {
+   "id": "clarinet.bass",
+   "section": "woodwinds",
+   "family": "clarinet",
+   "variant": "bass",
+   "transposition": "Bb",
+   "label_es": "Clarinete bajo",
+   "label_en": "Bass Clarinet",
+   "aliases": [
+    "bass clarinet",
+    "bb bass clarinet",
+    "clarinete bajo",
+    "clarinetto basso",
+    "b cl",
+    "bass cl",
+    "bcl"
+   ]
+  },
+  {
+   "id": "clarinet.contrabass",
+   "section": "woodwinds",
+   "family": "clarinet",
+   "variant": "contrabass",
+   "transposition": "Bb",
+   "label_es": "Clarinete contrabajo",
+   "label_en": "Contrabass Clarinet",
+   "aliases": [
+    "contrabass clarinet",
+    "bb contrabass clarinet",
+    "clarinete contrabajo",
+    "clarinetto contrabbasso"
+   ]
+  },
+  {
+   "id": "saxophone.soprano",
+   "section": "woodwinds",
+   "family": "saxophone",
+   "variant": "soprano",
+   "transposition": "Bb",
+   "label_es": "Saxofón soprano",
+   "label_en": "Soprano Saxophone",
+   "aliases": [
+    "soprano saxophone",
+    "soprano sax",
+    "saxofon soprano",
+    "saxo soprano",
+    "sassofono soprano",
+    "s sax"
+   ]
+  },
+  {
+   "id": "saxophone.alto",
+   "section": "woodwinds",
+   "family": "saxophone",
+   "variant": "alto",
+   "transposition": "Eb",
+   "label_es": "Saxofón alto",
+   "label_en": "Alto Saxophone",
+   "aliases": [
+    "alto saxophone",
+    "alto sax",
+    "alto saxophone in eb",
+    "eb alto saxophone",
+    "saxofon alto",
+    "saxo alto",
+    "sassofono contralto",
+    "a sax"
+   ]
+  },
+  {
+   "id": "saxophone.tenor",
+   "section": "woodwinds",
+   "family": "saxophone",
+   "variant": "tenor",
+   "transposition": "Bb",
+   "label_es": "Saxofón tenor",
+   "label_en": "Tenor Saxophone",
+   "aliases": [
+    "tenor saxophone",
+    "tenor sax",
+    "bb tenor saxophone",
+    "saxofon tenor",
+    "saxo tenor",
+    "sassofono tenore",
+    "t sax"
+   ]
+  },
+  {
+   "id": "saxophone.baritone",
+   "section": "woodwinds",
+   "family": "saxophone",
+   "variant": "baritone",
+   "transposition": "Eb",
+   "label_es": "Saxofón barítono",
+   "label_en": "Baritone Saxophone",
+   "aliases": [
+    "baritone saxophone",
+    "baritone sax",
+    "bari sax",
+    "eb baritone saxophone",
+    "saxofon baritono",
+    "saxo baritono",
+    "sassofono baritono",
+    "bar sax",
+    "b sax",
+    "baritone",
+    "baritono"
+   ]
+  },
+  {
+   "id": "horn.f",
+   "section": "brass",
+   "family": "horn",
+   "variant": "f",
+   "transposition": "F",
+   "label_es": "Trompa en Fa",
+   "label_en": "Horn in F",
+   "aliases": [
+    "horn",
+    "french horn",
+    "horn in f",
+    "f horn",
+    "trompa",
+    "trompa en fa",
+    "corno",
+    "corno in fa",
+    "cor",
+    "hn",
+    "hrn"
+   ]
+  },
+  {
+   "id": "trumpet.bb",
+   "section": "brass",
+   "family": "trumpet",
+   "variant": "bb",
+   "transposition": "Bb",
+   "label_es": "Trompeta en Si bemol",
+   "label_en": "B♭ Trumpet",
+   "aliases": [
+    "trumpet",
+    "bb trumpet",
+    "trumpet in bb",
+    "trompeta",
+    "trompeta en sib",
+    "trompeta en si bemol",
+    "tromba",
+    "tromba in sib",
+    "tpt",
+    "trp"
+   ]
+  },
+  {
+   "id": "trumpet.c",
+   "section": "brass",
+   "family": "trumpet",
+   "variant": "c",
+   "transposition": null,
+   "label_es": "Trompeta en Do",
+   "label_en": "C Trumpet",
+   "aliases": [
+    "c trumpet",
+    "trumpet in c",
+    "trompeta en do",
+    "tromba in do"
+   ]
+  },
+  {
+   "id": "cornet.bb",
+   "section": "brass",
+   "family": "cornet",
+   "variant": "bb",
+   "transposition": "Bb",
+   "label_es": "Corneta",
+   "label_en": "B♭ Cornet",
+   "aliases": [
+    "cornet",
+    "bb cornet",
+    "cornet in bb",
+    "corneta",
+    "cornetta",
+    "cnt"
+   ]
+  },
+  {
+   "id": "flugelhorn.bb",
+   "section": "brass",
+   "family": "flugelhorn",
+   "variant": "bb",
+   "transposition": "Bb",
+   "label_es": "Fliscorno",
+   "label_en": "Flugelhorn",
+   "aliases": [
+    "flugelhorn",
+    "fluegelhorn",
+    "bb flugelhorn",
+    "fliscorno",
+    "flicorno",
+    "flghn"
+   ]
+  },
+  {
+   "id": "trombone.tenor",
+   "section": "brass",
+   "family": "trombone",
+   "variant": "tenor",
+   "transposition": null,
+   "label_es": "Trombón",
+   "label_en": "Trombone",
+   "aliases": [
+    "trombone",
+    "tenor trombone",
+    "trombon",
+    "trombon tenor",
+    "trombone tenore",
+    "tbn",
+    "trb"
+   ]
+  },
+  {
+   "id": "trombone.bass",
+   "section": "brass",
+   "family": "trombone",
+   "variant": "bass",
+   "transposition": null,
+   "label_es": "Trombón bajo",
+   "label_en": "Bass Trombone",
+   "aliases": [
+    "bass trombone",
+    "trombon bajo",
+    "trombone basso",
+    "b tbn",
+    "bass tbn"
+   ]
+  },
+  {
+   "id": "euphonium",
+   "section": "brass",
+   "family": "euphonium",
+   "variant": "euphonium",
+   "transposition": null,
+   "label_es": "Bombardino",
+   "label_en": "Euphonium",
+   "aliases": [
+    "euphonium",
+    "bombardino",
+    "eufonio",
+    "flicorno basso",
+    "euph"
+   ]
+  },
+  {
+   "id": "baritone_horn",
+   "section": "brass",
+   "family": "baritone_horn",
+   "variant": "baritone",
+   "transposition": null,
+   "label_es": "Bombardino barítono",
+   "label_en": "Baritone Horn",
+   "aliases": [
+    "baritone horn",
+    "flicorno baritono"
+   ]
+  },
+  {
+   "id": "tuba",
+   "section": "brass",
+   "family": "tuba",
+   "variant": "tuba",
+   "transposition": null,
+   "label_es": "Tuba",
+   "label_en": "Tuba",
+   "aliases": [
+    "tuba",
+    "bass tuba",
+    "tba"
+   ]
+  },
+  {
+   "id": "sousaphone",
+   "section": "brass",
+   "family": "tuba",
+   "variant": "sousaphone",
+   "transposition": null,
+   "label_es": "Sousáfono",
+   "label_en": "Sousaphone",
+   "aliases": [
+    "sousaphone",
+    "sousafono"
+   ]
+  },
+  {
+   "id": "double_bass",
+   "section": "strings",
+   "family": "double_bass",
+   "variant": "double_bass",
+   "transposition": null,
+   "label_es": "Contrabajo",
+   "label_en": "Double Bass",
+   "aliases": [
+    "double bass",
+    "string bass",
+    "contrabass",
+    "contrabajo",
+    "contrabbasso",
+    "cb"
+   ]
+  },
+  {
+   "id": "electric_bass",
+   "section": "strings",
+   "family": "bass_guitar",
+   "variant": "electric",
+   "transposition": null,
+   "label_es": "Bajo eléctrico",
+   "label_en": "Electric Bass",
+   "aliases": [
+    "electric bass",
+    "bass guitar",
+    "bajo electrico",
+    "5 str electric bass",
+    "el bass"
+   ]
+  },
+  {
+   "id": "cello",
+   "section": "strings",
+   "family": "cello",
+   "variant": "cello",
+   "transposition": null,
+   "label_es": "Violonchelo",
+   "label_en": "Cello",
+   "aliases": [
+    "cello",
+    "violoncello",
+    "violonchelo",
+    "vc"
+   ]
+  },
+  {
+   "id": "piano",
+   "section": "keyboard",
+   "family": "piano",
+   "variant": "piano",
+   "transposition": null,
+   "label_es": "Piano",
+   "label_en": "Piano",
+   "aliases": [
+    "piano",
+    "pianoforte",
+    "pno"
+   ]
+  },
+  {
+   "id": "harp",
+   "section": "keyboard",
+   "family": "harp",
+   "variant": "harp",
+   "transposition": null,
+   "label_es": "Arpa",
+   "label_en": "Harp",
+   "aliases": [
+    "harp",
+    "arpa"
+   ]
+  },
+  {
+   "id": "timpani",
+   "section": "percussion",
+   "family": "timpani",
+   "variant": "timpani",
+   "transposition": null,
+   "label_es": "Timbales",
+   "label_en": "Timpani",
+   "aliases": [
+    "timpani",
+    "timbales",
+    "timpano",
+    "timp"
+   ]
+  },
+  {
+   "id": "snare_drum",
+   "section": "percussion",
+   "family": "drum",
+   "variant": "snare",
+   "transposition": null,
+   "label_es": "Caja",
+   "label_en": "Snare Drum",
+   "aliases": [
+    "snare drum",
+    "concert snare drum",
+    "snare",
+    "side drum",
+    "caja",
+    "tamburo",
+    "s d"
+   ]
+  },
+  {
+   "id": "bass_drum",
+   "section": "percussion",
+   "family": "drum",
+   "variant": "bass",
+   "transposition": null,
+   "label_es": "Bombo",
+   "label_en": "Bass Drum",
+   "aliases": [
+    "bass drum",
+    "concert bass drum",
+    "bombo",
+    "gran cassa",
+    "b d"
+   ]
+  },
+  {
+   "id": "crash_cymbals",
+   "section": "percussion",
+   "family": "cymbal",
+   "variant": "crash",
+   "transposition": null,
+   "label_es": "Platos",
+   "label_en": "Crash Cymbals",
+   "aliases": [
+    "crash cymbal",
+    "crash cymbals",
+    "clash cymbals",
+    "cymbals",
+    "platos",
+    "piatti"
+   ]
+  },
+  {
+   "id": "suspended_cymbal",
+   "section": "percussion",
+   "family": "cymbal",
+   "variant": "suspended",
+   "transposition": null,
+   "label_es": "Plato suspendido",
+   "label_en": "Suspended Cymbal",
+   "aliases": [
+    "suspended cymbal",
+    "sus cym",
+    "plato suspendido",
+    "piatto sospeso"
+   ]
+  },
+  {
+   "id": "drum_set",
+   "section": "percussion",
+   "family": "drum_set",
+   "variant": "drum_set",
+   "transposition": null,
+   "label_es": "Batería",
+   "label_en": "Drum Set",
+   "aliases": [
+    "drumset",
+    "drum set",
+    "drum kit",
+    "drums",
+    "bateria"
+   ]
+  },
+  {
+   "id": "tambourine",
+   "section": "percussion",
+   "family": "tambourine",
+   "variant": "tambourine",
+   "transposition": null,
+   "label_es": "Pandereta",
+   "label_en": "Tambourine",
+   "aliases": [
+    "tambourine",
+    "pandereta",
+    "tamburello",
+    "tamb"
+   ]
+  },
+  {
+   "id": "triangle",
+   "section": "percussion",
+   "family": "triangle",
+   "variant": "triangle",
+   "transposition": null,
+   "label_es": "Triángulo",
+   "label_en": "Triangle",
+   "aliases": [
+    "triangle",
+    "triangulo",
+    "triangolo",
+    "trgl"
+   ]
+  },
+  {
+   "id": "glockenspiel",
+   "section": "percussion",
+   "family": "keyboard_percussion",
+   "variant": "glockenspiel",
+   "transposition": null,
+   "label_es": "Glockenspiel",
+   "label_en": "Glockenspiel",
+   "aliases": [
+    "glockenspiel",
+    "orchestra bells",
+    "bells",
+    "bell lyra",
+    "lira",
+    "glock"
+   ]
+  },
+  {
+   "id": "xylophone",
+   "section": "percussion",
+   "family": "keyboard_percussion",
+   "variant": "xylophone",
+   "transposition": null,
+   "label_es": "Xilófono",
+   "label_en": "Xylophone",
+   "aliases": [
+    "xylophone",
+    "xilofono",
+    "xylo"
+   ]
+  },
+  {
+   "id": "marimba",
+   "section": "percussion",
+   "family": "keyboard_percussion",
+   "variant": "marimba",
+   "transposition": null,
+   "label_es": "Marimba",
+   "label_en": "Marimba",
+   "aliases": [
+    "marimba",
+    "mrb"
+   ]
+  },
+  {
+   "id": "vibraphone",
+   "section": "percussion",
+   "family": "keyboard_percussion",
+   "variant": "vibraphone",
+   "transposition": null,
+   "label_es": "Vibráfono",
+   "label_en": "Vibraphone",
+   "aliases": [
+    "vibraphone",
+    "vibrafono",
+    "vibes",
+    "vib"
+   ]
+  },
+  {
+   "id": "chimes",
+   "section": "percussion",
+   "family": "keyboard_percussion",
+   "variant": "chimes",
+   "transposition": null,
+   "label_es": "Campanas tubulares",
+   "label_en": "Chimes",
+   "aliases": [
+    "chimes",
+    "tubular bells",
+    "campanas tubulares",
+    "campane tubolari"
+   ]
+  }
+ ]
+}
