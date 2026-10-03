@@ -56,7 +56,15 @@ Las pruebas de integración requieren `TEST_DATABASE_URL` con una conexión Post
 local (preferiblemente dedicada a pruebas) y permisos para crear esquemas. Ejecutar
 `.venv/bin/python -m pytest -q`. Cada prueba crea y elimina exclusivamente su esquema
 `test_scoremaster_<uuid>`; sin esa variable las pruebas PostgreSQL se omiten.
-No usar una base de producción para pruebas.
+No usar una base de producción para pruebas. En local puede crearse una base
+dedicada en el contenedor y apuntar ambas variables a ella:
+
+```sh
+docker compose exec db sh -c 'createdb -U "$POSTGRES_USER" scoremaster_test'
+```
+
+El CI de GitHub Actions ejecuta estas pruebas en cada pull request con un servicio
+PostgreSQL 17 temporal.
 
 Para verificar el repositorio desde la imagen de desarrollo, usando su configuración
 sin imprimir la conexión:

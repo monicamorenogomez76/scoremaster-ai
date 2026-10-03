@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Throwaway credentials for the PostgreSQL service that lives only inside each job.
+env:
+  POSTGRES_DB: scoremaster
+  POSTGRES_USER: scoremaster
+  POSTGRES_PASSWORD: ci-only-password
+  DATABASE_URL: postgresql+psycopg://scoremaster:ci-only-password@127.0.0.1:5432/scoremaster
+
+jobs:
+  tests:
+    name: Python, Node y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: scoremaster
+          POSTGRES_USER: scoremaster
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U scoremaster -d scoremaster"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: |
+          npm --prefix frontend ci
+          pip install -r requirements.txt
+      - name: Compilar frontend
+        run: npm --prefix frontend run build
+      - name: Pruebas unitarias del frontend
+        run: node --test backend/test/frontend/*.test.mjs
+      - name: Pruebas Python con PostgreSQL real
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: python -m pytest -q -rs
+
+  e2e:
+    name: Recorridos Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: scoremaster
+          POSTGRES_USER: scoremaster
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U scoremaster -d scoremaster"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    env:
+      SCOREMASTER_URL: http://127.0.0.1:8006
+      PLAYWRIGHT_MODULE: /tmp/browser-tests/node_modules/playwright
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias y Chromium
+        run: |
+          npm --prefix frontend ci
+          pip install -r requirements.txt
+          npm install --prefix /tmp/browser-tests playwright@1.63.0
+          /tmp/browser-tests/node_modules/.bin/playwright install --with-deps chromium
+      - name: Compilar frontend y migrar la base
+        run: |
+          npm --prefix frontend run build
+          python -m alembic upgrade head
+      - name: Arrancar la aplicación
+        run: |
+          python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8006 > /tmp/uvicorn.log 2>&1 &
+          for attempt in $(seq 1 30); do curl -sf "$SCOREMASTER_URL/health" && exit 0; sleep 1; done
+          cat /tmp/uvicorn.log; exit 1
+      - name: Carga y análisis
+        run: node backend/test/frontend/react-upload.e2e.mjs
+      - name: Visores y reproducción
+        run: node backend/test/frontend/workflow.e2e.mjs
+      - name: Panel, banda, ensayo y vídeos
+        run: node backend/test/frontend/dashboard.e2e.mjs
+      - name: Registro del servidor
+        if: failure()
+        run: cat /tmp/uvicorn.log
+
+  docker:
+    name: Imagen Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar docker-compose.yml
+        run: docker compose config --quiet
+      - name: Construir la imagen
+        run: docker build --tag scoremaster-ai:ci .
