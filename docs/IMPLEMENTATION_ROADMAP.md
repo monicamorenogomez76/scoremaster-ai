@@ -32,7 +32,7 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 05 | Guardado desde el análisis | Integrado: PR #22; ID, resultados y configuración persistidos |
 | 06 | Catálogo canónico | Integrado: PR #28 |
 | 07 | Metadatos del parser | Integrado: PR #29 |
-| 08 | Resolver determinista | En curso: resolver y `/analyze` en revisión; consumidores pendientes |
+| 08 | Resolver determinista | En curso: resolver integrado (PR #30); dificultad en revisión; BandFit y audio pendientes |
 | 09 | Confirmación humana | Pendiente |
 | 10 | Tiempos y ataques musicales | Pendiente |
 | 11 | Características locales | Pendiente |

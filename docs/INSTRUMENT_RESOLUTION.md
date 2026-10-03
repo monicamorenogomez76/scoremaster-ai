@@ -39,6 +39,11 @@ distintos (kits de percusión) no cuentan; el programa MIDI no se usa. Los umbra
 (0.90 aceptación, 0.70 revisión) son iniciales y deben calibrarse. `/analyze` devuelve
 `instruments` con identidad, estado, fuente, confianza y evidencias. BandFit, la
 dificultad y el audio todavía usan el nombre de la parte: es la segunda parte del paso 08.
+La dificultad por instrumento ya usa la identidad resuelta: la familia es la sección del
+catálogo y el perfil es el existente para esa identidad (`PROFILE_BY_CANONICAL_ID`), sin
+perfiles nuevos. Las partes sin identidad mantienen la clasificación anterior por nombre,
+y el baseline legacy sigue idéntico. BandFit (agrupar por identidad cambia la plantilla de
+la interfaz) y el timbre del audio quedan para PR posteriores.
 Con las partituras locales: 75 partes `resolved`, 2 `review`, 35 `unknown` (partes
 «Voice») y ningún conflicto ni clasificación incorrecta.
 

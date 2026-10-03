@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from music21 import pitch
 
+from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import ScorePart
 from backend.analyzers.endurance import longest_active_run
 
@@ -62,6 +63,31 @@ INSTRUMENT_ALIASES = {
     "suspended cymbal": "cymbal",
     "tambourine": "tambourine",
     "bell lyra": "glockenspiel",
+}
+
+# Resolved identities reuse the profiles above; this map adds no new musical judgement,
+# it only lets every alias of an identity reach the profile its English name already had.
+PROFILE_BY_CANONICAL_ID = {
+    "piccolo": "piccolo",
+    "flute": "flute",
+    "oboe": "oboe",
+    "clarinet.bb": "clarinet",
+    "clarinet.alto": "alto clarinet",
+    "clarinet.bass": "bass clarinet",
+    "bassoon": "bassoon",
+    "saxophone.alto": "alto saxophone",
+    "saxophone.tenor": "tenor saxophone",
+    "saxophone.baritone": "baritone saxophone",
+    "trumpet.bb": "trumpet",
+    "horn.f": "horn",
+    "trombone.tenor": "trombone",
+    "euphonium": "euphonium",
+    "tuba": "tuba",
+    "double_bass": "double bass",
+    "timpani": "timpani",
+    "xylophone": "xylophone",
+    "glockenspiel": "glockenspiel",
+    "chimes": "chimes",
 }
 
 FAMILY_LABELS_ES = {
@@ -194,9 +220,16 @@ def grade_from_score(score: float) -> int:
     return 5
 
 
+def _family_and_profile(part: ScorePart) -> tuple[str, InstrumentProfile | None]:
+    """Resolved identity first; unresolved parts keep the previous name-based classification."""
+    identity = resolve_part(part).identity
+    if identity is None:
+        return classify_instrument_family(part.name), INSTRUMENT_PROFILES.get(_profile_key(part.name))
+    return identity.section, INSTRUMENT_PROFILES.get(PROFILE_BY_CANONICAL_ID.get(identity.canonical_id, ""))
+
+
 def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = None) -> dict:
-    profile = INSTRUMENT_PROFILES.get(_profile_key(part.name))
-    family = classify_instrument_family(part.name)
+    family, profile = _family_and_profile(part)
     if profile is None:
         profile = InstrumentProfile(family, 48, 84, 36, 9, 8, 2.2, 135)
 
