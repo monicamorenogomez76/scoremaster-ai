@@ -1,13 +1,27 @@
 import json
 import inspect
 from pathlib import Path
+from uuid import UUID
+
+import pytest
 
 from fastapi.testclient import TestClient
 from music21 import stream, note
 
 from backend.app.main import analyze_score, app
+from backend.app.dependencies import get_analysis_repository
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def isolated_repository():
+    class TestRepository:
+        def save(self, record):
+            return record.analysis_id
+    app.dependency_overrides[get_analysis_repository] = TestRepository
+    yield
+    app.dependency_overrides.pop(get_analysis_repository, None)
 
 
 def test_analyze_handler_is_sync_for_threadpool_execution():
@@ -44,6 +58,7 @@ def test_analyze_score_endpoint_returns_summary():
 
     assert response.status_code == 200
     payload = response.json()
+    assert UUID(payload['analysis_id']).version == 4
     assert payload["title"]
     assert payload["difficulty"]["overall_score"] >= 0
     assert payload["tempo"]["tempo_mark_count"] == 0

@@ -3,25 +3,40 @@ from __future__ import annotations
 import io
 import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from xml.etree import ElementTree
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import SQLAlchemyError
 
 from backend.analyzers.band_fit import compute_band_fit
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics
 from backend.app.youtube import search_videos
+from backend.app.dependencies import STORAGE_UNAVAILABLE, close_analysis_engine, get_analysis_repository
+from backend.application.analysis_repository import AnalysisRepository
+from backend.application.save_analysis import save_analysis
 from backend.parsers.musicxml_parser import parse_musicxml
 from backend.parsers.playback import build_playback
 
 BASE_DIR = Path(__file__).resolve().parent
-app = FastAPI(title="ScoreMasterAI API")
+
+
+@asynccontextmanager
+async def lifespan(app):
+    try:
+        yield
+    finally:
+        close_analysis_engine()
+
+
+app = FastAPI(title="ScoreMasterAI API", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 
@@ -116,6 +131,7 @@ def analyze_score(
     file: UploadFile = File(...),
     band_profile: str = Form("{}"),
     total_minutes: int = Form(60),
+    repository: AnalysisRepository = Depends(get_analysis_repository),
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="Expected a MusicXML file upload.")
@@ -148,7 +164,7 @@ def analyze_score(
         band_fit = compute_band_fit(score, profile)
         rehearsal_plan = build_rehearsal_plan(score, total_minutes)
 
-        return {
+        result = {
             "title": score.title,
             "composer": score.composer,
             "parts": [part.name for part in score.parts],
@@ -157,5 +173,9 @@ def analyze_score(
             "band_fit": band_fit,
             "rehearsal_plan": rehearsal_plan,
         }
+        try:
+            return save_analysis(result, content, profile, total_minutes, repository)
+        except SQLAlchemyError as exc:
+            raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
     finally:
         temp_path.unlink(missing_ok=True)

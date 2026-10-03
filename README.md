@@ -119,11 +119,13 @@ conformidad WCAG.
 ## Evolución aprobada
 
 El [plan de PR pequeñas](docs/IMPLEMENTATION_ROADMAP.md) y las
-[especificaciones](docs/README.md) describen lo previsto. PostgreSQL, grados 1–6,
-feedback y revisión LLM todavía no están implementados en esta entrega documental.
+[especificaciones](docs/README.md) describen lo previsto. PostgreSQL y el guardado de análisis ya están implementados. Grados 1–6,
+feedback y revisión LLM siguen previstos.
 
 El [baseline reproducible](evaluation/README.md) captura el comportamiento legacy
 antes de cambiar sus reglas: `python -m evaluation.baseline`.
 
 El [arranque de PostgreSQL](docs/POSTGRESQL.md) requiere `.env` y conserva los
-datos en un volumen. En esta entrega todavía no se guardan análisis en la base.
+datos en un volumen. Aplicar las migraciones antes de analizar: cada análisis
+correcto se guarda y devuelve `analysis_id`. El archivo original y el audio no se
+guardan; todavía no existe historial público ni vinculación a cuentas.
