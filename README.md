@@ -34,6 +34,10 @@ al navegador y temporales.
 El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
 de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
 
+ScoreLint incluye SL005 para ocho o más compases activos sin silencios. Es una
+aproximación de continuidad por compases, no una estimación fisiológica de fatiga.
+Cualquier silencio explícito o compás vacío interrumpe el bloque.
+
 ## Partitura y vídeos
 
 Cada pasaje crítico ofrece una única acción «Ver pasaje». Su visor incluye
