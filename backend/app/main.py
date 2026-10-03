@@ -21,6 +21,7 @@ from backend.app.youtube import search_videos
 from backend.app.dependencies import STORAGE_UNAVAILABLE, close_analysis_engine, get_analysis_repository
 from backend.application.analysis_repository import AnalysisRepository
 from backend.application.save_analysis import save_analysis
+from backend.domain.instrument_resolver import resolve_part
 from backend.parsers.musicxml_parser import parse_musicxml
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.parsers.playback import build_playback
@@ -150,6 +151,7 @@ def analyze_score(
             "title": score.title,
             "composer": score.composer,
             "parts": [part.name for part in score.parts],
+            "instruments": [resolve_part(part).as_dict() for part in score.parts],
             "difficulty": difficulty,
             "tempo": compute_tempo_metrics(score),
             "band_fit": band_fit,
