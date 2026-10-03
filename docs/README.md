@@ -11,5 +11,7 @@ Consultar primero el [plan aprobado y su estado](IMPLEMENTATION_ROADMAP.md). Los
 - [REALISTIC_AUDIO](REALISTIC_AUDIO.md)
 - [ENGINEERING_PRINCIPLES](ENGINEERING_PRINCIPLES.md)
 - [Backlog de implementación](tasks/IMPLEMENT_AI_EVOLUTION.md)
+- [Propuesta de cambios del README](tasks/README_CHANGES.md)
+- [Borrador de changelog](tasks/CHANGE_ENTRY.md)
 
-Los archivos originales aportados en la raíz no se eliminan. Los ejemplos de puntuación o confianza de las especificaciones no son resultados medidos.
+Estas copias sustituyen a los originales aportados en la raíz. Las pautas de trabajo están en [CONTRIBUTING](../CONTRIBUTING.md) y la distribución de skills del asistente en [AGENTS](../AGENTS.md). Los ejemplos de puntuación o confianza de las especificaciones no son resultados medidos.
