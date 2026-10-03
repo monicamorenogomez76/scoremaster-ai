@@ -21,8 +21,10 @@ No eliminar el volumen para arreglar credenciales: preservar los datos y rotarla
 
 `docker compose config --quiet` valida la configuración sin imprimir credenciales.
 `docker compose up --build` arranca API y DB; la API espera el healthcheck de DB.
-En este paso el backend todavía no guarda análisis ni necesita la base de datos
-al arrancar fuera de Docker. El repositorio de análisis está disponible; conectarlo a `/analyze` será el siguiente paso.
+Antes del primer análisis hay que aplicar las migraciones descritas abajo.
+Cada respuesta correcta de `/analyze` guarda un registro y devuelve `analysis_id`.
+Sin conexión o sin tablas migradas devuelve 503; no comunica un guardado exitoso.
+`/health` comprueba que la API está viva, no la disponibilidad de PostgreSQL.
 
 Para detener servicios conservando datos: `docker compose stop`.
 No usar `down -v` sobre una base con datos que deban conservarse.
@@ -41,6 +43,7 @@ Después de arrancar DB, construir la API y migrar explícitamente:
 ```sh
 docker compose build api
 docker compose run --rm api python -m alembic upgrade head
+docker compose up -d --wait api
 ```
 
 La migración `0001_analyses` crea `analyses`. Cada ejecución tiene un UUID propio,
@@ -64,3 +67,31 @@ docker compose run --rm api sh -c 'TEST_DATABASE_URL="$DATABASE_URL" python -m p
 
 La batería comprueba también que no hay diferencias entre el modelo SQLAlchemy y
 la migración aplicada, y que Alembic puede generar la siguiente revisión.
+
+## Guardado desde la API
+
+Cada ejecución correcta guarda el resultado completo previo, la plantilla usada y
+los minutos solicitados. Guarda también las dimensiones agregadas legacy y el
+resumen de tempo, identificados por `legacy-v1` y `legacy-features-v1`; todavía no
+son características locales del nuevo algoritmo. Analizar dos veces el mismo archivo
+crea dos IDs distintos. El hash corresponde a los bytes subidos (incluida la copia
+temporal con instrumentos corregidos cuando la interfaz la envía). La respuesta
+añade `analysis_id` sin modificar los campos musicales anteriores. No guarda el
+MusicXML, nombres de archivos, notas originales ni audio.
+
+Para arrancar con Python fuera de Docker, configurar `DATABASE_URL` en el entorno
+del proceso usando la conexión local de `.env.example` (por ejemplo en el entorno
+del IDE); Uvicorn no carga `.env` automáticamente. Después:
+
+```sh
+.venv/bin/python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8006
+```
+
+El pool se reutiliza y se cierra al apagar la API. El análisis sigue ejecutándose en un hilo de trabajo.
+
+La integración prueba respuestas frente al algoritmo legacy, registros e IDs,
+subidas rechazadas, errores sin credenciales expuestas y lectura tras reabrir
+conexiones. Para comprobar el volumen: analizar una partitura sintética, conservar
+su `analysis_id`, ejecutar `docker compose restart db api` y leer el registro mediante
+el repositorio después de que DB esté saludable. No se publica historial ni endpoint
+de lectura hasta incorporar autorización por registro.

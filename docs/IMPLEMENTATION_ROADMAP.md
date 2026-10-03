@@ -15,21 +15,21 @@
 
 Las PR #11–#16 están integradas. La PR #5 se cerró porque su densidad rítmica y agrupación ya estaban incorporadas. Comprobaciones: 62 pruebas Python, 5 pruebas Node y recorrido Playwright sobre carga, instrumentos, visor, reinicio, móvil y pasajes.
 
-PostgreSQL local está integrado mediante la PR #19. El repositorio y las migraciones están preparados para revisión; todavía no se guarda desde la API ni existe proveedor LLM. El audio actual ya usa muestras General MIDI para instrumentos afinados y síntesis para percusión. La resistencia actual es una aproximación por compases. Los hallazgos se agrupan como críticos, pendiente del detector separado.
+PostgreSQL local está integrado mediante la PR #19. El repositorio y las migraciones están integrados en la PR #21. El guardado desde la API está preparado para revisión; todavía no existe proveedor LLM. El audio actual ya usa muestras General MIDI para instrumentos afinados y síntesis para percusión. La resistencia actual es una aproximación por compases. Los hallazgos se agrupan como críticos, pendiente del detector separado.
 
 La corrección del audio del clarinete, el pasaje completo y los controles compartidos están integrados en la PR #20. Las siguientes PR retoman el plan musical y de persistencia.
 
 ## Entregas
 
-Los números 01–25 identifican pasos del plan, no números de GitHub. El paso 04 está preparado para la siguiente PR, después de la #20.
+Los números 01–25 identifican pasos del plan, no números de GitHub. El paso 04 está integrado en la PR #21; el paso 05 está preparado para revisión.
 
 | Entrega | Objetivo | Estado |
 |---|---|---|
 | 01 | Especificación consolidada | Integrada: PR #17 |
 | 02 | Baseline reproducible | Integrada: PR #18; 15 casos, 10 nombres y audio |
 | 03 | PostgreSQL en desarrollo | Integrado en PR #19: Compose, healthcheck y volumen |
-| 04 | Migraciones y repositorio de análisis | Preparado para revisión: SQLAlchemy, Alembic y pruebas PostgreSQL |
-| 05 | Guardado desde el análisis | Pendiente |
+| 04 | Migraciones y repositorio de análisis | Integrado: PR #21; SQLAlchemy, Alembic y pruebas PostgreSQL |
+| 05 | Guardado desde el análisis | Preparado para revisión: ID, resultados y configuración persistidos |
 | 06 | Catálogo canónico | Pendiente |
 | 07 | Metadatos del parser | Pendiente |
 | 08 | Resolver determinista | Pendiente |

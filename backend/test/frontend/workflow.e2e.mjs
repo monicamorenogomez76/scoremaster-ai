@@ -20,7 +20,11 @@ try {
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
   await upload('Flute');
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
+  const analysisResponse = page.waitForResponse(response => response.url().endsWith('/analyze') && response.request().method() === 'POST');
   await page.locator('#upload-form button[type=submit]').click();
+  const savedAnalysis = await analysisResponse;
+  assert.equal(savedAnalysis.status(), 200);
+  assert.match((await savedAnalysis.json()).analysis_id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   await page.waitForFunction(() => document.querySelector('#full-score-rendering svg') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false', { timeout: 45000 });
   const fits = await page.locator('#full-score-rendering').evaluate(container => {
     const svg = container.querySelector('svg').getBoundingClientRect(), box = container.getBoundingClientRect();
