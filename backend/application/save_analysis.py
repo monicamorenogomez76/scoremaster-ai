@@ -1,6 +1,8 @@
 from hashlib import sha256
 
 from backend.application.analysis_repository import AnalysisRecord, AnalysisRepository
+from backend.domain.instrument_catalog import CATALOG_VERSION
+from backend.domain.instrument_resolver import RESOLVER_VERSION
 
 
 def save_analysis(result: dict, source: bytes, profile: dict, total_minutes: int,
@@ -16,6 +18,7 @@ def save_analysis(result: dict, source: bytes, profile: dict, total_minutes: int
                 name: details['dimensions']
                 for name, details in result['difficulty']['by_instrument'].items()
             },
+            'instrument_resolution': {'resolver_version': RESOLVER_VERSION, 'catalog_version': CATALOG_VERSION},
         },
     )
     analysis_id = repository.save(record)

@@ -30,6 +30,18 @@ ElementTree; el parser rechaza documentos con `<!ENTITY>` y acepta `.mxl` aunque
 archivo tenga extensión `.musicxml`. Los cambios de transposición posteriores al
 primer `<transpose>` todavía no se modelan.
 
+**Paso 08, primera parte (resolver determinista):** `backend/domain/instrument_resolver.py`
+combina el nombre de la parte y los `instrument-name` declarados. Si coinciden: `resolved`,
+fuente `MUSICXML`, 0.97. Solo el nombre: `resolved`, `ALIAS`, 0.90. Solo el metadato:
+`review`, `MUSICXML`, 0.75. Si discrepan: `conflict`, sin identidad y con ambos
+candidatos. Sin pruebas: `unknown`. Varios `instrument-name` que nombran instrumentos
+distintos (kits de percusión) no cuentan; el programa MIDI no se usa. Los umbrales
+(0.90 aceptación, 0.70 revisión) son iniciales y deben calibrarse. `/analyze` devuelve
+`instruments` con identidad, estado, fuente, confianza y evidencias. BandFit, la
+dificultad y el audio todavía usan el nombre de la parte: es la segunda parte del paso 08.
+Con las partituras locales: 75 partes `resolved`, 2 `review`, 35 `unknown` (partes
+«Voice») y ningún conflicto ni clasificación incorrecta.
+
 Con las partituras locales de prueba (no versionadas), 49 de 52 nombres se resuelven
 y ninguno se clasifica incorrectamente. Todavía no lo consumen BandFit, la dificultad
 ni el audio: eso corresponde al resolver determinista (paso 08).

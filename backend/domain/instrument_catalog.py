@@ -16,6 +16,8 @@ from pathlib import Path
 UNKNOWN = "UNKNOWN"
 ALIAS = "ALIAS"
 CATALOG_PATH = Path(__file__).with_name("instrument_catalog.json")
+# Recorded with every persisted analysis, so results stay traceable when aliases change.
+CATALOG_VERSION = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))["version"]
 
 _ROMAN = {"i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5, "vi": 6}
 _NUMBER = r"\b(?:\d+|vi|iv|v|iii|ii|i)\b"
