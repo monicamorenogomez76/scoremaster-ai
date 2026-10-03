@@ -13,6 +13,8 @@ from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics
 from backend.app.dependencies import STORAGE_UNAVAILABLE, analysis_engine, close_analysis_engine, get_analysis_repository
 from backend.app.main import app
+from backend.domain.instrument_catalog import CATALOG_VERSION
+from backend.domain.instrument_resolver import RESOLVER_VERSION, resolve_part
 from backend.infrastructure.analysis_repository import PostgresAnalysisRepository, StoredAnalysis
 from backend.parsers.musicxml_parser import parse_musicxml
 
@@ -45,6 +47,7 @@ def test_api_persists_exact_legacy_result_and_configuration(postgres_engine, rep
         score = parse_musicxml(SCORE_PATH)
         expected = {'title': score.title, 'composer': score.composer,
             'parts': [part.name for part in score.parts],
+            'instruments': [resolve_part(part).as_dict() for part in score.parts],
             'difficulty': compute_difficulty_score(score), 'tempo': compute_tempo_metrics(score),
             'band_fit': compute_band_fit(score, {'Flute': 1}),
             'rehearsal_plan': build_rehearsal_plan(score, 30)}
@@ -56,6 +59,8 @@ def test_api_persists_exact_legacy_result_and_configuration(postgres_engine, rep
         assert stored.features['tempo'] == expected['tempo']
         assert stored.features['instrument_dimensions'] == {
             name: details['dimensions'] for name, details in expected['difficulty']['by_instrument'].items()}
+        assert stored.features['instrument_resolution'] == {'resolver_version': RESOLVER_VERSION,
+                                                            'catalog_version': CATALOG_VERSION}
         assert stored.algorithm_version == 'legacy-v1'
         assert stored.features_version == 'legacy-features-v1'
         second = upload(client)

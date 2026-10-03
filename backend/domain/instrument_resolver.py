@@ -18,6 +18,8 @@ REVIEW_CONFIDENCE = 0.7
 AGREEMENT_CONFIDENCE = 0.97
 METADATA_ONLY_CONFIDENCE = 0.75
 
+# Bump when the resolution rules or confidences change.
+RESOLVER_VERSION = "instrument-resolver-v1"
 RESOLVED, REVIEW, CONFLICT, UNKNOWN = "resolved", "review", "conflict", "unknown"
 SOURCE_ALIAS, SOURCE_MUSICXML, SOURCE_UNKNOWN = "ALIAS", "MUSICXML", "UNKNOWN"
 
