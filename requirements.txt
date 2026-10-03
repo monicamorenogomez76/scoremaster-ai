@@ -4,3 +4,6 @@ music21==8.3.0
 pytest==8.3.2
 httpx==0.27.2
 python-multipart==0.0.20
+SQLAlchemy==2.0.54
+alembic==1.16.5
+psycopg[binary]==3.2.13

@@ -22,7 +22,7 @@ No eliminar el volumen para arreglar credenciales: preservar los datos y rotarla
 `docker compose config --quiet` valida la configuración sin imprimir credenciales.
 `docker compose up --build` arranca API y DB; la API espera el healthcheck de DB.
 En este paso el backend todavía no guarda análisis ni necesita la base de datos
-al arrancar fuera de Docker. Las migraciones y el repositorio se añaden a continuación.
+al arrancar fuera de Docker. El repositorio de análisis está disponible; conectarlo a `/analyze` será el siguiente paso.
 
 Para detener servicios conservando datos: `docker compose stop`.
 No usar `down -v` sobre una base con datos que deban conservarse.
@@ -33,3 +33,34 @@ PostgreSQL gestionado mediante DATABASE_URL, conexión TLS y usuario con permiso
 mínimos. No exponer el puerto DB públicamente. Las migraciones se ejecutarán como
 paso de release. Backup/restauración y autorización se verificarán antes de publicar
 historiales multiusuario. El volumen Docker local no sustituye las copias de seguridad.
+
+## Migraciones y repositorio
+
+Después de arrancar DB, construir la API y migrar explícitamente:
+
+```sh
+docker compose build api
+docker compose run --rm api python -m alembic upgrade head
+```
+
+La migración `0001_analyses` crea `analyses`. Cada ejecución tiene un UUID propio,
+hash SHA-256 del archivo, resultado estructurado, configuración, características,
+versiones de algoritmo y características, y fecha UTC. No se guardan archivos ni audio.
+La escritura es transaccional; reutilizar un UUID provoca rollback. La migración
+puede repetirse sin duplicar tablas. Todavía no existe un endpoint público de historial.
+
+Las pruebas de integración requieren `TEST_DATABASE_URL` con una conexión PostgreSQL
+local (preferiblemente dedicada a pruebas) y permisos para crear esquemas. Ejecutar
+`.venv/bin/python -m pytest -q`. Cada prueba crea y elimina exclusivamente su esquema
+`test_scoremaster_<uuid>`; sin esa variable las pruebas PostgreSQL se omiten.
+No usar una base de producción para pruebas.
+
+Para verificar el repositorio desde la imagen de desarrollo, usando su configuración
+sin imprimir la conexión:
+
+```sh
+docker compose run --rm api sh -c 'TEST_DATABASE_URL="$DATABASE_URL" python -m pytest -q backend/test/test_postgres_repository.py'
+```
+
+La batería comprueba también que no hay diferencias entre el modelo SQLAlchemy y
+la migración aplicada, y que Alembic puede generar la siguiente revisión.
