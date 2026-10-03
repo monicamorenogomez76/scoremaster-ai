@@ -13,9 +13,10 @@ function harness() {
     { instrument: 'Flute', program: 73, events: [{ note: 72, time: 0, duration: 4 }] },
     { instrument: 'Clarinet', program: 71, events: [{ note: 60, time: 0, duration: 2 }, { note: 62, time: 4, duration: 2 }] }
   ] };
+  const current = { data };
   const scope = { exports: {}, window: { AudioContext: function () { return audio; } },
     FormData: class { append() {} }, AbortController,
-    fetch: async () => ({ ok: true, json: async () => data }),
+    fetch: async () => ({ ok: true, json: async () => current.data }),
     setTimeout: () => 1, clearTimeout() {},
     setInterval: (callback) => { callbacks.add(callback); return callback; },
     clearInterval: (callback) => callbacks.delete(callback),
@@ -31,7 +32,7 @@ function harness() {
     .replace(/export /g, '')
     .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont })');
   vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage });', scope);
-  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed,
+  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; },
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
 
@@ -90,5 +91,17 @@ test('pitched samples never use the external loops that introduce extra tones', 
   assert.ok(h.optionsUsed.every(options => options.loadLoopData === false));
   await t.play();
   assert.ok(h.starts.every(event => event.loop === false));
+  t.stop();
+});
+
+test('the resolved sound wins over the MIDI program and the part name', async () => {
+  const h = harness();
+  const fetchData = { duration: 4, measures: [{ number: 1, time: 0 }], tracks: [
+    { instrument: 'Trompa', program: 0, sound: 'french_horn', events: [{ note: 60, time: 0, duration: 1 }] },
+    { instrument: 'Clarinet', program: 71, events: [{ note: 62, time: 0, duration: 1 }] }
+  ] };
+  h.setData(fetchData);
+  const t = await h.api.preparePlayback({}, null);
+  assert.deepEqual(h.optionsUsed.map(options => options.instrument).sort(), ['clarinet', 'french_horn']);
   t.stop();
 });

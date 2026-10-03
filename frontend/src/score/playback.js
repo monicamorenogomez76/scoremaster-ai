@@ -18,6 +18,8 @@ const programs = {
 };
 
 function timbre(data) {
+  // Sound of the resolved instrument identity, chosen by the server from the catalog.
+  if (data.sound) return data.sound;
   if (programs[data.program]) return programs[data.program];
   const name = data.instrument.toLowerCase();
   const aliases = [

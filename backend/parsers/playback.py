@@ -2,11 +2,23 @@
 from collections import Counter
 import re
 
+from pathlib import Path
+
 from music21 import chord, converter, note, stream, tempo
+
+from backend.domain.instrument_resolver import resolve_part
+from backend.domain.models import ScorePart
+from backend.parsers.musicxml_parser import metadata_for_part, read_part_metadata
+from backend.parsers.musicxml_source import extract_musicxml
+
+
+def _identity(part, name, declared):
+    return resolve_part(ScorePart(name, (), metadata_for_part(part, declared))).identity
 
 
 def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
     score = converter.parse(str(source), format='musicxml')
+    declared = read_part_metadata(extract_musicxml(Path(source).read_bytes()) or b'<score-partwise/>')
     raw_names = [part.partName or (part.id if isinstance(part.id, str) else f'Part {i}')
                  for i, part in enumerate(score.parts, 1)]
     counts, indexes = Counter(raw_names), Counter()
@@ -79,7 +91,10 @@ def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
         total_events += len(events) + len(percussion)
         if total_events > (10000 if instrument_name else 150000):
             raise ValueError('La partitura es demasiado larga para reproducirla.')
+        identity = _identity(selected, name, declared)
         tracks.append({'instrument': name, 'program': selected.getInstrument().midiProgram,
+                       'canonical_id': identity.canonical_id if identity else None,
+                       'sound': identity.sound if identity else None,
                        'events': events, 'percussion': percussion, 'skipped_unpitched': skipped})
     shared = {'duration': round(seconds_at(end) - origin, 6),
               'default_tempo': not any(offset <= start for offset in marks),

@@ -36,6 +36,8 @@ class InstrumentIdentity:
     label_es: str
     label_en: str
     aliases: tuple[str, ...] = ()
+    # General MIDI soundfont for playback; None for unpitched percussion.
+    sound: str | None = None
 
 
 @dataclass(frozen=True)
@@ -81,7 +83,8 @@ def _load() -> tuple[tuple[InstrumentIdentity, ...], dict[str, InstrumentIdentit
     entries, index = [], {}
     for item in document["instruments"]:
         identity = InstrumentIdentity(item["id"], item["section"], item["family"], item["variant"],
-                                      item["transposition"], item["label_es"], item["label_en"], tuple(item["aliases"]))
+                                      item["transposition"], item["label_es"], item["label_en"], tuple(item["aliases"]),
+                                      item.get("sound"))
         for alias in identity.aliases:
             if alias in index:
                 raise ValueError("Alias {!r} is shared by {} and {}".format(alias, index[alias].canonical_id, identity.canonical_id))

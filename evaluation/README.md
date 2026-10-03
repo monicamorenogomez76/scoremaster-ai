@@ -6,6 +6,9 @@ Para regenerarlo intencionadamente: `python -m evaluation.baseline --update`.
 No actualizarlo para ocultar regresiones. Se congelará el código legacy al evolucionar
 el motor, de modo que este baseline siga reproducible sin imponer sus defectos al motor nuevo.
 
+El audio se compara con las claves de pista originales; `canonical_id` y `sound`, añadidos
+con el resolver de instrumentos, no forman parte de esta captura legacy.
+
 Incluye cinco MusicXML sintéticos ya versionados, diez casos de dominio generados,
 nombres instrumentales y eventos de audio. La lista de archivos es explícita: nunca
 recorre las partituras comerciales locales. No hay etiquetas humanas ni resultados LLM.
