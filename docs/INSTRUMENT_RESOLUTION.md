@@ -2,6 +2,28 @@
 
 # Instrument Resolution Design
 
+## Estado de implementación
+
+**Paso 06 integrado en código (catálogo canónico):** `backend/domain/instrument_catalog.json`
+contiene 46 identidades con sección, familia, variante, transposición, etiquetas y
+aliases en español, inglés e italiano. `backend/domain/instrument_catalog.py` normaliza
+el nombre (minúsculas, acentos, `♭`/`flat` → `b`, puntuación), separa los números de
+parte (`2`, `II`, `2nd`, `1 & 2`, `1/2`) y busca el alias **exacto**: no hay coincidencia
+por substring ni difusa. Lo que no está en el catálogo es `UNKNOWN`.
+
+Decisiones musicales de la autora, para contexto de banda:
+
+- «Clarinet»/«Clarinete» sin afinación es clarinete en Si♭ (en orquesta podría ser en La).
+- «Trumpet»/«Trompeta» es en Si♭; «Horn»/«Trompa» es la trompa en Fa, otro instrumento.
+- «Baritone»/«Barítono» a secas es el saxofón barítono; «Baritone Horn» es el bombardino barítono.
+- «Requinto» es el clarinete en Mi♭.
+- «Trombone 3» es un trombón tenor; una parte compartida «Trombone 3 & Bass Trombone»
+  queda `UNKNOWN` para confirmación humana. «Cymbal» a secas también.
+
+Con las partituras locales de prueba (no versionadas), 49 de 52 nombres se resuelven
+y ninguno se clasifica incorrectamente. Todavía no lo consumen BandFit, la dificultad
+ni el audio: eso corresponde al resolver determinista (paso 08).
+
 ## 1. Problema
 
 MusicXML no garantiza una nomenclatura única de instrumentos.
