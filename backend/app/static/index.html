@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ScoreMasterAI</title>
+    <link rel="icon" href="/static/brand.svg" type="image/svg+xml" />
     <style>
       :root {
         color-scheme: light dark;
@@ -220,6 +221,29 @@
       .score-page-label { flex: 1; min-width: 180px; color: #475569; text-align: center; font-size: 0.9rem; }
       .score-rendering { max-height: 72vh; overflow: auto; background: #fff; border: 1px solid #cbd5e1; }
       .score-rendering svg { max-width: none; height: auto; }
+      .embedded-score { margin-top: 24px; padding: 20px; background: #f8fafc; color: #172033; border: 1px solid #cbd5e1; border-radius: 12px; }
+      .embedded-score:fullscreen { overflow: auto; padding: 24px; }
+      .embedded-score h2 { margin: 0 0 14px; }
+      .instrument-assignment { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+      .instrument-assignment[hidden] { display: none; }
+      .instrument-assignment p { grid-column: 1 / -1; }
+      .instrument-assignment select { background: white; color: #172033; }
+      .embedded-score[hidden] { display: none; }
+      .embedded-score .score-tool { width: 40px; height: 40px; padding: 8px; border: 0; border-radius: 8px; background: #e8edf4; color: #334155; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; }
+      .embedded-score .score-tool:hover { background: #dce5f0; }
+      .embedded-score .transport-primary { background: #2563eb; color: white; border-radius: 50%; }
+      .embedded-score .transport-primary:hover { background: #1d4ed8; }
+      .embedded-score .score-tool svg { width: 24px; height: 24px; fill: currentColor; }
+      .embedded-score .score-tool:disabled { opacity: .4; }
+      .ensemble-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 0; }
+      .ensemble-toolbar label { display: flex; align-items: center; gap: 6px; margin: 0; }
+      .ensemble-toolbar input[type=range] { width: 110px; margin: 0; padding: 0; }
+      .ensemble-toolbar select { padding: 6px; background: white; color: #172033; }
+      #ensemble-seek { width: 100%; margin: 0 0 12px; padding: 0; }
+      #full-score-rendering { display: flex; justify-content: center; align-items: flex-start; padding: 16px; box-sizing: border-box; height: 70vh; min-height: 320px; overflow: auto; background: white; border: 1px solid #cbd5e1; }
+      #full-score-rendering svg { max-width: none; }
+      .loading-status[aria-busy=true]::before { content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 2px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: loading-spin 1s linear infinite; }
+      @keyframes loading-spin { to { transform: rotate(360deg); } }
       .video-results { display: grid; gap: 8px; margin: 12px 0; }
       .video-result { display: grid; grid-template-columns: 144px minmax(0, 1fr); align-items: center; gap: 12px; width: 100%; padding: 8px; text-align: left; }
       .video-result.is-selected { border-color: var(--primary); background: #edf5ef; color: var(--text); }
@@ -269,48 +293,48 @@
       }
       :root {
         color-scheme: light;
-        --bg: #f1f4f1;
+        --bg: #f5f7fc;
         --panel: #ffffff;
-        --panel-alt: #f6f8f6;
-        --text: #24332b;
-        --muted: #68776e;
-        --primary: #20634f;
-        --success: #307b5d;
-        --danger: #b44739;
-        --line: #d8e1da;
-        --accent: #d36149;
+        --panel-alt: #f3f5fb;
+        --text: #18233c;
+        --muted: #58657e;
+        --primary: #4f46e5;
+        --success: #087f68;
+        --danger: #b42338;
+        --line: #e0e5f0;
+        --accent: #6d28d9;
       }
       body { display: block; background: var(--bg); color: var(--text); font-family: "DM Sans", "Avenir Next", sans-serif; }
       [hidden] { display: none !important; }
       button, input { font: inherit; }
       button { border-radius: 6px; }
       .login-screen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 460px); min-height: 100vh; background: #fff; }
-      .login-brand { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 100vh; padding: clamp(28px, 5vw, 72px); overflow: hidden; background: #173e32; color: #f5f7f2; }
+      .login-brand { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 100vh; padding: clamp(28px, 5vw, 72px); overflow: hidden; background: #182450; color: #f5f7f2; }
       .login-brand::after { position: absolute; right: -5%; bottom: 18%; left: 6%; height: 116px; border-block: 1px solid rgba(240,247,239,.3); background: repeating-linear-gradient(to bottom, transparent 0 22px, rgba(240,247,239,.22) 23px 24px); content: ""; opacity: .6; }
       .login-brand-mark { display: flex; align-items: center; gap: 11px; font-weight: 700; }
       .brand-monogram { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid rgba(255,255,255,.45); border-radius: 5px; font-family: Georgia, serif; font-size: 1.15rem; }
       .login-brand-copy { position: relative; z-index: 1; max-width: 560px; margin: auto 0; }
       .eyebrow { color: var(--accent); font-size: .72rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
-      .login-brand .eyebrow { color: #c5d7bd; }
+      .login-brand .eyebrow { color: #c4b5fd; }
       .login-brand h1 { max-width: 510px; margin: 14px 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2.4rem, 4vw, 4.4rem); font-weight: 500; line-height: 1.05; }
-      .login-brand p { max-width: 420px; color: #d0ddd3; font-size: 1rem; line-height: 1.65; }
-      .login-brand-meta { display: flex; flex-wrap: wrap; gap: 8px 20px; color: #bdcfc3; font-size: .82rem; }
+      .login-brand p { max-width: 420px; color: #dbe4ff; font-size: 1rem; line-height: 1.65; }
+      .login-brand-meta { display: flex; flex-wrap: wrap; gap: 8px 20px; color: #c3cef0; font-size: .82rem; }
       .login-panel { display: grid; place-items: center; padding: 32px; }
       .login-card { width: min(100%, 360px); }
       .login-card h2 { margin: 10px 0 8px; font-size: 1.65rem; }
       .login-card p { line-height: 1.55; }
       .login-demo-button { margin-top: 22px; padding: 13px 16px; background: var(--primary); color: #fff; }
-      .login-note { margin-top: 16px; padding: 12px; border-left: 3px solid var(--accent); background: #f5f7f4; color: var(--muted); font-size: .84rem; }
+      .login-note { margin-top: 16px; padding: 12px; border-left: 3px solid var(--accent); background: #f3f2ff; color: var(--muted); font-size: .84rem; }
       .app-shell { display: grid; grid-template-columns: 238px minmax(0, 1fr); min-height: 100vh; }
-      .sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 20px 13px 15px; border-right: 1px solid var(--line); background: #fbfcfa; }
+      .sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 20px 13px 15px; border-right: 1px solid var(--line); background: #ffffff; }
       .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 2px 9px 24px; color: var(--text); font-weight: 700; }
-      .sidebar-brand .brand-monogram { border-color: #cbd7ce; color: var(--primary); }
-      .nav-label { padding: 14px 10px 7px; color: #87948c; font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+      .sidebar-brand .brand-monogram { border-color: #dce2f0; color: var(--primary); }
+      .nav-label { padding: 14px 10px 7px; color: #64718b; font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
       .app-nav { display: grid; gap: 3px; }
-      .nav-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 11px; border: 0; background: transparent; color: #58685f; font-size: .9rem; font-weight: 500; text-align: left; }
-      .nav-item:hover { background: #eef3ef; color: var(--text); }
-      .nav-item[aria-current="page"] { background: #e7efe8; color: #18563f; font-weight: 700; }
-      .nav-index { width: 19px; color: #8a988f; font-family: Georgia, serif; font-size: .75rem; }
+      .nav-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 11px; border: 0; background: transparent; color: #58657e; font-size: .9rem; font-weight: 500; text-align: left; }
+      .nav-item:hover { background: #f3f4ff; color: var(--text); }
+      .nav-item[aria-current="page"] { background: #eeedff; color: #4338ca; font-weight: 700; }
+      .nav-index { width: 19px; color: #64718b; font-family: Georgia, serif; font-size: .75rem; }
       .sidebar-bottom { display: grid; gap: 11px; margin-top: auto; padding: 14px 8px 0; border-top: 1px solid var(--line); }
       .demo-identity { display: grid; gap: 3px; }
       .demo-identity strong { font-size: .86rem; }
@@ -321,7 +345,7 @@
       .topbar-title { margin: 0; font-size: .94rem; font-weight: 650; }
       .topbar-meta { color: var(--muted); font-size: .8rem; }
       .mobile-menu-button { display: none; width: auto; padding: 8px 10px; border: 1px solid var(--line); background: #fff; color: var(--text); }
-      .workspace { width: min(1320px, 100%); margin: 0 auto; padding: 32px clamp(18px, 3.5vw, 48px) 60px; }
+      .workspace { width: min(1700px, 100%); margin: 0 auto; padding: 32px clamp(18px, 3.5vw, 48px) 60px; }
       .app-view { display: none; }
       .app-view.is-active { display: block; animation: view-in 160ms ease-out; }
       @keyframes view-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -343,22 +367,22 @@
       .app-shell .dashboard-grid { margin: 0; }
       .app-shell .metric-card { border-color: var(--line); border-radius: 7px; background: #fff; }
       .app-shell .metric-card .label { color: var(--muted); letter-spacing: .07em; }
-      .app-shell .tree-node { border-color: #d3ded6; background: #fff; color: #24332b; }
-      .app-shell .tree-node:hover, .app-shell .tree-node:focus-visible { border-color: #20634f; background: #f6faf6; }
-      .app-shell .tree-node-support { color: #52645a; }
-      .app-shell .tree-node .tree-grade { padding: 4px 9px; border: 1px solid #b9d5c0; border-radius: 999px; background: #e8f2e9; color: #174f39; font-size: .8rem; }
+      .app-shell .tree-node { border-color: #e0e5f0; background: #fff; color: #18233c; }
+      .app-shell .tree-node:hover, .app-shell .tree-node:focus-visible { border-color: #4f46e5; background: #f6f7ff; }
+      .app-shell .tree-node-support { color: #58657e; }
+      .app-shell .tree-node .tree-grade { padding: 4px 9px; border: 1px solid #d5d0ff; border-radius: 999px; background: #eeedff; color: #4338ca; font-size: .8rem; }
       .app-shell .result-section { margin-top: 17px; padding: 0; border: 0; }
       .app-shell .result-section h2 { font-size: .98rem; }
-      .app-shell .family-bar { background: #e6ece7; }
+      .app-shell .family-bar { background: #edf0f8; }
       .app-shell .family-bar > span { background: var(--primary); }
-      .app-shell .pill { border-color: #d5e4d8; background: #edf4ed; color: #315c45; }
+      .app-shell .pill { border-color: #dbd7ff; background: #f2f0ff; color: #5145a8; }
       .app-shell input, .app-shell button { border-radius: 5px; }
       .app-shell input[type="file"] { background: var(--panel-alt); color: var(--text); }
       .workspace form { max-width: 760px; margin-top: 0; }
       .workspace form > input { background: #fff; color: var(--text); }
       .band-profile-editor { max-width: 980px; color: var(--text); }
       .band-profile-editor p { font-size: .86rem; }
-      .empty-workspace { max-width: 620px; padding: 20px; border: 1px dashed #c7d4ca; border-radius: 7px; background: rgba(255,255,255,.7); }
+      .empty-workspace { max-width: 620px; padding: 20px; border: 1px dashed #d0d8eb; border-radius: 7px; background: rgba(255,255,255,.7); }
       .empty-workspace h2 { margin: 0 0 8px; font-size: .98rem; }
       .empty-workspace p { margin: 0; color: var(--muted); line-height: 1.5; }
       .duration-field { display: grid; gap: 6px; color: var(--text); font-size: .88rem; font-weight: 600; }
@@ -395,6 +419,55 @@
         .topbar { padding: 0 14px; }
         .topbar-meta { font-size: .72rem; }
       }
+
+      /* Shared visual language: quiet surfaces, clear actions and keyboard focus. */
+      body { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      button, input, select, textarea { min-height: 44px; }
+      button { transition: background-color 150ms ease, box-shadow 150ms ease; }
+      button:disabled { cursor: default; }
+      :where(button, input, select, textarea, a):focus-visible { outline: 3px solid #4f46e5; outline-offset: 3px; }
+      .brand-logo { flex-shrink: 0; filter: drop-shadow(0 5px 10px rgba(79,70,229,.18)); }
+      .sidebar-brand { font-size: 1.1rem; letter-spacing: -.04em; }
+      .login-brand { background: radial-gradient(ellipse at 20% 10%, #3849a4 0%, transparent 55%), linear-gradient(145deg, #182450, #352060); }
+      .login-brand h1 { font-family: inherit; font-weight: 700; letter-spacing: -.045em; line-height: 1.12; }
+      .login-panel { background: #f8f9fd; }
+      .login-card { padding: 30px; border: 1px solid var(--line); background: white; border-radius: 24px; box-shadow: 0 20px 60px rgba(35,45,85,.06); width: min(100%, 410px); }
+      .login-brand-mark { font-size: 1.2rem; letter-spacing: -.03em; }
+      .app-shell button, .app-shell input, .app-shell select, .login-demo-button { border-radius: 12px; }
+      .nav-item { padding: 12px; margin-bottom: 3px; }
+      .nav-index { display: flex; align-items: center; width: 20px; font-family: inherit; }
+      .nav-index svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .nav-item[aria-current="page"] { box-shadow: inset 3px 0 var(--primary); }
+      .workspace { padding-top: 36px; }
+      .view-heading h1 { font-weight: 750; letter-spacing: -.035em; }
+      .surface, .embedded-score, .empty-workspace { border-radius: 18px; box-shadow: 0 6px 24px rgba(30,44,90,.035); }
+      .app-shell .metric-card { position: relative; border-radius: 18px; padding: 22px; box-shadow: 0 5px 20px rgba(30,44,90,.035); }
+      .app-shell .metric-card .value { letter-spacing: -.04em; color: var(--primary); }
+      .metric-card .subvalue { line-height: 1.5; }
+      .app-shell .tree-node { border-radius: 14px; padding: 16px; }
+      .app-shell .family-bar > span { background: linear-gradient(90deg, #4f46e5, #7c3aed); }
+      .app-shell .primary-action, #upload-form button[type=submit], #update-analysis, #recalculate-rehearsal { color: white; background: var(--primary); box-shadow: 0 4px 12px rgba(79,70,229,.15); }
+      #upload-form button[type=submit]:hover, .primary-action:hover { background: #4338ca; }
+      #new-score { background: white; border: 1px solid var(--line); color: var(--text); }
+      .embedded-score { background: #fff; }
+      .ensemble-toolbar { padding: 14px; gap: 16px; background: #f3f5fb; border: 1px solid var(--line); border-radius: 16px; }
+      .embedded-score .score-tool { width: 44px; height: 44px; border-radius: 12px; }
+      .embedded-score .transport-primary { background: var(--primary); border-radius: 50%; }
+      .embedded-score .transport-primary:hover { background: #4338ca; }
+      #ensemble-time { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
+      input[type=range] { accent-color: var(--primary); }
+      .loading-status { font-size: .85rem; color: var(--muted); }
+      #full-score-rendering { border-radius: 12px; background: #f1f3f9; }
+      #full-score-rendering svg { background: white; box-shadow: 0 2px 12px rgba(30,44,90,.08); }
+      .family-chart { margin: 24px 0; padding: 24px; background: white; border: 1px solid var(--line); border-radius: 18px; }
+      .family-chart h2 { margin: 0 0 6px; font-size: 1.05rem; }
+      .family-chart p { margin: 0 0 22px; font-size: .85rem; }
+      .chart-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 88px; gap: 16px; align-items: center; margin-top: 16px; font-size: .9rem; }
+      .chart-track { height: 14px; background: repeating-linear-gradient(90deg, #edf0f8 0%, #edf0f8 calc(20% - 2px), white calc(20% - 2px), white 20%); border-radius: 5px; overflow: hidden; }
+      .chart-fill { height: 100%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); border-radius: 5px; }
+      .chart-value { font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; }
+      @media (max-width: 600px) { .chart-row { grid-template-columns: 95px minmax(0,1fr) 65px; gap: 8px; font-size: .8rem; } .login-card { padding: 20px; } .ensemble-toolbar { gap: 10px; } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -404,7 +477,7 @@
   <body>
     <section id="login-screen" class="login-screen">
       <div class="login-brand">
-        <div class="login-brand-mark"><span class="brand-monogram">S</span><span>ScoreMaster</span></div>
+        <div class="login-brand-mark"><img class="brand-logo" src="/static/brand.svg" alt="" width="44" height="44" /><span>ScoreMaster</span></div>
         <div class="login-brand-copy">
           <p class="eyebrow">Análisis de repertorio</p>
           <h1>Un espacio de trabajo para tu banda.</h1>
@@ -425,15 +498,15 @@
 
     <div id="app-shell" class="app-shell" hidden>
       <aside id="sidebar" class="sidebar">
-        <div class="sidebar-brand"><span class="brand-monogram">S</span><span>ScoreMaster</span></div>
+        <div class="sidebar-brand"><img class="brand-logo" src="/static/brand.svg" alt="" width="44" height="44" /><span>ScoreMaster</span></div>
         <p class="nav-label">Espacio de trabajo</p>
         <nav class="app-nav" aria-label="Navegación principal">
-          <button class="nav-item" type="button" data-view-target="overview"><span class="nav-index">01</span>Inicio</button>
-          <button class="nav-item" type="button" data-view-target="analyze"><span class="nav-index">02</span>Analizar partitura</button>
-          <button class="nav-item" type="button" data-view-target="difficulty"><span class="nav-index">03</span>Dificultad</button>
-          <button class="nav-item" type="button" data-view-target="band"><span class="nav-index">04</span>Mi banda</button>
-          <button class="nav-item" type="button" data-view-target="rehearsal"><span class="nav-index">05</span>Plan de ensayo</button>
-          <button class="nav-item" type="button" data-view-target="videos"><span class="nav-index">06</span>Vídeos</button>
+          <button class="nav-item" type="button" data-view-target="overview"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v10h-6v-6H9v6H3z"/></svg></span>Inicio</button>
+          <button class="nav-item" type="button" data-view-target="analyze"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5zM9 11h6M9 15h6"/></svg></span>Analizar partitura</button>
+          <button class="nav-item" type="button" data-view-target="difficulty"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20V7"/></svg></span>Dificultad</button>
+          <button class="nav-item" type="button" data-view-target="band"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 4a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.8"/></svg></span>Mi banda</button>
+          <button class="nav-item" type="button" data-view-target="rehearsal"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M16 3v4M3 10h18M4 5h16v16H4zM8 14h3M8 17h7"/></svg></span>Plan de ensayo</button>
+          <button class="nav-item" type="button" data-view-target="videos"><span class="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM10 9l5 3-5 3z"/></svg></span>Vídeos</button>
         </nav>
         <div class="sidebar-bottom">
           <div class="demo-identity"><strong>Sesión de demo</strong><span>Los datos no se guardan</span></div>
@@ -473,9 +546,34 @@
                   <input id="file" type="file" accept=".musicxml,.mxl,.xml" required />
                 </label>
                 <button type="submit">Subir y analizar</button>
+                <button id="new-score" type="button" class="score-tool">Nueva partitura</button>
+                <div id="instrument-assignment" class="instrument-assignment" hidden></div>
               </form>
               <div id="result" class="analysis-status" hidden></div>
             </div>
+            <section id="embedded-score" hidden class="embedded-score" aria-label="Partitura completa y reproductor">
+              <h2>Partitura completa</h2>
+              <div class="ensemble-toolbar" aria-label="Reproducción de todas las voces">
+                <button id="ensemble-play" class="score-tool transport-primary" type="button" aria-label="Reproducir" title="Reproducir" disabled>▶</button>
+                <button id="ensemble-stop" class="score-tool" type="button" aria-label="Detener" title="Detener" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg></button>
+                <output id="ensemble-time">0:00 / 0:00</output>
+                <label>Velocidad <select id="ensemble-speed"><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1" selected>100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option></select></label>
+                <label>Volumen <input id="ensemble-volume" type="range" min="0" max="100" value="50" aria-label="Volumen de reproducción" /></label>
+                <button id="score-fullscreen" class="score-tool" type="button" aria-label="Pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v2H5v5H3zm11 0h7v7h-2V5h-5zM3 14h2v5h5v2H3zm16 0h2v7h-7v-2h5z"/></svg></button>
+              </div>
+              <input id="ensemble-seek" type="range" min="0" max="1" step="0.1" value="0" disabled aria-label="Posición de reproducción" />
+              <p id="ensemble-status" class="loading-status" role="status" aria-live="polite">Todas las voces · sonidos aproximados de instrumentos.</p>
+              <p id="full-score-status" class="loading-status" role="status" aria-live="polite">Sube una partitura para verla aquí.</p>
+              <div class="score-toolbar" aria-label="Navegación de la partitura completa">
+                <button id="score-prev" class="score-tool" type="button" aria-label="Página anterior" title="Página anterior" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4-8 8 8 8 2-2-6-6 6-6z"/></svg></button>
+                <span id="score-page" class="score-page-label"></span>
+                <button id="score-next" class="score-tool" type="button" aria-label="Página siguiente" title="Página siguiente" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 8 8-8 8-2-2 6-6-6-6z"/></svg></button>
+                <button id="score-zoom-out" class="score-tool" type="button" aria-label="Reducir zoom" title="Reducir zoom">−</button>
+                <button id="score-fit" class="score-tool" type="button" title="Ajustar página" aria-label="Ajustar página"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z"/></svg></button><output id="score-zoom-label">Auto</output>
+                <button id="score-zoom-in" class="score-tool" type="button" aria-label="Ampliar zoom" title="Ampliar zoom">+</button>
+              </div>
+              <div id="full-score-rendering"></div>
+            </section>
           </section>
 
           <section class="app-view" data-view="difficulty">
@@ -524,6 +622,11 @@
         <button id="notation-close" class="score-close" type="button" aria-label="Cerrar partitura">Cerrar</button>
       </div>
       <div id="notation-score" class="score-rendering"></div>
+      <div class="score-tools">
+        <button id="passage-play" class="score-tool" type="button">Escuchar instrumento</button>
+        <button id="passage-stop" class="score-tool" type="button">Detener</button>
+        <span id="playback-status" role="status" aria-live="polite"></span>
+      </div>
       <div class="score-toolbar" aria-label="Controles de partitura">
         <button id="notation-prev" class="score-tool" type="button" aria-label="Compases anteriores">Anterior</button>
         <span id="notation-page-label" class="score-page-label"></span>
@@ -559,6 +662,34 @@
       let notationSourcePromise = null;
       let activeNotationPassage = null;
       const measuresPerNotationPage = 4;
+      const audioModule = import('/static/playback.js');
+      const scoreViewPromise = import('/static/score-view.js?v=2').then(({ createScoreView }) =>
+        createScoreView({ getSource: loadNotationSource, getFile: () => currentScoreFile, filter: filterMusicXmlPassage }));
+      function loadEmbeddedScore() {
+        const file = currentScoreFile, version = selectionVersion;
+        scoreViewPromise.then((view) => { if (file && file === currentScoreFile && version === selectionVersion) return view.load(); }).catch(() => {
+          const status = document.getElementById('full-score-status');
+          status.textContent = 'No se pudo cargar el visor. Puedes volver a intentarlo recargando la página.';
+          status.setAttribute('aria-busy', 'false');
+        });
+      }
+      const audioStatus = document.getElementById('playback-status');
+      async function stopPassageAudio() {
+        (await audioModule).stopPlayback();
+        audioStatus.textContent = '';
+      }
+      document.getElementById('passage-play').addEventListener('click', async () => {
+        if (!currentScoreFile || !activeNotationPassage) return;
+        try {
+          await (await audioModule).playPassage(currentScoreFile, activeNotationPassage,
+            (message) => { audioStatus.textContent = message; });
+        } catch (error) {
+          await stopPassageAudio();
+          audioStatus.textContent = error.message || 'No se pudo cargar el sonido. Comprueba la conexión a Internet.';
+        }
+      });
+      document.getElementById('passage-stop').addEventListener('click', stopPassageAudio);
+      document.getElementById('notation-dialog').addEventListener('close', stopPassageAudio);
 
       function showDemoWorkspace() {
         sessionStorage.setItem('scoremaster-demo-session', 'active');
@@ -615,8 +746,7 @@
       const findingLabels = {
         SL003: 'Alta densidad rítmica',
         SL004: 'Intervalos amplios',
-        SL002: 'Registro agudo',
-        SL005: 'Pasaje prolongado sin descanso'
+        SL002: 'Registro agudo'
       };
       const familyLabelsEs = {
         woodwinds: 'Viento madera',
@@ -748,7 +878,7 @@
 
       function filterMusicXmlPassage(source, instrumentName, measureRange) {
         const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
-        const partMatch = instrumentName.match(/^(.*)\s+(\d+)$/);
+        const partMatch = instrumentName && instrumentName.match(/^(.*)\s+(\d+)$/);
         const sourceInstrumentName = partMatch ? partMatch[1] : instrumentName;
         let selectedStaffNumber = partMatch ? Number(partMatch[2]) : null;
         const documentXml = new DOMParser().parseFromString(source, 'application/xml');
@@ -760,7 +890,7 @@
         const directChild = (parent, name) => Array.from(parent.children)
           .find((element) => element.localName === name);
         const scoreParts = descendants(documentXml, 'score-part');
-        const matchingParts = scoreParts.filter((part) => {
+        const matchingParts = instrumentName === null ? scoreParts : scoreParts.filter((part) => {
           const name = directChild(part, 'part-name');
           return name && name.textContent.trim() === sourceInstrumentName;
         });
@@ -788,20 +918,30 @@
           }
           const scorePartName = scoreParts.find((entry) => entry.getAttribute('id') === part.getAttribute('id'));
           const nameElement = scorePartName && directChild(scorePartName, 'part-name');
-          if (nameElement) nameElement.textContent = instrumentName;
+          if (nameElement && instrumentName !== null) nameElement.textContent = instrumentName;
           let previousAttributes = null;
           let firstRetained = true;
           Array.from(part.children).filter((element) => element.localName === 'measure').forEach((measure) => {
             const measureNumber = Number.parseInt(measure.getAttribute('number'), 10);
             const attributes = directChild(measure, 'attributes');
-            if (attributes) previousAttributes = attributes.cloneNode(true);
+            if (attributes) {
+              if (!previousAttributes) previousAttributes = attributes.cloneNode(true);
+              else Array.from(attributes.children).forEach((element) => {
+                const inherited = Array.from(previousAttributes.children).find((candidate) =>
+                  candidate.localName === element.localName &&
+                  candidate.getAttribute('number') === element.getAttribute('number'));
+                if (inherited) previousAttributes.replaceChild(element.cloneNode(true), inherited);
+                else previousAttributes.append(element.cloneNode(true));
+              });
+            }
             if (measureNumber < firstMeasure || measureNumber > lastMeasure) {
               part.removeChild(measure);
               return;
             }
-            if (firstRetained && !attributes && previousAttributes) {
+            if (firstRetained && previousAttributes) {
               const print = directChild(measure, 'print');
-              measure.insertBefore(previousAttributes.cloneNode(true), print ? print.nextSibling : measure.firstChild);
+              if (attributes) measure.replaceChild(previousAttributes.cloneNode(true), attributes);
+              else measure.insertBefore(previousAttributes.cloneNode(true), print ? print.nextSibling : measure.firstChild);
             }
             if (selectedStaffNumber) {
               const currentAttributes = directChild(measure, 'attributes');
@@ -853,6 +993,10 @@
       }
 
       async function openNotationPassage(instrument, measureRange) {
+        (await scoreViewPromise).stop();
+        await stopPassageAudio();
+        document.getElementById('passage-play').hidden = false;
+        document.getElementById('passage-stop').hidden = false;
         const dialog = document.getElementById('notation-dialog');
         const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
         activeNotationPassage = { instrument, firstMeasure, lastMeasure, pageStart: firstMeasure, zoom: 1 };
@@ -906,7 +1050,8 @@
         document.getElementById('notation-zoom-label').textContent = Math.round(state.zoom * 100) + '%';
         container.scrollTop = 0;
         container.scrollLeft = 0;
-        status.textContent = 'Notación original · tonalidad escrita del MusicXML · ' + displayInstrumentName(state.instrument);
+        status.textContent = 'Notación original · tonalidad escrita del MusicXML · ' +
+          (state.instrument === null ? 'Todas las voces' : displayInstrumentName(state.instrument));
       }
 
       document.getElementById('notation-prev').addEventListener('click', () => {
@@ -1265,6 +1410,15 @@
             viewButton.textContent = 'Ver partitura';
             viewButton.addEventListener('click', () => openNotationPassage(selectedInstrument, passage.measure_range));
             actions.append(viewButton);
+            const listenButton = document.createElement('button');
+            listenButton.type = 'button';
+            listenButton.className = 'passage-open';
+            listenButton.textContent = 'Escuchar';
+            listenButton.addEventListener('click', async () => {
+              await openNotationPassage(selectedInstrument, passage.measure_range);
+              document.getElementById('passage-play').click();
+            });
+            actions.append(listenButton);
             item.append(actions);
             passageList.append(item);
           });
@@ -1313,6 +1467,23 @@
         dashboard.append(familyCard);
 
         overviewMetrics.append(dashboard);
+        if (familyEntries.length) {
+          const chart = document.createElement('section'); chart.className = 'family-chart';
+          chart.setAttribute('aria-label', 'Grado de dificultad por familia');
+          appendText(chart, 'h2', '', 'Dónde concentrar el ensayo');
+          appendText(chart, 'p', '', 'Grado de dificultad por familia · escala de 1 a 5');
+          for (const [name, details] of familyEntries.slice().sort((a,b) => (b[1].grade || 1) - (a[1].grade || 1))) {
+            const row = document.createElement('div'); row.className = 'chart-row';
+            appendText(row, 'span', '', familyLabelsEs[name] || name);
+            const track = document.createElement('div'); track.className = 'chart-track'; track.setAttribute('aria-hidden', 'true');
+            const fill = document.createElement('div'); fill.className = 'chart-fill';
+            const grade = Math.max(1, Math.min(5, Number(details.grade) || 1)); fill.style.width = grade / 5 * 100 + '%';
+            track.append(fill); row.append(track); appendText(row, 'span', 'chart-value', 'Grado ' + grade);
+            chart.append(row);
+          }
+          overviewMetrics.append(chart);
+        }
+
 
         const priority = criticalPassages[0];
         const priorityBox = document.getElementById('overview-priority');
@@ -1391,6 +1562,9 @@
           return;
         }
 
+        const version = selectionVersion;
+        const controller = new AbortController();
+        analysisController?.abort(); analysisController = controller;
         const payload = new FormData();
         payload.append('file', file);
         resultBox.hidden = false;
@@ -1402,8 +1576,9 @@
           payload.append('band_profile', JSON.stringify(bandProfile));
           payload.append('total_minutes', document.getElementById('total-minutes').value || '60');
 
-          const response = await fetch('/analyze', { method: 'POST', body: payload });
+          const response = await fetch('/analyze', { method: 'POST', body: payload, signal: controller.signal });
           const data = await response.json();
+          if (version !== selectionVersion) return;
 
           resultBox.hidden = false;
           if (!response.ok) {
@@ -1425,24 +1600,102 @@
           }
 
           renderAnalysis(data);
+          loadEmbeddedScore();
           renderBandProfile(partNames, completedProfile);
-          if (navigateToOverview) setActiveView('overview');
+          if (navigateToOverview) setActiveView('analyze');
         } catch (error) {
+          if (version !== selectionVersion || error.name === 'AbortError') return;
           resultBox.hidden = false;
           resultBox.textContent = 'Error en la solicitud: ' + error.message;
         } finally {
-          submitButton.disabled = false;
-          submitButton.textContent = submitLabel;
+          if (version === selectionVersion) { submitButton.disabled = false; submitButton.textContent = submitLabel; }
         }
       }
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const file = document.getElementById('file').files[0];
-        currentScoreFile = file;
-        notationSourcePromise = null;
-        await analyzeFile(file, readBandProfile());
+        if (!file) return;
+        if (currentScoreFile !== file && !assignmentSource) { currentScoreFile = file; notationSourcePromise = null; }
+        (await scoreViewPromise).clear();
+        await stopPassageAudio();
+        await applyInstrumentAssignments();
+        await analyzeFile(currentScoreFile, readBandProfile());
       });
+
+      let assignmentSource = null, selectionVersion = 0, analysisController = null;
+      const assignmentPanel = document.getElementById('instrument-assignment');
+      const instrumentChoices = [['Flute',74],['Piccolo',73],['Oboe',69],['Clarinet',72],['Bass Clarinet',72],['Bassoon',71],['Alto Saxophone',66],['Tenor Saxophone',67],['Baritone Saxophone',68],['Trumpet',57],['Horn',61],['Trombone',58],['Euphonium',59],['Tuba',59],['Timpani',48],['Glockenspiel',10],['Xylophone',14],['Snare Drum',null],['Bass Drum',null],['Cymbals',null]];
+      async function resetScore(clearFile = true) {
+        selectionVersion++; analysisController?.abort(); submitButton.disabled = false; submitButton.textContent = submitLabel;
+        assignmentSource = null; currentScoreFile = null; notationSourcePromise = null;
+        (await scoreViewPromise).clear(); await stopPassageAudio();
+        if (clearFile) form.reset();
+        assignmentPanel.replaceChildren(); assignmentPanel.hidden = true;
+        bandProfileRows.replaceChildren(); bandProfileEditor.hidden = true;
+        for (const id of ['difficulty-content','band-content','rehearsal-content','videos-content']) {
+          const target = document.getElementById(id);
+          if (target) { target.replaceChildren(); appendText(target, 'p', 'result-empty', 'Analiza una nueva partitura para ver los resultados.'); }
+        }
+        document.getElementById('overview-result').hidden = true;
+        document.getElementById('overview-priority').hidden = true;
+        document.getElementById('overview-empty').hidden = false;
+        resultBox.hidden = true; setActiveView('analyze');
+      }
+      document.getElementById('new-score').addEventListener('click', () => resetScore());
+      document.getElementById('file').addEventListener('change', async () => {
+        const file = document.getElementById('file').files[0];
+        await resetScore(false); if (!file) return;
+        currentScoreFile = file; const version = selectionVersion;
+        submitButton.disabled = true; resultBox.hidden = false; resultBox.textContent = 'Cargando datos de instrumentos…';
+        try {
+          const source = await loadNotationSource(); if (version !== selectionVersion) return;
+          const xml = new DOMParser().parseFromString(source, 'application/xml');
+          const parts = Array.from(xml.querySelectorAll('score-part'));
+          const generic = parts.filter(part => /^(voice|part|instrument|voz)(\s+\d+)?$/i.test(part.querySelector('part-name')?.textContent.trim() || ''));
+          if (generic.length) {
+            assignmentSource = xml; assignmentPanel.hidden = false;
+            appendText(assignmentPanel, 'p', '', 'El archivo no identifica estos instrumentos. Asígnalos para analizar y escuchar sus sonidos correctos.');
+            for (const part of generic) {
+              const label = document.createElement('label'); label.textContent = 'Parte ' + (parts.indexOf(part) + 1) + ' '; const select = document.createElement('select'); select.dataset.partId = part.id;
+              const empty = document.createElement('option'); empty.value = ''; empty.textContent = 'Sin identificar'; select.append(empty);
+              for (const [name] of instrumentChoices) { const option = document.createElement('option'); option.value = name; option.textContent = displayInstrumentName(name); select.append(option); }
+              const metadataName = part.querySelector('instrument-name')?.textContent;
+              if (instrumentChoices.some(([name]) => name === metadataName)) select.value = metadataName;
+              label.append(select); assignmentPanel.append(label);
+            }
+          }
+          resultBox.hidden = true;
+        } catch (error) { if (version === selectionVersion) resultBox.textContent = error.message; }
+        finally { if (version === selectionVersion) submitButton.disabled = false; }
+      });
+      async function applyInstrumentAssignments() {
+        if (!assignmentSource) return;
+        const mappedSource = assignmentSource.cloneNode(true);
+        for (const select of assignmentPanel.querySelectorAll('select')) {
+          if (!select.value) continue;
+          const part = Array.from(mappedSource.querySelectorAll('score-part')).find(part => part.id === select.dataset.partId);
+          part.querySelector('part-name').textContent = select.value;
+          const abbreviation = part.querySelector('part-abbreviation'); if (abbreviation) abbreviation.textContent = select.value;
+          const instrument = part.querySelector('instrument-name'); if (instrument) instrument.textContent = select.value;
+          const program = instrumentChoices.find(([name]) => name === select.value)[1];
+          const midi = part.querySelector('midi-program'); if (midi && program) midi.textContent = program;
+          if (!program) {
+            if (midi) midi.textContent = '1';
+            const channel = part.querySelector('midi-channel'); if (channel) channel.textContent = '10';
+            const midiInstrument = part.querySelector('midi-instrument');
+            if (midiInstrument) {
+              let unpitched = midiInstrument.querySelector('midi-unpitched');
+              if (!unpitched) { unpitched = mappedSource.createElement('midi-unpitched'); midiInstrument.append(unpitched); }
+              unpitched.textContent = { 'Snare Drum': 39, 'Bass Drum': 36, 'Cymbals': 50 }[select.value];
+            }
+          }
+        }
+        const source = new XMLSerializer().serializeToString(mappedSource);
+        // Labels and timbres apply to a session copy; preserve the selected original file.
+        currentScoreFile = new File([source], document.getElementById('file').files[0].name.replace(/\.(mxl|xml)$/i, '.musicxml'), { type: 'application/xml' });
+        notationSourcePromise = Promise.resolve(source);
+      }
 
       updateAnalysisButton.addEventListener('click', async () => {
         await analyzeFile(currentScoreFile, readBandProfile(), false);

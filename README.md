@@ -31,26 +31,44 @@ La interfaz ofrece navegación por vistas y una entrada de demostración. No hay
 autenticación real ni persistencia de cuentas: la sesión y la plantilla son locales
 al navegador y temporales.
 
-ScoreLint detecta densidad rítmica (SL003), intervalos amplios (SL004), registro
-agudo (SL002) y bloques de ocho o más compases activos sin silencios (SL005).
-Estos últimos aparecen entre los pasajes críticos y aportan dos puntos al
-indicador de avisos. El análisis de continuidad se comparte con la dimensión
-de resistencia de la dificultad por instrumento.
-
-La resistencia es una aproximación por compases: cualquier silencio explícito
-o compás vacío corta el bloque. No estima fatiga física, duración en segundos,
-respiraciones ni descansos entre voces simultáneas. SL002 sustituye al antiguo
-código SL005 del aviso de registro agudo para seguir el catálogo del proyecto.
-
-Para ejecutar las pruebas desde la carpeta del proyecto:
-`python -m pytest -q` (con las dependencias de `requirements.txt` instaladas).
+El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
+de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
 
 ## Partitura y vídeos
+
+Cada pasaje crítico ofrece «Escuchar» para reproducir únicamente esa parte con
+muestras General MIDI mediante [smplr](https://github.com/danigb/smplr), versión
+1.1.0. «Detener» y cerrar la partitura interrumpen el audio. La reproducción usa
+altura de concierto, acordes, silencios, ligaduras y cambios de tempo del
+MusicXML; sin tempo se indica el valor por defecto de negra = 120. Se reproduce
+el rango escrito una vez, sin desarrollar repeticiones ni aplicar expresividad.
+Los timbres son aproximados; bombardino usa tuba y clarinetes graves usan
+clarinete. Si no se reconoce el timbre se usa piano y se indica en pantalla.
+La percusión reconocida usa sonidos sintetizados aproximados; se avisa cuando
+una parte sin altura no se puede interpretar.
+
+El navegador necesita Internet para descargar el módulo y las muestras; la
+partitura no se envía al proveedor de sonidos. El endpoint `/playback` procesa
+temporalmente el archivo y limita la subida a 8 MB, el contenido descomprimido a
+20 MB, el pasaje a 10 000 eventos y el conjunto a 150 000 eventos.
 
 Los pasajes críticos se pueden abrir como notación MusicXML renderizada en el
 navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
 El archivo original se conserva en el navegador solo durante la sesión de
 análisis y no se persiste en el servidor.
+
+En «Analizar partitura», después de completar el análisis, la partitura aparece en un visor
+grande incrustado, con todas las voces, páginas de cuatro compases, zoom y pantalla
+completa. Incluye reproducción del conjunto, pausa, detener, posición, velocidad
+y volumen. La página se ajusta al ancho y al alto disponibles, con controles
+mediante iconos y una opción para volver al ajuste automático. «Nueva partitura»
+limpia el análisis, el visor y el audio; elegir otro archivo también reinicia la sesión.
+Si el MusicXML contiene partes genéricas como «Voice», se permite asignar sus
+instrumentos antes del análisis. Esta asignación modifica una copia temporal de
+la sesión, conservando el archivo original. No se deducen instrumentos cuando
+el archivo no los identifica. El visor y los sonidos muestran «Cargando…» durante su preparación;
+la carga del audio se puede cancelar con Detener. El audio se programa por pequeñas
+ventanas de tiempo para evitar preparar todos los sonidos simultáneamente.
 
 La búsqueda integrada de vídeos usa YouTube Data API v3. Para activar resultados
 reproducibles dentro de la aplicación, configura `YOUTUBE_API_KEY` como variable
@@ -61,3 +79,34 @@ se permite pegar un enlace para reproducirlo en la aplicación.
 La plantilla de banda se inicializa con una plaza por cada parte de la obra
 cargada, usando la instrumentación de Persis como referencia inicial. Los cambios
 son temporales durante la sesión; todavía no se guardan por usuario.
+
+### Pruebas de interfaz
+
+Las pruebas unitarias del reproductor y el visor se ejecutan con
+`node --test backend/test/frontend/*.test.mjs`. El recorrido real de carga,
+análisis, ajuste de página, reinicio y asignación de instrumentos usa Playwright
+con Chromium y partituras sintéticas. Con el servidor local activo:
+
+```sh
+npm install --prefix /tmp/scoremaster-browser-tests @playwright/test
+/tmp/scoremaster-browser-tests/node_modules/.bin/playwright install chromium
+PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/workflow.e2e.mjs
+```
+
+Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`.
+La descarga del visor necesita conexión a Internet.
+
+### Diseño de la interfaz
+
+La interfaz usa un logo SVG propio, una paleta azul/violeta, superficies claras,
+controles con iconos y gráficos de grado por familia sobre una escala explícita
+de 1 a 5. Los valores también aparecen como texto. Las acciones principales y
+secundarias se distinguen visualmente, el foco del teclado permanece visible y
+los controles del reproductor tienen áreas de 44 × 44 píxeles. Se respeta la
+preferencia de movimiento reducido.
+
+El diseño se orienta por [WCAG 2.2](https://www.w3.org/TR/WCAG22/) y
+[Material Design 3](https://m3.material.io/). Playwright comprueba escritorio y
+móvil, ausencia de desbordamiento horizontal, el tamaño del botón de reproducción
+y el foco al navegar con Tab. Esto no constituye una auditoría completa de
+conformidad WCAG.
