@@ -18,6 +18,7 @@ from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics
 from backend.app.youtube import search_videos
 from backend.parsers.musicxml_parser import parse_musicxml
+from backend.parsers.playback import build_playback
 
 BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI(title="ScoreMasterAI API")
@@ -80,6 +81,34 @@ def notation_source(file: UploadFile = File(...)):
     if source is None:
         raise HTTPException(status_code=400, detail="Uploaded file is not valid MusicXML.")
     return Response(content=source, media_type="application/vnd.recordare.musicxml+xml")
+
+
+@app.post("/playback")
+def playback(
+    file: UploadFile = File(...),
+    instrument: str = Form(..., min_length=1, max_length=200),
+    first_measure: int = Form(..., ge=0),
+    last_measure: int = Form(..., ge=0),
+):
+    if last_measure < first_measure:
+        raise HTTPException(status_code=400, detail="El rango de compases no es válido.")
+    content = file.file.read(8 * 1024 * 1024 + 1)
+    if len(content) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="La partitura supera 8 MB.")
+    if is_zipfile(io.BytesIO(content)):
+        with ZipFile(io.BytesIO(content)) as archive:
+            if sum(item.file_size for item in archive.infolist()) > 20 * 1024 * 1024:
+                raise HTTPException(status_code=413, detail="La partitura descomprimida supera 20 MB.")
+    source = _extract_musicxml(content)
+    if source is None or b"<!ENTITY" in source:
+        raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.")
+    with NamedTemporaryFile(suffix=".musicxml") as temporary:
+        temporary.write(source)
+        temporary.flush()
+        try:
+            return build_playback(temporary.name, instrument, first_measure, last_measure)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail="No se pudo preparar el audio del pasaje.") from exc
 
 
 @app.post("/analyze")
