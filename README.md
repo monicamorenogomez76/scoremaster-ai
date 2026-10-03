@@ -57,10 +57,16 @@ navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
 El archivo original se conserva en el navegador solo durante la sesión de
 análisis y no se persiste en el servidor.
 
-En «Analizar partitura», la partitura completa aparece directamente en un visor
+En «Analizar partitura», después de completar el análisis, la partitura aparece en un visor
 grande incrustado, con todas las voces, páginas de cuatro compases, zoom y pantalla
 completa. Incluye reproducción del conjunto, pausa, detener, posición, velocidad
-y volumen. El visor y los sonidos muestran «Cargando…» durante su preparación;
+y volumen. La página se ajusta al ancho y al alto disponibles, con controles
+mediante iconos y una opción para volver al ajuste automático. «Nueva partitura»
+limpia el análisis, el visor y el audio; elegir otro archivo también reinicia la sesión.
+Si el MusicXML contiene partes genéricas como «Voice», se permite asignar sus
+instrumentos antes del análisis. Esta asignación modifica una copia temporal de
+la sesión, conservando el archivo original. No se deducen instrumentos cuando
+el archivo no los identifica. El visor y los sonidos muestran «Cargando…» durante su preparación;
 la carga del audio se puede cancelar con Detener. El audio se programa por pequeñas
 ventanas de tiempo para evitar preparar todos los sonidos simultáneamente.
 
@@ -73,3 +79,19 @@ se permite pegar un enlace para reproducirlo en la aplicación.
 La plantilla de banda se inicializa con una plaza por cada parte de la obra
 cargada, usando la instrumentación de Persis como referencia inicial. Los cambios
 son temporales durante la sesión; todavía no se guardan por usuario.
+
+### Pruebas de interfaz
+
+Las pruebas unitarias del reproductor y el visor se ejecutan con
+`node --test backend/test/frontend/*.test.mjs`. El recorrido real de carga,
+análisis, ajuste de página, reinicio y asignación de instrumentos usa Playwright
+con Chromium y partituras sintéticas. Con el servidor local activo:
+
+```sh
+npm install --prefix /tmp/scoremaster-browser-tests @playwright/test
+/tmp/scoremaster-browser-tests/node_modules/.bin/playwright install chromium
+PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/workflow.e2e.mjs
+```
+
+Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`.
+La descarga del visor necesita conexión a Internet.

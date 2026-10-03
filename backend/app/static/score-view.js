@@ -9,9 +9,35 @@ export function createScoreView({ getSource, getFile, filter }) {
   function busy(target, message, loading) {
     target.textContent = message; target.setAttribute('aria-busy', String(loading));
   }
+  function setPlayIcon(paused) {
+    play.innerHTML = paused ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l13-8z"/></svg>';
+    play.setAttribute('aria-label', paused ? 'Pausar' : 'Reproducir');
+    play.title = paused ? 'Pausar' : 'Reproducir';
+  }
+  function clear() {
+    score = null; rendering++; resetTransport();
+    busy(status, '', false);
+    el('score-prev').disabled = true; el('score-next').disabled = true;
+    el('score-page').textContent = '';
+    el('score-zoom-label').textContent = 'Auto';
+    el('full-score-rendering').replaceChildren();
+    el('embedded-score').hidden = true;
+  }
+  function fit() {
+    if (!score?.sizes?.length) return;
+    const container = el('full-score-rendering');
+    if (container.clientWidth <= 32 || container.clientHeight <= 32) return;
+    const width = Math.max(...score.sizes.map(item => item.width));
+    const height = score.sizes.reduce((total, item) => total + item.height, 0);
+    const scale = Math.min((container.clientWidth - 32) / width, (container.clientHeight - 32) / height) * score.zoom;
+    for (const item of score.sizes) { item.svg.style.display = 'block'; item.svg.style.width = item.width * scale + 'px'; item.svg.style.height = item.height * scale + 'px'; }
+    score.staging.style.width = width * scale + 'px';
+    el('score-zoom-label').textContent = Math.round(scale * 100) + ' %';
+  }
+  new ResizeObserver(fit).observe(el('full-score-rendering'));
   function resetTransport() {
     generation++; stopPlayback(); transport = null; playing = false;
-    play.textContent = '▶ Reproducir'; play.disabled = !score;
+    setPlayIcon(false); play.disabled = !score;
     stop.disabled = !score; seek.disabled = true; seek.value = 0;
     el('ensemble-time').textContent = '0:00 / 0:00';
     busy(audioStatus, 'Detenido.', false);
@@ -31,7 +57,8 @@ export function createScoreView({ getSource, getFile, filter }) {
     staging.style.position = 'absolute'; staging.style.visibility = 'hidden';
     container.append(staging);
     try {
-      const xml = filter(state.source, null, state.pageStart + '-' + end);
+      const pageXml = filter(state.source, null, state.pageStart + '-' + end);
+      const xml = pageXml.trimStart().startsWith('<?xml') ? pageXml : '<?xml version="1.0" encoding="UTF-8"?>\n' + pageXml;
       const OSMD = window.opensheetmusicdisplay?.OpenSheetMusicDisplay;
       if (!OSMD) throw new Error('No se pudo cargar el visor. Comprueba la conexión a Internet.');
       const display = new OSMD(staging, { autoResize: false, backend: 'svg', drawTitle: false,
@@ -40,21 +67,17 @@ export function createScoreView({ getSource, getFile, filter }) {
       if (token !== rendering || state !== score) return;
       display.render();
       staging.style.position = ''; staging.style.visibility = '';
-      staging.style.width = Math.max(900, container.clientWidth - 24) * state.zoom + 'px';
-      for (const svg of staging.querySelectorAll('svg')) {
-        const width = Number.parseFloat(svg.getAttribute('width'));
-        const height = Number.parseFloat(svg.getAttribute('height'));
-        if (width && height) { svg.style.width = width * state.zoom + 'px'; svg.style.height = height * state.zoom + 'px'; }
-      }
+      state.staging = staging;
+      state.sizes = Array.from(staging.querySelectorAll('svg')).map(svg => ({ svg, width: Number.parseFloat(svg.getAttribute('width')), height: Number.parseFloat(svg.getAttribute('height')) })).filter(item => item.width && item.height);
       container.replaceChildren(staging); container.scrollTop = 0;
       busy(status, 'Todas las voces · notación original · compases ' + state.pageStart + '–' + end, false);
-      el('score-zoom-label').textContent = Math.round(state.zoom * 100) + ' %';
+      fit();
     } catch (error) {
       if (token === rendering) busy(status, 'No se pudo mostrar esta página: ' + error.message, false);
     } finally { if (staging.style.visibility === 'hidden') staging.remove(); }
   }
   async function load() {
-    resetTransport(); score = null; rendering++;
+    clear(); el('embedded-score').hidden = false;
     const file = getFile(); play.disabled = true; stop.disabled = true;
     el('full-score-rendering').replaceChildren();
     busy(status, 'Cargando partitura…', true);
@@ -87,7 +110,7 @@ export function createScoreView({ getSource, getFile, filter }) {
       ready.setVolume(Number(el('ensemble-volume').value) / 100);
       seek.max = ready.duration; seek.disabled = false;
       ready.subscribe((state) => {
-        playing = state.playing; play.textContent = playing ? '❚❚ Pausar' : '▶ Reproducir';
+        playing = state.playing; setPlayIcon(playing);
         seek.value = state.position;
         el('ensemble-time').textContent = clock(state.position) + ' / ' + clock(state.duration);
       });
@@ -106,7 +129,7 @@ export function createScoreView({ getSource, getFile, filter }) {
   el('ensemble-volume').addEventListener('input', (event) => transport?.setVolume(Number(event.target.value) / 100));
   el('score-prev').addEventListener('click', () => { if (score) { score.pageStart = Math.max(score.first, score.pageStart - 4); renderPage(); } });
   el('score-next').addEventListener('click', () => { if (score) { score.pageStart = Math.min(score.last, score.pageStart + 4); renderPage(); } });
-  function zoom(delta) { if (score) { score.zoom = Math.max(.6, Math.min(2, score.zoom + delta)); renderPage(); } }
+  function zoom(delta) { if (score) { score.zoom = Math.max(.6, Math.min(2, score.zoom + delta)); fit(); } }
   el('score-zoom-out').addEventListener('click', () => zoom(-.1)); el('score-zoom-in').addEventListener('click', () => zoom(.1));
   el('score-fullscreen').addEventListener('click', async () => {
     try {
@@ -114,5 +137,6 @@ export function createScoreView({ getSource, getFile, filter }) {
       await renderPage();
     } catch (_) { busy(status, 'La pantalla completa no está disponible en este navegador.', false); }
   });
-  return { load, stop: resetTransport };
+  el('score-fit').addEventListener('click', () => { if (score) { score.zoom = 1; fit(); } });
+  return { load, clear, stop: resetTransport };
 }
