@@ -136,7 +136,8 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   try {
     await Promise.all([...instruments].map(async ([sound, group]) => {
       const loaded = Soundfont(ctx, { instrument: sound, kit: 'FluidR3_GM',
-        destination: master, loadLoopData: true, notesToLoad: [...group.notes] });
+        // External loop points change pitch in some MP3 samples (e.g. clarinet D4).
+        destination: master, loadLoopData: false, notesToLoad: { notes: [...group.notes] } });
       players.push(loaded);
       let timeoutId;
       const timeout = new Promise((_, reject) => { timeoutId = setTimeout(() => reject(new Error('La descarga de sonidos ha tardado demasiado. Comprueba tu conexión.')), 90000); });
@@ -154,7 +155,10 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   let queue = [];
   const duration = data.duration;
   const listeners = new Set();
-  function tell() { listeners.forEach((callback) => callback({ position, duration, playing, tempoMap: data.tempo_map })); }
+  function tell() {
+    const measure = (data.measures || []).findLast(item => item.time <= position);
+    listeners.forEach(callback => callback({ position, duration, playing, currentMeasure: measure?.number, tempoMap: data.tempo_map }));
+  }
   function silence() { clearInterval(timer); players.forEach((player) => player.stop()); }
   function tick() {
     position = Math.min(duration, base + Math.max(0, ctx.currentTime - began) * speed);
@@ -162,8 +166,12 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
     while (pointer < queue.length && queue[pointer].time <= horizon) {
       const event = queue[pointer++];
       const time = began + (event.time - base) / speed;
+      // smplr defaults to a 300 ms release AFTER duration, creating unintended
+      // overlapping pitches. Place a short anti-click release INSIDE the note.
+      const length = event.duration / speed;
+      const release = Math.min(.008, length * .1);
       event.player.start({ note: event.note, time: Math.max(ctx.currentTime, time),
-        duration: event.duration / speed, velocity: 65 });
+        duration: Math.max(0, length - release), ampRelease: release, loop: false, velocity: 65 });
     }
     if (position >= duration) { playing = false; silence(); onStatus('Reproducción finalizada.'); }
     tell();

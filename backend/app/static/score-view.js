@@ -1,4 +1,5 @@
-import { preparePlayback, stopPlayback } from './playback.js';
+import { preparePlayback, stopPlayback } from './playback.js?v=5';
+import { highlightMeasure } from './playback-guide.js';
 
 export function createScoreView({ getSource, getFile, filter }) {
   const el = (id) => document.getElementById(id);
@@ -28,15 +29,17 @@ export function createScoreView({ getSource, getFile, filter }) {
     const container = el('full-score-rendering');
     if (container.clientWidth <= 32 || container.clientHeight <= 32) return;
     const width = Math.max(...score.sizes.map(item => item.width));
-    const height = score.sizes.reduce((total, item) => total + item.height, 0);
-    const scale = Math.min((container.clientWidth - 32) / width, (container.clientHeight - 32) / height) * score.zoom;
+    // Keep notation legible: fit width, and scroll vertically through the ensemble.
+    const scale = Math.max(.75, (container.clientWidth - 32) / width) * score.zoom;
     for (const item of score.sizes) { item.svg.style.display = 'block'; item.svg.style.width = item.width * scale + 'px'; item.svg.style.height = item.height * scale + 'px'; }
     score.staging.style.width = width * scale + 'px';
+    if (score.display) score.display.playbackScale = scale;
     el('score-zoom-label').textContent = Math.round(scale * 100) + ' %';
   }
   new ResizeObserver(fit).observe(el('full-score-rendering'));
   function resetTransport() {
     generation++; stopPlayback(); transport = null; playing = false;
+    if (score) { score.display?.cursor?.hide(); score.currentMeasure = undefined; }
     setPlayIcon(false); play.disabled = !score;
     stop.disabled = !score; seek.disabled = true; seek.value = 0;
     el('ensemble-time').textContent = '0:00 / 0:00';
@@ -49,7 +52,7 @@ export function createScoreView({ getSource, getFile, filter }) {
     busy(status, 'Cargando partitura · compases ' + state.pageStart + '–' + end + '…', true);
     el('score-prev').disabled = state.pageStart <= state.first;
     el('score-next').disabled = end >= state.last;
-    el('score-page').textContent = 'Compases ' + state.pageStart + '–' + end + ' de ' + state.first + '–' + state.last;
+    el('score-page').textContent = 'Página ' + (Math.floor((state.pageStart - state.first) / 4) + 1) + '/' + Math.ceil((state.last - state.first + 1) / 4) + ' · compases ' + state.pageStart + '–' + end;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     if (token !== rendering || state !== score) return;
     const container = el('full-score-rendering'), staging = document.createElement('div');
@@ -62,16 +65,17 @@ export function createScoreView({ getSource, getFile, filter }) {
       const OSMD = window.opensheetmusicdisplay?.OpenSheetMusicDisplay;
       if (!OSMD) throw new Error('No se pudo cargar el visor. Comprueba la conexión a Internet.');
       const display = new OSMD(staging, { autoResize: false, backend: 'svg', drawTitle: false,
-        drawPartNames: true, drawMeasureNumbers: true });
+        drawPartNames: true, drawMeasureNumbers: true, cursorsOptions: [{ type: 3, color: '#6366f1', alpha: .25, follow: false }] });
       await display.load(xml);
       if (token !== rendering || state !== score) return;
       display.render();
       staging.style.position = ''; staging.style.visibility = '';
-      state.staging = staging;
+      state.staging = staging; state.display = display;
       state.sizes = Array.from(staging.querySelectorAll('svg')).map(svg => ({ svg, width: Number.parseFloat(svg.getAttribute('width')), height: Number.parseFloat(svg.getAttribute('height')) })).filter(item => item.width && item.height);
       container.replaceChildren(staging); container.scrollTop = 0;
       busy(status, 'Todas las voces · notación original · compases ' + state.pageStart + '–' + end, false);
       fit();
+      if (state.currentMeasure !== undefined) highlightMeasure(display, state.currentMeasure, container);
     } catch (error) {
       if (token === rendering) busy(status, 'No se pudo mostrar esta página: ' + error.message, false);
     } finally { if (staging.style.visibility === 'hidden') staging.remove(); }
@@ -112,6 +116,13 @@ export function createScoreView({ getSource, getFile, filter }) {
       ready.subscribe((state) => {
         playing = state.playing; setPlayIcon(playing);
         seek.value = state.position;
+        if (score && state.currentMeasure !== undefined && (score.currentMeasure !== state.currentMeasure || (state.playing && (state.currentMeasure < score.pageStart || state.currentMeasure > score.pageStart + 3)))) {
+          score.currentMeasure = state.currentMeasure;
+          if (state.playing && (state.currentMeasure < score.pageStart || state.currentMeasure > score.pageStart + 3)) {
+            score.pageStart = score.first + Math.floor((state.currentMeasure - score.first) / 4) * 4;
+            renderPage();
+          } else highlightMeasure(score.display, state.currentMeasure, el('full-score-rendering'));
+        }
         el('ensemble-time').textContent = clock(state.position) + ' / ' + clock(state.duration);
       });
       busy(audioStatus, 'Sonidos cargados.', false);

@@ -29,19 +29,22 @@ function setup() {
       render() { const svg = new Element(); svg.attributes = { width: '1000', height: '2000' }; this.target.append(svg); }
     } } },
   });
-  const source = fs.readFileSync(new URL('../../app/static/score-view.js', import.meta.url), 'utf8').replace(/^import .*\n/, '').replace('export function', 'function');
+  const source = fs.readFileSync(new URL('../../app/static/score-view.js', import.meta.url), 'utf8').replace(/^import .*\n/gm, '').replace('export function', 'function');
   vm.runInContext(source + '\nglobalThis.create = createScoreView;', context);
   return { el, context, stopped: () => stopped, resize: () => resize() };
 }
 
-test('fits tall ensemble page in both dimensions and refits after resize', async () => {
+test('fits ensemble width without shrinking all staves to viewport height', async () => {
   const state = setup(); const file = {};
   const view = state.context.create({ getFile: () => file, getSource: async () => '<score/>', filter: () => '<page/>' });
   await view.load();
   const svg = state.el('full-score-rendering').children[0].children[0];
-  assert.equal(svg.style.height, '568px'); assert.equal(svg.style.width, '284px');
+  assert.equal(svg.style.height, '1536px'); assert.equal(svg.style.width, '768px');
+  assert.equal(state.el('score-page').textContent, 'Página 1/2 · compases 1–4');
   state.el('full-score-rendering').clientHeight = 400; state.resize();
-  assert.equal(svg.style.height, '368px');
+  assert.equal(svg.style.height, '1536px', 'height changes must not shrink notation');
+  state.el('full-score-rendering').clientWidth = 390; state.resize();
+  assert.equal(svg.style.width, '750px', 'small screens retain readable notation with internal scroll');
   view.clear();
   assert.equal(state.el('embedded-score').hidden, true);
   assert.equal(state.el('full-score-rendering').children.length, 0);

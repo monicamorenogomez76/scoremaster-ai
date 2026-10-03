@@ -5,6 +5,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+await page.route('https://unpkg.com/smplr@1.1.0/dist/index.mjs', route => route.fulfill({ contentType: 'text/javascript', body: 'export function Soundfont() { return { ready: Promise.resolve(), start() {}, stop() {}, dispose() {} }; }' }));
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const score = name => `<?xml version="1.0"?><score-partwise version="4.0"><work><work-title>Synthetic workflow test</work-title></work><part-list><score-part id="P1"><part-name>${name}</part-name><score-instrument id="I1"><instrument-name>${name === 'Voice' ? 'Voice Oohs' : name}</instrument-name></score-instrument><midi-instrument id="I1"><midi-channel>1</midi-channel><midi-program>${name === 'Voice' ? 54 : 74}</midi-program></midi-instrument></score-part></part-list><part id="P1"><measure number="1"><attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note></measure></part></score-partwise>`;
@@ -23,9 +24,9 @@ try {
   await page.waitForFunction(() => document.querySelector('#full-score-rendering svg') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false', { timeout: 45000 });
   const fits = await page.locator('#full-score-rendering').evaluate(container => {
     const svg = container.querySelector('svg').getBoundingClientRect(), box = container.getBoundingClientRect();
-    return svg.width <= box.width && svg.height <= box.height;
+    return svg.width <= box.width;
   });
-  assert.equal(fits, true, 'page must fit viewport');
+  assert.equal(fits, true, 'page must fit width');
   await page.screenshot({ path: '/tmp/scoremaster-redesign-score.png', fullPage: true, animations: 'disabled' });
   await page.locator('[data-view-target=overview]').click();
   assert.equal(await page.locator('.family-chart').isVisible(), true);
@@ -83,10 +84,82 @@ try {
   await page.waitForFunction(() => document.querySelector('#notation-score svg'));
   assert.equal(await page.locator('#passage-play').isVisible(), true);
   assert.equal(await page.locator('#passage-stop').isVisible(), true);
+  const viewerLayout = await page.evaluate(() => {
+    const dialog = document.querySelector('#notation-dialog').getBoundingClientRect();
+    const close = document.querySelector('#notation-close').getBoundingClientRect();
+    const passage = getComputedStyle(document.querySelector('#passage-play'));
+    const ensemble = getComputedStyle(document.querySelector('#ensemble-play'));
+    return { width: dialog.width, height: dialog.height, closeVisible: close.right <= dialog.right && close.bottom <= dialog.bottom && close.width >= 44 && close.height >= 44,
+      sameStyle: passage.backgroundColor === ensemble.backgroundColor && passage.borderRadius === ensemble.borderRadius };
+  });
+  assert.ok(viewerLayout.width >= 1400 && viewerLayout.height >= 960, 'passage uses almost the whole viewport');
+  assert.equal(viewerLayout.closeVisible, true);
+  assert.equal(viewerLayout.sameStyle, true, 'both viewers share their playback button styling');
+
   const controls = await page.locator('.passage-transport').boundingBox(), notation = await page.locator('#notation-score').boundingBox();
   assert.ok(controls.y < notation.y, 'playback controls appear before the score');
   assert.equal(autoplayRequests, 0, 'opening a passage never starts playback');
   await page.locator('#notation-close').click();
   assert.equal(await page.locator('#notation-dialog').isVisible(), false);
   console.log('PASS: one passage action opens notation with playback controls and no autoplay');
+  const longScore = score('Flute').replace(/<measure number="1">[\s\S]*?<\/measure>/, Array.from({ length: 45 }, (_, i) => `<measure number="${70 + i}">${i === 0 ? '<attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>' : ''}<note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note></measure>`).join(''));
+  await page.evaluate(async source => {
+    currentScoreFile = new File([source], 'synthetic-long.musicxml');
+    notationSourcePromise = Promise.resolve(source);
+    await openNotationPassage('Flute', '70-114');
+  }, longScore);
+  assert.match(await page.locator('#notation-page-label').textContent(), /45 compases/);
+  assert.equal(await page.locator('#notation-next').isVisible(), false);
+  const retained = await page.evaluate(() => new DOMParser().parseFromString(filterMusicXmlPassage(activeNotationPassage.source, 'Flute', '70-114'), 'application/xml').querySelectorAll('measure').length);
+  assert.equal(retained, 45);
+  assert.equal(await page.evaluate(() => activeNotationPassage.renderer.Sheet.SourceMeasures.length), 45, 'all bars reach the renderer');
+  await page.evaluate(async () => { const { highlightMeasure } = await import('/static/playback-guide.js'); highlightMeasure(activeNotationPassage.renderer, 114, document.getElementById('notation-score')); });
+  assert.equal(await page.evaluate(() => activeNotationPassage.renderer.cursor.Iterator.CurrentMeasureIndex), 44);
+  assert.equal(await page.evaluate(() => activeNotationPassage.renderer.cursor.Hidden), false);
+  await page.locator('#passage-play').click();
+  await page.waitForFunction(() => document.querySelector('#passage-position').textContent.includes('Compás 70 '));
+  await page.locator('#passage-play').click();
+  assert.equal(await page.locator('#passage-play').getAttribute('aria-label'), 'Reproducir');
+  await page.locator('#passage-speed').selectOption('0.75');
+  await page.locator('#passage-volume').fill('60');
+  await page.locator('#passage-play').click();
+  await page.waitForFunction(() => document.querySelector('#passage-play').getAttribute('aria-label') === 'Pausar');
+  await page.locator('#passage-seek').evaluate(input => { input.value = '80'; input.dispatchEvent(new Event('change')); });
+  await page.waitForFunction(() => document.querySelector('#passage-position').textContent.includes('Compás 110 '));
+  assert.equal(await page.evaluate(() => activeNotationPassage.renderer.cursor.Iterator.CurrentMeasureIndex), 40);
+  assert.equal(await page.evaluate(() => activeNotationPassage.renderer.cursor.cursorElement.style.zIndex), '1');
+  await page.locator('#passage-stop').click();
+  assert.equal(await page.evaluate(() => activeNotationPassage.renderer.cursor.Hidden), true);
+  await page.screenshot({ path: '/tmp/scoremaster-complete-passage.png', fullPage: true });
+  console.log('PASS: entire 45-bar passage rendered without next-page control');
+  await page.locator('#notation-close').click();
+  await page.locator('[data-view-target=analyze]').click();
+  await page.evaluate(async () => (await scoreViewPromise).load());
+  assert.match(await page.locator('#score-page').textContent(), /Página 1\/12/);
+  await page.locator('#ensemble-play').click();
+  await page.waitForFunction(() => !document.querySelector('#ensemble-seek').disabled);
+  await page.locator('#ensemble-seek').evaluate(input => { input.value = '20'; input.dispatchEvent(new Event('change')); });
+  await page.waitForFunction(() => document.querySelector('#score-page').textContent.includes('Página 3/12') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false');
+  assert.match(await page.locator('#score-page').textContent(), /78–81/);
+  await page.locator('#ensemble-stop').click();
+  console.log('PASS: full score automatically turns to the page playing after a seek');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(async () => openNotationPassage('Flute', '70-114'));
+  const mobileDialog = await page.evaluate(() => {
+    const close = document.querySelector('#notation-close').getBoundingClientRect();
+    const viewport = document.querySelector('#notation-score').getBoundingClientRect();
+    const dialog = document.querySelector('#notation-dialog');
+    return { closeFits: close.left >= 0 && close.right <= window.innerWidth && close.bottom < window.innerHeight,
+      noOuterScroll: dialog.scrollHeight <= dialog.clientHeight + 1, scoreHeight: viewport.height };
+  });
+  assert.equal(mobileDialog.closeFits, true);
+  assert.equal(mobileDialog.noOuterScroll, true, 'only the notation scrolls, controls stay visible');
+  assert.ok(mobileDialog.scoreHeight > 300);
+  await page.screenshot({ path: '/tmp/scoremaster-passage-mobile.png' });
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#notation-dialog').isVisible(), false);
+  console.log('PASS: mobile passage keeps close and controls visible with internal score scrolling');
+
+
+
 } finally { await browser.close(); }
