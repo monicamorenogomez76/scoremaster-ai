@@ -115,3 +115,9 @@ El diseño se orienta por [WCAG 2.2](https://www.w3.org/TR/WCAG22/) y
 móvil, ausencia de desbordamiento horizontal, el tamaño del botón de reproducción
 y el foco al navegar con Tab. Esto no constituye una auditoría completa de
 conformidad WCAG.
+
+## Evolución aprobada
+
+El [plan de PR pequeñas](docs/IMPLEMENTATION_ROADMAP.md) y las
+[especificaciones](docs/README.md) describen lo previsto. PostgreSQL, grados 1–6,
+feedback y revisión LLM todavía no están implementados en esta entrega documental.
