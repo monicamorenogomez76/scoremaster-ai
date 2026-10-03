@@ -13,7 +13,7 @@ Las rutas son relativas a la carpeta que contiene este `AGENTS.md`.
 | Motor determinista de análisis | [scoremaster-scorelint](skills/scoremaster-scorelint/SKILL.md) | Métricas, reglas, findings, dificultad, escalas y criticidad; pruebas y regresiones del algoritmo. |
 | Adecuación a la banda y planificación | [scoremaster-bandfit-rehearsal](skills/scoremaster-bandfit-rehearsal/SKILL.md) | Cobertura de partes, disponibilidad, necesidades de intérpretes, prioridades y presupuesto de ensayo. |
 | Integración de IA | [scoremaster-ai-layer](skills/scoremaster-ai-layer/SKILL.md) | Puertos y proveedores, prompts, salida estructurada, demo/fake, fallback, caché y trazabilidad. No sustituye hechos musicales por inferencias. |
-| Frontend, notación y reproducción | [scoremaster-ui-audio](skills/scoremaster-ui-audio/SKILL.md) | Interfaz, accesibilidad, visor, estado de sesión y audio. Trabaja sobre HTML/CSS/JavaScript en `backend/app/static/`, servido por FastAPI. |
+| Frontend, notación y reproducción | [scoremaster-ui-audio](skills/scoremaster-ui-audio/SKILL.md) | Interfaz, accesibilidad, visor, estado de sesión y audio. React en `frontend/` (compilado a `backend/app/static/frontend/`); visor y audio en `backend/app/static/` hasta su migración. |
 | API, datos e infraestructura de ejecución | [scoremaster-api-persistence](skills/scoremaster-api-persistence/SKILL.md) | Contratos HTTP, uploads, repositorios, transacciones, PostgreSQL, Alembic y Docker. |
 | Evaluación y evidencia para el TFM | [scoremaster-evaluation](skills/scoremaster-evaluation/SKILL.md) | Baseline, benchmark, protocolo de feedback, métricas, comparación de métodos y resultados reproducibles. |
 | Revisión del criterio musical | [scoremaster-musical-reviewer](skills/scoremaster-musical-reviewer/SKILL.md) | Validez musical de reglas y resultados, contexto instrumental y recomendaciones con evidencias por parte y compás. No constituye validación humana del benchmark. |
@@ -52,8 +52,8 @@ Las rutas son relativas a la carpeta que contiene este `AGENTS.md`.
 El contexto siguiente conserva los objetivos y propuestas originales del TFM.
 Para decisiones que hayan evolucionado (stack, escalas, persistencia y secuencia),
 prevalece `docs/IMPLEMENTATION_ROADMAP.md`; para conocer lo implementado, comprueba
-el código, las pruebas y el README actual. React era una propuesta inicial y no
-describe el frontend actual; migrarlo requiere una tarea específica.
+el código, las pruebas y el README actual. La migración a React sigue las PR de
+transición del plan aprobado; consulta `frontend/README.md` para su estado.
 
 # CONTEXTO INICIAL — TFM MAESTROAI / SCORELINT
 

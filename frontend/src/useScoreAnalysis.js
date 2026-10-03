@@ -1,28 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { applyInstrumentAssignments, inspectInstruments } from './instrument-session.js';
+import { apiInstrumentName } from './labels.js';
 
-export function useScoreAnalysis(workspace) {
+// options: { minutes, getProfile(), onReset(), onAnalysis(data, profile, navigate) }.
+// Read through a ref so changing them never aborts a request in flight.
+export function useScoreAnalysis(workspace, options) {
   const [state, setState] = useState({ busy: false, message: '', error: false });
   const [parts, setParts] = useState([]);
   const [assignments, setAssignments] = useState({});
   const file = useRef(null), xml = useRef(null), generation = useRef(0), controller = useRef(null);
+  const latest = useRef(options); latest.current = options;
   const invalidate = useCallback(() => {
     controller.current?.abort();
     return ++generation.current;
   }, []);
 
+  const clearSelection = useCallback(async () => {
+    setParts([]); setAssignments({});
+    latest.current.onReset();
+    await workspace.reset();
+  }, [workspace]);
+
   const reset = useCallback(async () => {
     invalidate(); file.current = null; xml.current = null;
-    setParts([]); setAssignments({}); setState({ busy: false, message: '', error: false });
-    await workspace.reset();
-  }, [invalidate, workspace]);
+    setState({ busy: false, message: '', error: false });
+    await clearSelection();
+  }, [clearSelection, invalidate]);
 
   const selectFile = async selected => {
     const version = invalidate(); file.current = selected; xml.current = null;
-    setParts([]); setAssignments({});
     setState({ busy: Boolean(selected), message: selected ? 'Cargando datos de instrumentos…' : '', error: false });
     try {
-      await workspace.reset();
+      await clearSelection();
       if (!selected || version !== generation.current) return;
       workspace.setFile(selected);
       const source = await workspace.loadSource();
@@ -46,24 +55,25 @@ export function useScoreAnalysis(workspace) {
       await workspace.prepareAnalysis();
       if (version !== generation.current) return;
       let data, completedProfile = profile;
-      // Preserve legacy defaults: one player per score part, then recompute BandFit.
+      // First analysis: one player per score part, then recompute BandFit with that template.
       for (let attempt = 0; attempt < 2; attempt++) {
         const body = new FormData(); body.append('file', selected);
         body.append('band_profile', JSON.stringify(completedProfile));
-        body.append('total_minutes', workspace.getMinutes());
+        body.append('total_minutes', latest.current.minutes || '60');
         const response = await fetch('/analyze', { method: 'POST', body, signal: request.signal });
         try { data = await response.json(); }
         catch { throw new Error('El servidor devolvió una respuesta no válida. Vuelve a intentarlo.'); }
         if (version !== generation.current) return;
         if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'No se pudo analizar la partitura.');
         const names = data.parts || [];
-        const missing = names.some(name => completedProfile[workspace.apiInstrumentName(name)] === undefined);
+        const missing = names.some(name => completedProfile[apiInstrumentName(name)] === undefined);
         completedProfile = Object.fromEntries(names.map(name => {
-          const key = workspace.apiInstrumentName(name); return [key, completedProfile[key] ?? 1];
+          const key = apiInstrumentName(name); return [key, completedProfile[key] ?? 1];
         }));
         if (!missing) break;
       }
-      workspace.showAnalysis(data, completedProfile, navigate);
+      latest.current.onAnalysis(data, completedProfile, navigate);
+      workspace.showScore();
       setState({ busy: false, message: '', error: false });
     } catch (error) {
       if (version !== generation.current || error.name === 'AbortError') return;
@@ -73,16 +83,15 @@ export function useScoreAnalysis(workspace) {
     }
   }, [invalidate, workspace]);
 
-  useEffect(() => {
-    workspace.setAnalysisHandler(analyze);
-    return () => { invalidate(); workspace.setAnalysisHandler(() => {}); };
-  }, [analyze, invalidate, workspace]);
+  useEffect(() => invalidate, [invalidate]);
 
   const submit = () => {
     if (!file.current) return analyze(null, {});
     const mapped = applyInstrumentAssignments(file.current, xml.current, assignments);
     workspace.setFile(mapped.file, mapped.source);
-    return analyze(mapped.file, workspace.readProfile());
+    return analyze(mapped.file, latest.current.getProfile());
   };
-  return { state, parts, assignments, setAssignments, selectFile, reset, submit };
+  // Band and rehearsal views recompute the current score without leaving their view.
+  const recalculate = () => analyze(workspace.getFile(), latest.current.getProfile(), false);
+  return { state, parts, assignments, setAssignments, selectFile, reset, submit, recalculate };
 }
