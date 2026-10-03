@@ -32,6 +32,12 @@ El flujo de trabajo y las pautas de cambios están en [CONTRIBUTING.md](CONTRIBU
 El MVP incluye análisis determinista de dificultad, compatibilidad de plantilla,
 plan de ensayo y un cuadro de mando por familias, instrumentos y pasajes críticos.
 
+La migración a React está en revisión: formulario de carga/análisis, estados y
+cancelación. Dashboard y visores siguen con el adaptador temporal hasta sus PR.
+Ver [arquitectura y arranque del frontend](frontend/README.md). Para ejecutar con
+Python, compilar primero con `npm --prefix frontend ci` y
+`npm --prefix frontend run build`; Docker lo hace durante la construcción.
+
 La interfaz ofrece navegación por vistas y una entrada de demostración. No hay
 autenticación real ni persistencia de cuentas: la sesión y la plantilla son locales
 al navegador y temporales.

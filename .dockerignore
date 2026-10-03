@@ -1,0 +1,11 @@
+.git
+.venv
+**/__pycache__
+.pytest_cache
+frontend/node_modules
+backend/app/static/frontend
+.env
+.env.*
+test-scores
+*.pdf
+skills

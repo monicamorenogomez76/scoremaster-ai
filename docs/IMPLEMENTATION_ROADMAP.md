@@ -15,13 +15,13 @@
 
 Las PR #11–#16 están integradas. La PR #5 se cerró porque su densidad rítmica y agrupación ya estaban incorporadas. Comprobaciones: 62 pruebas Python, 5 pruebas Node y recorrido Playwright sobre carga, instrumentos, visor, reinicio, móvil y pasajes.
 
-PostgreSQL local está integrado mediante la PR #19. El repositorio y las migraciones están integrados en la PR #21. El guardado desde la API está preparado para revisión; todavía no existe proveedor LLM. El audio actual ya usa muestras General MIDI para instrumentos afinados y síntesis para percusión. La resistencia actual es una aproximación por compases. Los hallazgos se agrupan como críticos, pendiente del detector separado.
+PostgreSQL local está integrado mediante la PR #19. El repositorio y las migraciones están integrados en la PR #21. El guardado desde la API está integrado en la PR #22; todavía no existe proveedor LLM. El audio actual ya usa muestras General MIDI para instrumentos afinados y síntesis para percusión. La resistencia actual es una aproximación por compases. Los hallazgos se agrupan como críticos, pendiente del detector separado.
 
 La corrección del audio del clarinete, el pasaje completo y los controles compartidos están integrados en la PR #20. Las siguientes PR retoman el plan musical y de persistencia.
 
 ## Entregas
 
-Los números 01–25 identifican pasos del plan, no números de GitHub. El paso 04 está integrado en la PR #21; el paso 05 está preparado para revisión.
+Los números 01–25 identifican pasos del plan, no números de GitHub. Los pasos 04 y 05 están integrados en las PR #21 y #22. Antes del paso 06 se retoma la arquitectura frontend React aprobada.
 
 | Entrega | Objetivo | Estado |
 |---|---|---|
@@ -29,7 +29,7 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. El paso 
 | 02 | Baseline reproducible | Integrada: PR #18; 15 casos, 10 nombres y audio |
 | 03 | PostgreSQL en desarrollo | Integrado en PR #19: Compose, healthcheck y volumen |
 | 04 | Migraciones y repositorio de análisis | Integrado: PR #21; SQLAlchemy, Alembic y pruebas PostgreSQL |
-| 05 | Guardado desde el análisis | Preparado para revisión: ID, resultados y configuración persistidos |
+| 05 | Guardado desde el análisis | Integrado: PR #22; ID, resultados y configuración persistidos |
 | 06 | Catálogo canónico | Pendiente |
 | 07 | Metadatos del parser | Pendiente |
 | 08 | Resolver determinista | Pendiente |
@@ -78,3 +78,18 @@ PR independientes de autenticación, autorización y despliegue PostgreSQL gesti
 | Aplicación/infraestructura | backend/application, backend/infrastructure | Nuevos puertos/repositorios | Persistencia, IA y caché sin dependencias externas en dominio |
 | Presentación | backend/app | /analyze, frontend | IDs, evidencias, escalas y feedback |
 | Evaluación | evaluation | Casos, etiquetas y exportación | Baseline, métricas y comparación reproducible |
+
+## Transición a React antes del paso 06
+
+Tres PR independientes, revisadas antes del commit:
+
+| PR de transición | Alcance | Estado |
+|---|---|---|
+| React 1 | Build reproducible, carga/análisis, asignaciones, estados y cancelación | Preparada para revisión |
+| React 2 | Dashboard, dificultad, BandFit, ensayo y navegación | Pendiente |
+| React 3 | Visores, vídeos y reproducción; retirada del adaptador temporal | Pendiente |
+
+Se conserva el diseño y se verifica cada recorrido con Playwright. La primera
+PR monta React en el formulario mediante un adaptador temporal para las vistas
+existentes. [Detalles y arranque](../frontend/README.md). No modifica los algoritmos
+musicales ni el esquema de PostgreSQL.

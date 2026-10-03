@@ -84,6 +84,8 @@ del proceso usando la conexión local de `.env.example` (por ejemplo en el entor
 del IDE); Uvicorn no carga `.env` automáticamente. Después:
 
 ```sh
+npm --prefix frontend ci
+npm --prefix frontend run build
 .venv/bin/python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8006
 ```
 
