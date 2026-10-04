@@ -2,6 +2,23 @@
 
 # Realistic Audio Plan
 
+## Estado
+
+Implementado: reproducción híbrida en el navegador. Los instrumentos con grabaciones reales
+de tonejs-instruments (VSCO 2 CE, Karoryfer, Iowa) usan esas muestras, con la grabación más
+cercana a cada nota y transposición de smplr; el resto usa el banco General MIDI MusyngKite,
+que también actúa como respaldo si las grabaciones no se descargan. Pendientes: dinámicas,
+articulaciones y un renderer desacoplado. Ver «Créditos de sonido» en el README.
+
+Valoración de la autora (2026-10-04): la reproducción mejora pero todavía no es buena;
+se aplaza. Candidatos para retomarlo: dinámicas y articulaciones del MusicXML, envolventes
+y release por instrumento, reverberación ligera, más capas de velocidad y bibliotecas
+con más muestras por instrumento (University of Iowa, VSCO 2 CE completo).
+
+Regresión de sonido: `backend/test/frontend/recorded-sample.e2e.mjs` renderiza el clarinete
+grabado con smplr real y falla si el resultado es silencio (smplr 1.1.0 reproduce en
+silencio los mapas `buffers` simples; se usa un preset con `pitch` y `keyRange`).
+
 ## 1. Problema
 
 La reproducción actual puede sonar demasiado MIDI / General MIDI.

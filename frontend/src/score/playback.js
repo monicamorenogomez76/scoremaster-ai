@@ -1,4 +1,6 @@
 // Sampled solo playback. The MusicXML remains on our server/browser only.
+import { recordedPreset } from './sample-banks.js';
+
 let context;
 let activeTransport;
 let pendingRequest;
@@ -6,6 +8,8 @@ const wholeScoreCache = new WeakMap();
 let generation = 0;
 let library;
 const SMPLR_URL = 'https://unpkg.com/smplr@1.1.0/dist/index.mjs';
+// MusyngKite (CC BY-SA 3.0) sounds less synthetic than FluidR3_GM for winds; samples load from its CDN.
+const SOUNDFONT_KIT = 'MusyngKite';
 
 const programs = {
   0: 'acoustic_grand_piano', 9: 'glockenspiel', 11: 'vibraphone',
@@ -113,7 +117,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   }
   onStatus('Cargando sonidos de los instrumentos… La primera carga puede tardar.');
   library ||= import(/* @vite-ignore */ SMPLR_URL).catch((error) => { library = null; throw error; });
-  const { Soundfont } = await library;
+  const { Soundfont, Sampler } = await library;
   if (token !== generation) return null;
   const master = ctx.createGain();
   const limiter = ctx.createDynamicsCompressor();
@@ -136,16 +140,28 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   function disposePlayers() { players.forEach((player) => player.dispose()); master.disconnect(); limiter.disconnect(); }
   // Publish disposal before awaiting samples, so Stop can cancel loading too.
   activeTransport = { dispose: disposePlayers };
+  async function ready(player) {
+    players.push(player);
+    let timeoutId;
+    const timeout = new Promise((_, reject) => { timeoutId = setTimeout(() => reject(new Error('La descarga de sonidos ha tardado demasiado. Comprueba tu conexión.')), 90000); });
+    try { await Promise.race([player.ready, timeout]); }
+    finally { clearTimeout(timeoutId); }
+    return player;
+  }
+  // Real recordings where they exist; the General MIDI soundfont otherwise or if they fail to load.
+  async function loadPlayer(sound, group) {
+    const preset = Sampler && recordedPreset(sound, [...group.notes]);
+    if (preset) {
+      try { return await ready(Sampler(ctx, { preset, destination: master })); }
+      catch { /* recordings unavailable: fall back to the soundfont */ }
+    }
+    return ready(Soundfont(ctx, { instrument: sound, kit: SOUNDFONT_KIT,
+      // External loop points change pitch in some MP3 samples (e.g. clarinet D4).
+      destination: master, loadLoopData: false, notesToLoad: { notes: [...group.notes] } }));
+  }
   try {
     await Promise.all([...instruments].map(async ([sound, group]) => {
-      const loaded = Soundfont(ctx, { instrument: sound, kit: 'FluidR3_GM',
-        // External loop points change pitch in some MP3 samples (e.g. clarinet D4).
-        destination: master, loadLoopData: false, notesToLoad: { notes: [...group.notes] } });
-      players.push(loaded);
-      let timeoutId;
-      const timeout = new Promise((_, reject) => { timeoutId = setTimeout(() => reject(new Error('La descarga de sonidos ha tardado demasiado. Comprueba tu conexión.')), 90000); });
-      try { await Promise.race([loaded.ready, timeout]); }
-      finally { clearTimeout(timeoutId); }
+      const loaded = await loadPlayer(sound, group);
       if (token === generation) group.events.forEach((event) => timeline.push({ ...event, player: loaded }));
     }));
   } catch (error) {
