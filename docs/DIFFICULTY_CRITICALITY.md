@@ -19,6 +19,25 @@ Difficulty != Criticality != RehearsalPriority
 ### Rehearsal Priority
 ¿Cuánto tiempo/prioridad merece en el ensayo dadas las circunstancias?
 
+### Ensayo de conjunto y pasajes comunes
+
+Decisión de la autora (2026-10-04): los ensayos son de conjunto. La prioridad no se calcula
+por instrumento aislado, sino por **pasaje común**:
+
+- **Coincidencia en compases**: los mismos compases son difíciles para varias partes a la vez.
+- **Material compartido**: partes que tocan lo mismo (unísono u octavas en altura real, o el
+  mismo ritmo), aunque sean de familias distintas. La altura escrita se convierte a real con la
+  transposición declarada en el MusicXML.
+
+Organización del ensayo:
+
+- **Bloques seccionales**, uno por sección (madera, metal, percusión, cuerda, sección rítmica,
+  teclas) y pasaje común, con las partes implicadas, los compases y los motivos.
+- **Un tutti final para juntar** los pasajes que implican a varias secciones o que comparten
+  material entre secciones.
+- La suma de bloques no supera el tiempo disponible; si no caben todos, se descartan los de
+  menor prioridad indicándolo. Sin pasajes, el plan es un único tutti.
+
 ---
 
 # 2. Difficulty
