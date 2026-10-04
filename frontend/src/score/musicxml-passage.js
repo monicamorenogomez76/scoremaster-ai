@@ -26,7 +26,19 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
     return name && normalizeName(name.textContent) === target;
   });
   let matchingParts = scoreParts, selectedStaffNumber = null;
-  if (instrumentName !== null) {
+  if (Array.isArray(instrumentName)) {
+    // A rehearsal block keeps every listed part whole. The analysis numbers parts sharing a
+    // name ("Voice 3" is the third "Voice") and staves of one part ("Horn in F 2").
+    const wanted = new Set(instrumentName.map(normalizeName));
+    const nameOf = part => normalizeName(directChild(part, 'part-name')?.textContent || '');
+    matchingParts = scoreParts.filter(part => {
+      const name = nameOf(part);
+      const sameName = scoreParts.filter(other => nameOf(other) === name);
+      if (wanted.has(name)) return true;
+      if (sameName.length > 1) return wanted.has(name + ' ' + (sameName.indexOf(part) + 1));
+      return [...wanted].some(entry => entry.startsWith(name + ' ') && /^\d+$/.test(entry.slice(name.length + 1)));
+    });
+  } else if (instrumentName !== null) {
     // A part literally named "B♭ Cornet 2" wins; otherwise the trailing number selects
     // a staff of a multi-staff part, or one of several parts sharing a name.
     const exact = named(normalizeName(instrumentName));
@@ -60,7 +72,7 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
     }
     const scorePartName = scoreParts.find((entry) => entry.getAttribute('id') === part.getAttribute('id'));
     const nameElement = scorePartName && directChild(scorePartName, 'part-name');
-    if (nameElement && instrumentName !== null) nameElement.textContent = instrumentName;
+    if (nameElement && typeof instrumentName === 'string') nameElement.textContent = instrumentName;
     let previousAttributes = null;
     let firstRetained = true;
     Array.from(part.children).filter((element) => element.localName === 'measure').forEach((measure) => {

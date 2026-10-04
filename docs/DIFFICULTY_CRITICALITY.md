@@ -46,6 +46,9 @@ reparte el resto en proporción a la prioridad con un mínimo de 5 min por bloqu
 pasajes muy largos vienen del detector de criticidad actual (paso 14 pendiente). El planificador
 anterior queda congelado en `evaluation/legacy_rehearsal.py` para el baseline.
 
+La vista del plan incluye un calendario: hora de inicio, bloques proporcionales a sus minutos y,
+al pulsar uno, la partitura de esos compases con solo los instrumentos implicados y su audio.
+
 ---
 
 # 2. Difficulty

@@ -40,7 +40,7 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 12 | Políticas de dificultad | Pendiente |
 | 13 | Grados 1–6 | Pendiente |
 | 14 | Detector de criticidad | Pendiente |
-| 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Preparado para revisión |
+| 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Integrado: PR #37; calendario interactivo en revisión |
 | 16 | Evidencias en interfaz | Pendiente |
 | 17 | Persistencia de feedback | Pendiente |
 | 18 | Formulario de valoración | Pendiente |

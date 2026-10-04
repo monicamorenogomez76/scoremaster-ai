@@ -486,3 +486,25 @@ input[type=range] { accent-color: var(--primary); }
 .chart-value { font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; }
 @media (max-width: 600px) { .chart-row { grid-template-columns: 95px minmax(0,1fr) 65px; gap: 8px; font-size: .8rem; } .login-card { padding: 20px; } .ensemble-toolbar { gap: 10px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Rehearsal calendar: blocks as wide as their minutes, one colour per section. */
+.rehearsal-calendar { display: grid; gap: 10px; margin: 14px 0 18px; }
+.rehearsal-calendar .duration-field input { width: auto; }
+.calendar-track { display: flex; gap: 4px; min-height: 76px; }
+.calendar-slot { display: flex; flex-direction: column; gap: 3px; min-width: 44px; }
+.calendar-block { display: grid; align-content: start; gap: 2px; flex: 1; width: 100%; min-height: 56px; padding: 8px; border: 0;
+  border-radius: 10px; background: var(--slot, #e8edf4); color: #fff; text-align: left; overflow: hidden; cursor: pointer; }
+.calendar-block:focus-visible, .calendar-range:focus-visible { outline: 3px solid #111827; outline-offset: 2px; }
+.calendar-time { font-size: .72rem; font-weight: 700; opacity: .9; }
+.calendar-name { font-size: .82rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calendar-ranges { display: flex; flex-wrap: wrap; gap: 3px; }
+.calendar-range { width: auto; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; font-size: .72rem; }
+.calendar-slot--woodwinds { --slot: #0f766e; }
+.calendar-slot--brass { --slot: #b45309; }
+.calendar-slot--percussion { --slot: #7c3aed; }
+.calendar-slot--strings { --slot: #be123c; }
+.calendar-slot--rhythm { --slot: #1d4ed8; }
+.calendar-slot--keyboard { --slot: #4d7c0f; }
+.calendar-slot--other { --slot: #475569; }
+.calendar-slot--tutti { --slot: #111827; }
+@media (max-width: 640px) { .calendar-track { flex-direction: column; } .calendar-slot { flex-grow: 0 !important; } }

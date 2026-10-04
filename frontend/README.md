@@ -36,6 +36,10 @@ excluye dependencias locales, credenciales y partituras de prueba.
 - `UploadWorkspace.jsx` y `useScoreAnalysis.js`: formulario, asignaciones,
   solicitudes, cancelación y descarte de respuestas anteriores.
 - `labels.js`: textos en castellano de instrumentos, familias, findings, BandFit y ensayo.
+- `schedule.js` y `RehearsalView.jsx`: calendario del ensayo. Cada bloque ocupa el ancho de sus
+  minutos desde la hora de inicio, con un color por sección; al pulsarlo se abre la partitura en
+  sus compases solo con sus instrumentos (toda la banda en el tutti, con un botón por pasaje) y
+  se pueden escuchar juntos (`/playback` acepta varios `instruments`).
 - `instrument-session.js`: modifica una copia temporal del XML; conserva el archivo
   seleccionado y la instrumentación no identificada cuando no hay confirmación.
 - `score/`: visores y audio.
