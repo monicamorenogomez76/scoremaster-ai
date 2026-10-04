@@ -54,9 +54,9 @@ Ver [arquitectura y arranque del frontend](frontend/README.md). Para ejecutar co
 Python, compilar primero con `npm --prefix frontend ci` y
 `npm --prefix frontend run build`; Docker lo hace durante la construcción.
 
-La aplicación exige iniciar sesión (email y contraseña, Google opcional). Los
-análisis se guardan en PostgreSQL; la biblioteca de obras y la plantilla por usuario
-llegan en la siguiente fase del plan.
+La aplicación exige iniciar sesión (email y contraseña, Google opcional). Cada obra
+analizada se guarda en «Mis obras» con su último análisis, y la plantilla de la banda
+se conserva por usuario.
 
 El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
 de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
@@ -86,8 +86,8 @@ temporalmente el archivo y limita la subida a 8 MB, el contenido descomprimido a
 
 Los pasajes críticos se pueden abrir como notación MusicXML renderizada en el
 navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
-El archivo original se conserva en el navegador solo durante la sesión de
-análisis y no se persiste en el servidor.
+El archivo original se guarda en «Mis obras», visible solo para su propietario, y
+se puede reabrir o eliminar (con sus análisis) en cualquier momento.
 
 En «Analizar partitura», después de completar el análisis, la partitura aparece en un visor
 grande incrustado, con todas las voces, páginas de cuatro compases, zoom y pantalla
@@ -109,8 +109,8 @@ navegador ni versionarse. Sin ella, se muestra una búsqueda directa en YouTube 
 se permite pegar un enlace para reproducirlo en la aplicación.
 
 La plantilla de banda tiene una fila por instrumento y empieza con los músicos que
-pide la obra (uno por voz; la percusión, en percusionistas). Los cambios son
-temporales durante la sesión; todavía no se guardan por usuario.
+pide la obra (uno por voz; la percusión, en percusionistas). «Actualizar análisis»
+guarda la plantilla del usuario, que se aplica a las siguientes obras.
 
 ### Pruebas de interfaz
 
@@ -193,5 +193,5 @@ antes de cambiar sus reglas: `python -m evaluation.baseline`.
 
 El [arranque de PostgreSQL](docs/POSTGRESQL.md) requiere `.env` y conserva los
 datos en un volumen. Aplicar las migraciones antes de analizar: cada análisis
-correcto se guarda y devuelve `analysis_id`. El archivo original y el audio no se
-guardan; todavía no existe historial público ni vinculación a cuentas.
+correcto se guarda en la biblioteca del usuario y devuelve `analysis_id` y `work_id`.
+El audio no se guarda y no hay historiales públicos: cada obra es privada.

@@ -46,12 +46,15 @@ def signed_in_test_user(request):
     if request.node.get_closest_marker('real_auth'):
         yield
         return
-    from backend.app.dependencies import authenticated_user
+    from backend.app.dependencies import authenticated_user, get_library_repository
     from backend.app.main import app
     from backend.application.accounts import User
-    user = User(uuid4(), TEST_USER_EMAIL, 'Test')
+    from backend.test.library_fakes import InMemoryLibrary
+    user, library = User(uuid4(), TEST_USER_EMAIL, 'Test'), InMemoryLibrary()
     app.dependency_overrides[authenticated_user] = lambda: user
+    app.dependency_overrides[get_library_repository] = lambda: library
     try:
         yield user
     finally:
         app.dependency_overrides.pop(authenticated_user, None)
+        app.dependency_overrides.pop(get_library_repository, None)

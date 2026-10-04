@@ -8,7 +8,7 @@
 - Separar Difficulty, Criticality y RehearsalPriority. Un análisis puede devolver cero críticos.
 - Los ensayos son de conjunto: un pasaje común es el que varias partes tocan igual en estructura —misma línea (mismo ritmo e intervalos, cada una en su tonalidad u octava) o mismo ritmo—, aunque sean de familias distintas. En cada pasaje se ensaya primero cada línea común, después las subsecciones con lo que queda (flautas, dobles cañas, clarinetes, saxofones, metales agudos, graves —con fagot, clarinete bajo y saxo barítono—, percusión, cuerda y rítmica) y al final un tutti para juntar (decisiones de la autora, 2026-10-04).
 - Primera entrega: base musical fiable. Después revisión estructurada LLM y evaluación híbrida. Asistente conversacional solo con evidencias validadas (partes, compases, hallazgos, plan y diario) y demo identificada sin API key; sin RAG ni agentes autónomos (decisión de la autora, 2026-10-04).
-- Persistir resultados estructurados y feedback, no partituras originales ni bancos de audio.
+- Persistir resultados estructurados y feedback. El MusicXML original se guarda privado de su usuario y se borra con la obra o la cuenta; no se guardan bancos de audio (decisión de la autora, 2026-10-04).
 - Cuentas con email y contraseña (Google opcional), sesiones en servidor y CSRF; cada dato pertenece a un usuario y se autoriza en el servidor (decisión de la autora, 2026-10-04).
 - Un objetivo por PR, pruebas y documentación. Integración secuencial mediante squash.
 
@@ -59,8 +59,8 @@ nivel por sección y coordinación del conjunto. Una PR por fase, con TDD.
 
 | Fase | Objetivo | Estado |
 |---|---|---|
-| A1 | Cuentas y sesión (email/contraseña, Google opcional, CSRF, cabeceras, límites de subida) | En revisión |
-| A2 | Biblioteca de obras y banda por usuario (MusicXML privado y borrable) | Pendiente |
+| A1 | Cuentas y sesión (email/contraseña, Google opcional, CSRF, cabeceras, límites de subida) | Integrado: PR #45 |
+| A2 | Biblioteca de obras y banda por usuario (MusicXML privado y borrable) | En revisión |
 | A3 | Sustitutos de instrumento (tabla revisable, tesitura y músicos libres) | Pendiente |
 | A4 | Conciertos y calendario de ensayos con varias obras | Pendiente |
 | A5 | Diario de ensayos (pendiente/resuelto, notas y propuestas confirmadas) | Pendiente |

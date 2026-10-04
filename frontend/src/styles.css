@@ -519,3 +519,14 @@ input[type=range] { accent-color: var(--primary); }
 .login-demo-button { width: 100%; }
 .login-google { display: block; margin-top: 10px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; color: inherit; text-align: center; text-decoration: none; }
 .login-switch { margin-top: 12px; padding: 6px 0; border: 0; background: none; color: var(--primary); cursor: pointer; }
+
+/* Library of works */
+.works-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.works-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding: 18px 20px; }
+.works-copy { min-width: 0; flex: 1 1 260px; }
+.works-title { margin: 0 0 4px; font-size: 1.05rem; overflow-wrap: anywhere; }
+.works-summary { margin: 6px 0 0; font-weight: 600; }
+.works-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.works-actions button { padding: 9px 14px; border: 1px solid var(--line); background: white; cursor: pointer; }
+.works-actions .work-open { border-color: var(--primary); background: var(--primary); color: white; }
+.works-actions .work-delete-confirm { border-color: #b42318; color: #b42318; }

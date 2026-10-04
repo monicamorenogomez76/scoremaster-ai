@@ -10,6 +10,8 @@ la skill `security-best-practices` para FastAPI y React.
 | A07 Fallos de identificación y autenticación | Contraseñas con Argon2id; mínimo 10 caracteres; el mismo error y el mismo coste para un email desconocido y una contraseña errónea; 5 intentos fallidos por email y dirección cada 15 minutos | `backend/application/auth.py` |
 | A07 Sesiones | Token aleatorio de 256 bits en cookie `HttpOnly`, `SameSite=Lax` y `Secure` en producción; la base guarda solo su SHA-256; caducidad de 7 días; cierre de sesión en servidor | `auth.py`, `backend/app/auth_routes.py` |
 | A01 Control de acceso | Las rutas de análisis, audio, notación y vídeos exigen sesión (`authenticated_user`); la autorización se decide en el servidor | `backend/app/dependencies.py`, `main.py` |
+| A01 Autorización por objeto (IDOR) | Obras, archivos, análisis y plantilla se consultan siempre filtrando por el usuario; una obra ajena responde 404 igual que una inexistente; borrado en cascada | `library_repository.py`, `library_routes.py` |
+| Datos personales y copyright | El MusicXML subido es privado de su usuario, no se publica y se puede borrar; la descarga lleva `Content-Disposition: attachment` y un nombre saneado | `library_routes.py` |
 | CSRF | Token por sesión en la cabecera `X-CSRF-Token` para toda petición que cambia datos, y rechazo de peticiones con `Origin` de otro sitio | `dependencies.py`, middleware `security` |
 | Google (opcional) | OIDC con `state` y PKCE S256; ID token verificado (firma, emisor y audiencia); un email no verificado nunca se vincula a una cuenta existente | `auth_routes.py` |
 | A03 Inyección | SQLAlchemy con consultas parametrizadas; el parser rechaza `<!ENTITY>`; sin ejecución de comandos | `infrastructure/`, `main.py` |

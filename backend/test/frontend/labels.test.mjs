@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   bandIssueText, byDifficulty, displayFamilyName, displayInstrumentName,
-  gradeOf, initialBandDraft, readBandProfile, completeBandProfile, unconfirmedStatusText, confirmationOptions, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel, rehearsalGroupName, blockScoreLabel,
+  gradeOf, initialBandDraft, readBandProfile, unconfirmedStatusText, confirmationOptions, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel, rehearsalGroupName, blockScoreLabel,
 } from '../../../frontend/src/labels.js';
 
 test('instrument names keep the part number', () => {
@@ -37,12 +37,6 @@ test('band template is one row per instrument and starts with the musicians the 
   assert.deepEqual(readBandProfile(requirements, { ...draft, 'clarinet.bb': '-3' }), { 'clarinet.bb': 0, percussion: 1 });
   assert.deepEqual(readBandProfile(requirements, { 'clarinet.bb': '', percussion: '11' }), { 'clarinet.bb': 0, percussion: 11 });
   assert.deepEqual(readBandProfile(undefined, {}), {});
-});
-
-test('the first analysis completes the template with what the score needs', () => {
-  assert.deepEqual(completeBandProfile(requirements, {}), { profile: { 'clarinet.bb': 3, percussion: 2 }, missing: true });
-  assert.deepEqual(completeBandProfile(requirements, { 'clarinet.bb': 11, percussion: 2 }),
-    { profile: { 'clarinet.bb': 11, percussion: 2 }, missing: false });
 });
 
 test('band issues and rehearsal blocks read as musician-facing Spanish', () => {
