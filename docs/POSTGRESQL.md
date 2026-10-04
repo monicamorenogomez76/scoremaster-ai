@@ -85,8 +85,15 @@ resumen de tempo, identificados por `legacy-v1` y `legacy-features-v1`; todavía
 son características locales del nuevo algoritmo. Analizar dos veces el mismo archivo
 crea dos IDs distintos. El hash corresponde a los bytes subidos (incluida la copia
 temporal con instrumentos corregidos cuando la interfaz la envía). La respuesta
-añade `analysis_id` sin modificar los campos musicales anteriores. No guarda el
-MusicXML, nombres de archivos, notas originales ni audio.
+añade `analysis_id` sin modificar los campos musicales anteriores.
+
+Desde la fase A2 cada análisis pertenece a su usuario y a una obra (`works`). La obra
+guarda el archivo MusicXML original, el título, el compositor y el nombre del archivo,
+**privados de su propietario** (decisión de la autora, 2026-10-04): permiten reabrir el
+visor, el audio y replanificar sin volver a subirlo. Subir otra vez el mismo archivo
+actualiza la misma obra. Borrar la obra (o la cuenta) borra su archivo y sus análisis
+en cascada. `bands` guarda la plantilla del usuario (músicos por instrumento). El audio
+no se guarda.
 
 Para arrancar con Python fuera de Docker, configurar `DATABASE_URL` en el entorno
 del proceso usando la conexión local de `.env.example` (por ejemplo en el entorno

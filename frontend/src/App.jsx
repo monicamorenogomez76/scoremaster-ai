@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { currentUser, onUnauthorized, signOut } from './api.js';
 import { AppShell } from './AppShell.jsx';
+import { saveBand } from './library.js';
 import { LoginScreen } from './LoginScreen.jsx';
 import { initialBandDraft, readBandProfile } from './labels.js';
 import { FullScoreViewer } from './score/FullScoreViewer.jsx';
@@ -61,6 +62,11 @@ export function App({ session }) {
     },
   });
   const recalculate = () => (session.getFile() ? upload.recalculate() : navigate('analyze'));
+  // The edited template is saved for the user's next works; this analysis already sends it.
+  const updateBand = () => {
+    saveBand(readBandProfile(analysis?.data.band_fit?.requirements, bandDraft)).catch(() => {});
+    recalculate();
+  };
   const confirmInstruments = chosen => {
     const next = { ...confirmations, ...chosen };
     setConfirmations(next);
@@ -81,7 +87,7 @@ export function App({ session }) {
     <LoginScreen hidden={signedIn || user === undefined} onSignedIn={enter} />
     <AppShell hidden={!signedIn} user={user} view={view} onNavigate={navigate} onSignOut={leave}
       upload={upload} analysis={analysis} bandDraft={bandDraft} onBandDraftChange={setBandDraft}
-      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onConfirmInstruments={confirmInstruments} onOpenPassage={workspace.openPassage}
+      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />
   </>;

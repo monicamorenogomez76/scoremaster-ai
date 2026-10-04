@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -18,13 +19,17 @@ from sqlalchemy.exc import SQLAlchemyError
 from backend.analyzers.band_fit import PERCUSSION, compute_band_fit
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_plan import build_rehearsal_plan
-from backend.analyzers.tempo import compute_tempo_metrics
+from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
 from backend.app.auth_routes import router as auth_router
+from backend.app.library_routes import router as library_router, valid_band_profile
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
     SAFE_METHODS, STORAGE_UNAVAILABLE, authenticated_user, close_analysis_engine, get_analysis_repository,
+    get_library_repository,
 )
+from backend.application.accounts import User
 from backend.application.analysis_repository import AnalysisRepository
+from backend.application.library import LibraryRepository, WorkUpload
 from backend.application.save_analysis import save_analysis
 from backend.domain.instrument_catalog import catalog_entries, identity_by_id
 from backend.domain.instrument_resolver import resolve_part
@@ -50,6 +55,7 @@ app = FastAPI(title="ScoreMasterAI API", lifespan=lifespan, docs_url=None if PRO
               redoc_url=None if PRODUCTION else "/redoc", openapi_url=None if PRODUCTION else "/openapi.json")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 app.include_router(auth_router)
+app.include_router(library_router)
 
 # The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
 CONTENT_SECURITY_POLICY = "; ".join([
@@ -199,14 +205,17 @@ def instrument_catalog():
             "percussion_key": PERCUSSION}
 
 
-@app.post("/analyze", dependencies=[Depends(authenticated_user)])
+@app.post("/analyze")
 def analyze_score(
     file: UploadFile = File(...),
     band_profile: str = Form("{}", max_length=64 * 1024),
     total_minutes: int = Form(60, ge=5, le=600),
     instrument_overrides: str = Form("{}", max_length=64 * 1024),
     repository: AnalysisRepository = Depends(get_analysis_repository),
+    library: LibraryRepository = Depends(get_library_repository),
+    user: User = Depends(authenticated_user),
 ):
+    """Analyse a score and keep it in the user's library; the saved band completes the template."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Expected a MusicXML file upload.")
     extension = Path(file.filename).suffix.lower()
@@ -220,9 +229,7 @@ def analyze_score(
         profile = json.loads(band_profile or "{}")
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="band_profile must be valid JSON.") from exc
-    if not isinstance(profile, dict) or len(profile) > 256 or not all(
-            isinstance(key, str) and len(key) <= 200 and type(count) is int and 0 <= count <= 1000
-            for key, count in profile.items()):
+    if not valid_band_profile(profile):
         raise HTTPException(status_code=400, detail="band_profile must map instruments to musician counts.")
     overrides = _instrument_overrides(instrument_overrides)
 
@@ -239,6 +246,13 @@ def analyze_score(
 
     try:
         score = _confirm_instruments(parse_musicxml(temp_path), overrides)
+        # Template: what the work needs for instruments never configured, then the saved band,
+        # then the musicians sent with this request.
+        needed = {item["key"]: item["required"] for item in compute_band_fit(score, {})["requirements"]}
+        try:
+            profile = {**needed, **library.band_profile(user.id), **profile}
+        except SQLAlchemyError as exc:
+            raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
         difficulty = compute_difficulty_score(score)
         band_fit = compute_band_fit(score, profile)
         rehearsal_plan = build_rehearsal_plan(score, total_minutes, difficulty)
@@ -250,12 +264,18 @@ def analyze_score(
             "instruments": [resolve_part(part).as_dict() for part in score.parts],
             "difficulty": difficulty,
             "tempo": compute_tempo_metrics(score),
+            "duration": estimate_duration(score),
             "band_fit": band_fit,
             "rehearsal_plan": rehearsal_plan,
         }
+        title = (score.title or "").strip() or Path(file.filename).stem
         try:
-            return save_analysis(result, content, profile, total_minutes, repository,
-                                 {part.name: overrides[part.name] for part in score.parts if part.name in overrides})
+            work = library.store_work(user.id, WorkUpload(title, score.composer, Path(file.filename).name, content,
+                                                          hashlib.sha256(content).hexdigest()))
+            saved = save_analysis(result, content, profile, total_minutes, repository,
+                                  {part.name: overrides[part.name] for part in score.parts if part.name in overrides},
+                                  user_id=user.id, work_id=work.id)
+            return {**saved, "work_id": str(work.id)}
         except SQLAlchemyError as exc:
             raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
     finally:

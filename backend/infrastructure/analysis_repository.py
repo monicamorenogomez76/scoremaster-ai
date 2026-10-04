@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
@@ -24,6 +24,17 @@ class StoredAnalysis(Base):
     algorithm_version: Mapped[str] = mapped_column(String(100), nullable=False)
     features_version: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    user_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'),
+                                                    nullable=True, index=True)
+    work_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), ForeignKey('works.id', ondelete='CASCADE'),
+                                                    nullable=True, index=True)
+
+
+def record_of(row: StoredAnalysis) -> AnalysisRecord:
+    return AnalysisRecord(source_sha256=row.source_sha256, result=row.result,
+        configuration=row.configuration, features=row.features,
+        algorithm_version=row.algorithm_version, features_version=row.features_version,
+        analysis_id=row.id, created_at=row.created_at, user_id=row.user_id, work_id=row.work_id)
 
 
 class PostgresAnalysisRepository:
@@ -34,15 +45,15 @@ class PostgresAnalysisRepository:
         with Session(self.engine) as session, session.begin():
             session.add(StoredAnalysis(id=record.analysis_id, source_sha256=record.source_sha256,
                 result=record.result, configuration=record.configuration, features=record.features,
-                algorithm_version=record.algorithm_version, features_version=record.features_version))
+                algorithm_version=record.algorithm_version, features_version=record.features_version,
+                user_id=record.user_id, work_id=record.work_id))
         return record.analysis_id
 
     def get(self, analysis_id: UUID) -> Optional[AnalysisRecord]:
         with Session(self.engine) as session:
             row = session.get(StoredAnalysis, analysis_id)
-            if row is None:
-                return None
-            return AnalysisRecord(source_sha256=row.source_sha256, result=row.result,
-                configuration=row.configuration, features=row.features,
-                algorithm_version=row.algorithm_version, features_version=row.features_version,
-                analysis_id=row.id, created_at=row.created_at)
+            return None if row is None else record_of(row)
+
+
+# Analyses reference users and works: register those tables on the shared metadata.
+from backend.infrastructure import account_repository, library_repository  # noqa: E402,F401

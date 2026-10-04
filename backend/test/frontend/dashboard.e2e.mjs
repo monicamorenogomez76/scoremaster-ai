@@ -26,6 +26,19 @@ try {
   assert.equal(await page.locator('#current-user').textContent(), 'Usuario demo');
   console.log('PASS: sign-in rejects a wrong password and the session survives a reload');
 
+  // The rest of the walkthrough uses a new account, so saved works and band start empty.
+  const director = { email: 'directora-' + Date.now() + '@banda.test', password: 'una contraseña larga' };
+  await page.locator('#sign-out').click();
+  await page.locator('#login-screen').waitFor({ state: 'visible' });
+  await page.locator('#login-mode').click();
+  await page.locator('#login-name').fill('Nueva directora');
+  await page.locator('#login-email').fill(director.email);
+  await page.locator('#login-password').fill(director.password);
+  await page.locator('#login-submit').click();
+  await page.locator('#app-shell').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#current-user').textContent(), 'Nueva directora');
+  console.log('PASS: a new account can be created from the access screen');
+
   const sharedNames = await page.evaluate(() => {
     const part = (id, step) => `<part id="${id}"><measure number="1"><attributes><divisions>1</divisions></attributes><note><pitch><step>${step}</step><octave>4</octave></pitch><duration>4</duration></note></measure></part>`;
     const xml = '<score-partwise><part-list>' + ['P1', 'P2', 'P3'].map(id => `<score-part id="${id}"><part-name>Voice</part-name></score-part>`).join('') +
@@ -160,8 +173,9 @@ try {
   await page.locator('#confirm-instruments').click();
   await page.getByLabel('Músicos de Clarinete en Si bemol').waitFor();
   assert.equal(await confirmation.count(), 0, 'confirmed parts leave the list');
-  assert.match(await page.locator('#band-content').textContent(), /100%.*Compatible/);
-  console.log('PASS: an unknown part is confirmed from the catalog and joins the band template');
+  assert.equal(await page.getByLabel('Músicos de Clarinete en Si bemol').inputValue(), '0', 'the saved band applies to the next work');
+  await page.locator('#band-content').getByText('Clarinete en Si bemol: falta en la plantilla; se necesita 1.').waitFor();
+  console.log('PASS: an unknown part is confirmed from the catalog and the saved band applies to it');
 
   await page.locator('#sign-out').click();
   await page.locator('#login-screen').waitFor({ state: 'visible' });
@@ -171,16 +185,25 @@ try {
   assert.deepEqual(errors, []);
   console.log('PASS: signing out returns to the access screen');
 
-  // A new director creates an account and enters directly.
-  await page.locator('#login-mode').click();
-  await page.locator('#login-name').fill('Nueva directora');
-  await page.locator('#login-email').fill('directora-' + Date.now() + '@banda.test');
-  await page.locator('#login-password').fill('una contraseña larga');
-  await page.locator('#login-submit').click();
-  await page.locator('#app-shell').waitFor({ state: 'visible' });
-  assert.equal(await page.locator('#current-user').textContent(), 'Nueva directora');
+  // The library survives signing out: reopen a work without uploading it again, then delete one.
+  await login(page, director);
+  await page.locator('[data-view-target=works]').click();
+  const works = page.locator('#works-content .works-item');
+  await works.nth(1).waitFor();
+  assert.equal(await works.count(), 2);
+  const original = works.filter({ hasText: 'high_register.musicxml' });
+  assert.match(await original.locator('.works-summary').textContent(), /^Grado \d · /);
+  await original.locator('.work-open').click();
+  await page.waitForFunction(() => document.querySelector('#full-score-rendering svg'), { timeout: 45000 });
+  await page.locator('[data-view-target=band]').click();
+  assert.equal(await page.getByLabel('Músicos de Clarinete en Si bemol').inputValue(), '0');
+  await page.locator('[data-view-target=works]').click();
+  const copy = works.filter({ hasText: 'melodia.musicxml' });
+  await copy.locator('.work-delete').click();
+  await copy.locator('.work-delete-confirm').click();
+  await page.waitForFunction(() => document.querySelectorAll('#works-content .works-item').length === 1);
   assert.deepEqual(errors, []);
-  console.log('PASS: a new account can be created from the access screen');
+  console.log('PASS: saved works reopen after signing in again and can be deleted');
 } finally {
   await browser.close();
 }

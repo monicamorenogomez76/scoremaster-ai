@@ -1,6 +1,6 @@
 from hashlib import sha256
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,8 +10,14 @@ from sqlalchemy.exc import OperationalError
 from backend.analyzers.band_fit import compute_band_fit
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_plan import build_rehearsal_plan
-from backend.analyzers.tempo import compute_tempo_metrics
-from backend.app.dependencies import STORAGE_UNAVAILABLE, analysis_engine, close_analysis_engine, get_analysis_repository
+from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
+from backend.app.dependencies import (
+    STORAGE_UNAVAILABLE, analysis_engine, authenticated_user, close_analysis_engine, get_analysis_repository,
+    get_library_repository,
+)
+from backend.application.accounts import User
+from backend.infrastructure.account_repository import PostgresAccountRepository
+from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.app.main import app
 from backend.domain.instrument_catalog import CATALOG_VERSION
 from backend.domain.instrument_resolver import RESOLVER_VERSION, resolve_part
@@ -38,24 +44,34 @@ def upload(client, content=None):
 
 def test_api_persists_exact_legacy_result_and_configuration(postgres_engine, repository_override):
     repo = PostgresAnalysisRepository(postgres_engine)
+    owner = User(uuid4(), 'owner@banda.org', 'Owner')
+    PostgresAccountRepository(postgres_engine).add_user(owner)
     repository_override[get_analysis_repository] = lambda: repo
+    repository_override[get_library_repository] = lambda: PostgresLibraryRepository(postgres_engine)
+    repository_override[authenticated_user] = lambda: owner
     with TestClient(app) as client:
         response = upload(client)
         assert response.status_code == 200
         payload = response.json()
         analysis_id = UUID(payload.pop('analysis_id'))
+        work_id = UUID(payload.pop('work_id'))
         score = parse_musicxml(SCORE_PATH)
+        # The template starts with what the work needs; the request adds its own musicians.
+        needed = {item['key']: item['required'] for item in compute_band_fit(score, {})['requirements']}
+        profile = {**needed, 'Flute': 1}
         expected = {'title': score.title, 'composer': score.composer,
             'parts': [part.name for part in score.parts],
             'instruments': [resolve_part(part).as_dict() for part in score.parts],
             'difficulty': compute_difficulty_score(score), 'tempo': compute_tempo_metrics(score),
-            'band_fit': compute_band_fit(score, {'Flute': 1}),
+            'duration': estimate_duration(score),
+            'band_fit': compute_band_fit(score, profile),
             'rehearsal_plan': build_rehearsal_plan(score, 30)}
         assert payload == expected
         stored = repo.get(analysis_id)
         assert stored.result == expected
+        assert (stored.user_id, stored.work_id) == (owner.id, work_id)
         assert stored.source_sha256 == sha256(SCORE_PATH.read_bytes()).hexdigest()
-        assert stored.configuration == {'band_profile': {'Flute': 1}, 'total_minutes': 30,
+        assert stored.configuration == {'band_profile': profile, 'total_minutes': 30,
                                         'instrument_overrides': {}}
         assert stored.features['tempo'] == expected['tempo']
         assert stored.features['instrument_dimensions'] == {

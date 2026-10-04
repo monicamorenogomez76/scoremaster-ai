@@ -14,6 +14,9 @@ class AnalysisRecord:
     features_version: str = 'legacy-features-v1'
     analysis_id: UUID = field(default_factory=uuid4)
     created_at: Optional[datetime] = None
+    # Owner and work of the analysis (empty for analyses saved before accounts existed).
+    user_id: Optional[UUID] = None
+    work_id: Optional[UUID] = None
 
 
 class AnalysisRepository(Protocol):

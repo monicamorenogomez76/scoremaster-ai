@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 from hashlib import sha256
 
 from backend.application.analysis_repository import AnalysisRecord, AnalysisRepository
@@ -7,9 +8,12 @@ from backend.domain.instrument_resolver import RESOLVER_VERSION
 
 
 def save_analysis(result: dict, source: bytes, profile: dict, total_minutes: int,
-                  repository: AnalysisRepository, instrument_overrides: Optional[dict] = None) -> dict:
+                  repository: AnalysisRepository, instrument_overrides: Optional[dict] = None,
+                  user_id: Optional[UUID] = None, work_id: Optional[UUID] = None) -> dict:
     """Persist the completed legacy analysis before reporting success."""
     record = AnalysisRecord(
+        user_id=user_id,
+        work_id=work_id,
         source_sha256=sha256(source).hexdigest(),
         result=result,
         configuration={'band_profile': profile, 'total_minutes': total_minutes,

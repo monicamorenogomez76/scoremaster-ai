@@ -136,9 +136,3 @@ export function readBandProfile(requirements, draft) {
   return Object.fromEntries((requirements || []).map(item =>
     [item.key, Math.max(0, Number.parseInt(draft[item.key] || '0', 10) || 0)]));
 }
-
-// First analysis: instruments without musicians in the template start with what the score needs.
-export function completeBandProfile(requirements, profile) {
-  const missing = (requirements || []).some(item => profile[item.key] === undefined);
-  return { profile: Object.fromEntries((requirements || []).map(item => [item.key, profile[item.key] ?? item.required])), missing };
-}

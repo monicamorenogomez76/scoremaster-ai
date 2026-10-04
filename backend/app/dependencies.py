@@ -5,9 +5,11 @@ from fastapi import Depends, HTTPException, Request
 
 from backend.application.accounts import AccountRepository, User
 from backend.application.analysis_repository import AnalysisRepository
+from backend.application.library import LibraryRepository
 from backend.application.auth import AuthService
 from backend.infrastructure.account_repository import PostgresAccountRepository
 from backend.infrastructure.analysis_repository import PostgresAnalysisRepository
+from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.infrastructure.database import database_engine
 
 
@@ -35,6 +37,13 @@ def get_account_repository() -> AccountRepository:
         return PostgresAccountRepository(analysis_engine())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=ACCOUNTS_UNAVAILABLE) from exc
+
+
+def get_library_repository() -> LibraryRepository:
+    try:
+        return PostgresLibraryRepository(analysis_engine())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
 
 
 def authenticated_user(request: Request, accounts: AccountRepository = Depends(get_account_repository)) -> User:
