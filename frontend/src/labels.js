@@ -109,6 +109,12 @@ export function rehearsalBlockDetail(block) {
   return pieces.join(' · ');
 }
 
+const calendarLabels = { woodwinds: 'Madera', brass: 'Metal', percussion: 'Perc.', strings: 'Cuerda',
+  rhythm: 'Rítmica', keyboard: 'Teclas', other: 'Otros' };
+
+// Short name that fits a narrow calendar slot; the full description stays in the aria-label.
+export const calendarLabel = block => (block.type === 'tutti' ? 'Tutti' : calendarLabels[block.section] || displayFamilyName(block.section));
+
 export function omittedBlockText(block) {
   return displayFamilyName(block.section) + ' · ' + measures(block.measure_range) + ' · ' + partList(block.parts);
 }

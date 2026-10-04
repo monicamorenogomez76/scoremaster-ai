@@ -44,7 +44,7 @@ export function PassageDialog({ ref, session }) {
     if (stale()) return;
     const target = container.current;
     target.replaceChildren();
-    const xml = filterMusicXmlPassage(state.source, state.instrument, first + '-' + last);
+    const xml = filterMusicXmlPassage(state.source, state.instruments || state.instrument, first + '-' + last);
     const renderer = openSheetMusicDisplay(target, { autoResize: true, backend: 'svg', drawTitle: false,
       drawPartNames: true, drawMeasureNumbers: true, cursorsOptions: [{ type: 3, color: '#6366f1', alpha: .25, follow: false }] });
     await renderer.load(xml);
@@ -60,19 +60,22 @@ export function PassageDialog({ ref, session }) {
     target.scrollTop = 0; target.scrollLeft = 0;
     if (state.currentMeasure !== undefined) highlightMeasure(renderer, state.currentMeasure, target);
     show({ zoom: Math.round(state.zoom * 100) + '%',
-      status: 'Notación original · tonalidad escrita del MusicXML · ' + displayInstrumentName(state.instrument) + ' · audio en sonido real (instrumentos transpositores)' });
+      status: 'Notación original · tonalidad escrita del MusicXML · ' + state.label + ' · audio en sonido real (instrumentos transpositores)' });
   }
   const rerender = () => render().catch(error => show({ status: error.message || 'No se pudo representar este pasaje.' }));
 
   useImperativeHandle(ref, () => ({
-    async open(instrument, measureRange) {
+    // One instrument (a critical passage) or several (a rehearsal block, labelled by its section).
+    async open(selection, measureRange, label) {
       stop();
       const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
-      const state = { instrument, firstMeasure, lastMeasure, zoom: 1 };
+      const instruments = Array.isArray(selection) ? selection : null;
+      const instrument = instruments ? null : selection;
+      const state = { instrument, instruments, label: label || displayInstrumentName(instrument), firstMeasure, lastMeasure, zoom: 1 };
       passage.current = state;
       // Never show the previous passage while the new one loads.
       container.current.replaceChildren();
-      show({ title: displayInstrumentName(instrument) + ' · compases ' + measureRange, status: 'Cargando el pasaje completo…', range: '' });
+      show({ title: state.label + ' · compases ' + measureRange, status: 'Cargando el pasaje completo…', range: '' });
       if (!dialog.current.open) dialog.current.showModal();
       try {
         state.source = await session.loadSource();

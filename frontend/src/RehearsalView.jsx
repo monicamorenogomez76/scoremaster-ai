@@ -1,10 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from './View.jsx';
-import { omittedBlockText, rehearsalBlockDetail, rehearsalBlockTitle } from './labels.js';
+import { calendarLabel, displayFamilyName, omittedBlockText, rehearsalBlockDetail, rehearsalBlockTitle } from './labels.js';
+import { rehearsalSchedule } from './schedule.js';
 
 const VISIBLE_OMITTED = 5;
 
-export function RehearsalView({ active, data, minutes, onMinutesChange, onRecalculate, busy }) {
+const blockLabel = block => (block.type === 'tutti' ? 'Toda la banda' : displayFamilyName(block.section));
+
+// Timeline of the rehearsal: each block is as wide as its minutes; pressing it opens the score
+// at its measures with only the instruments it involves (the whole band for the tutti).
+function RehearsalCalendar({ blocks, onOpenPassage }) {
+  const [start, setStart] = useState('19:00');
+  const schedule = rehearsalSchedule(blocks, start);
+  const open = (block, range) => onOpenPassage(block.parts, range, blockLabel(block));
+  return <div className="rehearsal-calendar">
+    <label className="duration-field" htmlFor="rehearsal-start">Hora de inicio
+      <input id="rehearsal-start" type="time" value={start} onChange={event => setStart(event.target.value)} />
+    </label>
+    <div className="calendar-track" role="list" aria-label="Horario del ensayo">
+      {schedule.map((block, index) => {
+        const ranges = block.type === 'tutti' ? block.measure_ranges || [] : [block.measure_range];
+        return <div key={index} role="listitem" className={'calendar-slot calendar-slot--' + (block.section || 'tutti')}
+          style={{ flexGrow: block.share, flexBasis: 0 }}>
+          <button type="button" className="calendar-block" disabled={!ranges.length}
+            aria-label={block.start + '–' + block.end + ' · ' + rehearsalBlockTitle(block) + ' · ' + block.minutes + ' min'}
+            onClick={() => open(block, ranges[0])}>
+            <span className="calendar-time">{block.start}</span>
+            <span className="calendar-name">{calendarLabel(block)}</span>
+          </button>
+          {ranges.length > 1 && <div className="calendar-ranges">{ranges.map(range =>
+            <button key={range} type="button" className="calendar-range" aria-label={'Abrir compases ' + range + ' con toda la banda'}
+              onClick={() => open(block, range)}>{range}</button>)}</div>}
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
+export function RehearsalView({ active, data, minutes, onMinutesChange, onRecalculate, busy, onOpenPassage }) {
   const plan = data?.rehearsal_plan || {};
   const blocks = plan.segments || [];
   const omitted = plan.omitted || [];
@@ -24,6 +57,7 @@ export function RehearsalView({ active, data, minutes, onMinutesChange, onRecalc
           <section className="result-section result-section--wide">
             <h2>Bloques recomendados</h2>
             <p className="result-supporting">Duración total: {plan.total_minutes ?? 0} minutos · Planificado: {plan.planned_minutes ?? 0} de {plan.total_minutes ?? 0} minutos</p>
+            {blocks.length > 0 && <RehearsalCalendar blocks={blocks} onOpenPassage={onOpenPassage} />}
             <ol className="result-list">{blocks.length === 0
               ? <li className="result-empty">No hay bloques de ensayo disponibles.</li>
               : blocks.map((block, index) => <li key={index} className={'rehearsal-block rehearsal-block--' + block.type}>

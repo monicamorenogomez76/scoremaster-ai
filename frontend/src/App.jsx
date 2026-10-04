@@ -33,7 +33,7 @@ export function App({ session }) {
     async reset() { session.clear(); fullScore.current.clear(); passage.current.stop(); },
     async prepareAnalysis() { fullScore.current.clear(); passage.current.stop(); },
     showScore() { fullScore.current.load(); },
-    openPassage(instrument, measureRange) { fullScore.current.stop(); return passage.current.open(instrument, measureRange); },
+    openPassage(selection, measureRange, label) { fullScore.current.stop(); return passage.current.open(selection, measureRange, label); },
   }), [session]);
 
   // Diagnostic handle used by the browser tests to load synthetic scores and passages.

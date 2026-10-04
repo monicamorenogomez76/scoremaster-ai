@@ -182,3 +182,24 @@ def test_simultaneous_drum_hits_play_as_percussion(tmp_path):
     assert len(hits) + track['skipped_unpitched'] == 2
     assert len(hits) == 2
     assert {hit['time'] for hit in hits} == {0.0}
+
+
+def test_a_sectional_passage_plays_only_its_instruments_on_one_clock(tmp_path):
+    path = make_score(tmp_path)
+
+    result = build_playback(path, ['Flute', 'Clarinet'], 2, 2)
+
+    assert [track['instrument'] for track in result['tracks']] == ['Flute', 'Clarinet']
+    assert result['measures'] == [{'number': 2, 'time': 0}]
+    assert result['tracks'][0]['events'][0] == {'note': 72, 'time': 0, 'duration': 2}
+    assert result['duration'] == 4
+
+
+def test_endpoint_accepts_several_instruments(tmp_path):
+    path = make_score(tmp_path)
+    response = TestClient(app).post('/playback', data={'instruments': ['Clarinet'], 'first_measure': 2,
+                                                        'last_measure': 2},
+                                    files={'file': ('score.musicxml', path.read_bytes())})
+
+    assert response.status_code == 200
+    assert [track['instrument'] for track in response.json()['tracks']] == ['Clarinet']

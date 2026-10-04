@@ -38,6 +38,15 @@ try {
   });
   assert.deepEqual(literalNames, ['P2', 'P3'], 'numbers and line breaks inside part names still find the part');
   console.log('PASS: passages of parts sharing a name contain only the selected part');
+  const several = await page.evaluate(() => {
+    const part = id => `<part id="${id}"><measure number="1"><attributes><divisions>1</divisions></attributes><note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration></note></measure></part>`;
+    const xml = '<score-partwise><part-list>' + [['P1', 'Flute'], ['P2', 'Oboe'], ['P3', 'Tuba']].map(([id, name]) =>
+      `<score-part id="${id}"><part-name>${name}</part-name></score-part>`).join('') + '</part-list>' + part('P1') + part('P2') + part('P3') + '</score-partwise>';
+    const result = new DOMParser().parseFromString(window.scoremasterWorkspace.filterPassage(xml, ['Flute', 'Tuba'], '1'), 'application/xml');
+    return [...result.querySelectorAll('part')].map(node => node.id);
+  });
+  assert.deepEqual(several, ['P1', 'P3'], 'a sectional passage keeps every instrument of the block');
+  console.log('PASS: a passage can keep several instruments');
 
   await page.locator('[data-view-target=analyze]').click();
   await page.locator('#file').setInputFiles({ name: 'high_density.musicxml', mimeType: 'application/xml', buffer: fixture });
@@ -74,6 +83,17 @@ try {
   assert.match(blocks.at(-1), /^Tutti para juntar/);
   assert.match(await page.locator('#rehearsal-content').textContent(), /Planificado: \d+ de 90 minutos/);
   console.log('PASS: rehearsal duration recalculates the plan with sectional blocks and a final tutti');
+
+  await page.locator('#rehearsal-start').fill('18:30');
+  const calendar = page.locator('.rehearsal-calendar .calendar-block');
+  assert.ok(await calendar.count() >= 2, 'one calendar block per rehearsal block');
+  assert.match(await calendar.first().getAttribute('aria-label'), /^18:30–\d\d:\d\d · Seccional · Viento madera · c\. 1/);
+  await calendar.first().click();
+  await page.waitForFunction(() => document.querySelector('#notation-score svg'));
+  assert.deepEqual(await page.evaluate(() => window.scoremasterWorkspace.getPassage().instruments), ['Clarinet']);
+  assert.match(await page.locator('#notation-title').textContent(), /^Viento madera · compases 1/);
+  await page.locator('#notation-close').click();
+  console.log('PASS: the rehearsal calendar opens the score at the block with its instruments');
 
   await page.locator('[data-view-target=overview]').click();
   assert.equal(await page.locator('#overview-priority-title').textContent(), 'Clarinete · compases 1');

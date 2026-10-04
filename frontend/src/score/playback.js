@@ -94,7 +94,9 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   const body = new FormData();
   body.append('file', file);
   if (passage) {
-    body.append('instrument', passage.instrument);
+    // A rehearsal block plays several instruments together; a passage, a single one.
+    if (passage.instruments) passage.instruments.forEach(name => body.append('instruments', name));
+    else body.append('instrument', passage.instrument);
     body.append('first_measure', passage.firstMeasure);
     body.append('last_measure', passage.lastMeasure);
   }
@@ -209,7 +211,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
         event.time < position ? { ...event, time: position, duration: event.time + event.duration - position } : event);
       pointer = 0; playing = true; tick();
       if (playing) timer = setInterval(tick, 50);
-      onStatus('Reproduciendo ' + (passage ? 'instrumento solista' : tracks.length + ' voces') + ' · timbres aproximados' +
+      onStatus('Reproduciendo ' + (passage?.instruments ? tracks.length + ' voces del bloque' : passage ? 'instrumento solista' : tracks.length + ' voces') + ' · timbres aproximados' +
         (data.default_tempo ? ' · negra = 120 por defecto' : '') +
         (tracks.some((track) => track.skipped_unpitched) ? ' · percusión no identificada omitida' : ''));
     },

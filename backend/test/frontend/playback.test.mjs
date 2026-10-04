@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 function harness() {
-  const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [], samplersUsed = [], failRecorded = { value: false }, withRecordings = { value: false };
+  const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [], samplersUsed = [], failRecorded = { value: false }, withRecordings = { value: false }, formFields = [];
   const audio = { currentTime: 0, sampleRate: 100, resume: async () => {},
     createGain: () => ({ gain: {}, connect() {}, disconnect() {} }),
     createDynamicsCompressor: () => ({ connect() {}, disconnect() {} }),
@@ -15,7 +15,7 @@ function harness() {
   ] };
   const current = { data };
   const scope = { exports: {}, withRecordings, window: { AudioContext: function () { return audio; } },
-    FormData: class { append() {} }, AbortController,
+    FormData: class { append(key, value) { formFields.push([key, value]); } }, AbortController,
     fetch: async () => ({ ok: true, json: async () => current.data }),
     setTimeout: () => 1, clearTimeout() {},
     setInterval: (callback) => { callbacks.add(callback); return callback; },
@@ -41,7 +41,7 @@ function harness() {
     .replace(/export /g, '')
     .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont, get Sampler() { return withRecordings.value ? fakeSampler : undefined; } })');
   vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage });', scope);
-  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings,
+  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings, formFields,
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
 
@@ -149,5 +149,21 @@ test('if recordings cannot be downloaded, the General MIDI sound is used instead
   assert.deepEqual(h.optionsUsed.map(options => options.instrument), ['clarinet']);
   await t.play();
   assert.deepEqual(h.starts.map(event => event.instrument), ['clarinet']);
+  t.stop();
+});
+
+test('a sectional passage asks the server for all its instruments', async () => {
+  const h = harness();
+  await h.api.preparePlayback({}, { instruments: ['Flute', 'Clarinet'], firstMeasure: 1, lastMeasure: 4 });
+  assert.deepEqual(h.formFields.filter(([key]) => key === 'instruments').map(([, value]) => value), ['Flute', 'Clarinet']);
+  assert.deepEqual(h.formFields.find(([key]) => key === 'first_measure'), ['first_measure', 1]);
+  assert.equal(h.formFields.some(([key]) => key === 'instrument'), false);
+});
+
+test('a rehearsal block announces how many voices it plays', async () => {
+  const h = harness(), statuses = [];
+  const t = await h.api.preparePlayback({}, { instruments: ['Flute', 'Clarinet'], firstMeasure: 1, lastMeasure: 4 }, message => statuses.push(message));
+  await t.play();
+  assert.match(statuses.at(-1), /^Reproduciendo 2 voces del bloque/);
   t.stop();
 });

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   apiInstrumentName, bandIssueText, byDifficulty, displayFamilyName, displayInstrumentName,
-  gradeOf, initialBandDraft, readBandProfile, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText,
+  gradeOf, initialBandDraft, readBandProfile, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel,
 } from '../../../frontend/src/labels.js';
 
 test('instrument names keep the part number in both directions', () => {
@@ -52,4 +52,10 @@ test('ensemble rehearsal blocks read as sectionals followed by a tutti to join',
   assert.equal(rehearsalBlockDetail(tutti), 'Toda la banda · Unísono: Clarinete 1 y Trompeta (c. 9–12)');
   assert.equal(omittedBlockText({ section: 'brass', parts: ['Tuba'], measure_range: '30-31', reason: 'time' }),
     'Viento metal · c. 30–31 · Tuba');
+});
+
+test('calendar blocks use short section names that fit narrow slots', () => {
+  assert.deepEqual(['woodwinds', 'brass', 'percussion', 'strings', 'rhythm', 'keyboard', 'other'].map(section => calendarLabel({ type: 'sectional', section })),
+    ['Madera', 'Metal', 'Perc.', 'Cuerda', 'Rítmica', 'Teclas', 'Otros']);
+  assert.equal(calendarLabel({ type: 'tutti', section: null }), 'Tutti');
 });

@@ -29,7 +29,11 @@ def _identity(part, name, declared):
     return resolve_part(ScorePart(name, (), metadata_for_part(part, declared))).identity
 
 
-def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
+def build_playback(source, instrument_name, first: int, last: int) -> dict:
+    """Timeline for one part (str), several parts (list: a sectional rehearsal block) or the whole score ('')."""
+    solo = isinstance(instrument_name, str) and bool(instrument_name)
+    wanted = [instrument_name] if isinstance(instrument_name, str) else list(instrument_name or ())
+    wanted = [name for name in wanted if name]
     score = converter.parse(str(source), format='musicxml')
     declared = read_part_metadata(extract_musicxml(Path(source).read_bytes()) or b'<score-partwise/>')
     raw_names = [part.partName or (part.id if isinstance(part.id, str) else f'Part {i}')
@@ -41,9 +45,9 @@ def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
             indexes[name] += 1
             staff = re.search(r'-Staff(\d+)$', str(part.id))
             name = f'{name} {int(staff.group(1)) if staff else indexes[name]}'
-        if not instrument_name or name == instrument_name:
+        if not wanted or name in wanted:
             named_parts.append((part, name))
-    if not named_parts:
+    if not named_parts or len(named_parts) < len(set(wanted)):
         raise ValueError('No se encontró el instrumento en la partitura.')
 
     marks = {float(mark.getOffsetInHierarchy(score)): float(mark.getQuarterBPM())
@@ -62,7 +66,7 @@ def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
 
     # Whole-score playback shares one origin, even when some parts start later.
     start, end = 0.0, float(score.highestTime)
-    if instrument_name:
+    if wanted:
         selected = named_parts[0][0]
         measures = list(selected.getElementsByClass(stream.Measure))
         chosen = [m for i, m in enumerate(measures, 1) if first <= int(m.number or i) <= last]
@@ -99,7 +103,7 @@ def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
             pitches = event.pitches if isinstance(event, chord.Chord) else (event.pitch,)
             events.extend({'note': float(pitch.midi), **timing} for pitch in pitches)
         total_events += len(events) + len(percussion)
-        if total_events > (10000 if instrument_name else 150000):
+        if total_events > (min(150000, 10000 * len(wanted)) if wanted else 150000):
             raise ValueError('La partitura es demasiado larga para reproducirla.')
         identity = _identity(selected, name, declared)
         tracks.append({'instrument': name, 'program': selected.getInstrument().midiProgram,
@@ -113,6 +117,6 @@ def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
                            if start <= float(m.offset) < end],
               'tempo_map': [{'quarter': offset, 'time': seconds_at(offset), 'bpm': bpm}
                             for offset, bpm in boundaries]}
-    if instrument_name:
+    if solo:
         return {**tracks[0], **shared}
     return {'tracks': tracks, **shared}

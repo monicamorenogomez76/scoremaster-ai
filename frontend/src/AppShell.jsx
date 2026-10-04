@@ -55,7 +55,7 @@ export function AppShell({ hidden, view, onNavigate, onSignOut, upload, analysis
 
         <DifficultyView key={analysis?.revision ?? 0} active={view} data={data} onOpenPassage={onOpenPassage} />
         <BandView active={view} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onRecalculate} busy={busy} />
-        <RehearsalView active={view} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} />
+        <RehearsalView active={view} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
 
         <View name="videos" active={view} eyebrow="Repertorio" title="Vídeos relacionados"
           description="Busca grabaciones para la obra analizada.">

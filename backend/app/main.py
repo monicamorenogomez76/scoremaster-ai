@@ -85,6 +85,7 @@ def notation_source(file: UploadFile = File(...)):
 def playback(
     file: UploadFile = File(...),
     instrument: str = Form("", max_length=200),
+    instruments: list[str] = Form([]),
     first_measure: int = Form(0, ge=0),
     last_measure: int = Form(999999, ge=0),
 ):
@@ -104,7 +105,8 @@ def playback(
         temporary.write(source)
         temporary.flush()
         try:
-            return build_playback(temporary.name, instrument, first_measure, last_measure)
+            selection = [name[:200] for name in instruments[:64]] if instruments else instrument
+            return build_playback(temporary.name, selection, first_measure, last_measure)
         except Exception as exc:
             raise HTTPException(status_code=400, detail="No se pudo preparar el audio del pasaje.") from exc
 
