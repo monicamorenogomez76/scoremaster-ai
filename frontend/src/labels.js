@@ -35,20 +35,6 @@ const instrumentLabelsEs = {
   'Crash Cymbal': 'Platos', 'Suspended Cymbal': 'Plato suspendido',
   'Tambourine': 'Pandereta', 'Triangle': 'Triángulo', 'Marimba': 'Marimba'
 };
-const bandProfileNames = {
-  'Flautín': 'Piccolo', 'Flauta': 'Flute', 'Oboe': 'Oboe',
-  'Clarinete': 'Clarinet', 'Clarinete en Si bemol': 'B♭ Clarinet',
-  'Clarinete alto': 'Alto Clarinet', 'Clarinete bajo': 'Bass Clarinet',
-  'Fagot': 'Bassoon', 'Saxofón alto': 'Alto Saxophone',
-  'Saxofón tenor': 'Tenor Saxophone', 'Saxofón barítono': 'Baritone Saxophone',
-  'Trompeta en Si bemol': 'B♭ Trumpet', 'Trompa en Fa': 'Horn in F',
-  'Trombón': 'Trombone', 'Bombardino': 'Euphonium', 'Tuba': 'Tuba',
-  'Contrabajo': 'Double Bass', 'Timbales': 'Timpani', 'Xilófono': 'Xylophone',
-  'Glockenspiel': 'Glockenspiel', 'Campanas tubulares': 'Chimes',
-  'Bombo': 'Concert Bass Drum', 'Caja': 'Concert Snare Drum',
-  'Plato suspendido': 'Suspended Cymbal', 'Platos': 'Crash Cymbal',
-  'Pandereta': 'Tambourine', 'Triángulo': 'Triangle', 'Marimba': 'Marimba'
-};
 export const dimensionLabelsEs = {
   range: 'Tesitura', register: 'Registro extremo', intervals: 'Saltos',
   density: 'Densidad de ataques', endurance: 'Continuidad', tempo: 'Tempo'
@@ -73,11 +59,6 @@ export function displayInstrumentName(instrument, details = {}) {
   return (instrumentLabelsEs[base] || base) + number;
 }
 
-export function apiInstrumentName(instrument) {
-  const [base, number] = splitPartNumber(instrument);
-  return (bandProfileNames[base] || base) + number;
-}
-
 export function displayFamilyName(family, details = {}) {
   return details.label_es || familyLabelsEs[family] || family;
 }
@@ -92,9 +73,24 @@ export function byDifficulty(entries, scoreKey) {
 }
 
 export function bandIssueText(issue) {
-  const instrument = displayInstrumentName(issue.instrument);
+  const instrument = issue.label_es;
   if (issue.available === 0) return instrument + ': falta en la plantilla; se necesita ' + issue.required + '.';
   return instrument + ': hay ' + issue.available + ' músicos y se necesitan ' + issue.required + '.';
+}
+
+const unconfirmedStatuses = {
+  unknown: 'Sin identificar',
+  review: 'Propuesta por los datos del archivo',
+  conflict: 'El nombre y los datos del archivo no coinciden',
+};
+export const unconfirmedStatusText = item => unconfirmedStatuses[item.status] || unconfirmedStatuses.unknown;
+
+// Catalog options for a part to confirm: the proposal and the candidates first, then the rest.
+export function confirmationOptions(item, catalog) {
+  const first = [item.proposal, ...(item.candidates || [])].filter(Boolean);
+  const byId = new Map((catalog || []).map(entry => [entry.canonical_id, entry]));
+  const preferred = first.map(id => byId.get(id)).filter(Boolean);
+  return [...preferred, ...(catalog || []).filter(entry => !first.includes(entry.canonical_id))];
 }
 
 const measures = (...ranges) => 'c. ' + ranges.map(range => String(range).replace('-', '–')).join(', ');
@@ -131,19 +127,18 @@ export function omittedBlockText(block) {
   return (block.type === 'common' ? 'Común' : rehearsalGroupName(block.group)) + ' · ' + measures(block.measure_range) + ' · ' + partList(block.parts);
 }
 
-export const uniqueParts = parts => Array.from(new Set(parts || []));
-
-// Editable band template: one entry per score part, keyed by the API instrument name.
-export function initialBandDraft(parts, profile = {}) {
-  return Object.fromEntries(uniqueParts(parts).map(part => {
-    const key = apiInstrumentName(part);
-    return [key, String(profile[key] ?? 1)];
-  }));
+// Editable band template: one entry per instrument (or percussionists), keyed as BandFit reports it.
+export function initialBandDraft(requirements, profile = {}) {
+  return Object.fromEntries((requirements || []).map(item => [item.key, String(profile[item.key] ?? item.required)]));
 }
 
-export function readBandProfile(parts, draft) {
-  return Object.fromEntries(uniqueParts(parts).map(part => {
-    const key = apiInstrumentName(part);
-    return [key, Math.max(0, Number.parseInt(draft[key] || '0', 10) || 0)];
-  }));
+export function readBandProfile(requirements, draft) {
+  return Object.fromEntries((requirements || []).map(item =>
+    [item.key, Math.max(0, Number.parseInt(draft[item.key] || '0', 10) || 0)]));
+}
+
+// First analysis: instruments without musicians in the template start with what the score needs.
+export function completeBandProfile(requirements, profile) {
+  const missing = (requirements || []).some(item => profile[item.key] === undefined);
+  return { profile: Object.fromEntries((requirements || []).map(item => [item.key, profile[item.key] ?? item.required])), missing };
 }

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from backend.domain.instrument_catalog import InstrumentIdentity, match_instrument_name
+from backend.domain.instrument_catalog import InstrumentIdentity, identity_by_id, match_instrument_name
 from backend.domain.models import ScorePart
 
 # Initial thresholds, not calibrated yet: >= auto accept, review band below it.
@@ -21,7 +21,7 @@ METADATA_ONLY_CONFIDENCE = 0.75
 # Bump when the resolution rules or confidences change.
 RESOLVER_VERSION = "instrument-resolver-v1"
 RESOLVED, REVIEW, CONFLICT, UNKNOWN = "resolved", "review", "conflict", "unknown"
-SOURCE_ALIAS, SOURCE_MUSICXML, SOURCE_UNKNOWN = "ALIAS", "MUSICXML", "UNKNOWN"
+SOURCE_ALIAS, SOURCE_MUSICXML, SOURCE_UNKNOWN, SOURCE_USER = "ALIAS", "MUSICXML", "UNKNOWN", "USER"
 
 
 @dataclass(frozen=True)
@@ -74,6 +74,11 @@ def resolve_part(part: ScorePart) -> InstrumentResolution:
     declared, metadata_evidence = _metadata_evidence(metadata.instrument_names)
     part_numbers = by_name.part_numbers or ((metadata.staff_number,) if metadata.staff_number else ())
     name_evidence = ("part-name '{}' → {}".format(name, named.canonical_id),) if named else ()
+
+    confirmed = identity_by_id(metadata.confirmed_id) if metadata.confirmed_id else None
+    if confirmed:
+        return InstrumentResolution(part.name, confirmed, SOURCE_USER, 1.0, RESOLVED, part_numbers,
+                                    ("confirmed by the user → {}".format(confirmed.canonical_id),))
 
     if named and declared and named.canonical_id != declared.canonical_id:
         return InstrumentResolution(part.name, None, SOURCE_UNKNOWN, 0.0, CONFLICT, part_numbers,

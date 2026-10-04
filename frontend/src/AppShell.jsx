@@ -16,7 +16,7 @@ const views = [
   ['videos', 'Vídeos', 'M4 5h16v14H4zM10 9l5 3-5 3z'],
 ];
 
-export function AppShell({ hidden, view, onNavigate, onSignOut, upload, analysis, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onOpenPassage, scoreViewer }) {
+export function AppShell({ hidden, view, onNavigate, onSignOut, upload, analysis, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onConfirmInstruments, onOpenPassage, scoreViewer }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = analysis?.data;
   const go = name => { setMenuOpen(false); onNavigate(name); };
@@ -54,7 +54,7 @@ export function AppShell({ hidden, view, onNavigate, onSignOut, upload, analysis
         </View>
 
         <DifficultyView key={analysis?.revision ?? 0} active={view} data={data} onOpenPassage={onOpenPassage} />
-        <BandView active={view} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onRecalculate} busy={busy} />
+        <BandView active={view} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onRecalculate} onConfirm={onConfirmInstruments} busy={busy} />
         <RehearsalView active={view} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
 
         <View name="videos" active={view} eyebrow="Repertorio" title="Vídeos relacionados"

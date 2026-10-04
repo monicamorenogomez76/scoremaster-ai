@@ -100,6 +100,10 @@ def catalog_entries() -> tuple[InstrumentIdentity, ...]:
     return _load()[0]
 
 
+def identity_by_id(canonical_id: str) -> InstrumentIdentity | None:
+    return next((identity for identity in catalog_entries() if identity.canonical_id == canonical_id), None)
+
+
 def match_instrument_name(name: str) -> CatalogMatch:
     base, part_numbers = _split_part_numbers(_prepare(name))
     alias = normalize_instrument_name(base)

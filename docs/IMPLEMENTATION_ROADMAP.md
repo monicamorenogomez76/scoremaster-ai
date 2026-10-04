@@ -34,13 +34,13 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 06 | Catálogo canónico | Integrado: PR #28 |
 | 07 | Metadatos del parser | Integrado: PR #29 |
 | 08 | Resolver determinista | Integrado: resolver (PR #30), dificultad (PR #31), sección rítmica (PR #32) y timbre (PR #33); BandFit con el paso 09 |
-| 09 | Confirmación humana | Pendiente |
+| 09 | Confirmación humana | En revisión: confirmación en «Mi banda» y BandFit por instrumento |
 | 10 | Tiempos y ataques musicales | Pendiente |
 | 11 | Características locales | Pendiente |
 | 12 | Políticas de dificultad | Pendiente |
 | 13 | Grados 1–6 | Pendiente |
-| 14 | Detector de criticidad | Frases (PR #40) integradas; detector en revisión |
-| 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Integrado: PR #37; calendario interactivo en revisión |
+| 14 | Detector de criticidad | Integrado: frases (PR #40) y detector con señal de velocidad (PR #41) |
+| 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Integrado: PR #37, calendario (PR #38) y similitud de estructura (PR #39) |
 | 16 | Evidencias en interfaz | Pendiente |
 | 17 | Persistencia de feedback | Pendiente |
 | 18 | Formulario de valoración | Pendiente |

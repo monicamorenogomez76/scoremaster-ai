@@ -4,6 +4,7 @@ import io
 import json
 import os
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile, is_zipfile
@@ -13,7 +14,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.analyzers.band_fit import compute_band_fit
+from backend.analyzers.band_fit import PERCUSSION, compute_band_fit
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics
@@ -21,7 +22,9 @@ from backend.app.youtube import search_videos
 from backend.app.dependencies import STORAGE_UNAVAILABLE, close_analysis_engine, get_analysis_repository
 from backend.application.analysis_repository import AnalysisRepository
 from backend.application.save_analysis import save_analysis
+from backend.domain.instrument_catalog import catalog_entries, identity_by_id
 from backend.domain.instrument_resolver import resolve_part
+from backend.domain.models import Score
 from backend.parsers.musicxml_parser import parse_musicxml
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.parsers.playback import build_playback
@@ -111,11 +114,43 @@ def playback(
             raise HTTPException(status_code=400, detail="No se pudo preparar el audio del pasaje.") from exc
 
 
+MAX_INSTRUMENT_OVERRIDES = 256
+
+
+def _instrument_overrides(raw: str) -> dict[str, str]:
+    """Part name → catalog identity confirmed by the user; anything else is rejected."""
+    try:
+        overrides = json.loads(raw or "{}")
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail="instrument_overrides must be valid JSON.") from exc
+    if not isinstance(overrides, dict) or len(overrides) > MAX_INSTRUMENT_OVERRIDES or not all(
+            isinstance(part, str) and len(part) <= 200 and isinstance(identity, str) and identity_by_id(identity)
+            for part, identity in overrides.items()):
+        raise HTTPException(status_code=400, detail="instrument_overrides must map part names to catalog instruments.")
+    return overrides
+
+
+def _confirm_instruments(score: Score, overrides: dict[str, str]) -> Score:
+    if not overrides:
+        return score
+    return replace(score, parts=tuple(
+        replace(part, metadata=replace(part.metadata, confirmed_id=overrides[part.name])) if part.name in overrides else part
+        for part in score.parts))
+
+
+@app.get("/instruments/catalog")
+def instrument_catalog():
+    return {"instruments": [{"canonical_id": identity.canonical_id, "label_es": identity.label_es, "section": identity.section}
+                            for identity in catalog_entries()],
+            "percussion_key": PERCUSSION}
+
+
 @app.post("/analyze")
 def analyze_score(
     file: UploadFile = File(...),
     band_profile: str = Form("{}"),
     total_minutes: int = Form(60),
+    instrument_overrides: str = Form("{}", max_length=64 * 1024),
     repository: AnalysisRepository = Depends(get_analysis_repository),
 ):
     if not file.filename:
@@ -131,6 +166,7 @@ def analyze_score(
         profile = json.loads(band_profile or "{}")
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="band_profile must be valid JSON.") from exc
+    overrides = _instrument_overrides(instrument_overrides)
 
     content = file.file.read()
     if not content:
@@ -144,7 +180,7 @@ def analyze_score(
         temp_path.write_bytes(content)
 
     try:
-        score = parse_musicxml(temp_path)
+        score = _confirm_instruments(parse_musicxml(temp_path), overrides)
         difficulty = compute_difficulty_score(score)
         band_fit = compute_band_fit(score, profile)
         rehearsal_plan = build_rehearsal_plan(score, total_minutes, difficulty)
@@ -160,7 +196,8 @@ def analyze_score(
             "rehearsal_plan": rehearsal_plan,
         }
         try:
-            return save_analysis(result, content, profile, total_minutes, repository)
+            return save_analysis(result, content, profile, total_minutes, repository,
+                                 {part.name: overrides[part.name] for part in score.parts if part.name in overrides})
         except SQLAlchemyError as exc:
             raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
     finally:

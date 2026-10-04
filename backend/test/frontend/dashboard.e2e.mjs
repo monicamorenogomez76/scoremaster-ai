@@ -56,8 +56,9 @@ try {
   await waitIdle();
 
   await page.locator('[data-view-target=band]').click();
-  const players = page.getByLabel('Músicos para Clarinete');
+  const players = page.getByLabel('Músicos de Clarinete en Si bemol');
   assert.equal(await players.inputValue(), '1');
+  assert.equal(await page.locator('#instrument-confirmation').count(), 0, 'identified parts need no confirmation');
   assert.match(await page.locator('#band-content').textContent(), /100%.*Compatible/);
   await players.fill('0');
   let release;
@@ -66,7 +67,7 @@ try {
   await page.locator('#update-analysis').click();
   assert.equal(await page.locator('#update-analysis').isDisabled(), true, 'recalculation shows progress');
   release();
-  await page.locator('#band-content').getByText('Clarinete: falta en la plantilla; se necesita 1.').waitFor();
+  await page.locator('#band-content').getByText('Clarinete en Si bemol: falta en la plantilla; se necesita 1.').waitFor();
   await page.unroute('**/analyze');
   assert.equal(await view('band').isVisible(), true, 'recalculation keeps the band view');
   assert.equal(await players.inputValue(), '0');
@@ -77,7 +78,7 @@ try {
   await page.locator('#recalculate-rehearsal').click();
   await page.locator('#rehearsal-content').getByText('Duración total: 90 minutos').waitFor();
   assert.equal(await view('rehearsal').isVisible(), true);
-  assert.equal(await page.getByLabel('Músicos para Clarinete').inputValue(), '0', 'rehearsal keeps the band template');
+  assert.equal(await page.getByLabel('Músicos de Clarinete en Si bemol').inputValue(), '0', 'rehearsal keeps the band template');
   const blocks = await page.locator('#rehearsal-content .rehearsal-block-title').allTextContents();
   assert.match(blocks[0], /^Seccional · Clarinetes · c\. 1/);
   assert.match(blocks.at(-1), /^Tutti para juntar/);
@@ -134,6 +135,26 @@ try {
   assert.equal(await videos.locator('iframe').getAttribute('src'), 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
   await page.unroute('**/youtube/search?*');
   console.log('PASS: video search falls back to a YouTube link and plays only valid links');
+
+  // A part the catalog does not know waits for the user before counting in the band template.
+  const unnamed = Buffer.from(fixture.toString().replace('<part-name>Clarinet</part-name>', '<part-name>Melodía</part-name>'));
+  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('#file').setInputFiles({ name: 'melodia.musicxml', mimeType: 'application/xml', buffer: unnamed });
+  await waitIdle();
+  await page.locator('#upload-form button[type=submit]').click();
+  await page.locator('#overview-result').waitFor({ state: 'attached' });
+  await waitIdle();
+  await page.locator('[data-view-target=band]').click();
+  const confirmation = page.locator('#instrument-confirmation');
+  await confirmation.waitFor();
+  assert.match(await confirmation.textContent(), /Melodía · Sin identificar/);
+  assert.equal(await page.locator('#band-profile-editor').isHidden(), true, 'nothing counts before confirming');
+  await page.getByLabel('Instrumento de Melodía').selectOption({ label: 'Clarinete en Si bemol' });
+  await page.locator('#confirm-instruments').click();
+  await page.getByLabel('Músicos de Clarinete en Si bemol').waitFor();
+  assert.equal(await confirmation.count(), 0, 'confirmed parts leave the list');
+  assert.match(await page.locator('#band-content').textContent(), /100%.*Compatible/);
+  console.log('PASS: an unknown part is confirmed from the catalog and joins the band template');
 
   await page.locator('#sign-out').click();
   assert.equal(await page.locator('#login-screen').isVisible(), true);

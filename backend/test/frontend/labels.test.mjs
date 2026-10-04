@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  apiInstrumentName, bandIssueText, byDifficulty, displayFamilyName, displayInstrumentName,
-  gradeOf, initialBandDraft, readBandProfile, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel, rehearsalGroupName, blockScoreLabel,
+  bandIssueText, byDifficulty, displayFamilyName, displayInstrumentName,
+  gradeOf, initialBandDraft, readBandProfile, completeBandProfile, unconfirmedStatusText, confirmationOptions, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel, rehearsalGroupName, blockScoreLabel,
 } from '../../../frontend/src/labels.js';
 
-test('instrument names keep the part number in both directions', () => {
+test('instrument names keep the part number', () => {
   assert.equal(displayInstrumentName('Horn in F 2'), 'Trompa en Fa 2');
-  assert.equal(apiInstrumentName('Trompa en Fa 2'), 'Horn in F 2');
   assert.equal(displayInstrumentName('Ondes Martenot'), 'Ondes Martenot');
   assert.equal(displayInstrumentName('Flute', { instrument_label_es: 'Flauta 1ª' }), 'Flauta 1ª');
   assert.equal(displayFamilyName('brass'), 'Viento metal');
@@ -27,18 +26,38 @@ test('difficulty ordering uses grade first and the index to break ties', () => {
   assert.deepEqual(ordered.map(([name]) => name), ['c', 'b', 'a']);
 });
 
-test('band template starts with one player per part and never goes negative', () => {
-  const parts = ['Flute', 'Flute', 'Horn in F 2'];
-  const draft = initialBandDraft(parts, { 'Horn in F 2': 0 });
-  assert.deepEqual(draft, { Flute: '1', 'Horn in F 2': '0' });
-  assert.deepEqual(readBandProfile(parts, { ...draft, Flute: '-3' }), { Flute: 0, 'Horn in F 2': 0 });
-  assert.deepEqual(readBandProfile(parts, { Flute: '', 'Horn in F 2': '2' }), { Flute: 0, 'Horn in F 2': 2 });
+const requirements = [
+  { key: 'clarinet.bb', label_es: 'Clarinete en Si bemol', required: 3, available: 0, parts: ['Clarinet 1', 'Clarinet 2', 'Clarinet 3'] },
+  { key: 'percussion', label_es: 'Percusionistas', required: 2, available: 0, parts: ['Bass Drum', 'Snare Drum'] },
+];
+
+test('band template is one row per instrument and starts with the musicians the score needs', () => {
+  const draft = initialBandDraft(requirements, { percussion: 1 });
+  assert.deepEqual(draft, { 'clarinet.bb': '3', percussion: '1' });
+  assert.deepEqual(readBandProfile(requirements, { ...draft, 'clarinet.bb': '-3' }), { 'clarinet.bb': 0, percussion: 1 });
+  assert.deepEqual(readBandProfile(requirements, { 'clarinet.bb': '', percussion: '11' }), { 'clarinet.bb': 0, percussion: 11 });
   assert.deepEqual(readBandProfile(undefined, {}), {});
 });
 
+test('the first analysis completes the template with what the score needs', () => {
+  assert.deepEqual(completeBandProfile(requirements, {}), { profile: { 'clarinet.bb': 3, percussion: 2 }, missing: true });
+  assert.deepEqual(completeBandProfile(requirements, { 'clarinet.bb': 11, percussion: 2 }),
+    { profile: { 'clarinet.bb': 11, percussion: 2 }, missing: false });
+});
+
 test('band issues and rehearsal blocks read as musician-facing Spanish', () => {
-  assert.equal(bandIssueText({ instrument: 'Oboe', available: 0, required: 1 }), 'Oboe: falta en la plantilla; se necesita 1.');
-  assert.equal(bandIssueText({ instrument: 'Horn in F', available: 2, required: 4 }), 'Trompa en Fa: hay 2 músicos y se necesitan 4.');
+  assert.equal(bandIssueText({ label_es: 'Oboe', available: 0, required: 1 }), 'Oboe: falta en la plantilla; se necesita 1.');
+  assert.equal(bandIssueText({ label_es: 'Trompa en Fa', available: 2, required: 4 }), 'Trompa en Fa: hay 2 músicos y se necesitan 4.');
+});
+
+test('parts to confirm explain why and offer the proposal and candidates first', () => {
+  assert.equal(unconfirmedStatusText({ status: 'unknown' }), 'Sin identificar');
+  assert.equal(unconfirmedStatusText({ status: 'review' }), 'Propuesta por los datos del archivo');
+  assert.equal(unconfirmedStatusText({ status: 'conflict' }), 'El nombre y los datos del archivo no coinciden');
+  const catalog = [{ canonical_id: 'flute', label_es: 'Flauta' }, { canonical_id: 'oboe', label_es: 'Oboe' },
+    { canonical_id: 'trumpet.bb', label_es: 'Trompeta en Si bemol' }];
+  const options = confirmationOptions({ status: 'conflict', proposal: null, candidates: ['trumpet.bb', 'flute'] }, catalog);
+  assert.deepEqual(options.map(option => option.canonical_id), ['trumpet.bb', 'flute', 'oboe']);
 });
 
 test('ensemble rehearsal blocks: common lines, subsections and a tutti to join', () => {

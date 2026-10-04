@@ -57,6 +57,19 @@ Con las partituras locales de prueba (no versionadas), 49 de 52 nombres se resue
 y ninguno se clasifica incorrectamente. Todavía no lo consumen BandFit, la dificultad
 ni el audio: eso corresponde al resolver determinista (paso 08).
 
+**Paso 09 (confirmación humana y BandFit por instrumento):** las partes `unknown`, `conflict` y
+`review` se confirman en «Mi banda» con un desplegable del catálogo (`GET /instruments/catalog`;
+primero la propuesta y los candidatos). `/analyze` recibe `instrument_overrides` (nombre de parte →
+identidad del catálogo, validada) y el parser añade `PartMetadata.confirmed_id`: el resolver la usa
+antes que cualquier evidencia, con fuente `USER` y confianza 1.0, así que la dificultad, los grupos
+de ensayo y BandFit la aplican. Las confirmaciones se guardan en la configuración del análisis.
+BandFit agrupa por identidad (decisiones de la autora, 2026-10-04): un músico por voz
+(«Clarinet 1 & 2» cuenta dos; los pentagramas de una parte de viento son sus voces y los de un
+teclado, un solo músico) y la percusión como percusionistas en total, uno por parte. Las partes sin
+confirmar se listan aparte y no cuentan en el porcentaje. Queda para más adelante: recordar alias
+confirmados (captura progresiva), percusionistas simultáneos por compás y aplicar la confirmación
+al audio de `/playback` (el diálogo previo de partes «Voice» sigue cubriendo ese caso).
+
 ## 1. Problema
 
 MusicXML no garantiza una nomenclatura única de instrumentos.
