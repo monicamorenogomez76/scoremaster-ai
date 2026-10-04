@@ -7,12 +7,17 @@ class ScoreNote:
 	pitch: Optional[str]
 	duration_quarters: float
 	is_rest: bool = False
+	# Position inside the measure, in quarter notes (None when unknown, e.g. hand-built scores).
+	offset_quarters: Optional[float] = None
+	# Written breath mark, caesura or fermata: a hint of a phrase ending.
+	phrase_mark: bool = False
 
 
 @dataclass(frozen=True)
 class ScoreMeasure:
 	number: int
 	notes: tuple[ScoreNote, ...]
+	duration_quarters: Optional[float] = None
 
 
 @dataclass(frozen=True)

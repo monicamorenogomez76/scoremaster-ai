@@ -325,6 +325,26 @@ Requerir:
 
 ---
 
+## Frases melódicas (criterios de la autora, 2026-10-04)
+
+Los pasajes críticos y los bloques de ensayo **nunca cortan una frase melódica**; una frase
+larga se mantiene entera. `backend/analyzers/phrases.py` detecta los límites sumando pistas, sin
+que ninguna decida sola:
+
+| Criterio de la autora | Implementación | Peso |
+|---|---|---|
+| Pausas relevantes | Silencio ≥ 1,5 × la nota típica de la frase, ≥ corchea y destacado frente a los silencios vecinos (un silencio breve o recurrente es del motivo o del acompañamiento) | 2 |
+| Alargamiento al final | Nota ≥ 2 × la típica anterior; sola no corta, con pausa o reinicio sí | 1 (+1 con pausa) |
+| Indicaciones escritas | Respiración, cesura y calderón, leídos del MusicXML | 2 |
+| Reinicio de un motivo | Reaparece el patrón inicial de la frase (ritmo e intervalos) | 1 |
+| Contexto métrico | La frase incluye el compás de su primera nota: la anacrusa va con su frase | — |
+| Relación entre partes | Los bloques de ensayo se amplían a las frases de todos sus instrumentos | — |
+| Cadencia o reposo armónico | Pendiente: requiere análisis armónico del acompañamiento | — |
+| Cambio de patrón | No corta: puede ser solo una subdivisión | — |
+
+Hay límite cuando la suma llega a 2. El parser conserva la posición de cada nota en el compás,
+la duración del compás y las marcas escritas.
+
 # 9. Windowing
 
 Revisar si el análisis actual opera únicamente por número fijo de compases.
