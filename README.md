@@ -113,6 +113,27 @@ PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node ba
 Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`.
 La descarga del visor necesita conexión a Internet.
 
+### Créditos de sonido
+
+La reproducción usa [smplr](https://github.com/danigb/smplr) (MIT) con dos fuentes de
+muestras, que se descargan de sus CDN durante la reproducción y no se incluyen ni se
+modifican en este repositorio:
+
+- **Grabaciones reales** de [tonejs-instruments](https://github.com/nbrosowsky/tonejs-instruments)
+  (Nicholaus Brosowsky; commit fijado `622c2f1`), para fagot, clarinete, flauta, trompa,
+  saxofón alto y tenor, trombón, trompeta, tuba, contrabajo, bajo y guitarras, arpa,
+  xilófono y piano. Según su `sample-source-info.txt` proceden de
+  [VSCO 2 Community Edition](https://versilian-studios.com/vsco-community/) (CC0),
+  [Karoryfer Samples](https://shop.karoryfer.com/pages/free-samples) (CC0) y las muestras de la
+  University of Iowa (uso sin restricciones). El clarinete no tiene fuente declarada; sus notas
+  coinciden con el clarinete de VSCO 2 CE.
+- **General MIDI MusyngKite** del paquete
+  [midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) de Benjamin Gleitzman
+  ([CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)) para el resto de
+  instrumentos y como respaldo si las grabaciones no se pueden descargar.
+
+La percusión sin altura se sintetiza en el navegador.
+
 ### Integración continua
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) se ejecuta en

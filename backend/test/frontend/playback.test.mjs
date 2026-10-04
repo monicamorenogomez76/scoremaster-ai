@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 function harness() {
-  const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [];
+  const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [], samplersUsed = [], failRecorded = { value: false }, withRecordings = { value: false };
   const audio = { currentTime: 0, sampleRate: 100, resume: async () => {},
     createGain: () => ({ gain: {}, connect() {}, disconnect() {} }),
     createDynamicsCompressor: () => ({ connect() {}, disconnect() {} }),
@@ -14,12 +14,19 @@ function harness() {
     { instrument: 'Clarinet', program: 71, events: [{ note: 60, time: 0, duration: 2 }, { note: 62, time: 4, duration: 2 }] }
   ] };
   const current = { data };
-  const scope = { exports: {}, window: { AudioContext: function () { return audio; } },
+  const scope = { exports: {}, withRecordings, window: { AudioContext: function () { return audio; } },
     FormData: class { append() {} }, AbortController,
     fetch: async () => ({ ok: true, json: async () => current.data }),
     setTimeout: () => 1, clearTimeout() {},
     setInterval: (callback) => { callbacks.add(callback); return callback; },
     clearInterval: (callback) => callbacks.delete(callback),
+    fakeSampler: (_, options) => {
+      samplersUsed.push(options);
+      const result = { ready: failRecorded.value ? Promise.reject(new Error('CDN down')) : Promise.resolve(), stopCount: 0, disposeCount: 0,
+        start: (event) => starts.push({ instrument: 'recorded', ...event }),
+        stop() { this.stopCount++; }, dispose() { this.disposeCount++; } };
+      instruments.push(result); return result;
+    },
     fakeSoundfont: (_, options) => {
       optionsUsed.push(options);
       const result = { ready: Promise.resolve(), stopCount: 0, disposeCount: 0,
@@ -28,11 +35,13 @@ function harness() {
       instruments.push(result); return result;
     }
   };
-  const source = readFileSync(new URL('../../../frontend/src/score/playback.js', import.meta.url), 'utf8')
+  const banks = readFileSync(new URL('../../../frontend/src/score/sample-banks.js', import.meta.url), 'utf8');
+  const source = (banks + readFileSync(new URL('../../../frontend/src/score/playback.js', import.meta.url), 'utf8'))
+    .replace(/^import .*\n/gm, '')
     .replace(/export /g, '')
-    .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont })');
+    .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont, get Sampler() { return withRecordings.value ? fakeSampler : undefined; } })');
   vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage });', scope);
-  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; },
+  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings,
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
 
@@ -103,5 +112,42 @@ test('the resolved sound wins over the MIDI program and the part name', async ()
   h.setData(fetchData);
   const t = await h.api.preparePlayback({}, null);
   assert.deepEqual(h.optionsUsed.map(options => options.instrument).sort(), ['clarinet', 'french_horn']);
+  t.stop();
+});
+
+test('instruments load from the MusyngKite bank, the higher quality General MIDI soundfont', async () => {
+  const h = harness(), t = await h.api.preparePlayback({}, null);
+  assert.ok(h.optionsUsed.length > 0);
+  assert.ok(h.optionsUsed.every(options => options.kit === 'MusyngKite'));
+  t.stop();
+});
+
+test('recorded samples play the instruments that have them; the rest use General MIDI', async () => {
+  const h = harness();
+  h.withRecordings.value = true;
+  h.setData({ duration: 4, measures: [{ number: 1, time: 0 }], tracks: [
+    { instrument: 'Clarinet', sound: 'clarinet', events: [{ note: 62, time: 0, duration: 1 }] },
+    { instrument: 'Oboe', sound: 'oboe', events: [{ note: 69, time: 0, duration: 1 }] }
+  ] });
+  const t = await h.api.preparePlayback({}, null);
+  assert.equal(h.samplersUsed.length, 1);
+  assert.deepEqual(Array.from(h.samplersUsed[0].preset.groups[0].regions, region => region.sample), ['D4']);
+  assert.deepEqual(h.optionsUsed.map(options => options.instrument), ['oboe']);
+  await t.play();
+  assert.deepEqual(h.starts.map(event => event.instrument).sort(), ['oboe', 'recorded']);
+  t.stop();
+});
+
+test('if recordings cannot be downloaded, the General MIDI sound is used instead', async () => {
+  const h = harness();
+  h.withRecordings.value = true;
+  h.failRecorded.value = true;
+  h.setData({ duration: 4, measures: [{ number: 1, time: 0 }], tracks: [
+    { instrument: 'Clarinet', sound: 'clarinet', events: [{ note: 62, time: 0, duration: 1 }] }
+  ] });
+  const t = await h.api.preparePlayback({}, null);
+  assert.deepEqual(h.optionsUsed.map(options => options.instrument), ['clarinet']);
+  await t.play();
+  assert.deepEqual(h.starts.map(event => event.instrument), ['clarinet']);
   t.stop();
 });
