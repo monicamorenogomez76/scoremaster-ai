@@ -3,7 +3,7 @@ from pathlib import Path
 
 from backend.analyzers.criticality import CriticalityPolicy, detect_critical_passages
 from backend.analyzers.difficulty import compute_difficulty_score
-from backend.domain.models import Finding, Score, ScoreMeasure, ScoreNote, ScorePart
+from backend.domain.models import Finding, Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
 from backend.parsers.musicxml_parser import parse_musicxml
 
 R = None
@@ -88,3 +88,38 @@ def test_difficulty_reports_the_new_passages_and_keeps_the_legacy_detector_for_t
 
     assert all("core_range" in passage for passage in current["critical_passages"])
     assert all("core_range" not in passage for passage in legacy["critical_passages"])
+
+
+SIXTEENTHS = [("C4", .25), ("D4", .25), ("E4", .25), ("F4", .25)] * 4
+
+
+def runs(bpm, bars=4):
+    """Stepwise sixteenths in every bar at the given quarter tempo."""
+    measures = tuple(ScoreMeasure(n, tuple(ScoreNote(p, d) for p, d in SIXTEENTHS)) for n in range(1, bars + 1))
+    return Score("Runs", (ScorePart("Clarinet", measures),), (TempoMark(1, 0, bpm, 1),))
+
+
+def test_fast_runs_are_critical_even_with_a_single_kind_of_warning():
+    # Sixteenths at 160: more than ten notes per second, during four bars.
+    passages = detect_critical_passages(runs(160), [finding("SL003", "1-4", "Clarinet")])
+
+    assert ranges(passages) == ["1-4"]
+    assert "speed" in passages[0]["signals"]
+
+
+def test_the_same_runs_at_a_slow_tempo_are_not_critical():
+    assert detect_critical_passages(runs(60), [finding("SL003", "1-4", "Clarinet")]) == []
+
+
+def test_a_fast_run_shorter_than_the_minimum_duration_is_not_critical():
+    assert detect_critical_passages(runs(160, bars=4), [finding("SL003", "1-4", "Clarinet")],
+                                    CriticalityPolicy(min_beats=20)) == []
+
+
+def test_speed_follows_tempo_changes():
+    score = runs(60, bars=8)
+    faster = Score(score.title, score.parts, score.tempo_marks + (TempoMark(5, 0, 160, 1),))
+
+    passages = detect_critical_passages(faster, [finding("SL003", "1-8", "Clarinet")])
+    # Only bars 5-8 are fast; the passage still covers the whole phrase they belong to.
+    assert [passage["core_range"] for passage in passages] == ["5-8"]
