@@ -5,7 +5,7 @@ from typing import Optional, Union
 from collections import Counter
 from xml.etree import ElementTree
 
-from music21 import converter, note, stream, tempo
+from music21 import articulations, converter, expressions, note, stream, tempo
 
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.domain.models import PartMetadata, PartTransposition, Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
@@ -34,6 +34,13 @@ def _transposition(transpose) -> Optional[PartTransposition]:
     diatonic = _integers(transpose.iter("diatonic"))
     octave_change = _integers(transpose.iter("octave-change"))
     return PartTransposition(chromatic[0], diatonic[0] if diatonic else None, octave_change[0] if octave_change else 0)
+
+
+def _has_phrase_mark(element) -> bool:
+    """Breath marks, caesuras and fermatas written on a note or rest."""
+    marks = (articulations.BreathMark, articulations.Caesura)
+    return any(isinstance(mark, marks) for mark in getattr(element, "articulations", [])) or \
+        any(isinstance(mark, expressions.Fermata) for mark in getattr(element, "expressions", []))
 
 
 def read_part_metadata(content: bytes) -> dict[str, PartMetadata]:
@@ -129,31 +136,19 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
                     )
                 )
             for element in parsed_measure.recurse().getElementsByClass(note.GeneralNote):
-                if isinstance(element, note.Note):
-                    notes.append(
-                        ScoreNote(
-                            pitch=element.pitch.nameWithOctave,
-                            duration_quarters=float(element.duration.quarterLength),
-                            is_rest=False,
-                        )
+                if not isinstance(element, (note.Note, note.Rest, note.Unpitched)):
+                    continue
+                notes.append(
+                    ScoreNote(
+                        pitch=element.pitch.nameWithOctave if isinstance(element, note.Note) else None,
+                        duration_quarters=float(element.duration.quarterLength),
+                        is_rest=isinstance(element, note.Rest),
+                        offset_quarters=float(element.getOffsetInHierarchy(parsed_measure)),
+                        phrase_mark=_has_phrase_mark(element),
                     )
-                elif isinstance(element, note.Rest):
-                    notes.append(
-                        ScoreNote(
-                            pitch=None,
-                            duration_quarters=float(element.duration.quarterLength),
-                            is_rest=True,
-                        )
-                    )
-                elif isinstance(element, note.Unpitched):
-                    notes.append(
-                        ScoreNote(
-                            pitch=None,
-                            duration_quarters=float(element.duration.quarterLength),
-                            is_rest=False,
-                        )
-                    )
-            measures.append(ScoreMeasure(number=measure_number, notes=tuple(notes)))
+                )
+            measures.append(ScoreMeasure(number=measure_number, notes=tuple(notes),
+                                         duration_quarters=float(parsed_measure.duration.quarterLength)))
 
         parts.append(ScorePart(name=part_name, measures=tuple(measures), metadata=metadata_for_part(parsed_part, declared_metadata)))
 
