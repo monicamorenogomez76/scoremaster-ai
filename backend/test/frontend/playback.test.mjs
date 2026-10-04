@@ -5,9 +5,11 @@ import assert from 'node:assert/strict';
 
 function harness() {
   const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [], samplersUsed = [], failRecorded = { value: false }, withRecordings = { value: false }, formFields = [];
+  const gains = [], compressors = [];
   const audio = { currentTime: 0, sampleRate: 100, resume: async () => {},
-    createGain: () => ({ gain: {}, connect() {}, disconnect() {} }),
-    createDynamicsCompressor: () => ({ connect() {}, disconnect() {} }),
+    createGain: () => { const node = { gain: {}, connect() {}, disconnect() {} }; gains.push(node); return node; },
+    createDynamicsCompressor: () => { const node = { threshold: {}, knee: {}, ratio: {}, attack: {}, release: {}, connect() {}, disconnect() {} };
+      compressors.push(node); return node; },
     createBuffer: () => ({ getChannelData: () => new Float32Array(200) }) };
   const data = { duration: 10, measures: [{ number: 70, time: 0 }, { number: 71, time: 4 }], tracks: [
     { instrument: 'Flute', program: 73, events: [{ note: 72, time: 0, duration: 4 }] },
@@ -41,7 +43,7 @@ function harness() {
     .replace(/export /g, '')
     .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont, get Sampler() { return withRecordings.value ? fakeSampler : undefined; } })');
   vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage });', scope);
-  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings, formFields,
+  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings, formFields, gains, compressors,
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
 
@@ -165,5 +167,18 @@ test('a rehearsal block announces how many voices it plays', async () => {
   const t = await h.api.preparePlayback({}, { instruments: ['Flute', 'Clarinet'], firstMeasure: 1, lastMeasure: 4 }, message => statuses.push(message));
   await t.play();
   assert.match(statuses.at(-1), /^Reproduciendo 2 voces del bloque/);
+  t.stop();
+});
+
+test('playback is loud enough: measured output was 10-20 times too quiet', async () => {
+  const h = harness(), t = await h.api.preparePlayback({}, null);   // two tracks
+  // Master gain at the default 50 % volume: 2 / sqrt(voices), protected by a real limiter.
+  assert.ok(Math.abs(h.gains[0].gain.value - 2 / Math.sqrt(2)) < 1e-9);
+  t.setVolume(1);
+  assert.ok(Math.abs(h.gains[0].gain.value - 4 / Math.sqrt(2)) < 1e-9);
+  const limiter = h.compressors[0];
+  assert.deepEqual([limiter.threshold.value, limiter.ratio.value, limiter.knee.value], [-3, 20, 0]);
+  await t.play();
+  assert.ok(h.starts.every(event => event.velocity === 100));
   t.stop();
 });
