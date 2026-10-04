@@ -14,6 +14,9 @@ Valoración de la autora (2026-10-04): la reproducción mejora pero todavía no 
 se aplaza. Candidatos para retomarlo: dinámicas y articulaciones del MusicXML, envolventes
 y release por instrumento, reverberación ligera, más capas de velocidad y bibliotecas
 con más muestras por instrumento (University of Iowa, VSCO 2 CE completo).
+Batería: los golpes simultáneos (`PercussionChord`) ya se reproducen, pero music21 no conserva
+el instrumento del kit de cada golpe y todos usan la tecla del primer instrumento de la parte
+(en Oregon Trail, bombo). Mapear cada `<instrument id>` a su `midi-unpitched` es una mejora pendiente.
 
 Regresión de sonido: `backend/test/frontend/recorded-sample.e2e.mjs` renderiza el clarinete
 grabado con smplr real y falla si el resultado es silencio (smplr 1.1.0 reproduce en

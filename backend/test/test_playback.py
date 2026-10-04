@@ -157,3 +157,28 @@ def test_passage_measure_clock_starts_at_zero_with_tempo_change(tmp_path):
     data = build_playback(path, 'Flute', 70, 71)
     assert data['measures'] == [{'number': 70, 'time': 0}, {'number': 71, 'time': 2}]
     assert data['events'][0]['time'] == 0
+
+
+def test_simultaneous_drum_hits_play_as_percussion(tmp_path):
+    # Drum set notes joined with <chord/> become a music21 PercussionChord.
+    def hit(instrument, step, chord_mark=''):
+        return ('<note>{}<unpitched><display-step>{}</display-step><display-octave>4</display-octave></unpitched>'
+                '<duration>1</duration><instrument id="{}"/><type>quarter</type></note>').format(chord_mark, step, instrument)
+    path = tmp_path / 'drums.musicxml'
+    path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"><part-list>'
+        '<score-part id="P1"><part-name>Drumset</part-name>'
+        '<score-instrument id="P1-I36"><instrument-name>Bass Drum</instrument-name></score-instrument>'
+        '<score-instrument id="P1-I39"><instrument-name>Snare Drum</instrument-name></score-instrument>'
+        '<midi-instrument id="P1-I36"><midi-channel>10</midi-channel><midi-unpitched>37</midi-unpitched></midi-instrument>'
+        '<midi-instrument id="P1-I39"><midi-channel>10</midi-channel><midi-unpitched>39</midi-unpitched></midi-instrument>'
+        '</score-part></part-list><part id="P1"><measure number="1"><attributes><divisions>1</divisions>'
+        '<clef><sign>percussion</sign></clef></attributes>'
+        + hit('P1-I36', 'F') + hit('P1-I39', 'C', '<chord/>') + '</measure></part></score-partwise>', encoding='utf-8')
+
+    track = build_playback(path, '', 0, 999999)['tracks'][0]
+
+    hits = track['percussion']
+    assert len(hits) + track['skipped_unpitched'] == 2
+    assert len(hits) == 2
+    assert {hit['time'] for hit in hits} == {0.0}

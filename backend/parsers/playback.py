@@ -4,12 +4,25 @@ import re
 
 from pathlib import Path
 
-from music21 import chord, converter, note, stream, tempo
+from music21 import chord, converter, note, percussion as m21_percussion, stream, tempo
 
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import ScorePart
 from backend.parsers.musicxml_parser import metadata_for_part, read_part_metadata
 from backend.parsers.musicxml_source import extract_musicxml
+
+
+def _drum_note(hit, part, name):
+    """General MIDI percussion key of a hit, from its instrument or, failing that, the part name."""
+    inst = getattr(hit, 'storedInstrument', None) or part.getInstrument()
+    drum = getattr(inst, 'percMapPitch', None)
+    if drum is None:
+        lower_name = name.casefold()
+        drum = next((number for text, number in (
+            ('snare', 38), ('bass drum', 35), ('tambourine', 54),
+            ('triangle', 81), ('cymbal', 49), ('hi-hat', 42), ('tom', 45)
+        ) if text in lower_name), None)
+    return drum
 
 
 def _identity(part, name, declared):
@@ -72,19 +85,16 @@ def build_playback(source, instrument_name: str, first: int, last: int) -> dict:
                 continue
             timing = {'time': round(seconds_at(max(start, onset)) - origin, 6),
                       'duration': round(seconds_at(min(end, release)) - seconds_at(max(start, onset)), 6)}
-            if isinstance(event, note.Unpitched):
-                inst = event.storedInstrument or selected.getInstrument()
-                drum = getattr(inst, 'percMapPitch', None)
-                if drum is None:
-                    lower_name = name.casefold()
-                    drum = next((number for text, number in (
-                        ('snare', 38), ('bass drum', 35), ('tambourine', 54),
-                        ('triangle', 81), ('cymbal', 49), ('hi-hat', 42), ('tom', 45)
-                    ) if text in lower_name), None)
-                if drum is not None:
-                    percussion.append({'note': drum, **timing})
-                else:
-                    skipped += 1
+            # Simultaneous drum-set hits arrive as a PercussionChord, not as chord.Chord.
+            hits = (list(event.notes) if isinstance(event, m21_percussion.PercussionChord)
+                    else [event] if isinstance(event, note.Unpitched) else [])
+            if hits:
+                for hit in hits:
+                    drum = _drum_note(hit, selected, name)
+                    if drum is not None:
+                        percussion.append({'note': drum, **timing})
+                    else:
+                        skipped += 1
                 continue
             pitches = event.pitches if isinstance(event, chord.Chord) else (event.pitch,)
             events.extend({'note': float(pitch.midi), **timing} for pitch in pitches)
