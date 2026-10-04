@@ -352,10 +352,13 @@ que ninguna decida sola:
 | Reinicio de un motivo | Reaparece el patrón inicial de la frase (ritmo e intervalos) | 1 |
 | Contexto métrico | La frase incluye el compás de su primera nota: la anacrusa va con su frase | — |
 | Relación entre partes | Los bloques de ensayo se amplían a las frases de todos sus instrumentos | — |
-| Cadencia o reposo armónico | Pendiente: requiere análisis armónico del acompañamiento | — |
+| Cadencia o reposo armónico | `harmony.py`: todas las partes en sonido real; tonalidad por zonas (±4 c., perfiles de Krumhansl, también su relativa). Auténtica: V (bajo en dominante y sensible) → I (bajo en tónica) en tiempo fuerte; semicadencia: llegada a V sostenida ≥ 2 tiempos que no resuelve. La melodía en la tónica no basta | 1 a la nota que suena en la llegada |
 | Cambio de patrón | No corta: puede ser solo una subdivisión | — |
 
-Hay límite cuando la suma llega a 2. Los fragmentos separados por límites débiles se unen en
+Hay límite cuando la suma llega a 2: la cadencia cierra con nota alargada o con pausa, y sola no
+corta las partes que siguen moviéndose (decisiones de la autora, 2026-10-04). Sin transposiciones
+declaradas (partes «Voice» de un PDF) la armonía no es fiable y no se detectan cadencias; los
+acordes dentro de un pentagrama todavía no se leen. Los fragmentos separados por límites débiles se unen en
 frases de **4 u 8 compases** (decisión de la autora): la frase se cierra al llegar a 4 o a 8, y de
 5 a 7 solo se une el siguiente fragmento si completa exactamente 8. Un silencio de un compás entero
 o una marca escrita es un límite fuerte que nunca se une. El parser conserva la posición de cada
