@@ -53,10 +53,7 @@ export const dimensionLabelsEs = {
   range: 'Tesitura', register: 'Registro extremo', intervals: 'Saltos',
   density: 'Densidad de ataques', endurance: 'Continuidad', tempo: 'Tempo'
 };
-const rehearsalReasons = {
-  'High rhythmic density in the selected passage.': 'Alta densidad rítmica en este pasaje.',
-  'Default rehearsal block.': 'Bloque general de ensayo.'
-};
+const sharedLabels = { unison: 'Unísono', octave: 'Octavas', rhythm: 'Mismo ritmo' };
 
 function splitPartNumber(instrument) {
   const match = instrument.match(/^(.*)\s+(\d+)$/);
@@ -93,9 +90,27 @@ export function bandIssueText(issue) {
   return instrument + ': hay ' + issue.available + ' músicos y se necesitan ' + issue.required + '.';
 }
 
-export function rehearsalSegmentText(segment) {
-  const reason = rehearsalReasons[segment.reason] || segment.reason || 'Pasaje seleccionado para trabajar.';
-  return displayInstrumentName(segment.instrument) + ' · compás ' + segment.measure_range + ' · ' + segment.minutes + ' min · ' + reason;
+const measures = (...ranges) => 'c. ' + ranges.map(range => String(range).replace('-', '–')).join(', ');
+const partList = parts => (parts || []).map(part => displayInstrumentName(part)).join(', ');
+
+// Ensemble rehearsal: sectional blocks per common passage, then a tutti to join them.
+export function rehearsalBlockTitle(block) {
+  if (block.type === 'tutti') return 'Tutti para juntar · ' + measures(...(block.measure_ranges || []));
+  return 'Seccional · ' + displayFamilyName(block.section) + ' · ' + measures(block.measure_range);
+}
+
+export function rehearsalBlockDetail(block) {
+  const pieces = [block.type === 'tutti' ? 'Toda la banda' : partList(block.parts)];
+  if (block.findings?.length) pieces.push(block.findings.map(findingLabel).join(', '));
+  for (const item of block.shared || []) {
+    pieces.push((sharedLabels[item.kind] || item.kind) + ': ' + item.parts.map(part => displayInstrumentName(part)).join(' y ')
+      + (item.measure_range ? ' (' + measures(item.measure_range) + ')' : ''));
+  }
+  return pieces.join(' · ');
+}
+
+export function omittedBlockText(block) {
+  return displayFamilyName(block.section) + ' · ' + measures(block.measure_range) + ' · ' + partList(block.parts);
 }
 
 export const uniqueParts = parts => Array.from(new Set(parts || []));

@@ -38,6 +38,14 @@ Organización del ensayo:
 - La suma de bloques no supera el tiempo disponible; si no caben todos, se descartan los de
   menor prioridad indicándolo. Sin pasajes, el plan es un único tutti.
 
+Implementación (paso 15): `backend/analyzers/rehearsal_passages.py` agrupa los pasajes críticos
+desde el de mayor prioridad; absorbe siempre los contenidos en él y solo crece mientras el pasaje
+no supere 16 compases. El material compartido compara cada parte crítica con todas las demás en
+altura real. `backend/analyzers/rehearsal_plan.py` reserva el 25 % (mínimo 5 min) para el tutti y
+reparte el resto en proporción a la prioridad con un mínimo de 5 min por bloque. Limitación: los
+pasajes muy largos vienen del detector de criticidad actual (paso 14 pendiente). El planificador
+anterior queda congelado en `evaluation/legacy_rehearsal.py` para el baseline.
+
 ---
 
 # 2. Difficulty

@@ -145,7 +145,7 @@ def analyze_score(
         score = parse_musicxml(temp_path)
         difficulty = compute_difficulty_score(score)
         band_fit = compute_band_fit(score, profile)
-        rehearsal_plan = build_rehearsal_plan(score, total_minutes)
+        rehearsal_plan = build_rehearsal_plan(score, total_minutes, difficulty)
 
         result = {
             "title": score.title,

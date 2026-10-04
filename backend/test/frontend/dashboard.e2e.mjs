@@ -69,7 +69,11 @@ try {
   await page.locator('#rehearsal-content').getByText('Duración total: 90 minutos').waitFor();
   assert.equal(await view('rehearsal').isVisible(), true);
   assert.equal(await page.getByLabel('Músicos para Clarinete').inputValue(), '0', 'rehearsal keeps the band template');
-  console.log('PASS: rehearsal duration recalculates the plan');
+  const blocks = await page.locator('#rehearsal-content .rehearsal-block-title').allTextContents();
+  assert.match(blocks[0], /^Seccional · Viento madera · c\. 1/);
+  assert.match(blocks.at(-1), /^Tutti para juntar/);
+  assert.match(await page.locator('#rehearsal-content').textContent(), /Planificado: \d+ de 90 minutos/);
+  console.log('PASS: rehearsal duration recalculates the plan with sectional blocks and a final tutti');
 
   await page.locator('[data-view-target=overview]').click();
   assert.equal(await page.locator('#overview-priority-title').textContent(), 'Clarinete · compases 1');
