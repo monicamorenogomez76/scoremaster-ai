@@ -265,6 +265,19 @@ Un pasaje NO es crítico solo por estar en el Top N.
 
 Debe poder devolver cero críticos.
 
+Implementación (paso 14): `backend/analyzers/criticality.py`, configurable con `CriticalityPolicy`.
+Puntuación local por compás = pesos de las reglas que lo marcan (SL005 no suma: es evidencia de
+persistencia). Un compás es candidato con puntuación ≥ 5 (absoluto) o si está en el percentil 85 de
+su parte y supera en 2 la mediana de los 4 compases a cada lado (relativo y destacado). Los
+candidatos consecutivos forman un núcleo, que exige al menos 4 tiempos y 2 reglas distintas. El
+núcleo se amplía a las frases completas que toca (`phrases.py`), así que un pasaje nunca corta una
+frase. Señal de velocidad (decisión de la autora, 2026-10-04): un compás tocado a
+≥ 8 notas por segundo al tempo escrito (semicorcheas desde negra = 120) es candidato por sí solo, y un
+núcleo formado solo por esos compases es crítico con un único tipo de aviso si dura ≥ 4 tiempos.
+Los umbrales generales se mantienen hasta la evaluación con músicos; las frases largas que amplían
+los pasajes (hasta 54 c. en Persis) son aceptadas por la autora. Puede haber cero críticos. Los valores son iniciales y deben calibrarse con la evaluación.
+El detector anterior queda como `critical_detector="legacy"` solo para el baseline.
+
 ## Señales mínimas
 
 ### A. Absolute threshold
