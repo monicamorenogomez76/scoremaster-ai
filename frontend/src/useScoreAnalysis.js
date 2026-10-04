@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { applyInstrumentAssignments, inspectInstruments } from './instrument-session.js';
-import { apiInstrumentName } from './labels.js';
+import { completeBandProfile } from './labels.js';
 
-// options: { minutes, getProfile(), onReset(), onAnalysis(data, profile, navigate) }.
+// options: { minutes, getProfile(), getConfirmations(), onReset(), onAnalysis(data, profile, navigate) }.
 // Read through a ref so changing them never aborts a request in flight.
 export function useScoreAnalysis(workspace, options) {
   const [state, setState] = useState({ busy: false, message: '', error: false });
@@ -46,7 +46,7 @@ export function useScoreAnalysis(workspace, options) {
     }
   };
 
-  const analyze = useCallback(async (selected, profile, navigate = true) => {
+  const analyze = useCallback(async (selected, profile, navigate = true, confirmations = latest.current.getConfirmations()) => {
     if (!selected) { setState({ busy: false, message: 'Selecciona un archivo MusicXML.', error: true }); return; }
     const version = invalidate();
     const request = new AbortController(); controller.current = request;
@@ -55,22 +55,20 @@ export function useScoreAnalysis(workspace, options) {
       await workspace.prepareAnalysis();
       if (version !== generation.current) return;
       let data, completedProfile = profile;
-      // First analysis: one player per score part, then recompute BandFit with that template.
+      // First analysis: the musicians each instrument needs, then recompute BandFit with that template.
       for (let attempt = 0; attempt < 2; attempt++) {
         const body = new FormData(); body.append('file', selected);
         body.append('band_profile', JSON.stringify(completedProfile));
         body.append('total_minutes', latest.current.minutes || '60');
+        body.append('instrument_overrides', JSON.stringify(confirmations || {}));
         const response = await fetch('/analyze', { method: 'POST', body, signal: request.signal });
         try { data = await response.json(); }
         catch { throw new Error('El servidor devolvió una respuesta no válida. Vuelve a intentarlo.'); }
         if (version !== generation.current) return;
         if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'No se pudo analizar la partitura.');
-        const names = data.parts || [];
-        const missing = names.some(name => completedProfile[apiInstrumentName(name)] === undefined);
-        completedProfile = Object.fromEntries(names.map(name => {
-          const key = apiInstrumentName(name); return [key, completedProfile[key] ?? 1];
-        }));
-        if (!missing) break;
+        const completed = completeBandProfile(data.band_fit?.requirements, completedProfile);
+        completedProfile = completed.profile;
+        if (!completed.missing) break;
       }
       latest.current.onAnalysis(data, completedProfile, navigate);
       workspace.showScore();
@@ -92,6 +90,7 @@ export function useScoreAnalysis(workspace, options) {
     return analyze(mapped.file, latest.current.getProfile());
   };
   // Band and rehearsal views recompute the current score without leaving their view.
-  const recalculate = () => analyze(workspace.getFile(), latest.current.getProfile(), false);
+  const recalculate = confirmations => analyze(workspace.getFile(), latest.current.getProfile(), false,
+    confirmations ?? latest.current.getConfirmations());
   return { state, parts, assignments, setAssignments, selectFile, reset, submit, recalculate };
 }

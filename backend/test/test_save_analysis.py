@@ -55,7 +55,8 @@ def test_api_persists_exact_legacy_result_and_configuration(postgres_engine, rep
         stored = repo.get(analysis_id)
         assert stored.result == expected
         assert stored.source_sha256 == sha256(SCORE_PATH.read_bytes()).hexdigest()
-        assert stored.configuration == {'band_profile': {'Flute': 1}, 'total_minutes': 30}
+        assert stored.configuration == {'band_profile': {'Flute': 1}, 'total_minutes': 30,
+                                        'instrument_overrides': {}}
         assert stored.features['tempo'] == expected['tempo']
         assert stored.features['instrument_dimensions'] == {
             name: details['dimensions'] for name, details in expected['difficulty']['by_instrument'].items()}

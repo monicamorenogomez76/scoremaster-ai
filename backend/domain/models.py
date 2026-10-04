@@ -40,6 +40,8 @@ class PartMetadata:
 	midi_channels: tuple[int, ...] = ()
 	transposition: Optional[PartTransposition] = None
 	staff_number: Optional[int] = None
+	# Catalog identity confirmed by the user (step 09); not read from the MusicXML.
+	confirmed_id: Optional[str] = None
 
 
 @dataclass(frozen=True)

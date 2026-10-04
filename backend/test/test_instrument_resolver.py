@@ -131,3 +131,15 @@ def test_analyze_reports_resolved_instruments():
     assert instrument["part"] == "Clarinet"
     assert instrument["canonical_id"] == "clarinet.bb"
     assert instrument["status"] == "resolved"
+
+
+def test_a_confirmation_by_the_user_wins_over_any_evidence():
+    confirmed = ScorePart("Voice 1", (), PartMetadata(part_id="P1", part_name="Voice 1", confirmed_id="clarinet.bb"))
+    conflict = ScorePart("Trumpet", (), PartMetadata(part_id="P2", part_name="Trumpet", instrument_names=("Flute",),
+                                                     confirmed_id="flute"))
+
+    resolution = resolve_part(confirmed)
+    assert (resolution.identity.canonical_id, resolution.status, resolution.source, resolution.confidence) == (
+        "clarinet.bb", RESOLVED, "USER", 1.0)
+    assert resolution.evidence == ("confirmed by the user → clarinet.bb",)
+    assert resolve_part(conflict).identity.canonical_id == "flute"

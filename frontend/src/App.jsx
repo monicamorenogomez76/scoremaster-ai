@@ -22,6 +22,8 @@ export function App({ session }) {
   // revision changes with every successful analysis so explorers restart from the top.
   const [analysis, setAnalysis] = useState(null);
   const [bandDraft, setBandDraft] = useState({});
+  // Instruments confirmed by the user: part name → catalog identity (step 09).
+  const [confirmations, setConfirmations] = useState({});
   const [minutes, setMinutes] = useState('60');
   const fullScore = useRef(null), passage = useRef(null);
 
@@ -56,15 +58,21 @@ export function App({ session }) {
   }, []);
   const upload = useScoreAnalysis(workspace, {
     minutes,
-    getProfile: () => readBandProfile(analysis?.data.parts, bandDraft),
-    onReset: () => { setAnalysis(null); setBandDraft({}); navigate('analyze'); },
+    getProfile: () => readBandProfile(analysis?.data.band_fit?.requirements, bandDraft),
+    getConfirmations: () => confirmations,
+    onReset: () => { setAnalysis(null); setBandDraft({}); setConfirmations({}); navigate('analyze'); },
     onAnalysis: (data, profile, shouldNavigate) => {
       setAnalysis(previous => ({ data, fileName: session.getFile()?.name || '', revision: (previous?.revision || 0) + 1 }));
-      setBandDraft(initialBandDraft(data.parts, profile));
+      setBandDraft(initialBandDraft(data.band_fit?.requirements, profile));
       if (shouldNavigate) navigate('analyze');
     },
   });
   const recalculate = () => (session.getFile() ? upload.recalculate() : navigate('analyze'));
+  const confirmInstruments = chosen => {
+    const next = { ...confirmations, ...chosen };
+    setConfirmations(next);
+    return session.getFile() ? upload.recalculate(next) : navigate('analyze');
+  };
 
   const enterDemo = () => { writeDemoSession(true); setSignedIn(true); navigate('overview'); };
   const leaveDemo = () => { writeDemoSession(false); setSignedIn(false); };
@@ -73,7 +81,7 @@ export function App({ session }) {
     <LoginScreen hidden={signedIn} onEnter={enterDemo} />
     <AppShell hidden={!signedIn} view={view} onNavigate={navigate} onSignOut={leaveDemo}
       upload={upload} analysis={analysis} bandDraft={bandDraft} onBandDraftChange={setBandDraft}
-      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onOpenPassage={workspace.openPassage}
+      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onConfirmInstruments={confirmInstruments} onOpenPassage={workspace.openPassage}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />
   </>;
