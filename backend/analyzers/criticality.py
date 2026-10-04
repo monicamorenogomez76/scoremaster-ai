@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from statistics import median
 
+from backend.analyzers.harmony import find_cadences
 from backend.analyzers.phrases import find_phrases
 from backend.domain.models import Finding, Score, ScorePart, TempoMark
 from backend.rules.weights import RULE_WEIGHTS
@@ -69,7 +70,7 @@ def _notes_per_second(measure, bpm: float | None) -> float:
 
 
 def _part_passages(part: ScorePart, findings: list[Finding], policy: CriticalityPolicy,
-                   tempo_marks: tuple[TempoMark, ...] = ()) -> list[dict]:
+                   tempo_marks: tuple[TempoMark, ...] = (), cadences=()) -> list[dict]:
     numbers = [measure.number for measure in part.measures]
     beats = {measure.number: measure.duration_quarters or 4.0 for measure in part.measures}
     fast = {measure.number for measure in part.measures
@@ -112,7 +113,7 @@ def _part_passages(part: ScorePart, findings: list[Finding], policy: Criticality
     if current:
         cores.append(current)
 
-    phrases = find_phrases(part)
+    phrases = find_phrases(part, cadences)
     passages = []
     for core in cores:
         core_rules = set().union(*(codes[number] for number in core))
@@ -151,7 +152,8 @@ def detect_critical_passages(score: Score, findings: list[Finding], policy: Crit
     for item in findings:
         by_part.setdefault(item.instrument, []).append(item)
     passages = []
+    cadences = find_cadences(score) if by_part else {}
     for part in score.parts:
         if part.name in by_part:
-            passages.extend(_part_passages(part, by_part[part.name], policy, score.tempo_marks))
+            passages.extend(_part_passages(part, by_part[part.name], policy, score.tempo_marks, cadences))
     return sorted(passages, key=lambda passage: (-passage["score"], _bounds(passage["measure_range"])[0], passage["instrument"]))

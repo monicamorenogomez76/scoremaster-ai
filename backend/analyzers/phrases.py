@@ -10,13 +10,16 @@ Several hints add up and none decides alone, following the cautions of the autho
 A phrase covers the measures of its notes, so an upbeat stays with the phrase it starts, and a long
 phrase is never cut. Short fragments separated by weak boundaries join into phrases of 4 or 8
 measures (author's decision); a whole measure of rest or a written mark is a strong boundary that
-never joins. Harmonic cadences are not analysed yet; a change of pattern is not a boundary
-because it may only be a subdivision.
+never joins. A harmonic cadence of the ensemble (harmony.py) adds a hint to the note sounding on
+its arrival: with a lengthening or a pause it ends the phrase, alone it does not (a part that keeps
+moving through the cadence is not cut). A change of pattern is not a boundary because it may only
+be a subdivision.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from statistics import median
+from typing import Collection
 
 from music21 import pitch as m21_pitch
 
@@ -46,6 +49,7 @@ class _Note:
     midi: int | None
     measure: int
     mark: bool
+    offset: float = 0.0   # position inside its measure
 
 
 def _timeline(part: ScorePart) -> tuple[list[_Note], list[float], dict[int, float]]:
@@ -63,7 +67,7 @@ def _timeline(part: ScorePart) -> tuple[list[_Note], list[float], dict[int, floa
                     marked_rests.append(onset)
                 continue
             midi = m21_pitch.Pitch(event.pitch).midi if event.pitch else None
-            notes.append(_Note(onset, event.duration_quarters, midi, measure.number, event.phrase_mark))
+            notes.append(_Note(onset, event.duration_quarters, midi, measure.number, event.phrase_mark, offset))
         bar_lengths[measure.number] = measure.duration_quarters or length
         start += bar_lengths[measure.number]
     merged: dict[float, _Note] = {}
@@ -82,7 +86,14 @@ def _pattern(notes: list[_Note], index: int):
             tuple(right.midi - left.midi for left, right in zip(window, window[1:])))
 
 
-def find_phrases(part: ScorePart) -> list[Phrase]:
+def _on_cadence(note: _Note, cadences: Collection[tuple[int, float]]) -> bool:
+    """The note sounds on the arrival of a cadence of its measure."""
+    return any(measure == note.measure and note.offset <= offset < note.offset + note.duration
+               for measure, offset in cadences)
+
+
+def find_phrases(part: ScorePart, cadences: Collection[tuple[int, float]] = ()) -> list[Phrase]:
+    """cadences: (measure, offset) of the ensemble's cadential arrivals, from harmony.find_cadences."""
     notes, marked_rests, bar_lengths = _timeline(part)
     if not notes:
         return []
@@ -106,6 +117,8 @@ def find_phrases(part: ScorePart) -> list[Phrase]:
         marked = current.mark or any(following.onset - gap <= onset < following.onset for onset in marked_rests)
         if marked:
             score += 2
+        if cadences and _on_cadence(current, cadences):
+            score += 1
         opening = _pattern(notes, phrase_start)
         if opening is not None and index + 1 > phrase_start + PATTERN_NOTES - 1 and _pattern(notes, index + 1) == opening:
             score += 1

@@ -110,3 +110,22 @@ def test_eight_one_bar_fragments_make_two_four_bar_phrases():
 def test_a_whole_bar_of_rest_is_a_strong_boundary_that_never_joins():
     bar = STACCATO + [(R, 1)]
     assert spans(part(bar, [(R, 4)], bar, bar, bar, bar)) == [(1, 1), (3, 6)]
+
+
+QUARTERS = [("C5", 1), ("D5", 1), ("E5", 1), ("F5", 1)]
+ONWARDS = [("A5", 1), ("G5", 1), ("F5", 1), ("E5", 1)]   # new material: no restart of the opening
+
+
+def test_a_lengthened_note_on_a_cadence_ends_the_phrase_without_a_pause():
+    # Bars 1-3 in quarters, a whole note in bar 4, and the melody goes straight on.
+    melody = part(QUARTERS, QUARTERS, QUARTERS, [("G5", 4)], ONWARDS, ONWARDS, ONWARDS, [("C5", 4)])
+
+    assert spans(melody) == [(1, 8)]
+    assert [(phrase.first_measure, phrase.last_measure)
+            for phrase in find_phrases(melody, cadences={(4, 0.0)})] == [(1, 4), (5, 8)]
+
+
+def test_a_cadence_alone_does_not_cut_a_part_that_keeps_moving():
+    accompaniment = part(*[EIGHTHS] * 8)
+    assert [(phrase.first_measure, phrase.last_measure)
+            for phrase in find_phrases(accompaniment, cadences={(4, 0.0)})] == [(1, 8)]

@@ -123,3 +123,22 @@ def test_speed_follows_tempo_changes():
     passages = detect_critical_passages(faster, [finding("SL003", "1-8", "Clarinet")])
     # Only bars 5-8 are fast; the passage still covers the whole phrase they belong to.
     assert [passage["core_range"] for passage in passages] == ["5-8"]
+
+
+def test_critical_passages_use_the_phrases_closed_by_cadences():
+    # Melody in quarters with a long note in bar 4 over an authentic cadence (C major, V - I).
+    quarters = [("C5", 1), ("D5", 1), ("E5", 1), ("F5", 1)]
+
+    def bars(notes_per_bar):
+        return tuple(ScoreMeasure(number, tuple(ScoreNote(p, d, False, sum(x for _, x in notes[:i]))
+                                                 for i, (p, d) in enumerate(notes)), 4.0)
+                     for number, notes in enumerate(notes_per_bar, 1))
+    onwards = [("A5", 1), ("G5", 1), ("F5", 1), ("E5", 1)]   # new material: no restart of the opening
+    melody = ScorePart("Flute", bars([quarters] * 3 + [[("C5", 4)]] + [onwards] * 4))
+    bass = ScorePart("Tuba", bars([[(p, 4)] for p in ["C3", "F2", "G2", "C3", "C3", "F2", "G2", "C3"]]))
+    tenor = ScorePart("Trombone", bars([[(p, 4)] for p in ["E3", "F3", "D3", "E3", "E3", "F3", "D3", "E3"]]))
+    alto = ScorePart("Horn in F", bars([[(p, 4)] for p in ["G3", "A3", "B3", "G3", "G3", "A3", "B3", "G3"]]))
+    score = Score("Cadence", (melody, bass, tenor, alto))
+
+    passages = detect_critical_passages(score, [finding("SL004", "2-3"), finding("SL002", "2-3")])
+    assert ranges(passages) == ["1-4"]
