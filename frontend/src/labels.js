@@ -53,7 +53,14 @@ export const dimensionLabelsEs = {
   range: 'Tesitura', register: 'Registro extremo', intervals: 'Saltos',
   density: 'Densidad de ataques', endurance: 'Continuidad', tempo: 'Tempo'
 };
-const sharedLabels = { unison: 'Unísono', octave: 'Octavas', rhythm: 'Mismo ritmo' };
+const rehearsalGroups = {
+  flutes: ['Flautas', 'Flautas'], double_reeds: ['Dobles cañas', 'D. cañas'], clarinets: ['Clarinetes', 'Clarinetes'],
+  saxophones: ['Saxofones', 'Saxos'], high_brass: ['Metales agudos', 'M. agudos'], low_voices: ['Graves', 'Graves'],
+  percussion: ['Percusión', 'Perc.'], strings_rhythm: ['Cuerda y rítmica', 'Cuerda'], other: ['Otros', 'Otros'],
+};
+const commonKinds = { line: 'Línea común', rhythm: 'Ritmo común' };
+
+export const rehearsalGroupName = group => (rehearsalGroups[group] || rehearsalGroups.other)[0];
 
 function splitPartNumber(instrument) {
   const match = instrument.match(/^(.*)\s+(\d+)$/);
@@ -93,30 +100,35 @@ export function bandIssueText(issue) {
 const measures = (...ranges) => 'c. ' + ranges.map(range => String(range).replace('-', '–')).join(', ');
 const partList = parts => (parts || []).map(part => displayInstrumentName(part)).join(', ');
 
-// Ensemble rehearsal: sectional blocks per common passage, then a tutti to join them.
+// Ensemble rehearsal: who plays the same thing, then subsections, then a tutti to join them.
 export function rehearsalBlockTitle(block) {
   if (block.type === 'tutti') return 'Tutti para juntar · ' + measures(...(block.measure_ranges || []));
-  return 'Seccional · ' + displayFamilyName(block.section) + ' · ' + measures(block.measure_range);
+  if (block.type === 'common') return (commonKinds[block.kind] || commonKinds.rhythm) + ' · ' + measures(block.measure_range);
+  return 'Seccional · ' + rehearsalGroupName(block.group) + ' · ' + measures(block.measure_range);
 }
 
 export function rehearsalBlockDetail(block) {
   const pieces = [block.type === 'tutti' ? 'Toda la banda' : partList(block.parts)];
   if (block.findings?.length) pieces.push(block.findings.map(findingLabel).join(', '));
-  for (const item of block.shared || []) {
-    pieces.push((sharedLabels[item.kind] || item.kind) + ': ' + item.parts.map(part => displayInstrumentName(part)).join(' y ')
-      + (item.measure_range ? ' (' + measures(item.measure_range) + ')' : ''));
-  }
   return pieces.join(' · ');
 }
 
-const calendarLabels = { woodwinds: 'Madera', brass: 'Metal', percussion: 'Perc.', strings: 'Cuerda',
-  rhythm: 'Rítmica', keyboard: 'Teclas', other: 'Otros' };
+// Label of the block in the score viewer title.
+export function blockScoreLabel(block) {
+  if (block.type === 'tutti') return 'Toda la banda';
+  if (block.type === 'common') return commonKinds[block.kind] || commonKinds.rhythm;
+  return rehearsalGroupName(block.group);
+}
 
 // Short name that fits a narrow calendar slot; the full description stays in the aria-label.
-export const calendarLabel = block => (block.type === 'tutti' ? 'Tutti' : calendarLabels[block.section] || displayFamilyName(block.section));
+export function calendarLabel(block) {
+  if (block.type === 'tutti') return 'Tutti';
+  if (block.type === 'common') return block.kind === 'line' ? 'Línea' : 'Ritmo';
+  return (rehearsalGroups[block.group] || rehearsalGroups.other)[1];
+}
 
 export function omittedBlockText(block) {
-  return displayFamilyName(block.section) + ' · ' + measures(block.measure_range) + ' · ' + partList(block.parts);
+  return (block.type === 'common' ? 'Común' : rehearsalGroupName(block.group)) + ' · ' + measures(block.measure_range) + ' · ' + partList(block.parts);
 }
 
 export const uniqueParts = parts => Array.from(new Set(parts || []));

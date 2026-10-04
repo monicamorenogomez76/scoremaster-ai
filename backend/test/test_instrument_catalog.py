@@ -233,3 +233,24 @@ def test_unqualified_guitar_stays_unknown_and_drum_set_stays_in_percussion():
     assert match_instrument_name("Guitar").identity is None
     assert match_instrument_name("Guitarra").identity is None
     assert match_instrument_name("Drumset").identity.section == "percussion"
+
+
+@pytest.mark.parametrize("name, group", [
+    ("Piccolo", "flutes"), ("Flute", "flutes"),
+    ("Oboe", "double_reeds"), ("English Horn", "double_reeds"),
+    ("E♭ Clarinet", "clarinets"), ("B♭ Clarinet", "clarinets"), ("Alto Clarinet", "clarinets"),
+    ("Soprano Saxophone", "saxophones"), ("Alto Sax", "saxophones"), ("Tenor Saxophone", "saxophones"),
+    ("Trumpet", "high_brass"), ("Cornet", "high_brass"), ("Flugelhorn", "high_brass"), ("Horn in F", "high_brass"),
+    # Author's decision: woodwind basses rehearse with the low brass.
+    ("Trombone", "low_voices"), ("Bass Trombone", "low_voices"), ("Euphonium", "low_voices"), ("Tuba", "low_voices"),
+    ("Bassoon", "low_voices"), ("Bass Clarinet", "low_voices"), ("Baritone Saxophone", "low_voices"),
+    ("Timpani", "percussion"), ("Drumset", "percussion"), ("Xylophone", "percussion"),
+    ("Double Bass", "strings_rhythm"), ("Electric Bass", "strings_rhythm"), ("Piano", "strings_rhythm"),
+])
+def test_every_instrument_belongs_to_a_rehearsal_group(name, group):
+    assert match_instrument_name(name).identity.rehearsal_group == group
+
+
+def test_all_catalog_entries_declare_a_rehearsal_group():
+    groups = {"flutes", "double_reeds", "clarinets", "saxophones", "high_brass", "low_voices", "percussion", "strings_rhythm"}
+    assert all(entry.rehearsal_group in groups for entry in catalog_entries())

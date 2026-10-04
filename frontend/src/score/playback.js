@@ -10,6 +10,11 @@ let library;
 const SMPLR_URL = 'https://unpkg.com/smplr@1.1.0/dist/index.mjs';
 // MusyngKite (CC BY-SA 3.0) sounds less synthetic than FluidR3_GM for winds; samples load from its CDN.
 const SOUNDFONT_KIT = 'MusyngKite';
+// Output was measured 10-20 times too quiet (-40 dB RMS): at the default 50 % volume the master
+// gain is 2/sqrt(voices) and a limiter keeps the summed band from clipping.
+const MASTER_GAIN = 4;
+const VELOCITY = 100;
+const masterLevel = (volume, voices) => Math.max(0, Math.min(1, volume)) * MASTER_GAIN / Math.sqrt(Math.max(1, voices));
 
 const programs = {
   0: 'acoustic_grand_piano', 9: 'glockenspiel', 11: 'vibraphone',
@@ -123,7 +128,9 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   if (token !== generation) return null;
   const master = ctx.createGain();
   const limiter = ctx.createDynamicsCompressor();
-  master.gain.value = .5 / Math.sqrt(Math.max(1, tracks.length));
+  limiter.threshold.value = -3; limiter.knee.value = 0; limiter.ratio.value = 20;
+  limiter.attack.value = 0.003; limiter.release.value = 0.25;
+  master.gain.value = masterLevel(.5, tracks.length);
   master.connect(limiter); limiter.connect(ctx.destination);
   const instruments = new Map();
   const drums = percussionPlayer(master);
@@ -192,7 +199,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
       const length = event.duration / speed;
       const release = Math.min(.008, length * .1);
       event.player.start({ note: event.note, time: Math.max(ctx.currentTime, time),
-        duration: Math.max(0, length - release), ampRelease: release, loop: false, velocity: 65 });
+        duration: Math.max(0, length - release), ampRelease: release, loop: false, velocity: VELOCITY });
     }
     if (position >= duration) { playing = false; silence(); onStatus('Reproducción finalizada.'); }
     tell();
@@ -219,7 +226,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
     stop() { playing = false; silence(); position = 0; tell(); onStatus('Detenido.'); },
     seek(value) { const resume = playing; this.pause(); position = Math.max(0, Math.min(duration, value)); tell(); if (resume) this.play(); },
     setSpeed(value) { const resume = playing; this.pause(); speed = Math.max(.25, Math.min(2, value)); if (resume) this.play(); },
-    setVolume(value) { master.gain.value = Math.max(0, Math.min(1, value)) / Math.sqrt(Math.max(1, tracks.length)); },
+    setVolume(value) { master.gain.value = masterLevel(value, tracks.length); },
     dispose() { if (disposed) return; disposed = true; silence(); disposePlayers(); listeners.clear(); }
   };
   activeTransport = transport;

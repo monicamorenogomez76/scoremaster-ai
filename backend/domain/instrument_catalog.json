@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v3",
+ "version": "instrument-catalog-v4",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -17,7 +17,8 @@
     "picc",
     "picc fl"
    ],
-   "sound": "piccolo"
+   "sound": "piccolo",
+   "rehearsal_group": "flutes"
   },
   {
    "id": "flute",
@@ -34,7 +35,8 @@
     "fl",
     "c flute"
    ],
-   "sound": "flute"
+   "sound": "flute",
+   "rehearsal_group": "flutes"
   },
   {
    "id": "flute.alto",
@@ -49,7 +51,8 @@
     "flauta alto",
     "flauto contralto"
    ],
-   "sound": "flute"
+   "sound": "flute",
+   "rehearsal_group": "flutes"
   },
   {
    "id": "oboe",
@@ -64,7 +67,8 @@
     "ob",
     "hautbois"
    ],
-   "sound": "oboe"
+   "sound": "oboe",
+   "rehearsal_group": "double_reeds"
   },
   {
    "id": "english_horn",
@@ -82,7 +86,8 @@
     "eng hn",
     "e hn"
    ],
-   "sound": "english_horn"
+   "sound": "english_horn",
+   "rehearsal_group": "double_reeds"
   },
   {
    "id": "bassoon",
@@ -99,7 +104,8 @@
     "bsn",
     "bn"
    ],
-   "sound": "bassoon"
+   "sound": "bassoon",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "contrabassoon",
@@ -116,7 +122,8 @@
     "contrafagotto",
     "cbsn"
    ],
-   "sound": "bassoon"
+   "sound": "bassoon",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "clarinet.eb",
@@ -137,7 +144,8 @@
     "clarinetto piccolo",
     "eb cl"
    ],
-   "sound": "clarinet"
+   "sound": "clarinet",
+   "rehearsal_group": "clarinets"
   },
   {
    "id": "clarinet.bb",
@@ -162,7 +170,8 @@
     "bb cl",
     "clar"
    ],
-   "sound": "clarinet"
+   "sound": "clarinet",
+   "rehearsal_group": "clarinets"
   },
   {
    "id": "clarinet.a",
@@ -178,7 +187,8 @@
     "clarinete en la",
     "clarinetto in la"
    ],
-   "sound": "clarinet"
+   "sound": "clarinet",
+   "rehearsal_group": "clarinets"
   },
   {
    "id": "clarinet.alto",
@@ -195,7 +205,8 @@
     "clarinetto contralto",
     "alto cl"
    ],
-   "sound": "clarinet"
+   "sound": "clarinet",
+   "rehearsal_group": "clarinets"
   },
   {
    "id": "clarinet.bass",
@@ -214,7 +225,8 @@
     "bass cl",
     "bcl"
    ],
-   "sound": "clarinet"
+   "sound": "clarinet",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "clarinet.contrabass",
@@ -230,7 +242,8 @@
     "clarinete contrabajo",
     "clarinetto contrabbasso"
    ],
-   "sound": "clarinet"
+   "sound": "clarinet",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "saxophone.soprano",
@@ -248,7 +261,8 @@
     "sassofono soprano",
     "s sax"
    ],
-   "sound": "soprano_sax"
+   "sound": "soprano_sax",
+   "rehearsal_group": "saxophones"
   },
   {
    "id": "saxophone.alto",
@@ -268,7 +282,8 @@
     "sassofono contralto",
     "a sax"
    ],
-   "sound": "alto_sax"
+   "sound": "alto_sax",
+   "rehearsal_group": "saxophones"
   },
   {
    "id": "saxophone.tenor",
@@ -287,7 +302,8 @@
     "sassofono tenore",
     "t sax"
    ],
-   "sound": "tenor_sax"
+   "sound": "tenor_sax",
+   "rehearsal_group": "saxophones"
   },
   {
    "id": "saxophone.baritone",
@@ -310,7 +326,8 @@
     "baritone",
     "baritono"
    ],
-   "sound": "baritone_sax"
+   "sound": "baritone_sax",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "horn.f",
@@ -333,7 +350,8 @@
     "hn",
     "hrn"
    ],
-   "sound": "french_horn"
+   "sound": "french_horn",
+   "rehearsal_group": "high_brass"
   },
   {
    "id": "trumpet.bb",
@@ -355,7 +373,8 @@
     "tpt",
     "trp"
    ],
-   "sound": "trumpet"
+   "sound": "trumpet",
+   "rehearsal_group": "high_brass"
   },
   {
    "id": "trumpet.c",
@@ -371,7 +390,8 @@
     "trompeta en do",
     "tromba in do"
    ],
-   "sound": "trumpet"
+   "sound": "trumpet",
+   "rehearsal_group": "high_brass"
   },
   {
    "id": "cornet.bb",
@@ -389,7 +409,8 @@
     "cornetta",
     "cnt"
    ],
-   "sound": "trumpet"
+   "sound": "trumpet",
+   "rehearsal_group": "high_brass"
   },
   {
    "id": "flugelhorn.bb",
@@ -407,7 +428,8 @@
     "flicorno",
     "flghn"
    ],
-   "sound": "trumpet"
+   "sound": "trumpet",
+   "rehearsal_group": "high_brass"
   },
   {
    "id": "trombone.tenor",
@@ -426,7 +448,8 @@
     "tbn",
     "trb"
    ],
-   "sound": "trombone"
+   "sound": "trombone",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "trombone.bass",
@@ -443,7 +466,8 @@
     "b tbn",
     "bass tbn"
    ],
-   "sound": "trombone"
+   "sound": "trombone",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "euphonium",
@@ -460,7 +484,8 @@
     "flicorno basso",
     "euph"
    ],
-   "sound": "tuba"
+   "sound": "tuba",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "baritone_horn",
@@ -474,7 +499,8 @@
     "baritone horn",
     "flicorno baritono"
    ],
-   "sound": "tuba"
+   "sound": "tuba",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "tuba",
@@ -489,7 +515,8 @@
     "bass tuba",
     "tba"
    ],
-   "sound": "tuba"
+   "sound": "tuba",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "sousaphone",
@@ -503,7 +530,8 @@
     "sousaphone",
     "sousafono"
    ],
-   "sound": "tuba"
+   "sound": "tuba",
+   "rehearsal_group": "low_voices"
   },
   {
    "id": "double_bass",
@@ -521,7 +549,8 @@
     "contrabbasso",
     "cb"
    ],
-   "sound": "contrabass"
+   "sound": "contrabass",
+   "rehearsal_group": "strings_rhythm"
   },
   {
    "id": "electric_bass",
@@ -538,7 +567,8 @@
     "5 str electric bass",
     "el bass"
    ],
-   "sound": "electric_bass_finger"
+   "sound": "electric_bass_finger",
+   "rehearsal_group": "strings_rhythm"
   },
   {
    "id": "guitar.electric",
@@ -555,7 +585,8 @@
     "e gtr",
     "el gtr"
    ],
-   "sound": "electric_guitar_clean"
+   "sound": "electric_guitar_clean",
+   "rehearsal_group": "strings_rhythm"
   },
   {
    "id": "guitar.acoustic",
@@ -571,7 +602,8 @@
     "chitarra acustica",
     "ac gtr"
    ],
-   "sound": "acoustic_guitar_nylon"
+   "sound": "acoustic_guitar_nylon",
+   "rehearsal_group": "strings_rhythm"
   },
   {
    "id": "cello",
@@ -587,7 +619,8 @@
     "violonchelo",
     "vc"
    ],
-   "sound": "cello"
+   "sound": "cello",
+   "rehearsal_group": "strings_rhythm"
   },
   {
    "id": "piano",
@@ -602,7 +635,8 @@
     "pianoforte",
     "pno"
    ],
-   "sound": "acoustic_grand_piano"
+   "sound": "acoustic_grand_piano",
+   "rehearsal_group": "strings_rhythm"
   },
   {
    "id": "harp",
@@ -616,7 +650,8 @@
     "harp",
     "arpa"
    ],
-   "sound": "orchestral_harp"
+   "sound": "orchestral_harp",
+   "rehearsal_group": "strings_rhythm"
   },
   {
    "id": "timpani",
@@ -632,7 +667,8 @@
     "timpano",
     "timp"
    ],
-   "sound": "timpani"
+   "sound": "timpani",
+   "rehearsal_group": "percussion"
   },
   {
    "id": "snare_drum",
@@ -651,7 +687,8 @@
     "tamburo",
     "s d"
    ],
-   "sound": null
+   "sound": null,
+   "rehearsal_group": "percussion"
   },
   {
    "id": "bass_drum",
@@ -668,7 +705,8 @@
     "gran cassa",
     "b d"
    ],
-   "sound": null
+   "sound": null,
+   "rehearsal_group": "percussion"
   },
   {
    "id": "crash_cymbals",
@@ -686,7 +724,8 @@
     "platos",
     "piatti"
    ],
-   "sound": null
+   "sound": null,
+   "rehearsal_group": "percussion"
   },
   {
    "id": "suspended_cymbal",
@@ -702,7 +741,8 @@
     "plato suspendido",
     "piatto sospeso"
    ],
-   "sound": null
+   "sound": null,
+   "rehearsal_group": "percussion"
   },
   {
    "id": "drum_set",
@@ -719,7 +759,8 @@
     "drums",
     "bateria"
    ],
-   "sound": null
+   "sound": null,
+   "rehearsal_group": "percussion"
   },
   {
    "id": "tambourine",
@@ -735,7 +776,8 @@
     "tamburello",
     "tamb"
    ],
-   "sound": null
+   "sound": null,
+   "rehearsal_group": "percussion"
   },
   {
    "id": "triangle",
@@ -751,7 +793,8 @@
     "triangolo",
     "trgl"
    ],
-   "sound": null
+   "sound": null,
+   "rehearsal_group": "percussion"
   },
   {
    "id": "glockenspiel",
@@ -769,7 +812,8 @@
     "lira",
     "glock"
    ],
-   "sound": "glockenspiel"
+   "sound": "glockenspiel",
+   "rehearsal_group": "percussion"
   },
   {
    "id": "xylophone",
@@ -784,7 +828,8 @@
     "xilofono",
     "xylo"
    ],
-   "sound": "xylophone"
+   "sound": "xylophone",
+   "rehearsal_group": "percussion"
   },
   {
    "id": "marimba",
@@ -798,7 +843,8 @@
     "marimba",
     "mrb"
    ],
-   "sound": "marimba"
+   "sound": "marimba",
+   "rehearsal_group": "percussion"
   },
   {
    "id": "vibraphone",
@@ -814,7 +860,8 @@
     "vibes",
     "vib"
    ],
-   "sound": "vibraphone"
+   "sound": "vibraphone",
+   "rehearsal_group": "percussion"
   },
   {
    "id": "chimes",
@@ -830,8 +877,10 @@
     "campanas tubulares",
     "campane tubolari"
    ],
-   "sound": "tubular_bells"
+   "sound": "tubular_bells",
+   "rehearsal_group": "percussion"
   }
  ],
- "sound_note": "sound: FluidR3_GM soundfont used for playback; unpitched percussion has none because the player synthesises it"
+ "sound_note": "sound: FluidR3_GM soundfont used for playback; unpitched percussion has none because the player synthesises it",
+ "rehearsal_group_note": "rehearsal_group: subsection for ensemble rehearsal (author's decision 2026-10-04); woodwind basses rehearse with the low brass"
 }

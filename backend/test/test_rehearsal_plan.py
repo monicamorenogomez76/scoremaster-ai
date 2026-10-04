@@ -19,8 +19,8 @@ def measures(pitch, count=24):
     return tuple(ScoreMeasure(number, (ScoreNote(pitch, 4.0),)) for number in range(1, count + 1))
 
 
-def score(*names, metadata=None):
-    return Score("Ensemble", tuple(ScorePart(name, measures("C5"), (metadata or {}).get(name, PartMetadata()))
+def score(*names, metadata=None, count=24):
+    return Score("Ensemble", tuple(ScorePart(name, measures("C5", count), (metadata or {}).get(name, PartMetadata()))
                                    for name in names))
 
 
@@ -31,52 +31,70 @@ def difficulty(*passages):
 
 
 def sectional(plan):
-    return [block for block in plan["segments"] if block["type"] == "sectional"]
+    return [block for block in plan["segments"] if block["type"] in ("sectional", "common")]
 
 
-def test_parts_of_one_section_in_the_same_measures_rehearse_together():
-    plan = build_rehearsal_plan(score("Clarinet 1", "Clarinet 2", "Alto Saxophone"), 60,
-                                difficulty(("Clarinet 1", "1-4", 4), ("Clarinet 2", "2-5", 2), ("Alto Saxophone", "3-4", 2)))
-
-    [block] = sectional(plan)
-    assert block["section"] == "woodwinds"
-    assert block["parts"] == ["Alto Saxophone", "Clarinet 1", "Clarinet 2"]
-    assert block["measure_range"] == "1-5"
-    assert block["findings"] == ["SL003"]
+LINE = ["C3", "D3", "E3", "F3"]
+TENOR_SAX = PartMetadata(transposition=PartTransposition(-2, -1, -1))
 
 
-def test_a_passage_shared_by_several_sections_gets_one_block_per_section_and_is_joined_in_the_tutti():
-    plan = build_rehearsal_plan(score("Clarinet 1", "Trumpet"), 60,
-                                difficulty(("Clarinet 1", "9-12", 2), ("Trumpet", "10-12", 2)))
-
-    assert [(block["section"], block["parts"]) for block in sectional(plan)] == [
-        ("brass", ["Trumpet"]), ("woodwinds", ["Clarinet 1"])]
-    tutti = plan["segments"][-1]
-    assert tutti["type"] == "tutti"
-    assert tutti["measure_ranges"] == ["9-12"]
+def written(name, pitches, metadata=PartMetadata(), count=24):
+    """One bar repeated; the number of pitches fixes the rhythm (4 quarters, 2 halves, 1 whole, 8 eighths)."""
+    duration = 4.0 / len(pitches)
+    return ScorePart(name, tuple(ScoreMeasure(number, tuple(ScoreNote(pitch, duration) for pitch in pitches))
+                                 for number in range(1, count + 1)), metadata)
 
 
-def test_cross_section_shared_material_is_reported_and_joined_in_the_tutti():
-    # Both in B♭: the same written notes sound in unison.
-    plan = build_rehearsal_plan(score("Clarinet 1", "Trumpet", metadata={"Clarinet 1": B_FLAT, "Trumpet": B_FLAT}), 60,
-                                difficulty(("Clarinet 1", "5-6", 2)))
+def blocks(plan, kind):
+    return [block for block in plan["segments"] if block["type"] == kind]
 
-    tutti = plan["segments"][-1]
-    assert {"parts": ["Clarinet 1", "Trumpet"], "kind": "unison", "measure_range": "5-6"} in tutti["shared"]
-    assert tutti["measure_ranges"] == ["5-6"]
+
+def test_who_plays_the_same_line_rehearses_first_then_subsections_with_the_rest():
+    ensemble = Score("Ensemble", (
+        written("Euphonium", LINE), written("Trombone", LINE), written("Tenor Saxophone", ["D4", "E4", "F#4", "G4"], TENOR_SAX),
+        written("Clarinet 1", ["G4", "C5"]), written("Flute", ["C6"]),
+    ))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Euphonium", "1-4", 4), ("Clarinet 1", "1-4", 2), ("Flute", "2-4", 2)))
+
+    assert [(block["type"], block.get("group"), block["parts"]) for block in plan["segments"][:-1]] == [
+        ("common", None, ["Euphonium", "Tenor Saxophone", "Trombone"]),
+        ("sectional", "clarinets", ["Clarinet 1"]),
+        ("sectional", "flutes", ["Flute"]),
+    ]
+    assert blocks(plan, "common")[0]["kind"] == "line"
+    assert blocks(plan, "common")[0]["measure_range"] == "1-4"
+    assert plan["segments"][-1]["type"] == "tutti"
+
+
+def test_subsections_follow_the_rehearsal_groups_of_the_catalog():
+    # Four different rhythms: nobody shares material, so every part rehearses in its subsection.
+    ensemble = Score("Low voices", (written("Bassoon", ["C3", "E3", "G3", "C4"]), written("Tuba", ["C2", "G2"]),
+                                    written("Horn in F", ["G4"]), written("Trumpet", ["C5", "D5", "E5", "F5", "G5", "F5", "E5", "D5"])))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Bassoon", "1-4", 3), ("Tuba", "1-4", 2), ("Horn in F", "1-4", 2),
+                                                         ("Trumpet", "1-4", 2)))
+
+    assert [(block["group"], block["parts"]) for block in blocks(plan, "sectional")] == [
+        ("high_brass", ["Horn in F", "Trumpet"]), ("low_voices", ["Bassoon", "Tuba"])]
+
+
+def test_the_tutti_joins_passages_with_common_lines_or_several_subsections():
+    ensemble = Score("Join", (written("Euphonium", LINE), written("Trombone", LINE), written("Flute", ["C6", "G5"])))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Euphonium", "1-4", 3), ("Flute", "10-12", 1)))
+
+    assert plan["segments"][-1]["measure_ranges"] == ["1-4"]
 
 
 def test_the_tutti_is_always_last():
     plan = build_rehearsal_plan(score("Flute"), 30, difficulty(("Flute", "1-2", 2)))
 
-    assert [block["type"] for block in plan["segments"]] == ["sectional", "tutti"]
+    assert plan["segments"][-1]["type"] == "tutti"
 
 
 @pytest.mark.parametrize("minutes", [10, 15, 30, 60, 90])
 def test_the_plan_never_exceeds_the_available_time(minutes):
     passages = [("Clarinet 1" if index % 2 else "Tuba", "{}-{}".format(index * 20 + 1, index * 20 + 4), 10 - index)
                 for index in range(8)]
-    plan = build_rehearsal_plan(score("Clarinet 1", "Tuba"), minutes, difficulty(*passages))
+    plan = build_rehearsal_plan(score("Clarinet 1", "Tuba", count=160), minutes, difficulty(*passages))
 
     planned = sum(block["minutes"] for block in plan["segments"])
     assert planned <= minutes
@@ -89,17 +107,18 @@ def test_the_plan_never_exceeds_the_available_time(minutes):
 
 def test_higher_priority_passages_are_kept_when_time_is_short():
     # 10 minutes: 5 for the final tutti and room for a single 5-minute sectional block.
-    plan = build_rehearsal_plan(score("Flute", "Tuba"), 10, difficulty(("Flute", "1-2", 1), ("Tuba", "30-31", 9)))
+    plan = build_rehearsal_plan(score("Flute", "Tuba", count=40), 10, difficulty(("Flute", "1-2", 1), ("Tuba", "30-31", 9)))
 
-    assert [block["parts"] for block in sectional(plan)] == [["Tuba"]]
-    assert plan["omitted"][0]["parts"] == ["Flute"]
+    # Both parts hold the same whole notes, so the Tuba passage rehearses them together.
+    assert [block["measure_range"] for block in sectional(plan)] == ["30-31"]
+    assert [item["measure_range"] for item in plan["omitted"]] == ["1-2"]
 
 
 def test_without_critical_passages_the_plan_is_a_single_tutti_reading():
     plan = build_rehearsal_plan(score("Flute", "Tuba"), 45, difficulty())
 
-    assert plan["segments"] == [{"type": "tutti", "section": None, "parts": ["Flute", "Tuba"], "measure_ranges": ["1-24"],
-                                 "minutes": 45, "findings": [], "shared": []}]
+    assert plan["segments"] == [{"type": "tutti", "group": None, "parts": ["Flute", "Tuba"], "measure_ranges": ["1-24"],
+                                 "minutes": 45, "findings": []}]
     assert plan["omitted"] == []
 
 
@@ -128,11 +147,33 @@ def test_analyze_returns_the_ensemble_plan():
     assert plan["planned_minutes"] <= 30
 
 
-def test_the_tutti_says_where_each_shared_material_is_and_lists_it_once():
-    tutti_metadata = {"Clarinet 1": B_FLAT, "Trumpet": B_FLAT}
-    plan = build_rehearsal_plan(score("Clarinet 1", "Trumpet", metadata=tutti_metadata), 60,
-                                difficulty(("Clarinet 1", "5-6", 3), ("Trumpet", "20-21", 2)))
+def phrases(name, playing, count=30):
+    """A part that plays quarters only in the given measures and rests elsewhere."""
+    def bar(number):
+        if number in playing:
+            return tuple(ScoreNote(pitch, 1.0) for pitch in ["C5", "D5", "E5", "F5"])
+        return (ScoreNote(None, 4.0, True),)
+    return ScorePart(name, tuple(ScoreMeasure(number, bar(number)) for number in range(1, count + 1)))
 
-    shared = plan["segments"][-1]["shared"]
-    assert shared == [{"parts": ["Clarinet 1", "Trumpet"], "kind": "unison", "measure_range": "5-6"},
-                      {"parts": ["Clarinet 1", "Trumpet"], "kind": "unison", "measure_range": "20-21"}]
+
+def test_blocks_start_and_end_where_their_instruments_play():
+    # The trumpet passage is c. 1-20, but the trumpets only play in c. 10-14.
+    ensemble = Score("Rests", (phrases("Trumpet", range(10, 15)),))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Trumpet", "1-20", 3)))
+
+    assert [block["measure_range"] for block in sectional(plan)] == ["10-14"]
+    assert plan["segments"][-1]["measure_ranges"] == ["10-14"]
+
+
+def test_a_long_silence_inside_a_block_splits_it_into_phrases():
+    ensemble = Score("Phrases", (phrases("Trumpet", {1, 2, 15, 16}),))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Trumpet", "1-16", 3)))
+
+    assert [block["measure_range"] for block in sectional(plan)] == ["1-2", "15-16"]
+
+
+def test_short_rests_do_not_split_a_block():
+    ensemble = Score("Breath", (phrases("Trumpet", {1, 2, 5, 6}),))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Trumpet", "1-6", 3)))
+
+    assert [block["measure_range"] for block in sectional(plan)] == ["1-6"]

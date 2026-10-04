@@ -21,33 +21,39 @@ Difficulty != Criticality != RehearsalPriority
 
 ### Ensayo de conjunto y pasajes comunes
 
-Decisión de la autora (2026-10-04): los ensayos son de conjunto. La prioridad no se calcula
-por instrumento aislado, sino por **pasaje común**:
+Decisiones de la autora (2026-10-04): los ensayos son de conjunto y un **pasaje común** es el que
+varias partes tocan igual en **estructura**, cada una en su tonalidad: por ejemplo, bombardino,
+trombón y saxo tenor con la misma línea. Cuenta como «lo mismo»:
 
-- **Coincidencia en compases**: los mismos compases son difíciles para varias partes a la vez.
-- **Material compartido**: partes que tocan lo mismo (unísono u octavas en altura real, o el
-  mismo ritmo), aunque sean de familias distintas. La altura escrita se convierte a real con la
-  transposición declarada en el MusicXML.
+- **Misma línea**: mismo ritmo y mismos intervalos melódicos, en cualquier tonalidad u octava
+  (altura real con la transposición del MusicXML); tolera pequeñas diferencias.
+- **Mismo ritmo** con notas distintas.
 
-Organización del ensayo:
+Organización de cada pasaje (los pasajes se ordenan por prioridad):
 
-- **Bloques seccionales**, uno por sección (madera, metal, percusión, cuerda, sección rítmica,
-  teclas) y pasaje común, con las partes implicadas, los compases y los motivos.
-- **Un tutti final para juntar** los pasajes que implican a varias secciones o que comparten
-  material entre secciones.
-- La suma de bloques no supera el tiempo disponible; si no caben todos, se descartan los de
-  menor prioridad indicándolo. Sin pasajes, el plan es un único tutti.
+1. **Líneas comunes**: un bloque por grupo de partes que tocan lo mismo, aunque mezclen familias;
+   incluye a todos los que tocan la línea aunque solo una parte se haya marcado como difícil.
+2. **Subsecciones** con las partes difíciles restantes: flautas, dobles cañas, clarinetes,
+   saxofones, metales agudos (trompetas, cornetas, fliscornos, trompas), **graves** (trombones,
+   bombardino, tuba, más fagot, clarinete bajo y saxo barítono), percusión, cuerda y rítmica.
+3. **Un tutti final** que junta los pasajes con líneas comunes o con varias subsecciones.
 
-Implementación (paso 15): `backend/analyzers/rehearsal_passages.py` agrupa los pasajes críticos
-desde el de mayor prioridad; absorbe siempre los contenidos en él y solo crece mientras el pasaje
-no supere 16 compases. El material compartido compara cada parte crítica con todas las demás en
-altura real. `backend/analyzers/rehearsal_plan.py` reserva el 25 % (mínimo 5 min) para el tutti y
-reparte el resto en proporción a la prioridad con un mínimo de 5 min por bloque. Limitación: los
-pasajes muy largos vienen del detector de criticidad actual (paso 14 pendiente). El planificador
-anterior queda congelado en `evaluation/legacy_rehearsal.py` para el baseline.
+Cada bloque abarca solo los compases en que tocan sus instrumentos: se recortan los silencios
+iniciales y finales, y un silencio de una frase completa (8 compases) lo divide en dos bloques.
 
-La vista del plan incluye un calendario: hora de inicio, bloques proporcionales a sus minutos y,
-al pulsar uno, la partitura de esos compases con solo los instrumentos implicados y su audio.
+La suma de bloques no supera el tiempo disponible; si no caben todos, se descartan los de menor
+prioridad indicándolo. Sin pasajes, el plan es un único tutti.
+
+Implementación: `backend/analyzers/rehearsal_passages.py` agrupa los pasajes críticos solapados
+(absorbe siempre los contenidos y limita el crecimiento a 16 compases) y `find_common_lines`
+compara compás a compás todas las partes: comparten material si coinciden en al menos el 75 % de
+los compases en que tocan; es «misma línea» si además el 85 % de los intervalos de cada compás
+coinciden (las notas sostenidas solo cuentan como ritmo). La subsección sale de
+`rehearsal_group` del catálogo. `backend/analyzers/rehearsal_plan.py` reserva el 25 % (mínimo
+5 min) para el tutti y reparte el resto en proporción a la prioridad (mínimo 5 min por bloque).
+La vista incluye un calendario interactivo que abre la partitura de cada bloque con sus
+instrumentos. Limitación: los pasajes muy largos vienen del detector de criticidad actual
+(paso 14 pendiente). El planificador anterior queda congelado en `evaluation/legacy_rehearsal.py`.
 
 ---
 
