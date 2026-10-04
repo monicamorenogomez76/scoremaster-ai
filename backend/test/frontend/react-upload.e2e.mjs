@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { csrfToken, login } from './login.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
@@ -15,7 +16,7 @@ const select = async () => {
 };
 try {
   await page.goto(url);
-  await page.locator('#enter-demo').click();
+  await login(page);
   await page.locator('[data-view-target=analyze]').click();
   await select();
   await page.route('**/analyze', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'No se pudo guardar el análisis.' }) }));
@@ -35,7 +36,7 @@ try {
   const response = await page.request.post(url + '/analyze', { multipart: {
     file: { name: 'synthetic.musicxml', mimeType: 'application/xml', buffer: fixture },
     band_profile: '{}', total_minutes: '60',
-  } });
+  }, headers: { 'X-CSRF-Token': await csrfToken(page, url) } });
   assert.equal(response.status(), 200);
   const saved = await response.json();
   let release, started;

@@ -1,6 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { authConfig, register, signIn } from './api.js';
 
-export function LoginScreen({ hidden, onEnter }) {
+export function LoginScreen({ hidden, onSignedIn }) {
+  const [mode, setMode] = useState('login');
+  const [config, setConfig] = useState({});
+  const [form, setForm] = useState({ email: '', password: '', name: '' });
+  const [state, setState] = useState({ busy: false, error: '' });
+  useEffect(() => { let current = true; authConfig().then(value => { if (current) setConfig(value); }); return () => { current = false; }; }, []);
+  const creating = mode === 'register';
+  const update = field => event => setForm(previous => ({ ...previous, [field]: event.target.value }));
+
+  const submit = async event => {
+    event.preventDefault();
+    setState({ busy: true, error: '' });
+    try {
+      const user = creating ? await register(form.email, form.password, form.name) : await signIn(form.email, form.password);
+      setForm(previous => ({ ...previous, password: '' }));
+      setState({ busy: false, error: '' });
+      onSignedIn(user);
+    } catch (error) {
+      setState({ busy: false, error: error.message });
+    }
+  };
+
   return <section id="login-screen" className="login-screen" hidden={hidden}>
     <div className="login-brand">
       <div className="login-brand-mark"><img className="brand-logo" src="/static/brand.svg" alt="" width="44" height="44" /><span>ScoreMaster</span></div>
@@ -12,13 +34,26 @@ export function LoginScreen({ hidden, onEnter }) {
       <div className="login-brand-meta"><span>ScoreLint</span><span>BandFit</span><span>RehearsalAI</span></div>
     </div>
     <div className="login-panel">
-      <div className="login-card">
-        <p className="eyebrow">Acceso de demostración</p>
-        <h2>Bienvenida</h2>
-        <p>Explora el análisis musical determinista y sus herramientas de ensayo.</p>
-        <button id="enter-demo" className="login-demo-button" type="button" onClick={onEnter}>Entrar en modo demo</button>
-        <div className="login-note">Esta demo no usa cuentas reales. La plantilla solo se conserva mientras dure la sesión.</div>
-      </div>
+      <form className="login-card" onSubmit={submit} noValidate>
+        <p className="eyebrow">{creating ? 'Nueva cuenta' : 'Acceso'}</p>
+        <h2>{creating ? 'Crea tu cuenta' : 'Bienvenida'}</h2>
+        {creating && <label className="login-field">Nombre
+          <input id="login-name" autoComplete="name" maxLength={100} value={form.name} onChange={update('name')} /></label>}
+        <label className="login-field">Email
+          <input id="login-email" type="email" autoComplete="email" required maxLength={254} value={form.email} onChange={update('email')} /></label>
+        <label className="login-field">Contraseña
+          <input id="login-password" type="password" required minLength={creating ? 10 : undefined} maxLength={256}
+            autoComplete={creating ? 'new-password' : 'current-password'} value={form.password} onChange={update('password')} /></label>
+        {creating && <p className="result-supporting">Al menos 10 caracteres.</p>}
+        {state.error && <p id="login-error" className="login-error" role="alert">{state.error}</p>}
+        <button id="login-submit" className="login-demo-button" type="submit" disabled={state.busy}>
+          {state.busy ? 'Un momento…' : creating ? 'Crear cuenta' : 'Entrar'}</button>
+        {config.google_enabled && <a id="login-google" className="login-google" href="/auth/google/start">Entrar con Google</a>}
+        <button id="login-mode" className="login-switch" type="button"
+          onClick={() => { setMode(creating ? 'login' : 'register'); setState({ busy: false, error: '' }); }}>
+          {creating ? 'Ya tengo cuenta' : 'Crear una cuenta'}</button>
+        {config.demo_email && <div className="login-note">Usuario de prueba: <strong>{config.demo_email}</strong>. La contraseña está en el README.</div>}
+      </form>
     </div>
   </section>;
 }

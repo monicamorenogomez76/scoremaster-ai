@@ -16,7 +16,7 @@ const views = [
   ['videos', 'Vídeos', 'M4 5h16v14H4zM10 9l5 3-5 3z'],
 ];
 
-export function AppShell({ hidden, view, onNavigate, onSignOut, upload, analysis, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onConfirmInstruments, onOpenPassage, scoreViewer }) {
+export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, analysis, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onConfirmInstruments, onOpenPassage, scoreViewer }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = analysis?.data;
   const go = name => { setMenuOpen(false); onNavigate(name); };
@@ -33,7 +33,7 @@ export function AppShell({ hidden, view, onNavigate, onSignOut, upload, analysis
       </nav>
       <div className="sidebar-bottom">
         <div className="demo-identity"><strong>Sesión de demo</strong><span>Plantilla temporal · análisis guardados</span></div>
-        <button id="sign-out" className="sign-out" type="button" onClick={onSignOut}>Salir de la demo</button>
+        <button id="sign-out" className="sign-out" type="button" onClick={onSignOut}>Cerrar sesión</button>
       </div>
     </aside>
 
@@ -42,7 +42,7 @@ export function AppShell({ hidden, view, onNavigate, onSignOut, upload, analysis
         <button id="mobile-menu-button" className="mobile-menu-button" type="button" aria-label="Abrir menú"
           aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>Menú</button>
         <p id="current-page-title" className="topbar-title">{(views.find(([name]) => name === view) || views[0])[1]}</p>
-        <span className="topbar-meta">Modo demo</span>
+        <span id="current-user" className="topbar-meta">{user?.display_name || user?.email || ''}</span>
       </header>
       <main className="workspace">
         <OverviewView active={view} data={data} onNavigate={go} />

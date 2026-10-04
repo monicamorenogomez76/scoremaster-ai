@@ -31,3 +31,27 @@ def postgres_engine():
             connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
         admin.dispose()
 
+
+
+def pytest_configure(config):
+    config.addinivalue_line('markers', 'real_auth: use the real session and CSRF checks instead of the test user')
+
+
+TEST_USER_EMAIL = 'test@scoremaster.local'
+
+
+@pytest.fixture(autouse=True)
+def signed_in_test_user(request):
+    """Endpoints that need a session see a fixed test user, unless the test checks real authentication."""
+    if request.node.get_closest_marker('real_auth'):
+        yield
+        return
+    from backend.app.dependencies import authenticated_user
+    from backend.app.main import app
+    from backend.application.accounts import User
+    user = User(uuid4(), TEST_USER_EMAIL, 'Test')
+    app.dependency_overrides[authenticated_user] = lambda: user
+    try:
+        yield user
+    finally:
+        app.dependency_overrides.pop(authenticated_user, None)

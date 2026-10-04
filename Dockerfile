@@ -17,4 +17,5 @@ COPY --from=frontend /app/backend/app/static/frontend ./backend/app/static/front
 COPY migrations ./migrations
 COPY alembic.ini ./alembic.ini
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Migrate, create the demo user when configured, then serve.
+CMD ["sh", "-c", "python -m alembic upgrade head && python -m backend.app.seed_demo && exec uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"]

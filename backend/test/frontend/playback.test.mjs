@@ -19,6 +19,8 @@ function harness() {
   const scope = { exports: {}, withRecordings, window: { AudioContext: function () { return audio; } },
     FormData: class { append(key, value) { formFields.push([key, value]); } }, AbortController,
     fetch: async () => ({ ok: true, json: async () => current.data }),
+    // playback.js calls the API through api.js; the test answers directly.
+    apiFetch: async () => ({ ok: true, json: async () => current.data }),
     setTimeout: () => 1, clearTimeout() {},
     setInterval: (callback) => { callbacks.add(callback); return callback; },
     clearInterval: (callback) => callbacks.delete(callback),

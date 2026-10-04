@@ -8,7 +8,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const banks = readFileSync(new URL('../../../frontend/src/score/sample-banks.js', import.meta.url), 'utf8').replace(/export /g, '');
 const browser = await chromium.launch();
 try {
-  const page = await browser.newPage();
+  // The sample check injects a script, which the application's CSP rightly forbids.
+  const page = await browser.newPage({ bypassCSP: true });
   await page.goto(process.env.SCOREMASTER_URL || 'http://127.0.0.1:8006');
   await page.addScriptTag({ content: banks + '\nwindow.recordedPreset = recordedPreset;' });
   const level = await page.evaluate(async () => {

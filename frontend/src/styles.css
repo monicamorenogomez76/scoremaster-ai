@@ -511,3 +511,11 @@ input[type=range] { accent-color: var(--primary); }
 .calendar-slot--other { --slot: #475569; }
 .calendar-slot--tutti { --slot: #111827; }
 @media (max-width: 640px) { .calendar-track { flex-direction: column; } .calendar-slot { flex-grow: 0 !important; } }
+
+/* Sign-in form */
+.login-field { display: grid; gap: 6px; margin-top: 14px; font-size: .88rem; font-weight: 600; }
+.login-field input { padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; }
+.login-error { margin: 12px 0 0; color: #b42318; font-size: .88rem; }
+.login-demo-button { width: 100%; }
+.login-google { display: block; margin-top: 10px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; color: inherit; text-align: center; text-decoration: none; }
+.login-switch { margin-top: 12px; padding: 6px 0; border: 0; background: none; color: var(--primary); cursor: pointer; }

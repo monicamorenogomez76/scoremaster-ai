@@ -1,0 +1,28 @@
+# Seguridad (OWASP)
+
+Medidas aplicadas en el MVP y ampliaciones pendientes. Referencias: OWASP Top 10 y las guías de
+la skill `security-best-practices` para FastAPI y React.
+
+## Aplicadas
+
+| Riesgo OWASP | Medida | Dónde |
+|---|---|---|
+| A07 Fallos de identificación y autenticación | Contraseñas con Argon2id; mínimo 10 caracteres; el mismo error y el mismo coste para un email desconocido y una contraseña errónea; 5 intentos fallidos por email y dirección cada 15 minutos | `backend/application/auth.py` |
+| A07 Sesiones | Token aleatorio de 256 bits en cookie `HttpOnly`, `SameSite=Lax` y `Secure` en producción; la base guarda solo su SHA-256; caducidad de 7 días; cierre de sesión en servidor | `auth.py`, `backend/app/auth_routes.py` |
+| A01 Control de acceso | Las rutas de análisis, audio, notación y vídeos exigen sesión (`authenticated_user`); la autorización se decide en el servidor | `backend/app/dependencies.py`, `main.py` |
+| CSRF | Token por sesión en la cabecera `X-CSRF-Token` para toda petición que cambia datos, y rechazo de peticiones con `Origin` de otro sitio | `dependencies.py`, middleware `security` |
+| Google (opcional) | OIDC con `state` y PKCE S256; ID token verificado (firma, emisor y audiencia); un email no verificado nunca se vincula a una cuenta existente | `auth_routes.py` |
+| A03 Inyección | SQLAlchemy con consultas parametrizadas; el parser rechaza `<!ENTITY>`; sin ejecución de comandos | `infrastructure/`, `main.py` |
+| A04/A05 Diseño y configuración | Subidas de 8 MB como máximo y 20 MB descomprimidas; parámetros acotados (`band_profile`, minutos, confirmaciones); documentación interactiva de la API desactivada con `APP_ENV=production` | `main.py` |
+| XSS y cabeceras | CSP restringida a los CDN del visor, el audio y los vídeos (`script-src 'self' cdn.jsdelivr.net unpkg.com`), `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, `X-Frame-Options`; React escapa el contenido | middleware `security` |
+| A09 Registro | Eventos de registro, login correcto o fallido, Google y logout en `audit_events`, sin contraseñas ni tokens | `account_repository.py` |
+| Secretos | Variables de entorno; `.env` fuera del repositorio; credenciales de prueba solo para la demo local | `.env.example`, `docker-compose.yml` |
+
+## Pendientes (ampliación futura)
+
+- Límite de intentos compartido entre procesos (hoy en memoria, válido con un solo proceso).
+- Verificación de email y recuperación de contraseña con un servidor de correo.
+- Roles (por ejemplo, director y músico) y compartir datos entre usuarios.
+- HTTPS y HSTS en el despliegue, PostgreSQL gestionado con TLS, copias de seguridad.
+- Revisión automática de dependencias en CI (pip-audit, npm audit).
+- `style-src 'unsafe-inline'` en la CSP, que hoy necesitan el visor y React.

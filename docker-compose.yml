@@ -22,6 +22,14 @@ services:
     environment:
       PYTHONUNBUFFERED: "1"
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-scoremaster}:${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-scoremaster}
+      # Test credentials published in the README; change them outside a local demo.
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@scoremaster.local}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-scoremaster-demo}
+      # Google sign-in stays disabled unless both values are set.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

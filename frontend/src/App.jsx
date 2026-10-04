@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { currentUser, onUnauthorized, signOut } from './api.js';
 import { AppShell } from './AppShell.jsx';
 import { LoginScreen } from './LoginScreen.jsx';
 import { initialBandDraft, readBandProfile } from './labels.js';
@@ -7,17 +8,9 @@ import { filterMusicXmlPassage } from './score/musicxml-passage.js';
 import { PassageDialog } from './score/PassageDialog.jsx';
 import { useScoreAnalysis } from './useScoreAnalysis.js';
 
-const SESSION_KEY = 'scoremaster-demo-session';
-// The demo session is a local convenience, not authentication; storage may be unavailable.
-function readDemoSession() {
-  try { return sessionStorage.getItem(SESSION_KEY) === 'active'; } catch { return false; }
-}
-function writeDemoSession(active) {
-  try { if (active) sessionStorage.setItem(SESSION_KEY, 'active'); else sessionStorage.removeItem(SESSION_KEY); } catch { /* session stays in memory */ }
-}
-
 export function App({ session }) {
-  const [signedIn, setSignedIn] = useState(readDemoSession);
+  // undefined while the session is checked, null when nobody is signed in.
+  const [user, setUser] = useState(undefined);
   const [view, setView] = useState('overview');
   // revision changes with every successful analysis so explorers restart from the top.
   const [analysis, setAnalysis] = useState(null);
@@ -74,12 +67,19 @@ export function App({ session }) {
     return session.getFile() ? upload.recalculate(next) : navigate('analyze');
   };
 
-  const enterDemo = () => { writeDemoSession(true); setSignedIn(true); navigate('overview'); };
-  const leaveDemo = () => { writeDemoSession(false); setSignedIn(false); };
+  useEffect(() => {
+    let current = true;
+    currentUser().then(found => { if (current) setUser(found); }).catch(() => { if (current) setUser(null); });
+    const stop = onUnauthorized(() => setUser(null));
+    return () => { current = false; stop(); };
+  }, []);
+  const signedIn = Boolean(user);
+  const enter = found => { setUser(found); navigate('overview'); };
+  const leave = async () => { await signOut().catch(() => {}); setUser(null); upload.reset(); };
 
   return <>
-    <LoginScreen hidden={signedIn} onEnter={enterDemo} />
-    <AppShell hidden={!signedIn} view={view} onNavigate={navigate} onSignOut={leaveDemo}
+    <LoginScreen hidden={signedIn || user === undefined} onSignedIn={enter} />
+    <AppShell hidden={!signedIn} user={user} view={view} onNavigate={navigate} onSignOut={leave}
       upload={upload} analysis={analysis} bandDraft={bandDraft} onBandDraftChange={setBandDraft}
       minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onConfirmInstruments={confirmInstruments} onOpenPassage={workspace.openPassage}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />

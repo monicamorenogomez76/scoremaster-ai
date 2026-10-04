@@ -60,3 +60,8 @@ def test_the_catalog_lists_identities_for_the_confirmation_menu():
     entries = response.json()["instruments"]
     assert {"canonical_id": "clarinet.bb", "label_es": "Clarinete en Si bemol", "section": "woodwinds"} in entries
     assert response.json()["percussion_key"] == "percussion"
+
+
+@pytest.mark.parametrize("profile", ['{"clarinet.bb": "muchos"}', '{"clarinet.bb": -1}', '{"clarinet.bb": 100000}', "[]"])
+def test_band_profiles_must_be_musician_counts(saved, profile):
+    assert analyze(band_profile=profile).status_code == 400

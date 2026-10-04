@@ -1,6 +1,7 @@
 from alembic import context
 
 from backend.infrastructure.analysis_repository import Base
+import backend.infrastructure.account_repository  # noqa: F401  (registers the account tables)
 from backend.infrastructure.database import database_engine
 
 config = context.config

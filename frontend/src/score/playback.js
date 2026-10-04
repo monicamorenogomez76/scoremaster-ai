@@ -1,4 +1,5 @@
 // Sampled solo playback. The MusicXML remains on our server/browser only.
+import { apiFetch } from '../api.js';
 import { recordedPreset } from './sample-banks.js';
 
 let context;
@@ -111,7 +112,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
     const request = pendingRequest;
     const timeout = setTimeout(() => request.abort(), 60000);
     try {
-      const response = await fetch('/playback', { method: 'POST', body, signal: request.signal });
+      const response = await apiFetch('/playback', { method: 'POST', body, signal: request.signal });
       if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
       data = await response.json();
       if (!passage) wholeScoreCache.set(file, data);
