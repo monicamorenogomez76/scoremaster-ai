@@ -79,7 +79,7 @@ try {
   assert.equal(await view('rehearsal').isVisible(), true);
   assert.equal(await page.getByLabel('Músicos para Clarinete').inputValue(), '0', 'rehearsal keeps the band template');
   const blocks = await page.locator('#rehearsal-content .rehearsal-block-title').allTextContents();
-  assert.match(blocks[0], /^Seccional · Viento madera · c\. 1/);
+  assert.match(blocks[0], /^Seccional · Clarinetes · c\. 1/);
   assert.match(blocks.at(-1), /^Tutti para juntar/);
   assert.match(await page.locator('#rehearsal-content').textContent(), /Planificado: \d+ de 90 minutos/);
   console.log('PASS: rehearsal duration recalculates the plan with sectional blocks and a final tutti');
@@ -87,11 +87,11 @@ try {
   await page.locator('#rehearsal-start').fill('18:30');
   const calendar = page.locator('.rehearsal-calendar .calendar-block');
   assert.ok(await calendar.count() >= 2, 'one calendar block per rehearsal block');
-  assert.match(await calendar.first().getAttribute('aria-label'), /^18:30–\d\d:\d\d · Seccional · Viento madera · c\. 1/);
+  assert.match(await calendar.first().getAttribute('aria-label'), /^18:30–\d\d:\d\d · Seccional · Clarinetes · c\. 1/);
   await calendar.first().click();
   await page.waitForFunction(() => document.querySelector('#notation-score svg'));
   assert.deepEqual(await page.evaluate(() => window.scoremasterWorkspace.getPassage().instruments), ['Clarinet']);
-  assert.match(await page.locator('#notation-title').textContent(), /^Viento madera · compases 1/);
+  assert.match(await page.locator('#notation-title').textContent(), /^Clarinetes · compases 1/);
   await page.locator('#notation-close').click();
   console.log('PASS: the rehearsal calendar opens the score at the block with its instruments');
 

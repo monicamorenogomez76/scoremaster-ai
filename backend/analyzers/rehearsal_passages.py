@@ -28,9 +28,10 @@ class CommonPassage:
 
 
 @dataclass(frozen=True)
-class SharedMaterial:
-    parts: tuple[str, str]
-    kind: str  # "unison", "octave" or "rhythm"
+class CommonLine:
+    """Parts that play the same thing in a passage: the same line or only the same rhythm."""
+    parts: tuple[str, ...]
+    kind: str  # "line" or "rhythm"
 
 
 def _bounds(measure_range: str) -> tuple[int, int]:
@@ -66,42 +67,80 @@ def group_common_passages(critical_passages: list[dict]) -> list[CommonPassage]:
     return passages
 
 
-def _events(part: ScorePart, first: int, last: int) -> list[tuple[float, int | None, bool]]:
-    """(duration, sounding MIDI or None, is_rest) for every event in the measure window."""
+# Author's decision (2026-10-04): parts play "the same" when they share the line (same rhythm
+# and melodic intervals, in any key or octave) or only the rhythm.
+LINE_INTERVAL_SHARE = 0.85   # within a measure, share of equal melodic intervals for "same line"
+SHARED_MEASURE_SHARE = 0.75  # share of the measures where either part plays that must coincide
+
+
+def _measures(part: ScorePart, first: int, last: int) -> dict[int, list[tuple[float, int | None, bool]]]:
+    """(duration, sounding MIDI or None, is_rest) per measure, using the declared transposition."""
     transposition = part.metadata.transposition
     shift = transposition.chromatic + 12 * transposition.octave_change if transposition else 0
-    events = []
-    for measure in part.measures:
-        if first <= measure.number <= last:
-            for note in measure.notes:
-                sounding = None if note.is_rest or note.pitch is None else m21_pitch.Pitch(note.pitch).midi + shift
-                events.append((note.duration_quarters, sounding, note.is_rest))
-    return events
+    return {measure.number: [(round(note.duration_quarters, 4),
+                              None if note.is_rest or note.pitch is None else m21_pitch.Pitch(note.pitch).midi + shift,
+                              note.is_rest) for note in measure.notes]
+            for measure in part.measures if first <= measure.number <= last}
 
 
-def _shared_kind(left, right) -> str | None:
-    if not left or [(d, rest) for d, _, rest in left] != [(d, rest) for d, _, rest in right]:
+def _plays(events) -> bool:
+    return any(not rest for _, _, rest in events)
+
+
+def _measure_kind(left, right) -> str | None:
+    if not _plays(left) or [(d, rest) for d, _, rest in left] != [(d, rest) for d, _, rest in right]:
         return None
-    played = [(a, b) for (_, a, rest), (_, b, _) in zip(left, right) if not rest]
-    if len(played) < 2:
-        return None
-    if all(a is not None and a == b for a, b in played):
-        return "unison"
-    if all(a is not None and b is not None for a, b in played) and len({a - b for a, b in played}) == 1 \
-            and (played[0][0] - played[0][1]) % 12 == 0:
-        return "octave"
+    pitches = [(a, b) for (_, a, rest), (_, b, _) in zip(left, right) if not rest]
+    if len(pitches) >= 2 and all(a is not None and b is not None for a, b in pitches):
+        intervals = [(a2 - a1, b2 - b1) for (a1, b1), (a2, b2) in zip(pitches, pitches[1:])]
+        if sum(1 for x, y in intervals if x == y) / len(intervals) >= LINE_INTERVAL_SHARE:
+            return "line"
     return "rhythm"
 
 
-def find_shared_material(score: Score, parts: Iterable[str], first: int, last: int) -> tuple[SharedMaterial, ...]:
-    """Compare each listed part with every other part of the score in measures first..last."""
-    events = {part.name: _events(part, first, last) for part in score.parts}
-    found = set()
-    for name in parts:
-        for other in events:
-            if other == name or name not in events:
-                continue
-            kind = _shared_kind(events[name], events[other])
+def _pair_kind(left: dict, right: dict) -> str | None:
+    active = [number for number in sorted(set(left) | set(right))
+              if _plays(left.get(number, [])) or _plays(right.get(number, []))]
+    if not active:
+        return None
+    kinds = [_measure_kind(left.get(number, []), right.get(number, [])) for number in active]
+    if sum(1 for kind in kinds if kind) / len(active) < SHARED_MEASURE_SHARE:
+        return None
+    return "line" if kinds.count("line") / len(active) >= SHARED_MEASURE_SHARE else "rhythm"
+
+
+def find_common_lines(score: Score, critical_parts: Iterable[str], first: int, last: int) -> list[CommonLine]:
+    """Groups of parts that play the same thing in measures first..last and include a critical part.
+
+    Every part of the score is compared, so a line gathers everyone who plays it even if only one
+    of them was flagged as difficult. A group is a "line" only when all its pairs share the line.
+    """
+    measures = {part.name: _measures(part, first, last) for part in score.parts}
+    names = [name for name, bars in measures.items() if any(_plays(events) for events in bars.values())]
+    parent = {name: name for name in names}
+
+    def root(name):
+        while parent[name] != name:
+            parent[name] = parent[parent[name]]
+            name = parent[name]
+        return name
+
+    edges = {}
+    for index, left in enumerate(names):
+        for right in names[index + 1:]:
+            kind = _pair_kind(measures[left], measures[right])
             if kind:
-                found.add(SharedMaterial(tuple(sorted((name, other))), kind))
-    return tuple(sorted(found, key=lambda shared: (shared.parts, shared.kind)))
+                edges[(left, right)] = kind
+                parent[root(left)] = root(right)
+    groups: dict[str, list[str]] = {}
+    for name in names:
+        groups.setdefault(root(name), []).append(name)
+    critical = set(critical_parts)
+    lines = []
+    for members in groups.values():
+        if len(members) < 2 or not critical & set(members):
+            continue
+        member_set = set(members)
+        kinds = [kind for (left, right), kind in edges.items() if left in member_set and right in member_set]
+        lines.append(CommonLine(tuple(sorted(members)), "line" if all(kind == "line" for kind in kinds) else "rhythm"))
+    return sorted(lines, key=lambda line: (-len(line.parts), line.parts))

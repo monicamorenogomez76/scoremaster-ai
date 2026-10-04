@@ -499,12 +499,15 @@ input[type=range] { accent-color: var(--primary); }
 .calendar-name { font-size: .82rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .calendar-ranges { display: flex; flex-wrap: wrap; gap: 3px; }
 .calendar-range { width: auto; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; font-size: .72rem; }
-.calendar-slot--woodwinds { --slot: #0f766e; }
-.calendar-slot--brass { --slot: #b45309; }
+.calendar-slot--common { --slot: #0369a1; }
+.calendar-slot--flutes { --slot: #0f766e; }
+.calendar-slot--double_reeds { --slot: #15803d; }
+.calendar-slot--clarinets { --slot: #4d7c0f; }
+.calendar-slot--saxophones { --slot: #a16207; }
+.calendar-slot--high_brass { --slot: #c2410c; }
+.calendar-slot--low_voices { --slot: #9f1239; }
 .calendar-slot--percussion { --slot: #7c3aed; }
-.calendar-slot--strings { --slot: #be123c; }
-.calendar-slot--rhythm { --slot: #1d4ed8; }
-.calendar-slot--keyboard { --slot: #4d7c0f; }
+.calendar-slot--strings_rhythm { --slot: #1d4ed8; }
 .calendar-slot--other { --slot: #475569; }
 .calendar-slot--tutti { --slot: #111827; }
 @media (max-width: 640px) { .calendar-track { flex-direction: column; } .calendar-slot { flex-grow: 0 !important; } }

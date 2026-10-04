@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   apiInstrumentName, bandIssueText, byDifficulty, displayFamilyName, displayInstrumentName,
-  gradeOf, initialBandDraft, readBandProfile, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel,
+  gradeOf, initialBandDraft, readBandProfile, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel, rehearsalGroupName, blockScoreLabel,
 } from '../../../frontend/src/labels.js';
 
 test('instrument names keep the part number in both directions', () => {
@@ -41,21 +41,34 @@ test('band issues and rehearsal blocks read as musician-facing Spanish', () => {
   assert.equal(bandIssueText({ instrument: 'Horn in F', available: 2, required: 4 }), 'Trompa en Fa: hay 2 músicos y se necesitan 4.');
 });
 
-test('ensemble rehearsal blocks read as sectionals followed by a tutti to join', () => {
-  const sectional = { type: 'sectional', section: 'woodwinds', parts: ['Clarinet 1', 'Alto Saxophone'], measure_range: '1-5',
-    findings: ['SL003'], shared: [{ parts: ['Alto Saxophone', 'Clarinet 1'], kind: 'rhythm' }] };
-  assert.equal(rehearsalBlockTitle(sectional), 'Seccional · Viento madera · c. 1–5');
-  assert.equal(rehearsalBlockDetail(sectional), 'Clarinete 1, Saxofón alto · Alta densidad rítmica · Mismo ritmo: Saxofón alto y Clarinete 1');
-  const tutti = { type: 'tutti', section: null, parts: ['Clarinet 1', 'Trumpet'], measure_ranges: ['9-12', '30'],
-    findings: [], shared: [{ parts: ['Clarinet 1', 'Trumpet'], kind: 'unison', measure_range: '9-12' }] };
+test('ensemble rehearsal blocks: common lines, subsections and a tutti to join', () => {
+  const common = { type: 'common', group: null, kind: 'line', parts: ['Euphonium', 'Trombone', 'Tenor Saxophone'],
+    measure_range: '47-54', findings: ['SL003'] };
+  assert.equal(rehearsalBlockTitle(common), 'Línea común · c. 47–54');
+  assert.equal(rehearsalBlockDetail(common), 'Bombardino, Trombón, Saxofón tenor · Alta densidad rítmica');
+  assert.equal(rehearsalBlockTitle({ ...common, kind: 'rhythm' }), 'Ritmo común · c. 47–54');
+  const sectional = { type: 'sectional', group: 'low_voices', parts: ['Bassoon', 'Tuba'], measure_range: '1-5', findings: [] };
+  assert.equal(rehearsalBlockTitle(sectional), 'Seccional · Graves · c. 1–5');
+  assert.equal(rehearsalBlockDetail(sectional), 'Fagot, Tuba');
+  const tutti = { type: 'tutti', group: null, parts: ['Clarinet 1', 'Trumpet'], measure_ranges: ['9-12', '30'], findings: [] };
   assert.equal(rehearsalBlockTitle(tutti), 'Tutti para juntar · c. 9–12, 30');
-  assert.equal(rehearsalBlockDetail(tutti), 'Toda la banda · Unísono: Clarinete 1 y Trompeta (c. 9–12)');
-  assert.equal(omittedBlockText({ section: 'brass', parts: ['Tuba'], measure_range: '30-31', reason: 'time' }),
-    'Viento metal · c. 30–31 · Tuba');
+  assert.equal(rehearsalBlockDetail(tutti), 'Toda la banda');
+  assert.equal(omittedBlockText({ type: 'sectional', group: 'high_brass', parts: ['Trumpet'], measure_range: '30-31', reason: 'time' }),
+    'Metales agudos · c. 30–31 · Trompeta');
+  assert.equal(omittedBlockText({ type: 'common', group: null, parts: ['Oboe', 'Flute'], measure_range: '2', reason: 'time' }),
+    'Común · c. 2 · Oboe, Flauta');
 });
 
-test('calendar blocks use short section names that fit narrow slots', () => {
-  assert.deepEqual(['woodwinds', 'brass', 'percussion', 'strings', 'rhythm', 'keyboard', 'other'].map(section => calendarLabel({ type: 'sectional', section })),
-    ['Madera', 'Metal', 'Perc.', 'Cuerda', 'Rítmica', 'Teclas', 'Otros']);
-  assert.equal(calendarLabel({ type: 'tutti', section: null }), 'Tutti');
+test('rehearsal groups have names for titles, the score viewer and narrow calendar slots', () => {
+  const groups = ['flutes', 'double_reeds', 'clarinets', 'saxophones', 'high_brass', 'low_voices', 'percussion', 'strings_rhythm'];
+  assert.deepEqual(groups.map(rehearsalGroupName), ['Flautas', 'Dobles cañas', 'Clarinetes', 'Saxofones', 'Metales agudos', 'Graves',
+    'Percusión', 'Cuerda y rítmica']);
+  assert.deepEqual(groups.map(group => calendarLabel({ type: 'sectional', group })),
+    ['Flautas', 'D. cañas', 'Clarinetes', 'Saxos', 'M. agudos', 'Graves', 'Perc.', 'Cuerda']);
+  assert.equal(calendarLabel({ type: 'common', kind: 'line' }), 'Línea');
+  assert.equal(calendarLabel({ type: 'common', kind: 'rhythm' }), 'Ritmo');
+  assert.equal(calendarLabel({ type: 'tutti' }), 'Tutti');
+  assert.equal(blockScoreLabel({ type: 'common', kind: 'line' }), 'Línea común');
+  assert.equal(blockScoreLabel({ type: 'sectional', group: 'saxophones' }), 'Saxofones');
+  assert.equal(blockScoreLabel({ type: 'tutti' }), 'Toda la banda');
 });

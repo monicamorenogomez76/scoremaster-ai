@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { View } from './View.jsx';
-import { calendarLabel, displayFamilyName, omittedBlockText, rehearsalBlockDetail, rehearsalBlockTitle } from './labels.js';
+import { blockScoreLabel, calendarLabel, omittedBlockText, rehearsalBlockDetail, rehearsalBlockTitle } from './labels.js';
 import { rehearsalSchedule } from './schedule.js';
 
 const VISIBLE_OMITTED = 5;
-
-const blockLabel = block => (block.type === 'tutti' ? 'Toda la banda' : displayFamilyName(block.section));
 
 // Timeline of the rehearsal: each block is as wide as its minutes; pressing it opens the score
 // at its measures with only the instruments it involves (the whole band for the tutti).
 function RehearsalCalendar({ blocks, onOpenPassage }) {
   const [start, setStart] = useState('19:00');
   const schedule = rehearsalSchedule(blocks, start);
-  const open = (block, range) => onOpenPassage(block.parts, range, blockLabel(block));
+  const open = (block, range) => onOpenPassage(block.parts, range, blockScoreLabel(block));
   return <div className="rehearsal-calendar">
     <label className="duration-field" htmlFor="rehearsal-start">Hora de inicio
       <input id="rehearsal-start" type="time" value={start} onChange={event => setStart(event.target.value)} />
@@ -20,7 +18,7 @@ function RehearsalCalendar({ blocks, onOpenPassage }) {
     <div className="calendar-track" role="list" aria-label="Horario del ensayo">
       {schedule.map((block, index) => {
         const ranges = block.type === 'tutti' ? block.measure_ranges || [] : [block.measure_range];
-        return <div key={index} role="listitem" className={'calendar-slot calendar-slot--' + (block.section || 'tutti')}
+        return <div key={index} role="listitem" className={'calendar-slot calendar-slot--' + (block.type === 'sectional' ? block.group : block.type)}
           style={{ flexGrow: block.share, flexBasis: 0 }}>
           <button type="button" className="calendar-block" disabled={!ranges.length}
             aria-label={block.start + '–' + block.end + ' · ' + rehearsalBlockTitle(block) + ' · ' + block.minutes + ' min'}
@@ -42,7 +40,7 @@ export function RehearsalView({ active, data, minutes, onMinutesChange, onRecalc
   const blocks = plan.segments || [];
   const omitted = plan.omitted || [];
   return <View name="rehearsal" active={active} eyebrow="RehearsalAI" title="Plan de ensayo"
-    description="Ensayo de conjunto: bloques seccionales por pasajes comunes y un tutti final para juntar.">
+    description="Ensayo de conjunto: primero quienes tocan lo mismo, después las subsecciones y un tutti final para juntar.">
     <div className="rehearsal-settings surface">
       <label className="duration-field" htmlFor="total-minutes">Duración prevista del ensayo
         <span className="duration-input"><input id="total-minutes" type="number" min="10" value={minutes}
