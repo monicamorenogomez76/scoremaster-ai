@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { credentials, login } from './login.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
@@ -13,11 +14,17 @@ const view = name => page.locator(`[data-view=${name}]`);
 const waitIdle = () => page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
 try {
   await page.goto(url);
-  await page.locator('#enter-demo').click();
+  await page.locator('#login-email').fill(credentials.email);
+  await page.locator('#login-password').fill('no-es-la-contraseña');
+  await page.locator('#login-submit').click();
+  assert.equal(await page.locator('#login-error').textContent(), 'Email o contraseña incorrectos.');
+  assert.equal(await page.locator('#app-shell').isVisible(), false);
+  await login(page);
   await page.reload();
-  assert.equal(await page.locator('#app-shell').isVisible(), true, 'demo session survives a reload');
+  await page.locator('#app-shell').waitFor({ state: 'visible' });
   assert.equal(await page.locator('[data-view-target=overview]').getAttribute('aria-current'), 'page');
-  console.log('PASS: demo session and navigation state');
+  assert.equal(await page.locator('#current-user').textContent(), 'Usuario demo');
+  console.log('PASS: sign-in rejects a wrong password and the session survives a reload');
 
   const sharedNames = await page.evaluate(() => {
     const part = (id, step) => `<part id="${id}"><measure number="1"><attributes><divisions>1</divisions></attributes><note><pitch><step>${step}</step><octave>4</octave></pitch><duration>4</duration></note></measure></part>`;
@@ -157,11 +164,23 @@ try {
   console.log('PASS: an unknown part is confirmed from the catalog and joins the band template');
 
   await page.locator('#sign-out').click();
-  assert.equal(await page.locator('#login-screen').isVisible(), true);
+  await page.locator('#login-screen').waitFor({ state: 'visible' });
   await page.reload();
-  assert.equal(await page.locator('#login-screen').isVisible(), true, 'leaving the demo is remembered');
+  assert.equal(await page.locator('#login-screen').isVisible(), true, 'signing out closes the session');
+  assert.equal((await page.request.post(url + '/analyze')).status(), 401, 'the API refuses requests without a session');
   assert.deepEqual(errors, []);
-  console.log('PASS: leaving the demo returns to the access screen');
+  console.log('PASS: signing out returns to the access screen');
+
+  // A new director creates an account and enters directly.
+  await page.locator('#login-mode').click();
+  await page.locator('#login-name').fill('Nueva directora');
+  await page.locator('#login-email').fill('directora-' + Date.now() + '@banda.test');
+  await page.locator('#login-password').fill('una contraseña larga');
+  await page.locator('#login-submit').click();
+  await page.locator('#app-shell').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#current-user').textContent(), 'Nueva directora');
+  assert.deepEqual(errors, []);
+  console.log('PASS: a new account can be created from the access screen');
 } finally {
   await browser.close();
 }

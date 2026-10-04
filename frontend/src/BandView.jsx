@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from './api.js';
 import { View } from './View.jsx';
 import { bandIssueText, bandStatusLabels, confirmationOptions, displayInstrumentName, unconfirmedStatusText } from './labels.js';
 
@@ -8,7 +9,7 @@ function InstrumentConfirmation({ items, onConfirm, busy }) {
   const [chosen, setChosen] = useState({});
   useEffect(() => {
     let current = true;
-    fetch('/instruments/catalog').then(response => response.json())
+    apiFetch('/instruments/catalog').then(response => response.json())
       .then(body => { if (current) setCatalog(body.instruments || []); })
       .catch(() => { if (current) setCatalog([]); });
     return () => { current = false; };

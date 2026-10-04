@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { applyInstrumentAssignments, inspectInstruments } from './instrument-session.js';
+import { apiFetch } from './api.js';
 import { completeBandProfile } from './labels.js';
 
 // options: { minutes, getProfile(), getConfirmations(), onReset(), onAnalysis(data, profile, navigate) }.
@@ -61,7 +62,7 @@ export function useScoreAnalysis(workspace, options) {
         body.append('band_profile', JSON.stringify(completedProfile));
         body.append('total_minutes', latest.current.minutes || '60');
         body.append('instrument_overrides', JSON.stringify(confirmations || {}));
-        const response = await fetch('/analyze', { method: 'POST', body, signal: request.signal });
+        const response = await apiFetch('/analyze', { method: 'POST', body, signal: request.signal });
         try { data = await response.json(); }
         catch { throw new Error('El servidor devolvió una respuesta no válida. Vuelve a intentarlo.'); }
         if (version !== generation.current) return;

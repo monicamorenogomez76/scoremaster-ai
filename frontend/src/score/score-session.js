@@ -1,6 +1,8 @@
+import { apiFetch } from '../api.js';
+
 // Score selected in this browser session and its MusicXML, fetched at most once per file.
 // The server decompresses .mxl files; the original never leaves this origin.
-export function createScoreSession(request = (...args) => fetch(...args)) {
+export function createScoreSession(request = (...args) => apiFetch(...args)) {
   let file = null, source = null, version = 0;
   return {
     getFile: () => file,

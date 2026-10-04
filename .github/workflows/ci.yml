@@ -77,6 +77,8 @@ jobs:
     env:
       SCOREMASTER_URL: http://127.0.0.1:8006
       PLAYWRIGHT_MODULE: /tmp/browser-tests/node_modules/playwright
+      DEMO_USER_EMAIL: demo@scoremaster.local
+      DEMO_USER_PASSWORD: scoremaster-demo
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -98,6 +100,7 @@ jobs:
         run: |
           npm --prefix frontend run build
           python -m alembic upgrade head
+          python -m backend.app.seed_demo
       - name: Arrancar la aplicación
         run: |
           python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8006 > /tmp/uvicorn.log 2>&1 &

@@ -27,6 +27,22 @@ El flujo de trabajo y las pautas de cambios están en [CONTRIBUTING.md](CONTRIBU
 `skills/`. Las partituras comerciales para pruebas manuales van en
 `test-scores/local/`, que no se versiona.
 
+## Arranque rápido y credenciales de prueba
+
+```sh
+cp .env.example .env        # credenciales locales de ejemplo
+docker compose up --build   # migra la base, crea el usuario demo y sirve en http://127.0.0.1:8000
+```
+
+| Usuario de prueba | Contraseña |
+|---|---|
+| `demo@scoremaster.local` | `scoremaster-demo` |
+
+También se puede crear una cuenta desde la pantalla de acceso. «Entrar con Google»
+solo aparece si `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` están configurados; sin
+ellos la aplicación funciona igual con email y contraseña. Las medidas de seguridad
+aplicadas y pendientes están en [docs/SECURITY.md](docs/SECURITY.md).
+
 ## Estado
 
 El MVP incluye análisis determinista de dificultad, compatibilidad de plantilla,
@@ -38,9 +54,9 @@ Ver [arquitectura y arranque del frontend](frontend/README.md). Para ejecutar co
 Python, compilar primero con `npm --prefix frontend ci` y
 `npm --prefix frontend run build`; Docker lo hace durante la construcción.
 
-La interfaz ofrece navegación por vistas y una entrada de demostración. No hay
-autenticación real ni persistencia de cuentas: la sesión y la plantilla son locales
-al navegador y temporales.
+La aplicación exige iniciar sesión (email y contraseña, Google opcional). Los
+análisis se guardan en PostgreSQL; la biblioteca de obras y la plantilla por usuario
+llegan en la siguiente fase del plan.
 
 El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
 de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
@@ -92,9 +108,9 @@ de entorno del servidor. La clave nunca debe incluirse en el HTML, enviarse al
 navegador ni versionarse. Sin ella, se muestra una búsqueda directa en YouTube y
 se permite pegar un enlace para reproducirlo en la aplicación.
 
-La plantilla de banda se inicializa con una plaza por cada parte de la obra
-cargada, usando la instrumentación de Persis como referencia inicial. Los cambios
-son temporales durante la sesión; todavía no se guardan por usuario.
+La plantilla de banda tiene una fila por instrumento y empieza con los músicos que
+pide la obra (uno por voz; la percusión, en percusionistas). Los cambios son
+temporales durante la sesión; todavía no se guardan por usuario.
 
 ### Pruebas de interfaz
 
@@ -110,7 +126,9 @@ PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node ba
 PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/dashboard.e2e.mjs
 ```
 
-Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`.
+Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`. Los recorridos
+entran con el usuario demo (`python -m backend.app.seed_demo` con `DEMO_USER_EMAIL` y
+`DEMO_USER_PASSWORD`); `SCOREMASTER_USER` y `SCOREMASTER_PASSWORD` permiten usar otro.
 La descarga del visor necesita conexión a Internet.
 
 ### Créditos de sonido

@@ -6,11 +6,12 @@ import os
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import urlparse
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile, is_zipfile
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -18,8 +19,11 @@ from backend.analyzers.band_fit import PERCUSSION, compute_band_fit
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics
+from backend.app.auth_routes import router as auth_router
 from backend.app.youtube import search_videos
-from backend.app.dependencies import STORAGE_UNAVAILABLE, close_analysis_engine, get_analysis_repository
+from backend.app.dependencies import (
+    SAFE_METHODS, STORAGE_UNAVAILABLE, authenticated_user, close_analysis_engine, get_analysis_repository,
+)
 from backend.application.analysis_repository import AnalysisRepository
 from backend.application.save_analysis import save_analysis
 from backend.domain.instrument_catalog import catalog_entries, identity_by_id
@@ -40,8 +44,65 @@ async def lifespan(app):
         close_analysis_engine()
 
 
-app = FastAPI(title="ScoreMasterAI API", lifespan=lifespan)
+PRODUCTION = os.environ.get("APP_ENV") == "production"
+# Interactive API docs only outside production.
+app = FastAPI(title="ScoreMasterAI API", lifespan=lifespan, docs_url=None if PRODUCTION else "/docs",
+              redoc_url=None if PRODUCTION else "/redoc", openapi_url=None if PRODUCTION else "/openapi.json")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+app.include_router(auth_router)
+
+# The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https://i.ytimg.com",
+    "media-src 'self' data: blob: https:",
+    "connect-src 'self' https:",
+    "worker-src 'self' blob:",
+    "frame-src https://www.youtube-nocookie.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+])
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Frame-Options": "DENY",
+}
+MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024
+
+
+@app.middleware("http")
+async def security(request, call_next):
+    """Refuse state-changing requests sent from another site and add the security headers."""
+    origin = request.headers.get("origin")
+    if request.method not in SAFE_METHODS and origin and urlparse(origin).netloc != request.headers.get("host"):
+        response = JSONResponse({"detail": "Origen no permitido."}, status_code=403)
+    else:
+        response = await call_next(request)
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    return response
+
+
+def _read_upload(file: UploadFile) -> bytes:
+    """Upload bytes within the size limits, with no XML entity declarations."""
+    content = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="La partitura supera 8 MB.")
+    if is_zipfile(io.BytesIO(content)):
+        with ZipFile(io.BytesIO(content)) as archive:
+            if sum(item.file_size for item in archive.infolist()) > MAX_UNCOMPRESSED_BYTES:
+                raise HTTPException(status_code=413, detail="La partitura descomprimida supera 20 MB.")
+    source = extract_musicxml(content) if content else None
+    if source is not None and b"<!ENTITY" in source:
+        raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.")
+    return content
 
 
 def _musicxml_suffix(content: bytes, extension: str):
@@ -66,25 +127,25 @@ def root():
     return FileResponse(frontend)
 
 
-@app.get("/youtube/search")
+@app.get("/youtube/search", dependencies=[Depends(authenticated_user)])
 def youtube_search(query: str = Query(..., min_length=2, max_length=200)):
     return search_videos(query, api_key=os.environ.get("YOUTUBE_API_KEY"))
 
 
-@app.post("/notation-source")
+@app.post("/notation-source", dependencies=[Depends(authenticated_user)])
 def notation_source(file: UploadFile = File(...)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="Expected a MusicXML file upload.")
     extension = Path(file.filename).suffix.lower()
     if extension not in {".musicxml", ".mxl", ".xml"}:
         raise HTTPException(status_code=400, detail="Expected a MusicXML file upload.")
-    source = extract_musicxml(file.file.read())
+    source = extract_musicxml(_read_upload(file))
     if source is None:
         raise HTTPException(status_code=400, detail="Uploaded file is not valid MusicXML.")
     return Response(content=source, media_type="application/vnd.recordare.musicxml+xml")
 
 
-@app.post("/playback")
+@app.post("/playback", dependencies=[Depends(authenticated_user)])
 def playback(
     file: UploadFile = File(...),
     instrument: str = Form("", max_length=200),
@@ -94,15 +155,8 @@ def playback(
 ):
     if last_measure < first_measure:
         raise HTTPException(status_code=400, detail="El rango de compases no es válido.")
-    content = file.file.read(8 * 1024 * 1024 + 1)
-    if len(content) > 8 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="La partitura supera 8 MB.")
-    if is_zipfile(io.BytesIO(content)):
-        with ZipFile(io.BytesIO(content)) as archive:
-            if sum(item.file_size for item in archive.infolist()) > 20 * 1024 * 1024:
-                raise HTTPException(status_code=413, detail="La partitura descomprimida supera 20 MB.")
-    source = extract_musicxml(content)
-    if source is None or b"<!ENTITY" in source:
+    source = extract_musicxml(_read_upload(file))
+    if source is None:
         raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.")
     with NamedTemporaryFile(suffix=".musicxml") as temporary:
         temporary.write(source)
@@ -145,11 +199,11 @@ def instrument_catalog():
             "percussion_key": PERCUSSION}
 
 
-@app.post("/analyze")
+@app.post("/analyze", dependencies=[Depends(authenticated_user)])
 def analyze_score(
     file: UploadFile = File(...),
-    band_profile: str = Form("{}"),
-    total_minutes: int = Form(60),
+    band_profile: str = Form("{}", max_length=64 * 1024),
+    total_minutes: int = Form(60, ge=5, le=600),
     instrument_overrides: str = Form("{}", max_length=64 * 1024),
     repository: AnalysisRepository = Depends(get_analysis_repository),
 ):
@@ -166,9 +220,13 @@ def analyze_score(
         profile = json.loads(band_profile or "{}")
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="band_profile must be valid JSON.") from exc
+    if not isinstance(profile, dict) or len(profile) > 256 or not all(
+            isinstance(key, str) and len(key) <= 200 and type(count) is int and 0 <= count <= 1000
+            for key, count in profile.items()):
+        raise HTTPException(status_code=400, detail="band_profile must map instruments to musician counts.")
     overrides = _instrument_overrides(instrument_overrides)
 
-    content = file.file.read()
+    content = _read_upload(file)
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
     musicxml_suffix = _musicxml_suffix(content, extension)

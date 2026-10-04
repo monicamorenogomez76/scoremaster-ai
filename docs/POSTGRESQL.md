@@ -20,7 +20,8 @@ cambiar POSTGRES_PASSWORD no cambia automáticamente la contraseña de esa insta
 No eliminar el volumen para arreglar credenciales: preservar los datos y rotarlas.
 
 `docker compose config --quiet` valida la configuración sin imprimir credenciales.
-`docker compose up --build` arranca API y DB; la API espera el healthcheck de DB.
+`docker compose up --build` arranca API y DB; la API espera el healthcheck de DB, aplica las
+migraciones y crea el usuario demo (`DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`) si no existe.
 Antes del primer análisis hay que aplicar las migraciones descritas abajo.
 Cada respuesta correcta de `/analyze` guarda un registro y devuelve `analysis_id`.
 Sin conexión o sin tablas migradas devuelve 503; no comunica un guardado exitoso.

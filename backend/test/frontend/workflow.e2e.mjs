@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { login } from './login.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
@@ -15,7 +16,7 @@ const upload = async name => {
 };
 try {
   await page.goto(process.env.SCOREMASTER_URL || 'http://127.0.0.1:8005');
-  await page.locator('#enter-demo').click();
+  await login(page);
   await page.locator('[data-view-target=analyze]').click();
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
   await upload('Flute');
@@ -49,7 +50,8 @@ try {
   const playback = await page.evaluate(async () => {
     const source = await window.scoremasterWorkspace.loadSource();
     const body = new FormData(); body.append('file', new File([source], 'assigned.musicxml')); body.append('instrument', 'Clarinet'); body.append('first_measure', '1'); body.append('last_measure', '1');
-    return (await fetch('/playback', { method: 'POST', body })).json();
+    const { csrf_token: csrf } = await (await fetch('/auth/me')).json();
+    return (await fetch('/playback', { method: 'POST', body, headers: { 'X-CSRF-Token': csrf } })).json();
   });
   assert.equal(playback.instrument, 'Clarinet'); assert.equal(playback.program, 71);
   console.log('PASS: generic instrument assignment reaches notation, analysis and playback');

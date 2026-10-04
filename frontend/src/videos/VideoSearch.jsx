@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { apiFetch } from '../api.js';
 import { MAX_QUERY, embedUrl, initialVideoQuery, isVideoId, parseYouTubeVideoId, safeSearchUrl } from './youtube.js';
 
 // Searches through the server (the YouTube key never reaches the browser) and embeds the
@@ -17,7 +18,7 @@ export function VideoSearch({ title, composer, fileName }) {
     setQuery(normalized); setSelected(null);
     setSearch({ status: 'Buscando “' + normalized + '”…', videos: [], searchUrl: '', searched: normalized });
     try {
-      const response = await fetch('/youtube/search?query=' + encodeURIComponent(normalized));
+      const response = await apiFetch('/youtube/search?query=' + encodeURIComponent(normalized));
       if (!response.ok) throw new Error('No se pudo completar la búsqueda de YouTube.');
       const result = await response.json();
       if (token !== request.current) return;
