@@ -8,7 +8,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
-const fixture = readFileSync(new URL('../../../test-scores/high_density.musicxml', import.meta.url));
+const fixture = readFileSync(new URL('../../../test-scores/high_register.musicxml', import.meta.url));
 const view = name => page.locator(`[data-view=${name}]`);
 const waitIdle = () => page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
 try {
@@ -49,7 +49,7 @@ try {
   console.log('PASS: a passage can keep several instruments');
 
   await page.locator('[data-view-target=analyze]').click();
-  await page.locator('#file').setInputFiles({ name: 'high_density.musicxml', mimeType: 'application/xml', buffer: fixture });
+  await page.locator('#file').setInputFiles({ name: 'high_register.musicxml', mimeType: 'application/xml', buffer: fixture });
   await waitIdle();
   await page.locator('#upload-form button[type=submit]').click();
   await page.locator('#overview-result').waitFor({ state: 'attached' });
@@ -97,7 +97,7 @@ try {
 
   await page.locator('[data-view-target=overview]').click();
   assert.equal(await page.locator('#overview-priority-title').textContent(), 'Clarinete · compases 1');
-  assert.equal(await page.locator('#overview-priority-detail').textContent(), 'Alta densidad rítmica');
+  assert.equal(await page.locator('#overview-priority-detail').textContent(), 'Registro agudo · Alta densidad rítmica · Intervalos amplios');
   await page.locator('#open-priority').click();
   assert.equal(await view('difficulty').isVisible(), true);
   await page.locator('#difficulty-content .tree-node').first().click();
@@ -123,7 +123,7 @@ try {
   await page.locator('[data-view-target=videos]').click();
   const videos = page.locator('#videos-content');
   await videos.getByRole('button', { name: 'Buscar' }).click();
-  await videos.getByRole('link', { name: /Abrir búsqueda de “High Density Study”/ }).waitFor();
+  await videos.getByRole("link", { name: /^Abrir búsqueda de “/ }).waitFor();
   const manualLink = videos.getByLabel('Enlace de vídeo de YouTube');
   await manualLink.fill('https://example.com/watch?v=dQw4w9WgXcQ');
   await videos.getByRole('button', { name: 'Reproducir enlace' }).click();

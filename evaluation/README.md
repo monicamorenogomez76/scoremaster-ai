@@ -6,6 +6,8 @@ Para regenerarlo intencionadamente: `python -m evaluation.baseline --update`.
 No actualizarlo para ocultar regresiones. Se congelará el código legacy al evolucionar
 el motor, de modo que este baseline siga reproducible sin imponer sus defectos al motor nuevo.
 
+Los análisis usan el detector de pasajes críticos anterior (`critical_detector="legacy"`) y el
+planificador congelado, para que la captura siga siendo la del motor previo.
 El audio se compara con las claves de pista originales; `canonical_id` y `sound`, añadidos
 con el resolver de instrumentos, no forman parte de esta captura legacy.
 

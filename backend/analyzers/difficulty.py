@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 
+from backend.analyzers.criticality import detect_critical_passages
 from backend.domain.models import Score
 from backend.analyzers.instrument_difficulty import (
     classify_instrument_family,
@@ -14,14 +15,9 @@ from backend.rules.high_density import find_high_rhythm_density
 from backend.rules.high_register import find_high_register
 from backend.rules.large_intervals import find_large_intervals
 from backend.rules.endurance import find_long_passages_without_rest
+from backend.rules.weights import RULE_WEIGHTS
 
 
-RULE_WEIGHTS = {
-    "SL002": 2,
-    "SL003": 2,
-    "SL004": 3,
-    "SL005": 2,
-}
 
 def _difficulty_level(score_value: int) -> str:
     if score_value == 0:
@@ -68,7 +64,8 @@ def _collapse_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return collapsed
 
 
-def compute_difficulty_score(score: Score) -> dict:
+def compute_difficulty_score(score: Score, critical_detector: str = "phrases") -> dict:
+    """critical_detector: "phrases" (step 14) or "legacy" (kept only for the baseline-v1 capture)."""
     """Aggregate rule findings into a deterministic overall difficulty score."""
     findings = []
     findings.extend(find_high_rhythm_density(score))
@@ -125,30 +122,39 @@ def compute_difficulty_score(score: Score) -> dict:
         family_entry["instruments"].add(finding.instrument)
         family_entry["findings"].append(finding.code)
 
-    for instrument, details in by_instrument.items():
-        instrument_findings = [finding for finding in findings if finding.instrument == instrument]
-        ranges = [_measure_numbers(finding.measure_range) for finding in instrument_findings]
-        collapsed_ranges = _collapse_ranges(ranges)
-        for start, end in collapsed_ranges:
-            passage_findings = [
-                finding for finding in instrument_findings
-                if start <= _measure_numbers(finding.measure_range)[0] <= end
-                or start <= _measure_numbers(finding.measure_range)[1] <= end
-            ]
-            passage_score = sum(RULE_WEIGHTS.get(finding.code, 1) for finding in passage_findings)
-            critical_passages.append(
-                {
-                    "instrument": instrument,
-                    "family": _instrument_family(instrument),
-                    "instrument_label_es": instrument_label_es(instrument),
-                    "family_label_es": family_label_es(_instrument_family(instrument)),
-                    "measure_range": str(start) if start == end else f"{start}-{end}",
-                    "score": passage_score,
-                    "findings": sorted({finding.code for finding in passage_findings}),
-                }
-            )
+    if critical_detector == "legacy":
+        for instrument, details in by_instrument.items():
+            instrument_findings = [finding for finding in findings if finding.instrument == instrument]
+            ranges = [_measure_numbers(finding.measure_range) for finding in instrument_findings]
+            collapsed_ranges = _collapse_ranges(ranges)
+            for start, end in collapsed_ranges:
+                passage_findings = [
+                    finding for finding in instrument_findings
+                    if start <= _measure_numbers(finding.measure_range)[0] <= end
+                    or start <= _measure_numbers(finding.measure_range)[1] <= end
+                ]
+                passage_score = sum(RULE_WEIGHTS.get(finding.code, 1) for finding in passage_findings)
+                critical_passages.append(
+                    {
+                        "instrument": instrument,
+                        "family": _instrument_family(instrument),
+                        "instrument_label_es": instrument_label_es(instrument),
+                        "family_label_es": family_label_es(_instrument_family(instrument)),
+                        "measure_range": str(start) if start == end else f"{start}-{end}",
+                        "score": passage_score,
+                        "findings": sorted({finding.code for finding in passage_findings}),
+                    }
+                )
 
-    critical_passages.sort(key=lambda passage: (-passage["score"], _measure_numbers(passage["measure_range"])[0]))
+        critical_passages.sort(key=lambda passage: (-passage["score"], _measure_numbers(passage["measure_range"])[0]))
+    else:
+        # Step 14: evidence-based detector; passages cover whole melodic phrases.
+        critical_passages = [{
+            **passage,
+            "family": by_instrument.get(passage["instrument"], {}).get("family", _instrument_family(passage["instrument"])),
+            "instrument_label_es": instrument_label_es(passage["instrument"]),
+            "family_label_es": family_label_es(by_instrument.get(passage["instrument"], {}).get("family", "other")),
+        } for passage in detect_critical_passages(score, findings)]
 
     overall_score = sum(
         RULE_WEIGHTS.get(finding.code, 1) for finding in findings

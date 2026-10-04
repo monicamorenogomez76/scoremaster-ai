@@ -177,3 +177,11 @@ def test_short_rests_do_not_split_a_block():
     plan = build_rehearsal_plan(ensemble, 60, difficulty(("Trumpet", "1-6", 3)))
 
     assert [block["measure_range"] for block in sectional(plan)] == ["1-6"]
+
+
+def test_fractional_priorities_still_give_whole_minutes_within_the_budget():
+    plan = build_rehearsal_plan(score("Flute", "Tuba", count=40), 47,
+                                difficulty(("Flute", "1-2", 2.5), ("Tuba", "30-31", 6.25)))
+
+    assert all(isinstance(block["minutes"], int) for block in plan["segments"])
+    assert plan["planned_minutes"] == 47

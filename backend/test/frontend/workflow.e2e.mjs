@@ -73,7 +73,7 @@ try {
   await page.screenshot({ path: '/tmp/scoremaster-redesign-mobile.png', fullPage: true, animations: 'disabled' });
   console.log('PASS: mobile layout, touch target and keyboard focus');
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.locator('#file').setInputFiles({ name: 'high_density.musicxml', mimeType: 'application/xml', buffer: readFileSync(new URL('../../../test-scores/high_density.musicxml', import.meta.url)) });
+  await page.locator('#file').setInputFiles({ name: 'high_register.musicxml', mimeType: 'application/xml', buffer: readFileSync(new URL('../../../test-scores/high_register.musicxml', import.meta.url)) });
   await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
   await page.locator('#upload-form button[type=submit]').click();
   await page.waitForFunction(() => document.querySelector('#full-score-rendering svg') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false');

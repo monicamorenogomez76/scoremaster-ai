@@ -39,7 +39,7 @@ def _allocate(blocks: list[dict], minutes: int) -> None:
     extra = minutes - MIN_BLOCK_MINUTES * len(blocks)
     total_priority = sum(block["priority"] for block in blocks) or len(blocks)
     for block in blocks:
-        block["minutes"] = MIN_BLOCK_MINUTES + extra * (block["priority"] or 1) // total_priority
+        block["minutes"] = MIN_BLOCK_MINUTES + int(extra * (block["priority"] or 1) // total_priority)
     leftover = minutes - sum(block["minutes"] for block in blocks)
     for index in range(leftover):
         blocks[index % len(blocks)]["minutes"] += 1

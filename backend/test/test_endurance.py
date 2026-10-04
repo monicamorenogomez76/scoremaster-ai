@@ -34,13 +34,16 @@ def test_empty_bars_and_even_short_rests_interrupt_continuity(events):
     assert [item.measure_range for item in findings] == ["1-8", "10-17"]
 
 
-def test_analysis_includes_endurance_in_critical_passages_and_weight():
+def test_continuity_alone_weights_difficulty_but_is_not_a_critical_passage():
     score = Score("Sustained passage", (ScorePart("Clarinet", active_bars(1, 8)),))
     result = compute_difficulty_score(score)
     assert result["overall_score"] == 2
     assert result["by_instrument"]["Clarinet"]["findings"] == ["SL005"]
-    assert result["critical_passages"][0]["measure_range"] == "1-8"
-    assert result["critical_passages"][0]["findings"] == ["SL005"]
+    # Step 14: continuity is evidence of persistence, not local difficulty; alone it is not critical.
+    assert result["critical_passages"] == []
+    legacy = compute_difficulty_score(score, critical_detector="legacy")
+    assert legacy["critical_passages"][0]["measure_range"] == "1-8"
+    assert legacy["critical_passages"][0]["findings"] == ["SL005"]
 
 
 def test_unpitched_notes_count_as_activity_and_parts_are_independent():
