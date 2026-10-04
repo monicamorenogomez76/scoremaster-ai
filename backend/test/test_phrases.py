@@ -22,9 +22,9 @@ EIGHTHS = [("C5", .5), ("D5", .5), ("E5", .5), ("F5", .5), ("G5", .5), ("F5", .5
 
 def test_a_relevant_pause_ends_the_phrase():
     # Flowing eighths, then a quarter rest: the rest is long compared with the local rhythm.
-    phrases = spans(part(EIGHTHS, EIGHTHS[:6] + [(R, 1)], EIGHTHS, EIGHTHS))
+    phrases = spans(part(EIGHTHS, EIGHTHS, EIGHTHS, EIGHTHS[:6] + [(R, 1)], EIGHTHS, EIGHTHS, EIGHTHS, EIGHTHS))
 
-    assert phrases == [(1, 2), (3, 4)]
+    assert phrases == [(1, 4), (5, 8)]
 
 
 def test_a_short_rest_that_belongs_to_the_motive_does_not_end_the_phrase():
@@ -41,7 +41,8 @@ def test_a_long_note_in_the_middle_of_a_phrase_does_not_end_it():
 
 def test_a_lengthened_note_followed_by_a_pause_ends_the_phrase():
     quarters = [("C5", 1), ("D5", 1), ("E5", 1), ("F5", 1)]
-    assert spans(part(quarters, [("G5", 3), (R, .5), ("A5", .5)], quarters)) == [(1, 2), (2, 3)]
+    phrases = spans(part(quarters, quarters, quarters, [("G5", 3), (R, .5), ("A5", .5)], quarters, quarters, quarters))
+    assert phrases == [(1, 4), (4, 7)]
 
 
 def test_a_written_breath_mark_or_fermata_ends_the_phrase():
@@ -52,7 +53,8 @@ def test_a_written_breath_mark_or_fermata_ends_the_phrase():
 def test_a_restart_of_the_opening_motive_after_a_lengthening_ends_the_phrase():
     opening = [("C5", .5), ("D5", .5), ("E5", 1)]
     bar = opening + [("G5", 2)]           # the long G5 is followed directly by the opening motive again
-    assert spans(part(bar, bar, bar)) == [(1, 1), (2, 2), (3, 3)]
+    # Each bar ends a fragment; fragments join into phrases of 4 bars.
+    assert spans(part(*[bar] * 8)) == [(1, 4), (5, 8)]
 
 
 def test_an_upbeat_stays_with_the_phrase_it_starts():
@@ -82,3 +84,29 @@ def test_recurring_rests_of_an_accompaniment_pattern_do_not_split_it():
 def test_a_pause_that_stands_out_from_the_pattern_still_ends_the_phrase():
     pattern = [("C3", 1), (R, 1), ("G2", 1), (R, 1)]
     assert spans(part(pattern, pattern, [("C3", 1), (R, 3)], [(R, 4)], pattern, pattern)) == [(1, 3), (5, 6)]
+
+
+STACCATO = [("C5", .5), (R, .5), ("E5", .5), (R, .5), ("G5", .5), (R, .5), ("E5", 1)]
+
+
+def test_short_fragments_of_a_staccato_accompaniment_join_into_four_bar_phrases():
+    # Each bar ends with a pause that stands out, but the fragments are part of 4-bar phrases.
+    bar = STACCATO + [(R, 1)]
+    assert spans(part(*[bar] * 8)) == [(1, 4), (5, 8)]
+
+
+def test_fragments_join_into_eight_bars_when_that_completes_the_phrase():
+    inner = [("C5", .5), (R, .5), ("E5", .5), (R, .5), ("G5", .5), (R, .5), ("E5", .5), ("D5", .5)]
+    end = [("C5", .5), (R, .5), ("E5", .5), (R, .5), ("G5", 1), (R, 1)]   # lengthening and a pause
+    # Fragments of 3 + 3 + 2 bars: after 6 bars the next fragment completes exactly 8.
+    assert spans(part(inner, inner, end, inner, inner, end, inner, end)) == [(1, 8)]
+
+
+def test_eight_one_bar_fragments_make_two_four_bar_phrases():
+    bar = STACCATO + [(R, 1)]
+    assert spans(part(*[bar] * 8)) == [(1, 4), (5, 8)]
+
+
+def test_a_whole_bar_of_rest_is_a_strong_boundary_that_never_joins():
+    bar = STACCATO + [(R, 1)]
+    assert spans(part(bar, [(R, 4)], bar, bar, bar, bar)) == [(1, 1), (3, 6)]

@@ -342,8 +342,11 @@ que ninguna decida sola:
 | Cadencia o reposo armónico | Pendiente: requiere análisis armónico del acompañamiento | — |
 | Cambio de patrón | No corta: puede ser solo una subdivisión | — |
 
-Hay límite cuando la suma llega a 2. El parser conserva la posición de cada nota en el compás,
-la duración del compás y las marcas escritas.
+Hay límite cuando la suma llega a 2. Los fragmentos separados por límites débiles se unen en
+frases de **4 u 8 compases** (decisión de la autora): la frase se cierra al llegar a 4 o a 8, y de
+5 a 7 solo se une el siguiente fragmento si completa exactamente 8. Un silencio de un compás entero
+o una marca escrita es un límite fuerte que nunca se une. El parser conserva la posición de cada
+nota en el compás, la duración del compás y las marcas escritas.
 
 # 9. Windowing
 
