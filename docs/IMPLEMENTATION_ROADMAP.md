@@ -6,6 +6,7 @@
 - Grados visibles enteros 1–6 y rúbrica propia documentada, sin afirmar certificación oficial. Índice técnico interno 0–10; transformación explícita. Actualmente la aplicación sigue usando grados 1–5 e índice 0–5 hasta la entrega 13.
 - Nivel objetivo por defecto intermedio, separado del grado editorial estimado.
 - Separar Difficulty, Criticality y RehearsalPriority. Un análisis puede devolver cero críticos.
+- Los ensayos son de conjunto: el planificador reconoce pasajes comunes (mismos compases difíciles para varias partes y material compartido: unísono, octavas, mismo ritmo) y organiza bloques seccionales con un tutti final para juntar (decisión de la autora, 2026-10-04).
 - Primera entrega: base musical fiable. Después revisión estructurada LLM y evaluación híbrida; sin chatbot, RAG ni agentes autónomos.
 - Persistir resultados estructurados y feedback, no partituras originales ni bancos de audio.
 - Evaluación local inicialmente; autenticación y autorización antes de publicar historial multiusuario.
@@ -32,14 +33,14 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 05 | Guardado desde el análisis | Integrado: PR #22; ID, resultados y configuración persistidos |
 | 06 | Catálogo canónico | Integrado: PR #28 |
 | 07 | Metadatos del parser | Integrado: PR #29 |
-| 08 | Resolver determinista | Resolver (PR #30), dificultad (PR #31) y sección rítmica (PR #32) integrados; timbre en revisión; BandFit con el paso 09 |
+| 08 | Resolver determinista | Integrado: resolver (PR #30), dificultad (PR #31), sección rítmica (PR #32) y timbre (PR #33); BandFit con el paso 09 |
 | 09 | Confirmación humana | Pendiente |
 | 10 | Tiempos y ataques musicales | Pendiente |
 | 11 | Características locales | Pendiente |
 | 12 | Políticas de dificultad | Pendiente |
 | 13 | Grados 1–6 | Pendiente |
 | 14 | Detector de criticidad | Pendiente |
-| 15 | Prioridad y presupuesto de ensayo | Pendiente |
+| 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Pendiente |
 | 16 | Evidencias en interfaz | Pendiente |
 | 17 | Persistencia de feedback | Pendiente |
 | 18 | Formulario de valoración | Pendiente |
@@ -61,7 +62,8 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 6–9. Alias multilingües, variantes, metadatos, UNKNOWN y confirmación humana coherente con BandFit/audio.
 10–12. Tiempos y ataques correctos en voces/acordes/ligaduras, tempo local, descansos y perfiles configurables.
 13. Escalas y rúbrica explícitas; API y frontend adaptados conjuntamente.
-14–15. Detector independiente, cero críticos y presupuesto de ensayo respetado.
+14. Detector independiente y cero críticos posible.
+15. Ensayo de conjunto: pasajes comunes por coincidencia de compases y por material compartido (unísono, octavas, mismo ritmo, con transposición), bloques seccionales por sección del catálogo y tutti final que junta los pasajes entre secciones; cada bloque indica partes, compases, minutos y motivos; suma de bloques ≤ tiempo disponible; cero pasajes produce solo un tutti; el planificador legacy queda congelado para el baseline.
 16–19. Evidencias, feedback por análisis/pasaje/versiones y evaluación reproducible por obra, sin leakage.
 20–25. Salidas IA validadas, demo identificada, fallback, versiones, caché y comparación sin anchoring ni resultados inventados. El híbrido sigue siendo experimental.
 

@@ -19,6 +19,7 @@ Inspecciona `backend/analyzers/band_fit.py`, `band_fit_by_measure.py` y `rehears
 
 - Compara identidades instrumentales coherentes con el parser. Distingue instrumento, parte independiente y número de intérpretes; una coincidencia de familia no garantiza cobertura.
 - Calcula necesidades locales por compás o pasaje cuando existan datos. No afirmes independencia de voces ni simultaneidad de percusionistas sin evidencia suficiente.
+- El ensayo es de conjunto: agrupa por pasajes comunes (coincidencia de compases y material compartido) en bloques seccionales con un tutti final; no planifiques por instrumento aislado. Consulta `docs/DIFFICULTY_CRITICALITY.md`.
 - Separa dificultad de la prioridad para la plantilla disponible. Justifica cada bloque mediante pasajes existentes, findings y disponibilidad; presenta alternativas como recomendaciones, no reorquestación validada.
 - Define la política de presupuesto y redondeo: minutos no negativos y suma de todos los bloques, incluidos calentamiento y transiciones, menor o igual al tiempo disponible. Contempla presupuestos cortos y ausencia de pasajes prioritarios.
 - El baseline registra un plan legacy que puede exceder 15 minutos. Corrige el planificador con una regresión explícita, sin reescribir la captura histórica para ocultarlo.
