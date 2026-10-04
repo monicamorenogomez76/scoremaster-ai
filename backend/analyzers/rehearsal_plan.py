@@ -10,12 +10,14 @@ from __future__ import annotations
 
 
 from backend.analyzers.difficulty import compute_difficulty_score
-from backend.analyzers.rehearsal_passages import find_common_lines, group_common_passages
+from backend.analyzers.rehearsal_passages import _bounds, find_common_lines, group_common_passages
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score
 
 MIN_BLOCK_MINUTES = 5
 TUTTI_SHARE = 0.25
+# A block covers only the measures its instruments play; a silence of a whole 8-bar phrase splits it.
+SPLIT_SILENCE = 8
 
 
 def _range(first: int, last: int) -> str:
@@ -43,6 +45,32 @@ def _allocate(blocks: list[dict], minutes: int) -> None:
         blocks[index % len(blocks)]["minutes"] += 1
 
 
+def _phrases(score: Score, parts, first: int, last: int) -> list[tuple[int, int]]:
+    """Measure spans where any of the parts plays, split by silences of SPLIT_SILENCE measures."""
+    names = set(parts)
+    playing = sorted({measure.number for part in score.parts if part.name in names for measure in part.measures
+                      if first <= measure.number <= last and any(not note.is_rest for note in measure.notes)})
+    spans: list[list[int]] = []
+    for number in playing:
+        if spans and number - spans[-1][1] - 1 < SPLIT_SILENCE:
+            spans[-1][1] = number
+        else:
+            spans.append([number, number])
+    return [(start, end) for start, end in spans]
+
+
+def _merged(ranges: list[str]) -> list[str]:
+    """Overlapping or adjacent measure ranges joined, in score order."""
+    spans = sorted(_bounds(measure_range) for measure_range in ranges)
+    merged: list[list[int]] = []
+    for start, end in spans:
+        if merged and start <= merged[-1][1] + 1:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    return [_range(start, end) for start, end in merged]
+
+
 def _rehearsal_groups(score: Score) -> dict[str, str]:
     groups = {}
     for part in score.parts:
@@ -63,21 +91,21 @@ def build_rehearsal_plan(score: Score, total_minutes: int, difficulty: dict | No
 
     candidates, joined_ranges = [], set()
     for passage in passages:
-        measure_range = _range(passage.first, passage.last)
-        common = {"findings": list(passage.findings), "priority": passage.score, "measure_range": measure_range, "minutes": 0}
+        common = {"findings": list(passage.findings), "priority": passage.score, "minutes": 0}
         lines = find_common_lines(score, passage.parts, passage.first, passage.last)
-        for line in lines:
-            candidates.append({"type": "common", "group": None, "parts": list(line.parts), "kind": line.kind,
-                               "groups": sorted({group_of.get(part, "other") for part in line.parts}), **common})
         in_lines = {part for line in lines for part in line.parts}
         by_group: dict[str, list[str]] = {}
         for part in passage.parts:
             if part not in in_lines:
                 by_group.setdefault(group_of.get(part, "other"), []).append(part)
-        for group, parts in sorted(by_group.items()):
-            candidates.append({"type": "sectional", "group": group, "parts": sorted(parts), **common})
-        if lines or len(by_group) > 1:
-            joined_ranges.add(measure_range)
+        blocks = [{"type": "common", "group": None, "parts": list(line.parts), "kind": line.kind,
+                   "groups": sorted({group_of.get(part, "other") for part in line.parts})} for line in lines]
+        blocks += [{"type": "sectional", "group": group, "parts": sorted(parts)} for group, parts in sorted(by_group.items())]
+        for block in blocks:
+            for start, end in _phrases(score, block["parts"], passage.first, passage.last):
+                candidates.append({**block, "measure_range": _range(start, end), **common})
+                if lines or len(by_group) > 1:
+                    joined_ranges.add(_range(start, end))
 
     tutti_minutes = min(total, max(MIN_BLOCK_MINUTES, round(total * TUTTI_SHARE)))
     remaining = total - tutti_minutes
@@ -89,9 +117,9 @@ def build_rehearsal_plan(score: Score, total_minutes: int, difficulty: dict | No
         tutti_minutes = total
 
     worked = list(dict.fromkeys(block["measure_range"] for block in kept))
-    joined = [measure_range for measure_range in worked if measure_range in joined_ranges] or worked
+    joined = _merged([measure_range for measure_range in worked if measure_range in joined_ranges] or worked)
     tutti = _tutti(all_parts, joined, tutti_minutes,
-                   sorted({code for block in kept if block["measure_range"] in joined for code in block["findings"]}))
+                   sorted({code for block in kept for code in block["findings"]}))
     segments = [{key: value for key, value in block.items() if key != "priority"} for block in kept] + [tutti]
     return {
         "total_minutes": total,

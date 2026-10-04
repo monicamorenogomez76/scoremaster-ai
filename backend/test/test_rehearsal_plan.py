@@ -19,8 +19,8 @@ def measures(pitch, count=24):
     return tuple(ScoreMeasure(number, (ScoreNote(pitch, 4.0),)) for number in range(1, count + 1))
 
 
-def score(*names, metadata=None):
-    return Score("Ensemble", tuple(ScorePart(name, measures("C5"), (metadata or {}).get(name, PartMetadata()))
+def score(*names, metadata=None, count=24):
+    return Score("Ensemble", tuple(ScorePart(name, measures("C5", count), (metadata or {}).get(name, PartMetadata()))
                                    for name in names))
 
 
@@ -94,7 +94,7 @@ def test_the_tutti_is_always_last():
 def test_the_plan_never_exceeds_the_available_time(minutes):
     passages = [("Clarinet 1" if index % 2 else "Tuba", "{}-{}".format(index * 20 + 1, index * 20 + 4), 10 - index)
                 for index in range(8)]
-    plan = build_rehearsal_plan(score("Clarinet 1", "Tuba"), minutes, difficulty(*passages))
+    plan = build_rehearsal_plan(score("Clarinet 1", "Tuba", count=160), minutes, difficulty(*passages))
 
     planned = sum(block["minutes"] for block in plan["segments"])
     assert planned <= minutes
@@ -107,7 +107,7 @@ def test_the_plan_never_exceeds_the_available_time(minutes):
 
 def test_higher_priority_passages_are_kept_when_time_is_short():
     # 10 minutes: 5 for the final tutti and room for a single 5-minute sectional block.
-    plan = build_rehearsal_plan(score("Flute", "Tuba"), 10, difficulty(("Flute", "1-2", 1), ("Tuba", "30-31", 9)))
+    plan = build_rehearsal_plan(score("Flute", "Tuba", count=40), 10, difficulty(("Flute", "1-2", 1), ("Tuba", "30-31", 9)))
 
     # Both parts hold the same whole notes, so the Tuba passage rehearses them together.
     assert [block["measure_range"] for block in sectional(plan)] == ["30-31"]
@@ -145,3 +145,35 @@ def test_analyze_returns_the_ensemble_plan():
     assert plan["total_minutes"] == 30
     assert plan["segments"][-1]["type"] == "tutti"
     assert plan["planned_minutes"] <= 30
+
+
+def phrases(name, playing, count=30):
+    """A part that plays quarters only in the given measures and rests elsewhere."""
+    def bar(number):
+        if number in playing:
+            return tuple(ScoreNote(pitch, 1.0) for pitch in ["C5", "D5", "E5", "F5"])
+        return (ScoreNote(None, 4.0, True),)
+    return ScorePart(name, tuple(ScoreMeasure(number, bar(number)) for number in range(1, count + 1)))
+
+
+def test_blocks_start_and_end_where_their_instruments_play():
+    # The trumpet passage is c. 1-20, but the trumpets only play in c. 10-14.
+    ensemble = Score("Rests", (phrases("Trumpet", range(10, 15)),))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Trumpet", "1-20", 3)))
+
+    assert [block["measure_range"] for block in sectional(plan)] == ["10-14"]
+    assert plan["segments"][-1]["measure_ranges"] == ["10-14"]
+
+
+def test_a_long_silence_inside_a_block_splits_it_into_phrases():
+    ensemble = Score("Phrases", (phrases("Trumpet", {1, 2, 15, 16}),))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Trumpet", "1-16", 3)))
+
+    assert [block["measure_range"] for block in sectional(plan)] == ["1-2", "15-16"]
+
+
+def test_short_rests_do_not_split_a_block():
+    ensemble = Score("Breath", (phrases("Trumpet", {1, 2, 5, 6}),))
+    plan = build_rehearsal_plan(ensemble, 60, difficulty(("Trumpet", "1-6", 3)))
+
+    assert [block["measure_range"] for block in sectional(plan)] == ["1-6"]

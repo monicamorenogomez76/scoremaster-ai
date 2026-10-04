@@ -38,6 +38,9 @@ Organización de cada pasaje (los pasajes se ordenan por prioridad):
    bombardino, tuba, más fagot, clarinete bajo y saxo barítono), percusión, cuerda y rítmica.
 3. **Un tutti final** que junta los pasajes con líneas comunes o con varias subsecciones.
 
+Cada bloque abarca solo los compases en que tocan sus instrumentos: se recortan los silencios
+iniciales y finales, y un silencio de una frase completa (8 compases) lo divide en dos bloques.
+
 La suma de bloques no supera el tiempo disponible; si no caben todos, se descartan los de menor
 prioridad indicándolo. Sin pasajes, el plan es un único tutti.
 
