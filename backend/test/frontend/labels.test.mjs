@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   apiInstrumentName, bandIssueText, byDifficulty, displayFamilyName, displayInstrumentName,
-  gradeOf, initialBandDraft, readBandProfile, rehearsalSegmentText,
+  gradeOf, initialBandDraft, readBandProfile, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText,
 } from '../../../frontend/src/labels.js';
 
 test('instrument names keep the part number in both directions', () => {
@@ -39,6 +39,17 @@ test('band template starts with one player per part and never goes negative', ()
 test('band issues and rehearsal blocks read as musician-facing Spanish', () => {
   assert.equal(bandIssueText({ instrument: 'Oboe', available: 0, required: 1 }), 'Oboe: falta en la plantilla; se necesita 1.');
   assert.equal(bandIssueText({ instrument: 'Horn in F', available: 2, required: 4 }), 'Trompa en Fa: hay 2 músicos y se necesitan 4.');
-  assert.equal(rehearsalSegmentText({ instrument: 'Flute', measure_range: '1-4', minutes: 5, reason: 'Default rehearsal block.' }),
-    'Flauta · compás 1-4 · 5 min · Bloque general de ensayo.');
+});
+
+test('ensemble rehearsal blocks read as sectionals followed by a tutti to join', () => {
+  const sectional = { type: 'sectional', section: 'woodwinds', parts: ['Clarinet 1', 'Alto Saxophone'], measure_range: '1-5',
+    findings: ['SL003'], shared: [{ parts: ['Alto Saxophone', 'Clarinet 1'], kind: 'rhythm' }] };
+  assert.equal(rehearsalBlockTitle(sectional), 'Seccional · Viento madera · c. 1–5');
+  assert.equal(rehearsalBlockDetail(sectional), 'Clarinete 1, Saxofón alto · Alta densidad rítmica · Mismo ritmo: Saxofón alto y Clarinete 1');
+  const tutti = { type: 'tutti', section: null, parts: ['Clarinet 1', 'Trumpet'], measure_ranges: ['9-12', '30'],
+    findings: [], shared: [{ parts: ['Clarinet 1', 'Trumpet'], kind: 'unison', measure_range: '9-12' }] };
+  assert.equal(rehearsalBlockTitle(tutti), 'Tutti para juntar · c. 9–12, 30');
+  assert.equal(rehearsalBlockDetail(tutti), 'Toda la banda · Unísono: Clarinete 1 y Trompeta (c. 9–12)');
+  assert.equal(omittedBlockText({ section: 'brass', parts: ['Tuba'], measure_range: '30-31', reason: 'time' }),
+    'Viento metal · c. 30–31 · Tuba');
 });

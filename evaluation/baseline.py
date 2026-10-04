@@ -6,10 +6,10 @@ from pathlib import Path
 
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.instrument_difficulty import canonical_instrument_name, classify_instrument_family
-from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.domain.models import Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
 from backend.parsers.musicxml_parser import parse_musicxml
 from backend.parsers.playback import build_playback
+from evaluation.legacy_rehearsal import build_legacy_rehearsal_plan as build_rehearsal_plan
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = Path(__file__).with_name('baseline-v1.json')
