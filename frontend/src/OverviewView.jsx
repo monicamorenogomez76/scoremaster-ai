@@ -18,8 +18,6 @@ export function OverviewPanel({ data, onStart, onOpenDifficulty }) {
       <button className="primary-action" type="button" onClick={onStart}>Ir a Inicio</button>
     </div>
     <div id="overview-result" hidden={!data}>{data && <>
-      <h2 id="overview-score-title" className="overview-title">{data.title || 'Partitura sin título'}</h2>
-      <p id="overview-composer" className="result-supporting">{data.composer ? 'Compositor: ' + data.composer : 'Compositor no indicado en el MusicXML'}</p>
       <div id="overview-metrics">
         <div className="dashboard-grid">
           <MetricCard label="Grado de la obra" value={gradeText(difficulty, scale)} detail="Estimación provisional · percentil 80 por familia" />

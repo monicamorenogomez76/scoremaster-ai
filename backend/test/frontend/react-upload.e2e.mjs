@@ -11,13 +11,14 @@ const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const fixture = readFileSync(new URL('../../../test-scores/high_density.musicxml', import.meta.url));
 const select = async () => {
+  if (!(await page.locator('#upload-form').isVisible())) await page.locator('#add-work').click();
   await page.locator('#file').setInputFiles({ name: 'synthetic.musicxml', mimeType: 'application/xml', buffer: fixture });
   await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
 };
 try {
   await page.goto(url);
   await login(page);
-  await page.locator('[data-view-target=home]').click();
+  await page.locator('[data-view-target=repertoire]').click();
   await select();
   await page.route('**/analyze', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'No se pudo guardar el análisis.' }) }));
   await page.locator('#upload-form button[type=submit]').click();
@@ -50,9 +51,9 @@ try {
   await received;
   assert.equal(await page.locator('#upload-form').getAttribute('aria-busy'), 'true');
   assert.match(await page.locator('#result').textContent(), /Analizando la partitura/);
-  await page.locator('[data-view-target=analysis]').click();
-  assert.equal(await page.locator('[data-view=analysis]').isVisible(), true);
-  await page.locator('[data-view-target=home]').click();
+  await page.locator('[data-view-target=summary]').click();
+  assert.equal(await page.locator('[data-view=summary]').isVisible(), true);
+  await page.locator('[data-view-target=repertoire]').click();
   await page.locator('#new-score').click();
   release();
   await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);

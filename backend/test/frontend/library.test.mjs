@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { deleteWork, durationText, listWorks, loadWork, saveBand, workSummaryText } from '../../../frontend/src/library.js';
+import {
+  analysisStatusText, deleteWork, durationText, groupPrioritiesBySection, listPriorities, listWorks, loadWork, preparationLabelsEs,
+  saveBand, updatePreparation, workSummaryText,
+} from '../../../frontend/src/library.js';
 
 function fakeServer(routes) {
   const calls = [];
@@ -51,4 +54,30 @@ test('saving the band sends only the changed instruments', async () => {
   assert.deepEqual(await saveBand({ flute: 3 }), { flute: 3, 'clarinet.bb': 11 });
   assert.deepEqual(JSON.parse(calls[0].body), { profile: { flute: 3 } });
   assert.equal(calls[0].headers.get('Content-Type'), 'application/json');
+});
+
+test('the director sets how far the band is with a work, apart from its difficulty', async () => {
+  assert.deepEqual(preparationLabelsEs, { review: 'Por revisar', preparing: 'En preparación', ready: 'Lista para programa', archived: 'Archivada' });
+  const calls = fakeServer({ 'PATCH /works/w1': [200, { id: 'w1', preparation_status: 'preparing' }] });
+  assert.equal((await updatePreparation('w1', 'preparing')).preparation_status, 'preparing');
+  assert.deepEqual(JSON.parse(calls[0].body), { preparation_status: 'preparing' });
+  assert.equal(calls[0].headers.get('Content-Type'), 'application/json');
+});
+
+test('a work says whether its analysis is available', () => {
+  assert.equal(analysisStatusText({ summary: { grade: 4 } }), 'Disponible');
+  assert.equal(analysisStatusText({ summary: {} }), 'Sin analizar');
+  assert.equal(analysisStatusText({}), 'Sin analizar');
+});
+
+test('priorities come from the works in preparation, grouped by section in their order', async () => {
+  const priorities = [
+    { work_id: 'w1', title: 'Persis', family: 'woodwinds', family_label_es: 'Viento madera', measure_range: '35-48', origin: 'analysis' },
+    { work_id: 'w1', title: 'Persis', family: 'brass', family_label_es: 'Viento metal', measure_range: '72-84', origin: 'analysis' },
+    { work_id: 'w2', title: 'Spania', family: 'woodwinds', family_label_es: 'Viento madera', measure_range: '9-16', origin: 'analysis' },
+  ];
+  fakeServer({ 'GET /works/priorities': [200, { priorities }] });
+  assert.deepEqual(await listPriorities(), priorities);
+  assert.deepEqual(groupPrioritiesBySection(priorities).map(([section, items]) => [section, items.map(item => item.measure_range)]),
+    [['Viento madera', ['35-48', '9-16']], ['Viento metal', ['72-84']]]);
 });
