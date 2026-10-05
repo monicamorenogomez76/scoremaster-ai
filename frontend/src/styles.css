@@ -377,7 +377,7 @@ button { border-radius: 6px; }
 .band-profile-editor { max-width: 980px; color: var(--text); }
 .band-profile-editor p { font-size: .86rem; }
 .empty-workspace { max-width: 620px; padding: 20px; border: 1px dashed #d0d8eb; border-radius: 7px; background: rgba(255,255,255,.7); }
-.empty-workspace h2 { margin: 0 0 8px; font-size: .98rem; }
+.empty-workspace h2, .empty-workspace h3 { margin: 0 0 8px; font-size: .98rem; }
 .empty-workspace p { margin: 0; color: var(--muted); line-height: 1.5; }
 .duration-field { display: grid; gap: 6px; color: var(--text); font-size: .88rem; font-weight: 600; }
 .duration-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
@@ -521,6 +521,9 @@ input[type=range] { accent-color: var(--primary); }
 .login-switch { margin-top: 12px; padding: 6px 0; border: 0; background: none; color: var(--primary); cursor: pointer; }
 
 /* Library of works */
+.works-section { margin-top: 24px; }
+.works-section > h2 { margin: 0 0 4px; font-size: 1.1rem; }
+.works-section > p { margin: 0 0 12px; }
 .works-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .works-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding: 18px 20px; }
 .works-copy { min-width: 0; flex: 1 1 260px; }

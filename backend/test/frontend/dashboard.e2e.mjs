@@ -22,7 +22,7 @@ try {
   await login(page);
   await page.reload();
   await page.locator('#app-shell').waitFor({ state: 'visible' });
-  assert.equal(await page.locator('[data-view-target=overview]').getAttribute('aria-current'), 'page');
+  assert.equal(await page.locator('[data-view-target=home]').getAttribute('aria-current'), 'page');
   assert.equal(await page.locator('#current-user').textContent(), 'Usuario demo');
   console.log('PASS: sign-in rejects a wrong password and the session survives a reload');
 
@@ -68,7 +68,7 @@ try {
   assert.deepEqual(several, ['P1', 'P3'], 'a sectional passage keeps every instrument of the block');
   console.log('PASS: a passage can keep several instruments');
 
-  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=home]').click();
   await page.locator('#file').setInputFiles({ name: 'high_register.musicxml', mimeType: 'application/xml', buffer: fixture });
   await waitIdle();
   await page.locator('#upload-form button[type=submit]').click();
@@ -116,11 +116,13 @@ try {
   await page.locator('#notation-close').click();
   console.log('PASS: the rehearsal calendar opens the score at the block with its instruments');
 
-  await page.locator('[data-view-target=overview]').click();
+  await page.locator('[data-view-target=analysis]').click();
   assert.equal(await page.locator('#overview-priority-title').textContent(), 'Clarinete · compases 1');
   assert.equal(await page.locator('#overview-priority-detail').textContent(), 'Registro agudo · Alta densidad rítmica · Intervalos amplios');
+  assert.equal(await page.locator('#difficulty-content').isVisible(), true, 'the analysis shows the dashboard and the difficulty together');
   await page.locator('#open-priority').click();
-  assert.equal(await view('difficulty').isVisible(), true);
+  assert.equal(await view('analysis').isVisible(), true);
+  await page.waitForFunction(() => { const box = document.querySelector('#difficulty-content').getBoundingClientRect(); return box.top >= 0 && box.top < window.innerHeight; });
   await page.locator('#difficulty-content .tree-node').first().click();
   await page.locator('#difficulty-content .tree-node').first().click();
   assert.match(await page.locator('.tree-nav').textContent(), /Todas las familias›Viento madera› Clarinete/);
@@ -140,7 +142,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.route('**/youtube/search?*', route => route.fulfill({ contentType: 'application/json',
     body: JSON.stringify({ videos: [], search_url: 'https://www.youtube.com/results?search_query=High+Density+Study' }) }));
-  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=home]').click();
   await page.locator('[data-view-target=videos]').click();
   const videos = page.locator('#videos-content');
   await videos.getByRole('button', { name: 'Buscar' }).click();
@@ -158,7 +160,7 @@ try {
 
   // A part the catalog does not know waits for the user before counting in the band template.
   const unnamed = Buffer.from(fixture.toString().replace('<part-name>Clarinet</part-name>', '<part-name>Melodía</part-name>'));
-  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=home]').click();
   await page.locator('#file').setInputFiles({ name: 'melodia.musicxml', mimeType: 'application/xml', buffer: unnamed });
   await waitIdle();
   await page.locator('#upload-form button[type=submit]').click();
@@ -187,7 +189,7 @@ try {
 
   // The library survives signing out: reopen a work without uploading it again, then delete one.
   await login(page, director);
-  await page.locator('[data-view-target=works]').click();
+  await page.locator('[data-view-target=home]').click();
   const works = page.locator('#works-content .works-item');
   await works.nth(1).waitFor();
   assert.equal(await works.count(), 2);
@@ -197,7 +199,7 @@ try {
   await page.waitForFunction(() => document.querySelector('#full-score-rendering svg'), { timeout: 45000 });
   await page.locator('[data-view-target=band]').click();
   assert.equal(await page.getByLabel('Músicos de Clarinete en Si bemol').inputValue(), '0');
-  await page.locator('[data-view-target=works]').click();
+  await page.locator('[data-view-target=home]').click();
   const copy = works.filter({ hasText: 'melodia.musicxml' });
   await copy.locator('.work-delete').click();
   await copy.locator('.work-delete-confirm').click();

@@ -58,6 +58,11 @@ La aplicación exige iniciar sesión (email y contraseña, Google opcional). Cad
 analizada se guarda en «Mis obras» con su último análisis, y la plantilla de la banda
 se conserva por usuario.
 
+La navegación sigue el orden de trabajo del director: en **Inicio** se sube una partitura
+o se abre una de «Mis obras» y se ve la partitura; en **Análisis** están el cuadro de mando
+(grado, pasajes críticos y familias) y el explorador de dificultad; después, **Mi banda**,
+**Plan de ensayo** y **Vídeos**.
+
 El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
 de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
 
@@ -89,7 +94,7 @@ navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
 El archivo original se guarda en «Mis obras», visible solo para su propietario, y
 se puede reabrir o eliminar (con sus análisis) en cualquier momento.
 
-En «Analizar partitura», después de completar el análisis, la partitura aparece en un visor
+En «Inicio», después de completar el análisis, la partitura aparece en un visor
 grande incrustado, con todas las voces, páginas de cuatro compases, zoom y pantalla
 completa. Incluye reproducción del conjunto, pausa, detener, posición, velocidad
 y volumen. La página se ajusta al ancho y al alto disponibles, con controles

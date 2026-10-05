@@ -12,7 +12,7 @@ import { useScoreAnalysis } from './useScoreAnalysis.js';
 export function App({ session }) {
   // undefined while the session is checked, null when nobody is signed in.
   const [user, setUser] = useState(undefined);
-  const [view, setView] = useState('overview');
+  const [view, setView] = useState('home');
   // revision changes with every successful analysis so explorers restart from the top.
   const [analysis, setAnalysis] = useState(null);
   const [bandDraft, setBandDraft] = useState({});
@@ -54,14 +54,15 @@ export function App({ session }) {
     minutes,
     getProfile: () => readBandProfile(analysis?.data.band_fit?.requirements, bandDraft),
     getConfirmations: () => confirmations,
-    onReset: () => { setAnalysis(null); setBandDraft({}); setConfirmations({}); navigate('analyze'); },
+    onReset: () => { setAnalysis(null); setBandDraft({}); setConfirmations({}); navigate('home'); },
     onAnalysis: (data, profile, shouldNavigate) => {
       setAnalysis(previous => ({ data, fileName: session.getFile()?.name || '', revision: (previous?.revision || 0) + 1 }));
       setBandDraft(initialBandDraft(data.band_fit?.requirements, profile));
-      if (shouldNavigate) navigate('analyze');
+      // The score is seen in the home view; the analysis waits in its own view.
+      if (shouldNavigate) navigate('home');
     },
   });
-  const recalculate = () => (session.getFile() ? upload.recalculate() : navigate('analyze'));
+  const recalculate = () => (session.getFile() ? upload.recalculate() : navigate('home'));
   // The edited template is saved for the user's next works; this analysis already sends it.
   const updateBand = () => {
     saveBand(readBandProfile(analysis?.data.band_fit?.requirements, bandDraft)).catch(() => {});
@@ -70,7 +71,7 @@ export function App({ session }) {
   const confirmInstruments = chosen => {
     const next = { ...confirmations, ...chosen };
     setConfirmations(next);
-    return session.getFile() ? upload.recalculate(next) : navigate('analyze');
+    return session.getFile() ? upload.recalculate(next) : navigate('home');
   };
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export function App({ session }) {
     return () => { current = false; stop(); };
   }, []);
   const signedIn = Boolean(user);
-  const enter = found => { setUser(found); navigate('overview'); };
+  const enter = found => { setUser(found); navigate('home'); };
   const leave = async () => { await signOut().catch(() => {}); setUser(null); upload.reset(); };
 
   return <>

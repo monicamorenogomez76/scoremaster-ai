@@ -1,22 +1,21 @@
 import React from 'react';
-import { View } from './View.jsx';
 import { byDifficulty, displayFamilyName, displayInstrumentName, findingLabel, gradeOf, gradeScaleOf, gradeText } from './labels.js';
 
 function MetricCard({ label, value, detail }) {
   return <div className="metric-card"><div className="label">{label}</div><div className="value">{value}</div><div className="subvalue">{detail}</div></div>;
 }
 
-export function OverviewView({ active, data, onNavigate }) {
+// Dashboard at the top of the analysis view: the work's grade, its families and the priority passage.
+export function OverviewPanel({ data, onStart, onOpenDifficulty }) {
   const difficulty = data?.difficulty || {};
   const families = byDifficulty(Object.entries(difficulty.by_family || {}), 'score');
   const passages = difficulty.critical_passages || [];
   const scale = gradeScaleOf(difficulty);
   const priority = passages[0];
-  return <View name="overview" active={active} eyebrow="Espacio de trabajo" title="Resumen"
-    description="Estado de la partitura y prioridades del ensayo.">
+  return <>
     <div id="overview-empty" className="overview-empty surface" hidden={Boolean(data)}>
-      <div><h2>Empieza con una partitura</h2><p>Sube un archivo MusicXML para ver la dificultad, los pasajes críticos y el ajuste a tu plantilla.</p></div>
-      <button className="primary-action" type="button" onClick={() => onNavigate('analyze')}>Analizar partitura</button>
+      <div><h2>Aún no hay análisis</h2><p>Sube un archivo MusicXML o abre una de tus obras en Inicio para ver su dificultad y sus pasajes críticos.</p></div>
+      <button className="primary-action" type="button" onClick={onStart}>Ir a Inicio</button>
     </div>
     <div id="overview-result" hidden={!data}>{data && <>
       <h2 id="overview-score-title" className="overview-title">{data.title || 'Partitura sin título'}</h2>
@@ -44,7 +43,7 @@ export function OverviewView({ active, data, onNavigate }) {
         <h2 id="overview-priority-title">{displayInstrumentName(priority.instrument, (difficulty.by_instrument || {})[priority.instrument]) + ' · compases ' + priority.measure_range}</h2>
         <p id="overview-priority-detail">{(priority.findings || []).map(findingLabel).join(' · ') || 'Pasaje marcado para revisión.'}</p>
       </div>
-      <button id="open-priority" className="primary-action" type="button" onClick={() => onNavigate('difficulty')}>Ver pasajes</button>
+      <button id="open-priority" className="primary-action" type="button" onClick={onOpenDifficulty}>Ver pasajes</button>
     </div>}
-  </View>;
+  </>;
 }
