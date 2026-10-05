@@ -55,6 +55,18 @@ La vista incluye un calendario interactivo que abre la partitura de cada bloque 
 instrumentos. Limitación: los pasajes muy largos vienen del detector de criticidad actual
 (paso 14 pendiente). El planificador anterior queda congelado en `evaluation/legacy_rehearsal.py`.
 
+### Agenda propuesta para un ensayo de varias obras (2026-10-05)
+
+A petición de la autora, la aplicación propone la agenda de un ensayo guardado
+(`backend/analyzers/rehearsal_proposal.py`, `POST /rehearsals/proposal`): un **calentamiento** de
+toda la banda con el 15 % del tiempo (mínimo 5 min); el resto se reparte entre las obras **en
+proporción a su grado**, con un mínimo de 10 min por obra y en el orden elegido por el director;
+las obras que no caben se indican en lugar de comprimirse. Cada obra recibe el plan de ensayo de
+conjunto anterior con su tiempo, y **cada bloque indica su obra y sus compases**. Las obras se
+vuelven a leer desde su MusicXML guardado con los instrumentos confirmados en su último análisis.
+La propuesta no se guarda: el director la revisa y ajusta en el editor. Estos repartos son reglas
+iniciales, no valores calibrados; el asistente IA (F2b) podrá ajustarlos a petición.
+
 ---
 
 # 2. Difficulty

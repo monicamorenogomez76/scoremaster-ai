@@ -1,6 +1,7 @@
 // Saved rehearsals of the signed-in user: several works per rehearsal and an agenda of blocks,
 // each naming the work rehearsed in it (author's decisions, 2026-10-05).
 import { apiJson } from './api.js';
+import { blockScoreLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
 
 const send = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const path = id => '/rehearsals/' + encodeURIComponent(id);
@@ -49,6 +50,37 @@ export const duplicateBlock = (blocks, index) => [...blocks.slice(0, index + 1),
 
 export function blockWorkText(block) {
   if (!block.work_title) return 'Toda la banda · sin obra concreta';
-  const measures = block.measures ? (block.measures.includes('-') ? 'cc. ' + block.measures.replace('-', '–') : 'c. ' + block.measures) : '';
+  const several = /[-,]/.test(block.measures || '');
+  const measures = block.measures ? (several ? 'cc. ' : 'c. ') + block.measures.replace(/-/g, '–') : '';
   return [block.work_title, measures].filter(Boolean).join(' · ');
+}
+
+// The app proposes the agenda of the chosen works (warm-up, then the ensemble plan of each work);
+// nothing is saved until the director reviews it.
+export const proposeRehearsal = (workIds, minutes) => apiJson('/rehearsals/proposal',
+  send('POST', { work_ids: workIds, duration_minutes: minutes }), 'No se pudo proponer la agenda.');
+
+const WARMUP_OBJECTIVE = 'Afinación, sonido y articulación de toda la banda.';
+
+function proposalTitle(segment) {
+  if (segment.type === 'warmup') return 'Calentamiento';
+  if (segment.type === 'tutti') return 'Tutti para juntar';
+  if (segment.type === 'common') return blockScoreLabel(segment);
+  return 'Seccional · ' + blockScoreLabel(segment);
+}
+
+function proposalSections(segment) {
+  if (segment.type === 'warmup' || segment.type === 'tutti') return ['Toda la banda'];
+  if (segment.type === 'common') return (segment.groups || []).map(rehearsalGroupName);
+  return [rehearsalGroupName(segment.group)];
+}
+
+// Blocks of the editor, each with its work and measures, within the API's limits.
+export function proposalBlocks(proposal) {
+  return proposal.blocks.map(segment => ({
+    title: proposalTitle(segment), minutes: segment.minutes, work_id: segment.work_id || null, work_title: segment.work_title || null,
+    measures: (segment.type === 'tutti' ? (segment.measure_ranges || []).join(', ') : segment.measure_range || '').slice(0, 40),
+    sections: [...new Set(proposalSections(segment))].slice(0, 20),
+    objective: (segment.type === 'warmup' ? WARMUP_OBJECTIVE : rehearsalBlockDetail(segment)).slice(0, 500),
+  }));
 }

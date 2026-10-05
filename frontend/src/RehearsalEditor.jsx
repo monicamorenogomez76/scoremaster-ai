@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { listWorks } from './library.js';
-import { agendaTime, createRehearsal, deleteRehearsal, duplicateBlock, moveBlock, todayIso, updateRehearsal } from './rehearsals.js';
+import { agendaTime, createRehearsal, deleteRehearsal, duplicateBlock, moveBlock, proposalBlocks, proposeRehearsal, todayIso, updateRehearsal } from './rehearsals.js';
 
 let nextKey = 0;
 const keyed = block => ({ ...block, key: ++nextKey });
@@ -36,6 +36,9 @@ export function RehearsalEditor({ rehearsal, onSaved, onCancel }) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [proposing, setProposing] = useState(false);
+  const [replacing, setReplacing] = useState(false);
+  const [proposalNote, setProposalNote] = useState('');
   const heading = useRef(null);
   useEffect(() => { listWorks().then(setWorks).catch(failure => setError(failure.message)); }, []);
   useEffect(() => { heading.current?.focus(); }, []);
@@ -55,6 +58,21 @@ export function RehearsalEditor({ rehearsal, onSaved, onCancel }) {
       onSaved(saved);
     } catch (failure) { setError(failure.message); } finally { setSaving(false); }
   };
+  // The app fills the agenda from the analysis of the chosen works; the director reviews it.
+  const propose = async () => {
+    setReplacing(false); setProposing(true); setError('');
+    try {
+      const proposal = await proposeRehearsal(draft.work_ids, Number(draft.duration_minutes) || 0);
+      setBlocks(() => proposalBlocks(proposal).map(block => keyed({ ...block, minutes: String(block.minutes),
+        work_id: block.work_id || '', sections: block.sections.join(', ') })));
+      const skipped = proposal.omitted_works.map(item => item.title);
+      setProposalNote('Agenda propuesta con el análisis de cada obra: calentamiento, pasajes por líneas comunes y '
+        + 'subsecciones, y un tutti por obra. Revísala y ajústala antes de guardar.'
+        + (skipped.length ? ' No caben en este tiempo: ' + skipped.join(', ') + '.' : ''));
+    } catch (failure) { setError(failure.message); } finally { setProposing(false); }
+  };
+  const askPropose = () => (draft.blocks.length ? setReplacing(true) : propose());
+
   const remove = async () => {
     try { await deleteRehearsal(rehearsal.id); onSaved(null); } catch (failure) { setError(failure.message); }
   };
@@ -82,10 +100,20 @@ export function RehearsalEditor({ rehearsal, onSaved, onCancel }) {
 
     <div className="agenda-heading">
       <h3>Agenda</h3>
+      <div className="agenda-propose">
+        {replacing
+          ? <><span>¿Sustituir los bloques actuales?</span>
+              <button type="button" className="primary-action" onClick={propose}>Sustituir</button>
+              <button type="button" className="secondary-action" onClick={() => setReplacing(false)}>Mantener</button></>
+          : <button id="propose-agenda" type="button" className="primary-action" disabled={proposing || draft.work_ids.length === 0}
+              onClick={askPropose}>{proposing ? 'Calculando…' : 'Proponer agenda'}</button>}
+      </div>
       <p id="agenda-time" className={time.exceeded ? 'agenda-time is-over' : 'agenda-time'} aria-live="polite">
         Asignado: {time.assigned} de {Number(draft.duration_minutes) || 0} minutos · {time.exceeded ? 'sobran ' + time.exceeded + ' (exceso)' : 'quedan ' + time.remaining}
       </p>
     </div>
+    {draft.work_ids.length === 0 && <p className="result-supporting">Elige las obras del ensayo para que la aplicación proponga la agenda.</p>}
+    {proposalNote && <p className="proposal-note" role="status">{proposalNote}</p>}
     <ol className="agenda-editor">{draft.blocks.map((block, index) => <li key={block.key} className="agenda-block">
       <fieldset>
         <legend>Bloque {index + 1}</legend>

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   agendaTime, blockWorkText, createRehearsal, deleteRehearsal, duplicateBlock, listRehearsals, moveBlock,
-  nextRehearsal, rehearsalDateText, splitRehearsals, updateRehearsal,
+  nextRehearsal, proposalBlocks, proposeRehearsal, rehearsalDateText, splitRehearsals, updateRehearsal,
 } from '../../../frontend/src/rehearsals.js';
 
 function fakeServer(routes) {
@@ -51,6 +51,7 @@ test('blocks move up and down and can be duplicated', () => {
 test('each block says which work is rehearsed in it', () => {
   assert.equal(blockWorkText({ work_title: 'Persis', measures: '35-48' }), 'Persis · cc. 35–48');
   assert.equal(blockWorkText({ work_title: 'Persis', measures: '' }), 'Persis');
+  assert.equal(blockWorkText({ work_title: 'Persis', measures: '1-4, 9-16' }), 'Persis · cc. 1–4, 9–16');
   assert.equal(blockWorkText({ work_title: null }), 'Toda la banda · sin obra concreta');
 });
 
@@ -70,4 +71,28 @@ test('rehearsals are listed, created, replaced and deleted', async () => {
   await deleteRehearsal('r1');
   assert.equal(calls[3].method, 'DELETE');
   await assert.rejects(updateRehearsal('ajeno', {}), { message: 'El ensayo no existe.' });
+});
+
+test('the proposed agenda becomes editable blocks, each with its work', async () => {
+  const proposal = { blocks: [
+    { type: 'warmup', minutes: 9, parts: [], findings: [], work_id: null, work_title: null },
+    { type: 'sectional', group: 'clarinets', parts: ['Clarinet'], measure_range: '1-4', minutes: 20, findings: ['SL002'], work_id: 'w1', work_title: 'Persis' },
+    { type: 'common', kind: 'line', parts: ['Trombone', 'Euphonium'], groups: ['low'], measure_range: '9', minutes: 15, findings: [], work_id: 'w1', work_title: 'Persis' },
+    { type: 'tutti', parts: ['Clarinet', 'Trombone'], measure_ranges: ['1-4', '9-16'], minutes: 16, findings: [], work_id: 'w1', work_title: 'Persis' },
+  ] };
+  const blocks = proposalBlocks(proposal);
+  assert.deepEqual(blocks.map(block => [block.title, block.minutes, block.work_id, block.measures]), [
+    ['Calentamiento', 9, null, ''],
+    ['Seccional · Clarinetes', 20, 'w1', '1-4'],
+    ['Línea común', 15, 'w1', '9'],
+    ['Tutti para juntar', 16, 'w1', '1-4, 9-16'],
+  ]);
+  assert.deepEqual(blocks[1].sections, ['Clarinetes']);
+  assert.deepEqual(blocks[3].sections, ['Toda la banda']);
+  assert.match(blocks[1].objective, /Registro agudo/);
+  assert.ok(blocks.every(block => block.objective.length <= 500 && block.measures.length <= 40));
+
+  const calls = fakeServer({ 'POST /rehearsals/proposal': [200, proposal] });
+  assert.equal((await proposeRehearsal(['w1'], 60)).blocks.length, 4);
+  assert.deepEqual(JSON.parse(calls[0].body), { work_ids: ['w1'], duration_minutes: 60 });
 });
