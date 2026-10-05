@@ -10,14 +10,16 @@ await page.route('https://unpkg.com/smplr@1.1.0/dist/index.mjs', route => route.
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const score = name => `<?xml version="1.0"?><score-partwise version="4.0"><work><work-title>Synthetic workflow test</work-title></work><part-list><score-part id="P1"><part-name>${name}</part-name><score-instrument id="I1"><instrument-name>${name === 'Voice' ? 'Voice Oohs' : name}</instrument-name></score-instrument><midi-instrument id="I1"><midi-channel>1</midi-channel><midi-program>${name === 'Voice' ? 54 : 74}</midi-program></midi-instrument></score-part></part-list><part id="P1"><measure number="1"><attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note></measure></part></score-partwise>`;
+// New works are added from the repertoire; the form stays open while a file is being chosen.
 const upload = async name => {
+  if (!(await page.locator('#upload-form').isVisible())) await page.locator('#add-work').click();
   await page.locator('#file').setInputFiles({ name: 'synthetic.musicxml', mimeType: 'application/xml', buffer: Buffer.from(score(name)) });
   await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
 };
 try {
   await page.goto(process.env.SCOREMASTER_URL || 'http://127.0.0.1:8005');
   await login(page);
-  await page.locator('[data-view-target=home]').click();
+  await page.locator('[data-view-target=repertoire]').click();
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
   await upload('Flute');
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
@@ -32,14 +34,15 @@ try {
     return svg.width <= box.width;
   });
   assert.equal(fits, true, 'page must fit width');
-  assert.equal(await page.locator('[data-view-target=home]').getAttribute('aria-current'), 'page', 'the score is seen in the home view after uploading');
-  assert.equal(await page.locator('#works-content').isVisible(), true, 'saved works are chosen from the home view');
+  assert.equal(await page.locator('[data-view-target=repertoire]').getAttribute('aria-current'), 'page');
+  assert.equal(await page.locator('#work-tab-score').getAttribute('aria-selected'), 'true', 'a new work opens on its score');
+  assert.equal(await page.locator('#works-content').isVisible(), false, 'the work detail replaces the list');
   await page.screenshot({ path: '/tmp/scoremaster-redesign-score.png', fullPage: true, animations: 'disabled' });
-  await page.locator('[data-view-target=analysis]').click();
+  await page.locator('#work-tab-difficulty').click();
   assert.equal(await page.locator('.family-chart').isVisible(), true);
   assert.equal(await page.locator('#difficulty-content .tree-node').first().isVisible(), true, 'the dashboard and the difficulty share the analysis view');
   await page.screenshot({ path: '/tmp/scoremaster-redesign-dashboard.png', fullPage: true, animations: 'disabled' });
-  await page.locator('[data-view-target=home]').click();
+  await page.locator('#add-work').click();
   await page.locator('#new-score').click();
   await page.waitForFunction(() => document.querySelector('#file').files.length === 0);
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
@@ -82,7 +85,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
   await page.locator('#upload-form button[type=submit]').click();
   await page.waitForFunction(() => document.querySelector('#full-score-rendering svg') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false');
-  await page.locator('[data-view-target=analysis]').click();
+  await page.locator('#work-tab-difficulty').click();
   await page.locator('#difficulty-content .tree-node').first().click();
   await page.locator('#difficulty-content .tree-node').first().click();
   assert.equal(await page.getByRole('button', { name: 'Escuchar', exact: true }).count(), 0);
@@ -141,7 +144,7 @@ try {
   await page.screenshot({ path: '/tmp/scoremaster-complete-passage.png', fullPage: true });
   console.log('PASS: entire 45-bar passage rendered without next-page control');
   await page.locator('#notation-close').click();
-  await page.locator('[data-view-target=home]').click();
+  await page.locator('#work-tab-score').click();
   await page.evaluate(async () => window.scoremasterWorkspace.loadScore());
   assert.match(await page.locator('#score-page').textContent(), /Página 1\/12/);
   await page.locator('#ensemble-play').click();

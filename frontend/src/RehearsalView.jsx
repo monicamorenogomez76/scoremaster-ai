@@ -39,7 +39,7 @@ export function RehearsalView({ active, data, minutes, onMinutesChange, onRecalc
   const plan = data?.rehearsal_plan || {};
   const blocks = plan.segments || [];
   const omitted = plan.omitted || [];
-  return <View name="rehearsal" active={active} eyebrow="RehearsalAI" title="Plan de ensayo"
+  return <View name="rehearsal" active={active} eyebrow="RehearsalAI" title="Ensayos"
     description="Ensayo de conjunto: primero quienes tocan lo mismo, después las subsecciones y un tutti final para juntar.">
     <div className="rehearsal-settings surface">
       <label className="duration-field" htmlFor="total-minutes">Duración prevista del ensayo

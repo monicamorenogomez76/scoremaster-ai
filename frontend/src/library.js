@@ -49,3 +49,24 @@ export function durationText(duration) {
   const minutes = Math.floor(duration.seconds / 60), seconds = String(duration.seconds % 60).padStart(2, '0');
   return minutes + ':' + seconds + (duration.assumed_tempo ? ' (tempo supuesto)' : '');
 }
+
+// How far the band is with a work: set by the director, independent of the analysed difficulty.
+export const preparationLabelsEs = { review: 'Por revisar', preparing: 'En preparación', ready: 'Lista para programa', archived: 'Archivada' };
+
+export const updatePreparation = (id, status) => json('/works/' + encodeURIComponent(id), {
+  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preparation_status: status }),
+}, 'No se pudo cambiar el estado de la obra.');
+
+export const analysisStatusText = work => (work?.summary?.grade == null ? 'Sin analizar' : 'Disponible');
+
+// Critical passages of the works in preparation (origin "analysis"; the director's notes arrive later).
+export const listPriorities = async () => (await json('/works/priorities', {}, 'No se pudieron cargar las prioridades.')).priorities;
+
+export function groupPrioritiesBySection(priorities) {
+  const sections = new Map();
+  for (const item of priorities) {
+    const section = item.family_label_es || item.family || 'Otras';
+    sections.set(section, [...(sections.get(section) || []), item]);
+  }
+  return [...sections];
+}

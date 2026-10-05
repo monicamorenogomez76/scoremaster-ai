@@ -58,10 +58,17 @@ La aplicación exige iniciar sesión (email y contraseña, Google opcional). Cad
 analizada se guarda en «Mis obras» con su último análisis, y la plantilla de la banda
 se conserva por usuario.
 
-La navegación sigue el orden de trabajo del director: en **Inicio** se sube una partitura
-o se abre una de «Mis obras» y se ve la partitura; en **Análisis** están el cuadro de mando
-(grado, pasajes críticos y familias) y el explorador de dificultad; después, **Mi banda**,
-**Plan de ensayo** y **Vídeos**.
+La navegación sigue la propuesta de interfaz de la autora (2026-10-05):
+
+- **Resumen**: próximo ensayo, obras en preparación y prioridades por sección (de momento, los
+  pasajes críticos de las obras en preparación, marcados con origen «Análisis»).
+- **Repertorio**: buscador, «Añadir obra» y, por obra, estado de preparación (independiente de la
+  dificultad) y estado del análisis. El detalle de una obra tiene las pestañas **Partitura**,
+  **Dificultad** y **Grabaciones**.
+- **Mi banda** y **Ensayos**. El asistente IA se incorporará como panel contextual.
+
+Estilo: blanco frío, grafito y azul eléctrico (`#365CFF`) con la fuente Inter incluida en el build,
+sin peticiones a servicios de fuentes externos.
 
 El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
 de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
@@ -94,7 +101,7 @@ navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
 El archivo original se guarda en «Mis obras», visible solo para su propietario, y
 se puede reabrir o eliminar (con sus análisis) en cualquier momento.
 
-En «Inicio», después de completar el análisis, la partitura aparece en un visor
+En «Repertorio», después de completar el análisis, la partitura aparece en un visor
 grande incrustado, con todas las voces, páginas de cuatro compases, zoom y pantalla
 completa. Incluye reproducción del conjunto, pausa, detener, posición, velocidad
 y volumen. La página se ajusta al ancho y al alto disponibles, con controles
@@ -174,7 +181,7 @@ en el propio workflow; no requiere secretos del repositorio.
 
 ### Diseño de la interfaz
 
-La interfaz usa un logo SVG propio, una paleta azul/violeta, superficies claras,
+La interfaz usa un logo SVG propio, la paleta blanco frío, grafito y azul eléctrico, superficies claras,
 controles con iconos y gráficos de grado por familia sobre una escala explícita
 de 1 a 6, con el nivel de la rúbrica (Iniciación … Superior). Los valores también aparecen como texto. Las acciones principales y
 secundarias se distinguen visualmente, el foco del teclado permanece visible y

@@ -12,7 +12,10 @@ import { useScoreAnalysis } from './useScoreAnalysis.js';
 export function App({ session }) {
   // undefined while the session is checked, null when nobody is signed in.
   const [user, setUser] = useState(undefined);
-  const [view, setView] = useState('home');
+  const [view, setView] = useState('summary');
+  // Repertoire: list of works, form to add one, or the detail of the open work and its tab.
+  const [repertoireMode, setRepertoireMode] = useState('list');
+  const [workTab, setWorkTab] = useState('score');
   // revision changes with every successful analysis so explorers restart from the top.
   const [analysis, setAnalysis] = useState(null);
   const [bandDraft, setBandDraft] = useState({});
@@ -54,15 +57,16 @@ export function App({ session }) {
     minutes,
     getProfile: () => readBandProfile(analysis?.data.band_fit?.requirements, bandDraft),
     getConfirmations: () => confirmations,
-    onReset: () => { setAnalysis(null); setBandDraft({}); setConfirmations({}); navigate('home'); },
+    onReset: () => { setAnalysis(null); setBandDraft({}); setConfirmations({}); setRepertoireMode('add'); navigate('repertoire'); },
     onAnalysis: (data, profile, shouldNavigate) => {
       setAnalysis(previous => ({ data, fileName: session.getFile()?.name || '', revision: (previous?.revision || 0) + 1 }));
       setBandDraft(initialBandDraft(data.band_fit?.requirements, profile));
-      // The score is seen in the home view; the analysis waits in its own view.
-      if (shouldNavigate) navigate('home');
+      // An uploaded or reopened work opens on its score, in the repertoire.
+      if (shouldNavigate) { setRepertoireMode('detail'); setWorkTab('score'); navigate('repertoire'); }
     },
   });
-  const recalculate = () => (session.getFile() ? upload.recalculate() : navigate('home'));
+  const addWork = () => { setRepertoireMode('add'); navigate('repertoire'); };
+  const recalculate = () => (session.getFile() ? upload.recalculate() : addWork());
   // The edited template is saved for the user's next works; this analysis already sends it.
   const updateBand = () => {
     saveBand(readBandProfile(analysis?.data.band_fit?.requirements, bandDraft)).catch(() => {});
@@ -71,7 +75,7 @@ export function App({ session }) {
   const confirmInstruments = chosen => {
     const next = { ...confirmations, ...chosen };
     setConfirmations(next);
-    return session.getFile() ? upload.recalculate(next) : navigate('home');
+    return session.getFile() ? upload.recalculate(next) : addWork();
   };
 
   useEffect(() => {
@@ -81,13 +85,14 @@ export function App({ session }) {
     return () => { current = false; stop(); };
   }, []);
   const signedIn = Boolean(user);
-  const enter = found => { setUser(found); navigate('home'); };
+  const enter = found => { setUser(found); setRepertoireMode('list'); navigate('summary'); };
   const leave = async () => { await signOut().catch(() => {}); setUser(null); upload.reset(); };
 
   return <>
     <LoginScreen hidden={signedIn || user === undefined} onSignedIn={enter} />
     <AppShell hidden={!signedIn} user={user} view={view} onNavigate={navigate} onSignOut={leave}
-      upload={upload} analysis={analysis} bandDraft={bandDraft} onBandDraftChange={setBandDraft}
+      upload={upload} analysis={analysis} repertoireMode={repertoireMode} onRepertoireModeChange={setRepertoireMode}
+      workTab={workTab} onWorkTabChange={setWorkTab} bandDraft={bandDraft} onBandDraftChange={setBandDraft}
       minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />
