@@ -29,23 +29,23 @@ def capture():
         path = ROOT / 'test-scores' / filename
         score = parse_musicxml(path)
         cases[filename] = {'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
-                           'analysis': compute_difficulty_score(score, critical_detector='legacy'),
+                           'analysis': compute_difficulty_score(score, critical_detector='legacy', scale='legacy'),
                            'rehearsal': build_rehearsal_plan(score, 15)}
     for bpm in (60, 160):
         name = f'stepwise-sixteenths-{bpm}'
         score = synthetic_case(name, ['C4','D4','E4','F4'] * 4, bpm=bpm)
-        cases[name] = {'analysis': compute_difficulty_score(score, critical_detector='legacy'),
+        cases[name] = {'analysis': compute_difficulty_score(score, critical_detector='legacy', scale='legacy'),
                        'rehearsal': build_rehearsal_plan(score, 15)}
     for bars in (1, 8, 16):
         for instrument, pitch in [('Trumpet','C4'), ('Clarinet','C6')]:
             name = f'{instrument}-{pitch}-{bars}-bars'
             score = synthetic_case(name, [pitch], bars=bars, instrument=instrument)
-            cases[name] = {'analysis': compute_difficulty_score(score, critical_detector='legacy'),
+            cases[name] = {'analysis': compute_difficulty_score(score, critical_detector='legacy', scale='legacy'),
                            'rehearsal': build_rehearsal_plan(score, 15)}
     easy = synthetic_case('sustained-slow', ['C4'])
     fast_elsewhere = Score('fast-elsewhere', easy.parts, easy.tempo_marks + (TempoMark(100, 0, 200, 1),))
     for score in (easy, fast_elsewhere):
-        cases[score.title] = {'analysis': compute_difficulty_score(score, critical_detector='legacy')}
+        cases[score.title] = {'analysis': compute_difficulty_score(score, critical_detector='legacy', scale='legacy')}
     names = ['Clarinete', 'Clarinete bajo', 'Trompa', 'Corno inglés', 'Saxofón alto',
              'Clarinetto', 'Voice', 'English Horn', 'Horn in F', 'Bass Clarinet']
     instruments = {name: {'canonical': canonical_instrument_name(name),

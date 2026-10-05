@@ -28,5 +28,5 @@ recorre las partituras comerciales locales. No hay etiquetas humanas ni resultad
   si excede sus minutos: ese defecto debe corregirse en el planificador, no en la captura.
 
 Los futuros expertos aportarán grados 1–6 y criticidad. La captura mantiene las
-escalas legacy 1–5/0–5 explícitas. El dataset de benchmark será independiente de
+escalas legacy 1–5/0–5 explícitas (`scale='legacy'`); la aplicación usa grados 1–6 e índice 0–10 desde el paso 13. El dataset de benchmark será independiente de
 estas regresiones y agrupará por obra para evitar leakage.

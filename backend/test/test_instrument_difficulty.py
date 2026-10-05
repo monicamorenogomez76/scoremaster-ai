@@ -52,7 +52,7 @@ def test_instrument_difficulty_increases_for_extreme_register_in_same_instrument
     assert extreme["grade"] > comfortable["grade"]
 
 
-def test_grade_five_is_reserved_for_extreme_technical_demand():
+def test_the_top_grade_is_reserved_for_extreme_technical_demand():
     measures = tuple(
         ScoreMeasure(
             number=number,
@@ -64,5 +64,5 @@ def test_grade_five_is_reserved_for_extreme_technical_demand():
 
     result = compute_instrument_difficulty(extreme_part, tempo_bpm=300)
 
-    assert result["grade"] == 5
-    assert result["difficulty_score"] == 5.0
+    assert result["grade"] == 6
+    assert result["difficulty_score"] == 10.0

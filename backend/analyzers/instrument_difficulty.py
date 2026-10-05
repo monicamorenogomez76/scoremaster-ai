@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from music21 import pitch
 
+from backend.domain.difficulty_scale import grade_from_index, technical_index
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import ScorePart
 from backend.domain.timing import attack_count, measure_length, melodic_lines, sounding_pitches
@@ -231,7 +232,8 @@ def _family_and_profile(part: ScorePart) -> tuple[str, InstrumentProfile | None]
     return identity.section, INSTRUMENT_PROFILES.get(PROFILE_BY_CANONICAL_ID.get(identity.canonical_id, ""))
 
 
-def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = None) -> dict:
+def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = None, scale: str = "current") -> dict:
+    """scale: "current" (grades 1-6, index and dimensions 0-10) or "legacy" (1-5 and 0-5, baseline-v1 only)."""
     family, profile = _family_and_profile(part)
     if profile is None:
         profile = InstrumentProfile(family, 48, 84, 36, 9, 8, 2.2, 135)
@@ -282,11 +284,17 @@ def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = Non
         else 0.0
     )
 
+    dimensions = {key: round(value, 2) for key, value in sorted(dimensions.items())}
+    if scale == "legacy":
+        grade, index = grade_from_score(score), round(score, 2)
+    else:
+        index = technical_index(round(score, 2))
+        grade, dimensions = grade_from_index(index), {key: technical_index(value) for key, value in dimensions.items()}
     return {
         "family": family,
         "family_label_es": family_label_es(family),
         "instrument_label_es": instrument_label_es(part.name),
-        "grade": grade_from_score(score),
-        "difficulty_score": round(score, 2),
-        "dimensions": {key: round(value, 2) for key, value in sorted(dimensions.items())},
+        "grade": grade,
+        "difficulty_score": index,
+        "dimensions": dimensions,
     }

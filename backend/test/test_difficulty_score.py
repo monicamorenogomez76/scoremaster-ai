@@ -145,7 +145,7 @@ def test_work_grade_uses_family_percentile_without_hiding_instrument_outlier():
 
     result = compute_difficulty_score(score)
 
-    assert result["by_instrument"]["Concert Snare Drum"]["grade"] == 5
-    assert result["by_family"]["percussion"]["grade"] == 4
-    assert result["grade"] == 4
+    assert result["by_instrument"]["Concert Snare Drum"]["grade"] == 6
+    assert result["by_family"]["percussion"]["grade"] == 5
+    assert result["grade"] == 5
     assert result["grade_method"] == "family_percentile_80"

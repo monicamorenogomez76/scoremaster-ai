@@ -61,6 +61,28 @@ instrumentos. Limitación: los pasajes muy largos vienen del detector de critici
 
 Mantener score continuo, idealmente 0-10.
 
+## Escala visible (paso 13, decisiones de la autora, 2026-10-05)
+
+`backend/domain/difficulty_scale.py`. El **índice técnico** 0–10 es 2 × la puntuación anterior
+0–5 (transformación explícita que conserva el orden entre partes; las dimensiones se escalan
+igual). El **grado** 1–6 sale de seis tramos iguales del índice, hasta que la evaluación con
+músicos los calibre:
+
+| Grado | Índice | Rúbrica: agrupación que puede tocarla |
+|---|---|---|
+| 1 Iniciación | 0 – 1,66 | Primer año, escuela de música |
+| 2 Elemental | 1,67 – 3,33 | Banda infantil, segundo o tercer año |
+| 3 Intermedio bajo | 3,34 – 4,99 | Banda juvenil |
+| 4 Intermedio | 5 – 6,66 | Banda amateur media (nivel objetivo por defecto) |
+| 5 Avanzado | 6,67 – 8,33 | Banda amateur de alto nivel, conservatorio profesional |
+| 6 Superior | 8,34 – 10 | Banda profesional o de concurso, repertorio virtuoso |
+
+Es una rúbrica propia, no una certificación oficial. El grado de familia es el del percentil 80
+de sus instrumentos y el de la obra, el máximo de las familias. El resultado declara
+`scale = {version: 2, grades: 6, technical_index_max: 10}`; un análisis guardado sin `scale` se
+puntuó 1–5 y la interfaz lo muestra como «escala anterior». El baseline se captura con
+`scale="legacy"`. En las obras locales la mediana de las partes es 5,2 (grado 4).
+
 Debe estar contextualizado por:
 
 - instrumento;

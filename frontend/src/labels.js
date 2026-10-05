@@ -64,7 +64,20 @@ export function displayFamilyName(family, details = {}) {
 }
 
 export const findingLabel = code => findingLabels[code] || code;
-export const gradeOf = details => Math.max(1, Math.min(5, Number(details?.grade) || 1));
+// Step 13: grades 1-6 and index 0-10. An analysis without a declared scale was graded 1-5.
+const CURRENT_SCALE = { grades: 6, indexMax: 10, legacy: false };
+const LEGACY_SCALE = { grades: 5, indexMax: 5, legacy: true };
+export const gradeScaleOf = difficulty => (difficulty?.scale?.grades === 6 ? CURRENT_SCALE : LEGACY_SCALE);
+
+// The band that can play each grade (author's rubric, not an official certification).
+export const gradeLabelsEs = { 1: 'Iniciación', 2: 'Elemental', 3: 'Intermedio bajo', 4: 'Intermedio', 5: 'Avanzado', 6: 'Superior' };
+
+export const gradeOf = (details, scale = CURRENT_SCALE) => Math.max(1, Math.min(scale.grades, Number(details?.grade) || 1));
+
+export function gradeText(details, scale = CURRENT_SCALE) {
+  const grade = gradeOf(details, scale);
+  return scale.legacy ? 'Grado ' + grade + ' de ' + scale.grades + ' (escala anterior)' : 'Grado ' + grade + ' · ' + gradeLabelsEs[grade];
+}
 
 // Highest grade first; the technical index breaks ties.
 export function byDifficulty(entries, scoreKey) {
