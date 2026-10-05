@@ -95,6 +95,12 @@ actualiza la misma obra. Borrar la obra (o la cuenta) borra su archivo y sus an�
 en cascada. `bands` guarda la plantilla del usuario (músicos por instrumento). El audio
 no se guarda.
 
+La migración `0004_work_preparation` añade `works.preparation_status` (`review`, `preparing`,
+`ready`, `archived`; por defecto `review`), fijado por el director con `PATCH /works/{id}` e
+independiente de la dificultad analizada. `GET /works/priorities` devuelve los pasajes críticos
+del último análisis de cada obra en preparación, con `origin: "analysis"` para distinguirlos de
+las futuras notas del director. Volver a analizar una obra conserva su estado.
+
 Para arrancar con Python fuera de Docker, configurar `DATABASE_URL` en el entorno
 del proceso usando la conexión local de `.env.example` (por ejemplo en el entorno
 del IDE); Uvicorn no carga `.env` automáticamente. Después:

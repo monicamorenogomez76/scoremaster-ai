@@ -1,4 +1,5 @@
 """In-memory library for API tests that do not exercise PostgreSQL."""
+from dataclasses import replace
 from uuid import uuid4
 
 from backend.application.library import Work
@@ -34,6 +35,16 @@ class InMemoryLibrary:
             return False
         del self.works[work_id], self.files[work_id]
         return True
+
+    def update_preparation(self, user_id, work_id, status):
+        if self.get_work(user_id, work_id) is None:
+            return None
+        owner, work, source = self.works[work_id]
+        self.works[work_id] = (owner, replace(work, preparation_status=status), source)
+        return self.works[work_id][1]
+
+    def preparation_priorities(self, user_id):
+        return []
 
     def band_profile(self, user_id):
         return dict(self.bands.get(user_id, {}))

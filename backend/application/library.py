@@ -6,6 +6,9 @@ from uuid import UUID
 
 from backend.application.analysis_repository import AnalysisRecord
 
+# How far the band is with a work, set by the director; independent of the analysed difficulty.
+PREPARATION_STATUSES = ("review", "preparing", "ready", "archived")
+
 
 @dataclass(frozen=True)
 class WorkUpload:
@@ -27,6 +30,7 @@ class Work:
     updated_at: Optional[datetime] = None
     # Latest analysis in brief: grade, number of critical passages and band compatibility.
     summary: dict = field(default_factory=dict)
+    preparation_status: str = "review"
 
 
 class LibraryRepository(Protocol):
@@ -36,5 +40,7 @@ class LibraryRepository(Protocol):
     def work_file(self, user_id: UUID, work_id: UUID) -> Optional[tuple[bytes, str]]: ...
     def latest_analysis(self, user_id: UUID, work_id: UUID) -> Optional[AnalysisRecord]: ...
     def delete_work(self, user_id: UUID, work_id: UUID) -> bool: ...
+    def update_preparation(self, user_id: UUID, work_id: UUID, status: str) -> Optional[Work]: ...
+    def preparation_priorities(self, user_id: UUID) -> list[dict]: ...
     def band_profile(self, user_id: UUID) -> dict: ...
     def update_band_profile(self, user_id: UUID, changes: dict) -> dict: ...

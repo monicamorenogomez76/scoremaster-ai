@@ -3,10 +3,10 @@ user's work answers 404, the same as a work that does not exist."""
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from backend.application.accounts import User
-from backend.application.library import LibraryRepository, Work
+from backend.application.library import PREPARATION_STATUSES, LibraryRepository, Work
 from backend.app.dependencies import authenticated_user, get_library_repository
 
 router = APIRouter()
@@ -26,6 +26,17 @@ class BandUpdate(BaseModel):
     profile: dict
 
 
+class WorkUpdate(BaseModel):
+    preparation_status: str
+
+    @field_validator("preparation_status")
+    @classmethod
+    def known_status(cls, value: str) -> str:
+        if value not in PREPARATION_STATUSES:
+            raise ValueError("Estado de preparación desconocido.")
+        return value
+
+
 def _work_id(value: str) -> UUID:
     try:
         return UUID(value)
@@ -36,12 +47,29 @@ def _work_id(value: str) -> UUID:
 def _public(work: Work) -> dict:
     return {"id": str(work.id), "title": work.title, "composer": work.composer, "file_name": work.file_name,
             "size": work.size, "updated_at": work.updated_at.isoformat() if work.updated_at else None,
-            "summary": work.summary}
+            "summary": work.summary, "preparation_status": work.preparation_status}
 
 
 @router.get("/works")
 def list_works(user: User = Depends(authenticated_user), library: LibraryRepository = Depends(get_library_repository)):
     return {"works": [_public(work) for work in library.list_works(user.id)]}
+
+
+# Declared before /works/{work_id} so that "priorities" is not read as a work id.
+@router.get("/works/priorities")
+def preparation_priorities(user: User = Depends(authenticated_user),
+                           library: LibraryRepository = Depends(get_library_repository)):
+    """Critical passages of the works in preparation; their origin says they come from the analysis."""
+    return {"priorities": library.preparation_priorities(user.id)}
+
+
+@router.patch("/works/{work_id}")
+def update_work(work_id: str, update: WorkUpdate, user: User = Depends(authenticated_user),
+                library: LibraryRepository = Depends(get_library_repository)):
+    work = library.update_preparation(user.id, _work_id(work_id), update.preparation_status)
+    if work is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return _public(work)
 
 
 @router.get("/works/{work_id}")

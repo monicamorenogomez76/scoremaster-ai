@@ -24,6 +24,7 @@ class StoredWork(Base):
     source: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
+    preparation_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default='review')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -38,7 +39,8 @@ class StoredBand(Base):
 
 
 def _work(row: StoredWork, summary: Optional[dict] = None) -> Work:
-    return Work(row.id, row.title, row.composer, row.file_name, row.size, row.created_at, row.updated_at, summary or {})
+    return Work(row.id, row.title, row.composer, row.file_name, row.size, row.created_at, row.updated_at, summary or {},
+                row.preparation_status)
 
 
 # Summary of the latest analysis of each work, read from the stored JSON without loading it whole.
@@ -53,6 +55,18 @@ _LIST = text("""
         from analyses a where a.work_id = w.id order by a.created_at desc limit 1) s on true
     where w.user_id = :user_id and s.grade is not null
 """)
+
+# Critical passages of the latest analysis of each work in preparation, in the analysis order.
+_PRIORITIES = text("""
+    select w.id as work_id, w.title, p.passage
+    from works w cross join lateral (
+        select a.result from analyses a where a.work_id = w.id order by a.created_at desc limit 1) latest
+    cross join lateral jsonb_array_elements(coalesce(latest.result -> 'difficulty' -> 'critical_passages', '[]'::jsonb))
+        with ordinality as p(passage, position)
+    where w.user_id = :user_id and w.preparation_status = 'preparing'
+    order by w.updated_at desc, w.title, p.position
+""")
+_PASSAGE_FIELDS = ("instrument", "instrument_label_es", "family", "family_label_es", "measure_range", "findings")
 
 
 class PostgresLibraryRepository:
@@ -103,6 +117,21 @@ class PostgresLibraryRepository:
         with Session(self.engine) as session, session.begin():
             deleted = session.execute(delete(StoredWork).where(StoredWork.id == work_id, StoredWork.user_id == user_id))
             return deleted.rowcount > 0
+
+    def update_preparation(self, user_id: UUID, work_id: UUID, status: str) -> Optional[Work]:
+        with Session(self.engine) as session, session.begin():
+            row = session.scalars(select(StoredWork).where(StoredWork.id == work_id, StoredWork.user_id == user_id)).first()
+            if row is None:
+                return None
+            row.preparation_status = status
+            session.flush()
+            return _work(row)
+
+    def preparation_priorities(self, user_id: UUID) -> list[dict]:
+        with Session(self.engine) as session:
+            return [{"work_id": str(row.work_id), "title": row.title,
+                     **{key: row.passage.get(key) for key in _PASSAGE_FIELDS}, "origin": "analysis"}
+                    for row in session.execute(_PRIORITIES, {"user_id": user_id})]
 
     def band_profile(self, user_id: UUID) -> dict:
         with Session(self.engine) as session:
