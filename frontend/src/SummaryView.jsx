@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { findingLabel, gradeScaleOf, gradeText } from './labels.js';
 import { groupPrioritiesBySection, listPriorities, listWorks } from './library.js';
 import { blockWorkText, listRehearsals, nextRehearsal, rehearsalDateText, todayIso } from './rehearsals.js';
+import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { View } from './View.jsx';
 
 const measuresText = range => (String(range).includes('-') ? 'cc. ' + String(range).replace('-', '–') : 'c. ' + range);
@@ -44,6 +45,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
           <p>Planifica el próximo ensayo con sus obras y su agenda para tenerlo aquí.</p></div>}
         {next && <>
           <p className="result-supporting">{[rehearsalDateText(next), next.duration_minutes + ' minutos', next.place].filter(Boolean).join(' · ')}</p>
+          <AgendaCalendar blocks={next.blocks} start={next.time} />
           {next.blocks.length === 0 ? <p className="result-supporting">Este ensayo aún no tiene agenda.</p>
             : <ol className="agenda-list">{next.blocks.map((block, index) => <li key={index} className="agenda-item">
                 <span className="agenda-number" aria-hidden="true">{index + 1}</span>

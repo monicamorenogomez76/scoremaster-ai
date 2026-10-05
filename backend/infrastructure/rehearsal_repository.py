@@ -33,7 +33,7 @@ def _values(draft: RehearsalDraft) -> dict:
                 place=draft.place, objectives=draft.objectives, work_ids=[str(work) for work in draft.work_ids],
                 blocks=[{"title": block.title, "minutes": block.minutes, "objective": block.objective,
                          "work_id": str(block.work_id) if block.work_id else None, "measures": block.measures,
-                         "sections": list(block.sections)} for block in draft.blocks])
+                         "sections": list(block.sections), "group": block.group} for block in draft.blocks])
 
 
 class PostgresRehearsalRepository:
@@ -55,7 +55,7 @@ class PostgresRehearsalRepository:
         works = tuple((UUID(work), titles[UUID(work)]) for work in row.work_ids if UUID(work) in titles)
         blocks = tuple(RehearsalBlock(item["title"], item["minutes"], item.get("objective", ""),
                                       UUID(item["work_id"]) if item.get("work_id") and UUID(item["work_id"]) in titles else None,
-                                      item.get("measures", ""), tuple(item.get("sections", ())))
+                                      item.get("measures", ""), tuple(item.get("sections", ())), item.get("group", "other"))
                        for item in row.blocks)
         draft = RehearsalDraft(row.scheduled_on, row.starts_at, row.duration_minutes, row.place, row.objectives,
                                tuple(work for work, _ in works), blocks)

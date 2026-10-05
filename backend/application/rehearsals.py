@@ -8,6 +8,12 @@ from typing import Optional, Protocol
 from uuid import UUID
 
 
+# Type of a block: it colours the agenda calendar like the rehearsal plan (warm-up, common line,
+# sectional of each subsection, tutti or other).
+BLOCK_GROUPS = ("warmup", "common", "tutti", "flutes", "double_reeds", "clarinets", "saxophones", "high_brass",
+                "low_voices", "percussion", "strings_rhythm", "other")
+
+
 class UnknownWork(ValueError):
     """A work that does not exist or belongs to another user."""
 
@@ -20,6 +26,7 @@ class RehearsalBlock:
     work_id: Optional[UUID] = None
     measures: str = ""
     sections: tuple[str, ...] = ()
+    group: str = "other"
 
 
 @dataclass(frozen=True)

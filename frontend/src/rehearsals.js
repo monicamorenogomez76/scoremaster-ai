@@ -1,7 +1,8 @@
 // Saved rehearsals of the signed-in user: several works per rehearsal and an agenda of blocks,
 // each naming the work rehearsed in it (author's decisions, 2026-10-05).
 import { apiJson } from './api.js';
-import { blockScoreLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
+import { blockScoreLabel, calendarLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
+import { rehearsalSchedule } from './schedule.js';
 
 const send = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const path = id => '/rehearsals/' + encodeURIComponent(id);
@@ -75,12 +76,31 @@ function proposalSections(segment) {
   return [rehearsalGroupName(segment.group)];
 }
 
+const proposalGroup = segment => (segment.type === 'sectional' ? segment.group || 'other' : segment.type);
+
 // Blocks of the editor, each with its work and measures, within the API's limits.
 export function proposalBlocks(proposal) {
   return proposal.blocks.map(segment => ({
-    title: proposalTitle(segment), minutes: segment.minutes, work_id: segment.work_id || null, work_title: segment.work_title || null,
+    title: proposalTitle(segment), minutes: segment.minutes, group: proposalGroup(segment), work_id: segment.work_id || null, work_title: segment.work_title || null,
     measures: (segment.type === 'tutti' ? (segment.measure_ranges || []).join(', ') : segment.measure_range || '').slice(0, 40),
     sections: [...new Set(proposalSections(segment))].slice(0, 20),
     objective: (segment.type === 'warmup' ? WARMUP_OBJECTIVE : rehearsalBlockDetail(segment)).slice(0, 500),
   }));
 }
+
+// Type of a block: it colours the agenda calendar with the colours of the rehearsal plan.
+const SECTIONS = ['flutes', 'double_reeds', 'clarinets', 'saxophones', 'high_brass', 'low_voices', 'percussion', 'strings_rhythm'];
+
+export const blockTypeOptions = () => [['warmup', 'Calentamiento'], ['common', 'Línea o ritmo común'],
+  ...SECTIONS.map(group => [group, 'Seccional · ' + rehearsalGroupName(group)]), ['tutti', 'Tutti'], ['other', 'Otro']];
+
+export function agendaCalendarLabel(block) {
+  if (block.group === 'warmup') return 'Calentam.';
+  if (block.group === 'common') return 'Común';
+  if (block.group === 'tutti') return 'Tutti';
+  return calendarLabel({ type: 'sectional', group: SECTIONS.includes(block.group) ? block.group : 'other' });
+}
+
+// Clock times of the agenda from the rehearsal's start; minutes typed in the editor are text.
+export const agendaSchedule = (blocks, start) => rehearsalSchedule(
+  blocks.map(block => ({ ...block, minutes: Number(block.minutes) || 0 })), start || undefined);

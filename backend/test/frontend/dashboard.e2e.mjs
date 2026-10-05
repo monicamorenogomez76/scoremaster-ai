@@ -256,6 +256,7 @@ try {
   await next.getByText('Ensayo de hoy').waitFor();
   assert.deepEqual(await next.locator('.agenda-title').allTextContents(), ['Pasajes prioritarios', 'Calentamiento']);
   assert.deepEqual(await next.locator('.agenda-work').allTextContents(), ['Untitled score · cc. 1–4', 'Toda la banda · sin obra concreta']);
+  assert.equal(await next.locator('.agenda-calendar .calendar-slot').count(), 2, 'the rehearsal of today has its coloured calendar');
   await next.getByRole('button', { name: 'Editar' }).click();
   await editor.waitFor({ state: 'visible' });
   assert.equal(await editor.getByLabel('Hora').inputValue(), '19:00');
@@ -269,9 +270,17 @@ try {
   await editor.getByRole('button', { name: 'Proponer agenda' }).click();
   await editor.locator('.agenda-block').nth(1).waitFor();
   assert.equal(await blocksOf().nth(0).getByLabel('Título').inputValue(), 'Calentamiento');
-  const proposedWorks = await blocksOf().evaluateAll(items => items.slice(1).map(item => item.querySelector('select').selectedOptions[0].textContent));
+  const proposedWorks = [];
+  for (let index = 1; index < await blocksOf().count(); index++) {
+    proposedWorks.push(await blocksOf().nth(index).getByLabel('Obra').evaluate(select => select.selectedOptions[0].textContent));
+  }
   assert.ok(proposedWorks.length > 0 && proposedWorks.every(title => title === 'Untitled score'), 'every proposed block names its work');
   assert.match(await editor.locator('#agenda-time').textContent(), /60 de 60 minutos/);
+  const slots = editor.locator('.agenda-calendar .calendar-slot');
+  assert.equal(await slots.count(), await blocksOf().count(), 'the agenda calendar shows every block');
+  assert.match(await slots.first().getAttribute('class'), /calendar-slot--warmup/);
+  assert.match(await slots.nth(1).locator('.calendar-work').textContent(), /Untitled score/);
+  assert.equal(await blocksOf().nth(0).getByLabel('Tipo').inputValue(), 'warmup');
   assert.deepEqual(errors, []);
   console.log('PASS: the app proposes the agenda of the chosen works, every block with its work');
 } finally {
