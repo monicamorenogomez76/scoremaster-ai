@@ -3,6 +3,7 @@ from __future__ import annotations
 from music21 import pitch
 
 from backend.domain.models import Finding, Score
+from backend.domain.timing import melodic_lines
 
 
 def find_large_intervals(score: Score) -> list[Finding]:
@@ -12,34 +13,32 @@ def find_large_intervals(score: Score) -> list[Finding]:
 
     for part in score.parts:
         for measure in part.measures:
-            pitched_notes = [
-                note for note in measure.notes if not note.is_rest and note.pitch is not None
-            ]
-            if len(pitched_notes) < 2:
+            # Each voice is one player: leaps are only measured along a voice.
+            leaps = (
+                (pitch.Pitch(left), pitch.Pitch(right))
+                for line in melodic_lines([measure]).values()
+                for left, right in zip(line, line[1:])
+                if abs(pitch.Pitch(right).midi - pitch.Pitch(left).midi) >= leap_threshold
+            )
+            leap = next(leaps, None)
+            if leap is None:
                 continue
-
-            for index in range(1, len(pitched_notes)):
-                previous = pitch.Pitch(pitched_notes[index - 1].pitch)
-                current = pitch.Pitch(pitched_notes[index].pitch)
-                interval = abs(current.midi - previous.midi)
-
-                if interval >= leap_threshold:
-                    findings.append(
-                        Finding(
-                            code="SL004",
-                            severity="warning",
-                            instrument=part.name,
-                            measure_range=str(measure.number),
-                            description="Large intervals at high tempo",
-                            evidence={
-                                "measure": measure.number,
-                                "interval_semitones": interval,
-                                "from_pitch": previous.nameWithOctave,
-                                "to_pitch": current.nameWithOctave,
-                                "threshold": leap_threshold,
-                            },
-                        )
-                    )
-                    break
+            previous, current = leap
+            findings.append(
+                Finding(
+                    code="SL004",
+                    severity="warning",
+                    instrument=part.name,
+                    measure_range=str(measure.number),
+                    description="Large intervals at high tempo",
+                    evidence={
+                        "measure": measure.number,
+                        "interval_semitones": abs(current.midi - previous.midi),
+                        "from_pitch": previous.nameWithOctave,
+                        "to_pitch": current.nameWithOctave,
+                        "threshold": leap_threshold,
+                    },
+                )
+            )
 
     return findings

@@ -3,6 +3,7 @@ from __future__ import annotations
 from music21 import pitch
 
 from backend.domain.models import Score
+from backend.domain.timing import sounding_pitches
 
 
 def compute_range_metrics(score: Score) -> dict:
@@ -12,8 +13,7 @@ def compute_range_metrics(score: Score) -> dict:
     for part in score.parts:
         for measure in part.measures:
             for note_event in measure.notes:
-                if not note_event.is_rest and note_event.pitch is not None:
-                    note_pitches.append(pitch.Pitch(note_event.pitch))
+                note_pitches.extend(pitch.Pitch(written) for written in sounding_pitches(note_event))
 
     if not note_pitches:
         return {

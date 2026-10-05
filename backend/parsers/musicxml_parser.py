@@ -5,7 +5,7 @@ from typing import Optional, Union
 from collections import Counter
 from xml.etree import ElementTree
 
-from music21 import articulations, converter, expressions, note, stream, tempo
+from music21 import articulations, chord, converter, expressions, note, stream, tempo
 
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.domain.models import PartMetadata, PartTransposition, Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
@@ -136,15 +136,24 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
                     )
                 )
             for element in parsed_measure.recurse().getElementsByClass(note.GeneralNote):
-                if not isinstance(element, (note.Note, note.Rest, note.Unpitched)):
+                if not isinstance(element, (note.Note, note.Rest, note.Unpitched, chord.ChordBase)):
                     continue
+                # Lowest first; a percussion chord has no pitch, like a single unpitched hit.
+                chord_pitches = tuple(item.nameWithOctave for item in sorted(element.pitches)) \
+                    if isinstance(element, chord.Chord) else ()
+                voice = element.activeSite if isinstance(element.activeSite, stream.Voice) else None
                 notes.append(
                     ScoreNote(
-                        pitch=element.pitch.nameWithOctave if isinstance(element, note.Note) else None,
+                        pitch=chord_pitches[-1] if chord_pitches else
+                        element.pitch.nameWithOctave if isinstance(element, note.Note) else None,
                         duration_quarters=float(element.duration.quarterLength),
                         is_rest=isinstance(element, note.Rest),
                         offset_quarters=float(element.getOffsetInHierarchy(parsed_measure)),
                         phrase_mark=_has_phrase_mark(element),
+                        voice=str(voice.id) if voice is not None else None,
+                        tie=element.tie.type if getattr(element, "tie", None) is not None else None,
+                        is_grace=element.duration.isGrace,
+                        chord_pitches=chord_pitches,
                     )
                 )
             measures.append(ScoreMeasure(number=measure_number, notes=tuple(notes),
