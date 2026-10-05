@@ -17,7 +17,7 @@ const upload = async name => {
 try {
   await page.goto(process.env.SCOREMASTER_URL || 'http://127.0.0.1:8005');
   await login(page);
-  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=home]').click();
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
   await upload('Flute');
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
@@ -32,11 +32,14 @@ try {
     return svg.width <= box.width;
   });
   assert.equal(fits, true, 'page must fit width');
+  assert.equal(await page.locator('[data-view-target=home]').getAttribute('aria-current'), 'page', 'the score is seen in the home view after uploading');
+  assert.equal(await page.locator('#works-content').isVisible(), true, 'saved works are chosen from the home view');
   await page.screenshot({ path: '/tmp/scoremaster-redesign-score.png', fullPage: true, animations: 'disabled' });
-  await page.locator('[data-view-target=overview]').click();
+  await page.locator('[data-view-target=analysis]').click();
   assert.equal(await page.locator('.family-chart').isVisible(), true);
+  assert.equal(await page.locator('#difficulty-content .tree-node').first().isVisible(), true, 'the dashboard and the difficulty share the analysis view');
   await page.screenshot({ path: '/tmp/scoremaster-redesign-dashboard.png', fullPage: true, animations: 'disabled' });
-  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=home]').click();
   await page.locator('#new-score').click();
   await page.waitForFunction(() => document.querySelector('#file').files.length === 0);
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
@@ -79,7 +82,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
   await page.locator('#upload-form button[type=submit]').click();
   await page.waitForFunction(() => document.querySelector('#full-score-rendering svg') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false');
-  await page.locator('[data-view-target=difficulty]').click();
+  await page.locator('[data-view-target=analysis]').click();
   await page.locator('#difficulty-content .tree-node').first().click();
   await page.locator('#difficulty-content .tree-node').first().click();
   assert.equal(await page.getByRole('button', { name: 'Escuchar', exact: true }).count(), 0);
@@ -138,7 +141,7 @@ try {
   await page.screenshot({ path: '/tmp/scoremaster-complete-passage.png', fullPage: true });
   console.log('PASS: entire 45-bar passage rendered without next-page control');
   await page.locator('#notation-close').click();
-  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=home]').click();
   await page.evaluate(async () => window.scoremasterWorkspace.loadScore());
   assert.match(await page.locator('#score-page').textContent(), /Página 1\/12/);
   await page.locator('#ensemble-play').click();

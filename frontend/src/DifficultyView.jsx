@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { View } from './View.jsx';
 import { byDifficulty, dimensionLabelsEs, displayFamilyName, displayInstrumentName, findingLabel, gradeOf, gradeScaleOf, gradeText } from './labels.js';
 
 function Bar({ percent }) {
@@ -79,16 +78,13 @@ function DifficultyTree({ difficulty, onOpenPassage }) {
   </div>;
 }
 
-export function DifficultyView({ active, data, onOpenPassage }) {
-  return <View name="difficulty" active={active} eyebrow="ScoreLint" title="Dificultad y pasajes"
-    description="Explora de la familia al instrumento y abre la partitura en el pasaje señalado.">
-    {data
-      ? <div id="difficulty-content" className="view-content">
-          <section className="result-section result-section--wide">
-            <h2>Dificultad por familias e instrumentos</h2>
-            <DifficultyTree difficulty={data.difficulty || {}} onOpenPassage={onOpenPassage} />
-          </section>
-        </div>
-      : <div id="difficulty-content" className="view-content empty-workspace"><h2>Aún no hay análisis</h2><p>Analiza una partitura para consultar la dificultad y abrir sus pasajes en notación.</p></div>}
-  </View>;
+// Explorer from family to instrument, below the dashboard of the analysis view.
+export function DifficultyPanel({ data, onOpenPassage }) {
+  return <div id="difficulty-content" className="view-content">
+    <section className="result-section result-section--wide">
+      <h2>Dificultad por familias e instrumentos</h2>
+      <p className="result-supporting">Explora de la familia al instrumento y abre la partitura en el pasaje señalado.</p>
+      <DifficultyTree difficulty={data.difficulty || {}} onOpenPassage={onOpenPassage} />
+    </section>
+  </div>;
 }

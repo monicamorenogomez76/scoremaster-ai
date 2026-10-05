@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { BandView } from './BandView.jsx';
-import { DifficultyView } from './DifficultyView.jsx';
-import { OverviewView } from './OverviewView.jsx';
+import { DifficultyPanel } from './DifficultyView.jsx';
+import { OverviewPanel } from './OverviewView.jsx';
 import { RehearsalView } from './RehearsalView.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
-import { WorksView } from './WorksView.jsx';
+import { WorksList } from './WorksView.jsx';
 
 const views = [
-  ['overview', 'Inicio', 'M3 10 12 3l9 7v10h-6v-6H9v6H3z'],
-  ['analyze', 'Analizar partitura', 'M5 3h10l4 4v14H5zM9 11h6M9 15h6'],
-  ['works', 'Mis obras', 'M4 4h6v16H4zM14 4h6v16h-6zM7 8h0M17 8h0'],
-  ['difficulty', 'Dificultad', 'M4 20V10M10 20V4M16 20v-8M22 20V7'],
+  ['home', 'Inicio', 'M3 10 12 3l9 7v10h-6v-6H9v6H3z'],
+  ['analysis', 'Análisis', 'M4 20V10M10 20V4M16 20v-8M22 20V7'],
   ['band', 'Mi banda', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 4a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.8'],
   ['rehearsal', 'Plan de ensayo', 'M8 3v4M16 3v4M3 10h18M4 5h16v16H4zM8 14h3M8 17h7'],
   ['videos', 'Vídeos', 'M4 5h16v14H4zM10 9l5 3-5 3z'],
@@ -47,16 +45,20 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
         <span id="current-user" className="topbar-meta">{user?.display_name || user?.email || ''}</span>
       </header>
       <main className="workspace">
-        <OverviewView active={view} data={data} onNavigate={go} />
-
-        <View name="analyze" active={view} eyebrow="ScoreLint" title="Analizar partitura"
-          description="Carga MusicXML para calcular la dificultad y localizar pasajes críticos.">
+        <View name="home" active={view} eyebrow="Espacio de trabajo" title="Inicio"
+          description="Sube una partitura MusicXML o abre una de tus obras para verla.">
           <div id="upload-root" className="surface"><UploadWorkspace upload={upload} /></div>
           {scoreViewer}
+          {/* Keyed by user: a new session never shows the previous user's works. */}
+          <WorksList key={user?.email ?? 'signed-out'} visible={!hidden && view === 'home'} revision={analysis?.revision ?? 0} onOpen={onOpenWork} busy={busy} />
         </View>
 
-        <WorksView active={view} revision={analysis?.revision ?? 0} onOpen={onOpenWork} busy={busy} />
-        <DifficultyView key={analysis?.revision ?? 0} active={view} data={data} onOpenPassage={onOpenPassage} />
+        <View name="analysis" active={view} eyebrow="ScoreLint" title="Análisis"
+          description="Dificultad de la obra, por familias e instrumentos, y sus pasajes críticos.">
+          <OverviewPanel data={data} onStart={() => go('home')}
+            onOpenDifficulty={() => document.getElementById('difficulty-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
+          {data && <DifficultyPanel key={analysis?.revision ?? 0} data={data} onOpenPassage={onOpenPassage} />}
+        </View>
         <BandView active={view} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onUpdateBand} onConfirm={onConfirmInstruments} busy={busy} />
         <RehearsalView active={view} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
 

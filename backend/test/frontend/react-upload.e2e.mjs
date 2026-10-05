@@ -17,7 +17,7 @@ const select = async () => {
 try {
   await page.goto(url);
   await login(page);
-  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=home]').click();
   await select();
   await page.route('**/analyze', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'No se pudo guardar el análisis.' }) }));
   await page.locator('#upload-form button[type=submit]').click();
@@ -50,9 +50,9 @@ try {
   await received;
   assert.equal(await page.locator('#upload-form').getAttribute('aria-busy'), 'true');
   assert.match(await page.locator('#result').textContent(), /Analizando la partitura/);
-  await page.locator('[data-view-target=overview]').click();
-  assert.equal(await page.locator('[data-view=overview]').isVisible(), true);
-  await page.locator('[data-view-target=analyze]').click();
+  await page.locator('[data-view-target=analysis]').click();
+  assert.equal(await page.locator('[data-view=analysis]').isVisible(), true);
+  await page.locator('[data-view-target=home]').click();
   await page.locator('#new-score').click();
   release();
   await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
