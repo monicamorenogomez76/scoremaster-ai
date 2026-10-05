@@ -15,3 +15,12 @@ Consultar primero el [plan aprobado y su estado](IMPLEMENTATION_ROADMAP.md). Los
 - [Borrador de changelog](tasks/CHANGE_ENTRY.md)
 
 Estas copias sustituyen a los originales aportados en la raíz. Las pautas de trabajo están en [CONTRIBUTING](../CONTRIBUTING.md) y la distribución de skills del asistente en [AGENTS](../AGENTS.md). Los ejemplos de puntuación o confianza de las especificaciones no son resultados medidos.
+
+## Guías operativas
+
+- [Contribuir al proyecto](../CONTRIBUTING.md)
+- [Responsabilidades y skills](../AGENTS.md)
+- [Frontend](../frontend/README.md)
+- [PostgreSQL](POSTGRESQL.md)
+- [Visor de partituras](SCORE_VIEWER.md)
+- [Baseline de evaluación](../evaluation/README.md)
