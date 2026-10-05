@@ -68,7 +68,7 @@ function SavedRehearsals({ visible, editing, onEdit, onCloseEditor }) {
       <button id="create-rehearsal" type="button" className="primary-action" onClick={() => onEdit({})}>Crear ensayo</button>
     </div>
     {error && <p className="result-supporting" role="alert">{error}</p>}
-    {editing && <RehearsalEditor key={editing.id || 'new'} rehearsal={editing}
+    {editing && <RehearsalEditor key={editing.id || editing.key || 'new'} rehearsal={editing}
       onSaved={() => { onCloseEditor(); refresh(); }} onCancel={onCloseEditor} />}
     <RehearsalList id="rehearsals-upcoming" title="Próximos" items={upcoming} empty="No hay ensayos programados." onEdit={onEdit} />
     <RehearsalList id="rehearsals-past" title="Realizados" items={past} empty="Aún no hay ensayos realizados." onEdit={onEdit} />

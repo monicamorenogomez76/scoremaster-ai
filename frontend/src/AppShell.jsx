@@ -41,7 +41,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
       </header>
       <main className="workspace">
         <SummaryView active={view} user={user} hidden={hidden} onNavigate={go} onOpenWork={onOpenWork} busy={busy}
-          onPlanRehearsal={() => onEditRehearsal({})} onEditRehearsal={onEditRehearsal} />
+          onPlanRehearsal={() => onEditRehearsal({})} onEditRehearsal={onEditRehearsal} onReviewDraft={onEditRehearsal} />
         <RepertoireView active={view} user={user} hidden={hidden} analysis={analysis} mode={repertoireMode}
           onModeChange={onRepertoireModeChange} tab={workTab} onTabChange={onWorkTabChange} upload={upload}
           onOpenWork={onOpenWork} onOpenPassage={onOpenPassage} scoreViewer={scoreViewer} />

@@ -255,6 +255,7 @@ try {
   await page.locator('[data-view-target=summary]').click();
   const next = page.locator('#summary-rehearsal');
   await next.getByText('Ensayo de hoy').waitFor();
+  await next.getByRole('button', { name: 'Ver detalle' }).click();
   assert.deepEqual(await next.locator('.agenda-title').allTextContents(), ['Pasajes prioritarios', 'Calentamiento']);
   assert.deepEqual(await next.locator('.agenda-work').allTextContents(), ['Untitled score · cc. 1–4', 'Toda la banda · sin obra concreta']);
   assert.equal(await next.locator('.agenda-calendar .calendar-slot').count(), 2, 'the rehearsal of today has its coloured calendar');
@@ -285,6 +286,35 @@ try {
   assert.equal(await blocksOf().nth(0).getByLabel('Tipo').inputValue(), 'warmup');
   assert.deepEqual(errors, []);
   console.log('PASS: the app proposes the agenda of the chosen works, every block with its work');
+
+  // The summary looks like the author's mock-up: everything at a glance on a computer.
+  await page.locator('#rehearsal-editor').getByRole('button', { name: 'Cancelar' }).click();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator('[data-view-target=summary]').click();
+  const todayCard = page.locator('#summary-rehearsal');
+  await todayCard.locator('.agenda-calendar').waitFor();
+  assert.deepEqual(await todayCard.locator('.calendar-work').allTextContents(), ['Untitled score', 'Toda la banda'],
+    'each coloured box names its work');
+  assert.equal(await todayCard.locator('.agenda-list').count(), 0, 'the agenda list is a detail asked for');
+  await todayCard.getByRole('button', { name: 'Ver detalle' }).click();
+  await todayCard.locator('.agenda-list').waitFor();
+  await todayCard.getByRole('button', { name: 'Ocultar detalle' }).click();
+  const assistant = page.locator('#summary-assistant');
+  assert.match(await assistant.textContent(), /sin IA/, 'the calculated proposal never passes for AI');
+  const box = await assistant.boundingBox(), rehearsalBox = await todayCard.boundingBox();
+  assert.ok(box.x > rehearsalBox.x + rehearsalBox.width - 1, 'the assistant is a column on the right');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 2), true,
+    'the summary fits on a computer screen');
+  await assistant.getByRole('button', { name: 'Generar propuesta' }).click();
+  await assistant.locator('.draft-block').first().waitFor();
+  assert.match(await assistant.textContent(), /Borrador/);
+  await assistant.getByRole('button', { name: 'Revisar y editar' }).click();
+  await editor.waitFor({ state: 'visible' });
+  assert.ok(await blocksOf().count() > 1, 'the draft opens in the editor to be reviewed and saved');
+  assert.equal(await blocksOf().nth(0).getByLabel('Título').inputValue(), 'Calentamiento');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  assert.deepEqual(errors, []);
+  console.log('PASS: the summary shows everything at a glance with a calculated draft to review');
 } finally {
   await browser.close();
 }
