@@ -1,5 +1,5 @@
 // The signed-in user's works and band template.
-import { apiFetch } from './api.js';
+import { apiFetch, apiJson } from './api.js';
 import { gradeScaleOf, gradeText } from './labels.js';
 
 async function failure(response, fallback) {
@@ -7,11 +7,7 @@ async function failure(response, fallback) {
   catch { return new Error(fallback); }
 }
 
-async function json(url, options, fallback) {
-  const response = await apiFetch(url, options);
-  if (!response.ok) throw await failure(response, fallback);
-  return response.status === 204 ? null : response.json();
-}
+const json = apiJson;
 
 export const listWorks = async () => (await json('/works', {}, 'No se pudo cargar la biblioteca.')).works;
 

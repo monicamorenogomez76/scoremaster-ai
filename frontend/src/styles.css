@@ -585,3 +585,35 @@ input[type=range] { accent-color: var(--primary); }
   .summary-table { display: block; overflow-x: auto; }
   .view-heading { flex-wrap: wrap; }
 }
+
+/* F2a: saved rehearsals, agenda editor and the next rehearsal in the summary. */
+.saved-rehearsals { margin-bottom: 32px; }
+.rehearsal-list { margin-top: 18px; }
+.rehearsal-list h3 { margin: 0 0 10px; font-size: 1rem; }
+.rehearsal-item { grid-template-columns: minmax(0, 1fr) auto; }
+.calculated-plan-title { margin: 8px 0 4px; font-size: 1.15rem; }
+.rehearsal-editor { display: grid; gap: 16px; margin-bottom: 18px; }
+.rehearsal-editor h2 { margin: 0; font-size: 1.15rem; }
+.rehearsal-editor h2:focus { outline: none; }
+.editor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.rehearsal-editor label { display: grid; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
+.rehearsal-editor input:not([type=checkbox]), .rehearsal-editor select, .rehearsal-editor textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-weight: 400; }
+.rehearsal-editor fieldset { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; }
+.rehearsal-editor legend { padding: 0 6px; font-size: .85rem; font-weight: 700; }
+.editor-works { display: grid; gap: 8px; }
+.rehearsal-editor .check-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 500; }
+.check-field input { width: 20px; height: 20px; min-height: 0; }
+.check-field .table-supporting { flex-basis: 100%; margin: 0 0 0 28px; }
+.agenda-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.agenda-heading h3 { margin: 0; font-size: 1rem; }
+.agenda-time { margin: 0; color: var(--muted); font-size: .88rem; }
+.agenda-time.is-over { color: var(--warning); font-weight: 700; }
+.agenda-editor { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.block-actions, .editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.agenda-list { display: grid; margin: 4px 0 0; padding: 0; list-style: none; }
+.agenda-item { display: grid; grid-template-columns: 28px 64px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.agenda-item:last-child { border-bottom: 0; }
+.agenda-number { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-size: .85rem; font-weight: 700; }
+.agenda-minutes { padding-top: 4px; color: var(--primary); font-weight: 600; }
+.agenda-title { display: block; }
+.agenda-work { display: block; margin-top: 2px; color: var(--text); font-size: .86rem; }

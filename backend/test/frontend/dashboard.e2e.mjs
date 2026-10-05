@@ -225,6 +225,40 @@ try {
   assert.equal(await page.locator('[data-view-target=repertoire]').getAttribute('aria-current'), 'page', 'each priority opens its work');
   assert.deepEqual(errors, []);
   console.log('PASS: the summary lists the works in preparation and their passages as priorities');
+
+  // A saved rehearsal: planned from the summary, with an agenda whose blocks name their work.
+  await page.locator('[data-view-target=summary]').click();
+  await page.locator('#plan-rehearsal').click();
+  const editor = page.locator('#rehearsal-editor');
+  await editor.waitFor({ state: 'visible' });
+  const today = await page.evaluate(() => { const now = new Date(); return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-'); });
+  await editor.getByLabel('Fecha').fill(today);
+  await editor.getByLabel('Hora').fill('19:00');
+  await editor.getByLabel('Duración (minutos)').fill('60');
+  await editor.getByLabel('Untitled score').check();
+  await editor.getByRole('button', { name: 'Añadir bloque' }).click();
+  const blocksOf = () => editor.locator('.agenda-block');
+  await blocksOf().nth(0).getByLabel('Título').fill('Calentamiento');
+  await blocksOf().nth(0).getByLabel('Minutos').fill('15');
+  await editor.getByRole('button', { name: 'Añadir bloque' }).click();
+  await blocksOf().nth(1).getByLabel('Título').fill('Pasajes prioritarios');
+  await blocksOf().nth(1).getByLabel('Minutos').fill('25');
+  await blocksOf().nth(1).getByLabel('Obra').selectOption({ label: 'Untitled score' });
+  await blocksOf().nth(1).getByLabel('Compases').fill('1-4');
+  assert.match(await editor.locator('#agenda-time').textContent(), /40 de 60 minutos.*quedan 20/);
+  await blocksOf().nth(1).getByRole('button', { name: 'Subir' }).click();
+  await editor.getByRole('button', { name: 'Guardar ensayo' }).click();
+  await page.locator('#rehearsals-upcoming').getByText('Hoy · 19:00').waitFor();
+  await page.locator('[data-view-target=summary]').click();
+  const next = page.locator('#summary-rehearsal');
+  await next.getByText('Ensayo de hoy').waitFor();
+  assert.deepEqual(await next.locator('.agenda-title').allTextContents(), ['Pasajes prioritarios', 'Calentamiento']);
+  assert.deepEqual(await next.locator('.agenda-work').allTextContents(), ['Untitled score · cc. 1–4', 'Toda la banda · sin obra concreta']);
+  await next.getByRole('button', { name: 'Editar' }).click();
+  await editor.waitFor({ state: 'visible' });
+  assert.equal(await editor.getByLabel('Hora').inputValue(), '19:00');
+  assert.deepEqual(errors, []);
+  console.log('PASS: a rehearsal is planned with an agenda that names the work of each block');
 } finally {
   await browser.close();
 }
