@@ -219,6 +219,9 @@ try {
   const priorities = page.locator('#summary-priorities');
   await priorities.getByText('Viento madera').waitFor();
   assert.match(await priorities.textContent(), /c\. 1.*Análisis/);
+  await priorities.getByRole('button', { name: 'Untitled score' }).click();
+  await page.waitForFunction(() => document.querySelector('#full-score-rendering svg'), null, { timeout: 45000 });
+  assert.equal(await page.locator('#work-detail').isVisible(), true, 'each priority opens its work');
   assert.deepEqual(errors, []);
   console.log('PASS: the summary lists the works in preparation and their passages as priorities');
 } finally {

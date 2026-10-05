@@ -62,7 +62,8 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, busy
           <tbody>{groupPrioritiesBySection(priorities).flatMap(([section, items]) => items.map((item, index) =>
             <tr key={[item.work_id, item.instrument, item.measure_range, index].join('|')}>
               {index === 0 && <th scope="rowgroup" rowSpan={items.length}>{section}</th>}
-              <td>{item.title}<span className="table-supporting">{item.instrument_label_es || item.instrument}</span></td>
+              <td><button type="button" className="link-action" disabled={busy} onClick={() => onOpenWork(item.work_id)}>{item.title}</button>
+                <span className="table-supporting">{item.instrument_label_es || item.instrument}</span></td>
               <td>{measuresText(item.measure_range)}</td>
               <td>{(item.findings || []).map(findingLabel).join(' · ')}</td>
               <td><span className="status-tag">Análisis</span></td>
