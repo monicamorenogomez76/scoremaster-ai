@@ -60,13 +60,25 @@ nivel por sección y coordinación del conjunto. Una PR por fase, con TDD.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | A1 | Cuentas y sesión (email/contraseña, Google opcional, CSRF, cabeceras, límites de subida) | Integrado: PR #45 |
-| A2 | Biblioteca de obras y banda por usuario (MusicXML privado y borrable) | En revisión |
+| A2 | Biblioteca de obras y banda por usuario (MusicXML privado y borrable) | Integrado: PR #46 |
 | A3 | Sustitutos de instrumento (tabla revisable, tesitura y músicos libres) | Pendiente |
 | A4 | Conciertos y calendario de ensayos con varias obras | Pendiente |
 | A5 | Diario de ensayos (pendiente/resuelto, notas y propuestas confirmadas) | Pendiente |
 | A6 | Asistente conversacional con evidencias (demo y proveedor real) | Pendiente |
 | A7 | Nivel por sección en la banda | Pendiente |
 | A8 | Dificultad de coordinación del conjunto | Pendiente |
+
+## Orden de trabajo acordado (2026-10-05)
+
+Se priorizan la IA y la evaluación experimental, obligatorias para el TFM, sobre la ampliación:
+
+1. Paso 10: la base de las métricas se corrige antes de medir.
+2. Paso 13 (y 11–12 si lo requiere): escala fijada antes de pedir valoraciones.
+3. Paso 20: puerto IA y demo identificada sin API key.
+4. Pasos 16–18: evidencias y formulario; los músicos necesitan días para responder.
+5. Pasos 19 y 21–24: evaluación, adaptador LLM y comparación.
+
+Las fases A3–A8 y el paso 25 se abordan solo si queda margen tras el paso 24.
 
 ## Criterios de aceptación
 
