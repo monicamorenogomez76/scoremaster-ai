@@ -1,5 +1,6 @@
 // The signed-in user's works and band template.
 import { apiFetch } from './api.js';
+import { gradeScaleOf, gradeText } from './labels.js';
 
 async function failure(response, fallback) {
   try { const body = await response.json(); return new Error(typeof body.detail === 'string' ? body.detail : fallback); }
@@ -38,7 +39,8 @@ const plural = (count, one, many) => count + ' ' + (count === 1 ? one : many);
 export function workSummaryText(work) {
   const summary = work?.summary || {};
   if (summary.grade == null) return 'Sin análisis';
-  return 'Grado ' + summary.grade + ' · ' + plural(summary.critical_passages ?? 0, 'pasaje crítico', 'pasajes críticos')
+  const scale = gradeScaleOf({ scale: { grades: summary.grade_max } });
+  return gradeText(summary, scale) + ' · ' + plural(summary.critical_passages ?? 0, 'pasaje crítico', 'pasajes críticos')
     + ' · ' + (summary.compatibility_percent ?? 0) + ' % de la plantilla';
 }
 

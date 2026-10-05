@@ -14,10 +14,12 @@ function fakeServer(routes) {
 }
 
 test('a work summary reads as a musician would say it', () => {
-  assert.equal(workSummaryText({ summary: { grade: 3, critical_passages: 12, compatibility_percent: 82 } }),
-    'Grado 3 · 12 pasajes críticos · 82 % de la plantilla');
-  assert.equal(workSummaryText({ summary: { grade: 1, critical_passages: 1, compatibility_percent: 100 } }),
-    'Grado 1 · 1 pasaje crítico · 100 % de la plantilla');
+  assert.equal(workSummaryText({ summary: { grade: 4, grade_max: 6, critical_passages: 12, compatibility_percent: 82 } }),
+    'Grado 4 · Intermedio · 12 pasajes críticos · 82 % de la plantilla');
+  assert.equal(workSummaryText({ summary: { grade: 1, grade_max: 6, critical_passages: 1, compatibility_percent: 100 } }),
+    'Grado 1 · Iniciación · 1 pasaje crítico · 100 % de la plantilla');
+  assert.equal(workSummaryText({ summary: { grade: 3, grade_max: 5, critical_passages: 2, compatibility_percent: 90 } }),
+    'Grado 3 de 5 (escala anterior) · 2 pasajes críticos · 90 % de la plantilla');
   assert.equal(workSummaryText({ summary: {} }), 'Sin análisis');
 });
 

@@ -56,7 +56,13 @@ def test_the_latest_analysis_belongs_to_the_work_and_is_deleted_with_it(postgres
 
     assert library.latest_analysis(owner.id, work.id).result["difficulty"]["grade"] == 3
     # The list carries a summary of the latest analysis, not the whole result.
-    assert library.list_works(owner.id)[0].summary == {"grade": 3, "critical_passages": 3, "compatibility_percent": 80}
+    # An analysis without a declared scale was graded 1-5, before step 13.
+    assert library.list_works(owner.id)[0].summary == {"grade": 3, "grade_max": 5, "critical_passages": 3,
+                                                       "compatibility_percent": 80}
+    current = {"difficulty": {"grade": 6, "critical_passages": [], "scale": {"version": 2, "grades": 6}},
+               "band_fit": {"compatibility_percent": 80}}
+    analyses.save(AnalysisRecord("b" * 64, current, user_id=owner.id, work_id=work.id))
+    assert library.list_works(owner.id)[0].summary["grade_max"] == 6
     assert library.delete_work(owner.id, work.id) is True
     assert library.latest_analysis(owner.id, work.id) is None
     assert library.delete_work(owner.id, work.id) is False

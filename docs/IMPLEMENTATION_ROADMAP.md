@@ -3,7 +3,7 @@
 ## Decisiones que prevalecen
 
 - PostgreSQL en desarrollo y producción; SQLAlchemy, Alembic y repositorios independientes del dominio.
-- Grados visibles enteros 1–6 y rúbrica propia documentada, sin afirmar certificación oficial. Índice técnico interno 0–10; transformación explícita. Actualmente la aplicación sigue usando grados 1–5 e índice 0–5 hasta la entrega 13.
+- Grados visibles enteros 1–6 y rúbrica propia documentada, sin afirmar certificación oficial. Índice técnico interno 0–10; transformación explícita. Integrado en el paso 13: índice = 2 × puntuación anterior, seis tramos iguales y `scale` en el resultado; el baseline conserva 1–5/0–5.
 - Nivel objetivo por defecto intermedio, separado del grado editorial estimado.
 - Separar Difficulty, Criticality y RehearsalPriority. Un análisis puede devolver cero críticos.
 - Los ensayos son de conjunto: un pasaje común es el que varias partes tocan igual en estructura —misma línea (mismo ritmo e intervalos, cada una en su tonalidad u octava) o mismo ritmo—, aunque sean de familias distintas. En cada pasaje se ensaya primero cada línea común, después las subsecciones con lo que queda (flautas, dobles cañas, clarinetes, saxofones, metales agudos, graves —con fagot, clarinete bajo y saxo barítono—, percusión, cuerda y rítmica) y al final un tutti para juntar (decisiones de la autora, 2026-10-04).
@@ -35,10 +35,10 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 07 | Metadatos del parser | Integrado: PR #29 |
 | 08 | Resolver determinista | Integrado: resolver (PR #30), dificultad (PR #31), sección rítmica (PR #32) y timbre (PR #33); BandFit con el paso 09 |
 | 09 | Confirmación humana | Integrado: PR #42; confirmación en «Mi banda» y BandFit por instrumento |
-| 10 | Tiempos y ataques musicales | En revisión: acordes, ligaduras, voces y adornos |
+| 10 | Tiempos y ataques musicales | Integrado: PR #48; acordes, ligaduras, voces y adornos |
 | 11 | Características locales | Pendiente |
 | 12 | Políticas de dificultad | Pendiente |
-| 13 | Grados 1–6 | Pendiente |
+| 13 | Grados 1–6 | En revisión: rúbrica, índice 0–10 y escala declarada |
 | 14 | Detector de criticidad | Integrado: frases (PR #40), detector con señal de velocidad (PR #41) y cadencias armónicas (PR #43) |
 | 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Integrado: PR #37, calendario (PR #38) y similitud de estructura (PR #39) |
 | 16 | Evidencias en interfaz | Pendiente |

@@ -42,10 +42,12 @@ def _work(row: StoredWork, summary: Optional[dict] = None) -> Work:
 
 
 # Summary of the latest analysis of each work, read from the stored JSON without loading it whole.
+# Analyses without a declared scale were graded 1-5, before step 13.
 _LIST = text("""
-    select w.id, s.grade, s.critical_passages, s.compatibility_percent
+    select w.id, s.grade, s.grade_max, s.critical_passages, s.compatibility_percent
     from works w left join lateral (
         select (a.result -> 'difficulty' ->> 'grade')::int as grade,
+               coalesce((a.result -> 'difficulty' -> 'scale' ->> 'grades')::int, 5) as grade_max,
                jsonb_array_length(coalesce(a.result -> 'difficulty' -> 'critical_passages', '[]'::jsonb)) as critical_passages,
                (a.result -> 'band_fit' ->> 'compatibility_percent')::int as compatibility_percent
         from analyses a where a.work_id = w.id order by a.created_at desc limit 1) s on true
@@ -74,7 +76,7 @@ class PostgresLibraryRepository:
         with Session(self.engine) as session:
             rows = session.scalars(select(StoredWork).where(StoredWork.user_id == user_id)
                                    .order_by(StoredWork.updated_at.desc(), StoredWork.title)).all()
-            summaries = {row.id: {"grade": row.grade, "critical_passages": row.critical_passages,
+            summaries = {row.id: {"grade": row.grade, "grade_max": row.grade_max, "critical_passages": row.critical_passages,
                                   "compatibility_percent": row.compatibility_percent}
                          for row in session.execute(_LIST, {"user_id": user_id})}
             return [_work(row, summaries.get(row.id)) for row in rows]

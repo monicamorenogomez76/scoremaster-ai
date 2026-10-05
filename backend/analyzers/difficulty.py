@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 
 from backend.analyzers.criticality import detect_critical_passages
+from backend.domain.difficulty_scale import SCALE, grade_from_index
 from backend.domain.models import Score
 from backend.analyzers.instrument_difficulty import (
     classify_instrument_family,
@@ -64,8 +65,9 @@ def _collapse_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return collapsed
 
 
-def compute_difficulty_score(score: Score, critical_detector: str = "phrases") -> dict:
-    """critical_detector: "phrases" (step 14) or "legacy" (kept only for the baseline-v1 capture)."""
+def compute_difficulty_score(score: Score, critical_detector: str = "phrases", scale: str = "current") -> dict:
+    """critical_detector: "phrases" (step 14) or "legacy"; scale: "current" (step 13: grades 1-6,
+    index 0-10) or "legacy" (1-5, 0-5). Both legacy options are kept only for the baseline-v1 capture."""
     """Aggregate rule findings into a deterministic overall difficulty score."""
     findings = []
     findings.extend(find_high_rhythm_density(score))
@@ -85,7 +87,7 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases") -
     )
     instrument_analyses: dict[str, dict] = {}
     for part in score.parts:
-        analysis = compute_instrument_difficulty(part, tempo_bpm)
+        analysis = compute_instrument_difficulty(part, tempo_bpm, scale)
         current = instrument_analyses.get(part.name)
         if current is None or (
             analysis["grade"], analysis["difficulty_score"]
@@ -159,8 +161,9 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases") -
     overall_score = sum(
         RULE_WEIGHTS.get(finding.code, 1) for finding in findings
     )
+    grade = grade_from_score if scale == "legacy" else grade_from_index
     family_grades = {
-        family: grade_from_score(_percentile(details["difficulty_scores"], 0.8))
+        family: grade(_percentile(details["difficulty_scores"], 0.8))
         for family, details in by_family.items()
     }
     overall_grade = max(
@@ -168,7 +171,7 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases") -
         default=1,
     )
 
-    return {
+    result = {
         "overall_score": overall_score,
         "level": _difficulty_level(overall_score),
         "grade": overall_grade,
@@ -194,3 +197,4 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases") -
         },
         "critical_passages": critical_passages,
     }
+    return result if scale == "legacy" else {**result, "scale": SCALE}

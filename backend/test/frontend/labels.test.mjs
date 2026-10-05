@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   bandIssueText, byDifficulty, displayFamilyName, displayInstrumentName,
-  gradeOf, initialBandDraft, readBandProfile, unconfirmedStatusText, confirmationOptions, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel, rehearsalGroupName, blockScoreLabel,
+  gradeOf, gradeScaleOf, gradeText, initialBandDraft, readBandProfile, unconfirmedStatusText, confirmationOptions, rehearsalBlockDetail, rehearsalBlockTitle, omittedBlockText, calendarLabel, rehearsalGroupName, blockScoreLabel,
 } from '../../../frontend/src/labels.js';
 
 test('instrument names keep the part number', () => {
@@ -13,10 +13,27 @@ test('instrument names keep the part number', () => {
   assert.equal(displayFamilyName('brass', { label_es: 'Metales' }), 'Metales');
 });
 
-test('grades are bounded to the visible 1-5 scale', () => {
+const current = gradeScaleOf({ scale: { version: 2, grades: 6, technical_index_max: 10 } });
+const legacy = gradeScaleOf({});
+
+test('an analysis declares its scale; one without it was graded 1-5 before step 13', () => {
+  assert.deepEqual(current, { grades: 6, indexMax: 10, legacy: false });
+  assert.deepEqual(legacy, { grades: 5, indexMax: 5, legacy: true });
+  assert.deepEqual(gradeScaleOf(undefined), legacy);
+});
+
+test('grades are bounded to the visible scale', () => {
   assert.equal(gradeOf({}), 1);
-  assert.equal(gradeOf({ grade: 9 }), 5);
+  assert.equal(gradeOf({ grade: 9 }), 6);
+  assert.equal(gradeOf({ grade: 9 }, legacy), 5);
   assert.equal(gradeOf(undefined), 1);
+});
+
+test('a grade reads with its rubric, and an old analysis says it used the previous scale', () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map(grade => gradeText({ grade }, current)), [
+    'Grado 1 · Iniciación', 'Grado 2 · Elemental', 'Grado 3 · Intermedio bajo',
+    'Grado 4 · Intermedio', 'Grado 5 · Avanzado', 'Grado 6 · Superior']);
+  assert.equal(gradeText({ grade: 3 }, legacy), 'Grado 3 de 5 (escala anterior)');
 });
 
 test('difficulty ordering uses grade first and the index to break ties', () => {

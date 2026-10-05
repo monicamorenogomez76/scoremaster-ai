@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from './View.jsx';
-import { byDifficulty, dimensionLabelsEs, displayFamilyName, displayInstrumentName, findingLabel, gradeOf } from './labels.js';
+import { byDifficulty, dimensionLabelsEs, displayFamilyName, displayInstrumentName, findingLabel, gradeOf, gradeScaleOf, gradeText } from './labels.js';
 
 function Bar({ percent }) {
   return <div className="family-bar"><span style={{ width: Math.max(0, Math.min(100, percent)) + '%' }} /></div>;
@@ -8,7 +8,7 @@ function Bar({ percent }) {
 
 function TreeNode({ title, grade, onSelect, children }) {
   return <button type="button" className="tree-node" onClick={onSelect}>
-    <span className="tree-node-head"><span>{title}</span><strong className="tree-grade">Grado {grade}</strong></span>
+    <span className="tree-node-head"><span>{title}</span><strong className="tree-grade">{grade}</strong></span>
     {children}
   </button>;
 }
@@ -20,6 +20,7 @@ function DifficultyTree({ difficulty, onOpenPassage }) {
   const [instrument, setInstrument] = useState(null);
   const families = difficulty.by_family || {}, instruments = difficulty.by_instrument || {};
   const passages = difficulty.critical_passages || [];
+  const scale = gradeScaleOf(difficulty);
   const familyDetails = families[family] || {};
   const details = instruments[instrument] || {};
 
@@ -29,8 +30,8 @@ function DifficultyTree({ difficulty, onOpenPassage }) {
     content = ordered.length === 0
       ? <p className="result-empty">No se encontraron instrumentos en la partitura.</p>
       : <div className="tree-node-list">{ordered.map(([name, entry]) =>
-          <TreeNode key={name} title={displayFamilyName(name, entry)} grade={gradeOf(entry)} onSelect={() => { setFamily(name); setInstrument(null); }}>
-            <Bar percent={Math.max(12, gradeOf(entry) * 20)} />
+          <TreeNode key={name} title={displayFamilyName(name, entry)} grade={gradeText(entry, scale)} onSelect={() => { setFamily(name); setInstrument(null); }}>
+            <Bar percent={Math.max(12, gradeOf(entry, scale) / scale.grades * 100)} />
             <span className="tree-node-support">
               <span>{(entry.instruments || []).length} instrumentos</span>
               <span>{passages.filter(passage => passage.family === name).length} pasajes</span>
@@ -41,18 +42,18 @@ function DifficultyTree({ difficulty, onOpenPassage }) {
     content = ordered.length === 0
       ? <p className="result-empty">No hay instrumentos clasificados en esta familia.</p>
       : <div className="tree-node-list">{ordered.map(([name, entry]) =>
-          <TreeNode key={name} title={displayInstrumentName(name, entry)} grade={gradeOf(entry)} onSelect={() => setInstrument(name)}>
+          <TreeNode key={name} title={displayInstrumentName(name, entry)} grade={gradeText(entry, scale)} onSelect={() => setInstrument(name)}>
             <span className="tree-node-support">{passageCount(passages.filter(passage => passage.instrument === name).length)}</span>
           </TreeNode>)}</div>;
   } else {
     const selected = passages.filter(passage => passage.instrument === instrument);
     content = <>
       <h3 className="result-metric">{displayInstrumentName(instrument, details)}</h3>
-      <p className="tree-grade tree-instrument-details">Grado {gradeOf(details)} · índice {details.difficulty_score ?? 0} / 5</p>
+      <p className="tree-grade tree-instrument-details">{gradeText(details, scale)} · índice {details.difficulty_score ?? 0} / {scale.indexMax}</p>
       <div className="tree-dimensions">{Object.entries(details.dimensions || {}).map(([dimension, value]) =>
         <div key={dimension} className="tree-dimension">
           <span>{dimensionLabelsEs[dimension] || dimension}</span>
-          <Bar percent={Number(value) * 20} />
+          <Bar percent={Number(value) / scale.indexMax * 100} />
           <strong>{Number(value).toFixed(1)}</strong>
         </div>)}</div>
       <h3 className="tree-passage-heading">Pasajes a revisar</h3>
