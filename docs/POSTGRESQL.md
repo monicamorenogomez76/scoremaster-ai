@@ -101,6 +101,13 @@ independiente de la dificultad analizada. `GET /works/priorities` devuelve los p
 del último análisis de cada obra en preparación, con `origin: "analysis"` para distinguirlos de
 las futuras notas del director. Volver a analizar una obra conserva su estado.
 
+La migración `0005_rehearsals` añade los **ensayos guardados** (`rehearsals`): fecha, hora,
+duración (10–600 min), lugar, objetivos, obras (`work_ids`, varias por ensayo) y la agenda
+(`blocks`, como mucho 50, en orden: título, minutos, objetivo, obra, compases y secciones).
+`/rehearsals` admite listar, crear, leer, sustituir y borrar; solo se pueden usar obras propias y
+cada bloque solo puede nombrar obras del ensayo. La respuesta incluye el título de la obra de cada
+bloque (`work_title`). Si se borra una obra, el ensayo y sus bloques se conservan sin ella.
+
 Para arrancar con Python fuera de Docker, configurar `DATABASE_URL` en el entorno
 del proceso usando la conexión local de `.env.example` (por ejemplo en el entorno
 del IDE); Uvicorn no carga `.env` automáticamente. Después:

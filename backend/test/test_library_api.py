@@ -6,11 +6,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app import auth_routes
-from backend.app.dependencies import get_account_repository, get_analysis_repository, get_library_repository
+from backend.app.dependencies import (get_account_repository, get_analysis_repository, get_library_repository,
+                                      get_rehearsal_repository)
 from backend.app.main import app
 from backend.infrastructure.account_repository import PostgresAccountRepository
 from backend.infrastructure.analysis_repository import PostgresAnalysisRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
+from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
 
 pytestmark = pytest.mark.real_auth
 SCORES = Path(__file__).resolve().parents[2] / "test-scores"
@@ -23,6 +25,7 @@ def clients(postgres_engine):
     app.dependency_overrides[get_account_repository] = lambda: PostgresAccountRepository(postgres_engine)
     app.dependency_overrides[get_analysis_repository] = lambda: PostgresAnalysisRepository(postgres_engine)
     app.dependency_overrides[get_library_repository] = lambda: PostgresLibraryRepository(postgres_engine)
+    app.dependency_overrides[get_rehearsal_repository] = lambda: PostgresRehearsalRepository(postgres_engine)
     signed_in = []
     for name in ("ana", "berta"):
         client = TestClient(app)
