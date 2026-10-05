@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View } from './View.jsx';
 import { blockScoreLabel, calendarLabel, omittedBlockText, rehearsalBlockDetail, rehearsalBlockTitle } from './labels.js';
 import { rehearsalSchedule } from './schedule.js';
+import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { RehearsalEditor } from './RehearsalEditor.jsx';
 import { listRehearsals, rehearsalDateText, splitRehearsals } from './rehearsals.js';
 
@@ -47,6 +48,7 @@ function RehearsalList({ id, title, items, empty, onEdit }) {
             <p className="result-supporting">{[item.duration_minutes + ' minutos', item.place, item.works.map(work => work.title).join(', ') || 'Sin obras']
               .filter(Boolean).join(' · ')}</p>
             <p className="works-summary">{item.blocks.length === 1 ? '1 bloque' : item.blocks.length + ' bloques'}</p>
+            <AgendaCalendar blocks={item.blocks} start={item.time} />
           </div>
           <div className="works-actions"><button type="button" className="secondary-action" onClick={() => onEdit(item)}>Editar</button></div>
         </li>)}</ul>}

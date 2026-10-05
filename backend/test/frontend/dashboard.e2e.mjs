@@ -251,12 +251,14 @@ try {
   await blocksOf().nth(1).getByRole('button', { name: 'Subir' }).click();
   await editor.getByRole('button', { name: 'Guardar ensayo' }).click();
   await page.locator('#rehearsals-upcoming').getByText('Hoy · 19:00').waitFor();
+  assert.equal(await page.locator('#rehearsals-upcoming .agenda-calendar .calendar-slot').count(), 2, 'each saved rehearsal shows its coloured calendar');
   await page.locator('[data-view-target=summary]').click();
   const next = page.locator('#summary-rehearsal');
   await next.getByText('Ensayo de hoy').waitFor();
   assert.deepEqual(await next.locator('.agenda-title').allTextContents(), ['Pasajes prioritarios', 'Calentamiento']);
   assert.deepEqual(await next.locator('.agenda-work').allTextContents(), ['Untitled score · cc. 1–4', 'Toda la banda · sin obra concreta']);
   assert.equal(await next.locator('.agenda-calendar .calendar-slot').count(), 2, 'the rehearsal of today has its coloured calendar');
+  assert.match(await next.locator('.agenda-calendar .calendar-slot').nth(1).getAttribute('class'), /calendar-slot--warmup/, 'a hand-written warm-up is coloured as a warm-up');
   await next.getByRole('button', { name: 'Editar' }).click();
   await editor.waitFor({ state: 'visible' });
   assert.equal(await editor.getByLabel('Hora').inputValue(), '19:00');

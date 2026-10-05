@@ -91,14 +91,34 @@ export function proposalBlocks(proposal) {
 // Type of a block: it colours the agenda calendar with the colours of the rehearsal plan.
 const SECTIONS = ['flutes', 'double_reeds', 'clarinets', 'saxophones', 'high_brass', 'low_voices', 'percussion', 'strings_rhythm'];
 
-export const blockTypeOptions = () => [['warmup', 'Calentamiento'], ['common', 'Línea o ritmo común'],
+export const blockTypeOptions = () => [['warmup', 'Calentamiento · banda completa'], ['common', 'Línea o ritmo común'],
   ...SECTIONS.map(group => [group, 'Seccional · ' + rehearsalGroupName(group)]), ['tutti', 'Tutti'], ['other', 'Otro']];
 
+// Words that reveal the type of a block written by hand (accents and case ignored). The warm-up is a
+// whole-band category of its own (author's decision, 2026-10-05).
+const GROUP_WORDS = [
+  ['warmup', ['calentamiento', 'banda completa']], ['tutti', ['tutti']], ['common', ['comun']],
+  ['flutes', ['flauta', 'flautin']], ['double_reeds', ['doble', 'oboe', 'fagot']], ['clarinets', ['clarinete']],
+  ['saxophones', ['saxo']], ['high_brass', ['metales agudos', 'trompeta', 'trompa', 'fliscorno', 'corneta']],
+  ['low_voices', ['grave', 'trombon', 'bombardino', 'tuba']], ['percussion', ['percusion']],
+  ['strings_rhythm', ['cuerda', 'ritmica', 'contrabajo']],
+];
+const plain = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+// The chosen type, or the one the title and sections reveal, so the calendar is always coloured.
+export function blockGroup(block) {
+  if (block.group && block.group !== 'other') return block.group;
+  const sections = Array.isArray(block.sections) ? block.sections.join(' ') : block.sections;
+  const text = plain(block.title + ' ' + (sections || ''));
+  return (GROUP_WORDS.find(([, words]) => words.some(word => text.includes(word))) || ['other'])[0];
+}
+
 export function agendaCalendarLabel(block) {
-  if (block.group === 'warmup') return 'Calentam.';
-  if (block.group === 'common') return 'Común';
-  if (block.group === 'tutti') return 'Tutti';
-  return calendarLabel({ type: 'sectional', group: SECTIONS.includes(block.group) ? block.group : 'other' });
+  const group = blockGroup(block);
+  if (group === 'warmup') return 'Calentam.';
+  if (group === 'common') return 'Común';
+  if (group === 'tutti') return 'Tutti';
+  return calendarLabel({ type: 'sectional', group: SECTIONS.includes(group) ? group : 'other' });
 }
 
 // Clock times of the agenda from the rehearsal's start; minutes typed in the editor are text.
