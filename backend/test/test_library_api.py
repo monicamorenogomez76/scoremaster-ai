@@ -133,3 +133,48 @@ def test_instruments_never_configured_start_with_what_the_work_needs(clients):
 
     ana.patch("/band", json={"profile": {requirement["key"]: 0}})
     assert analyze(ana).json()["band_fit"]["requirements"][0]["available"] == 0
+
+
+# F1 of the interface proposal (2026-10-05): preparation status, independent of the difficulty.
+
+
+def test_a_new_work_is_to_be_reviewed_and_its_owner_changes_its_preparation(clients):
+    ana, berta = clients
+    work_id = analyze(ana).json()["work_id"]
+    assert ana.get("/works").json()["works"][0]["preparation_status"] == "review"
+
+    changed = ana.patch("/works/" + work_id, json={"preparation_status": "preparing"})
+
+    assert changed.status_code == 200 and changed.json()["preparation_status"] == "preparing"
+    assert ana.get("/works").json()["works"][0]["preparation_status"] == "preparing"
+    assert analyze(ana).json()["work_id"] == work_id
+    assert ana.get("/works").json()["works"][0]["preparation_status"] == "preparing", "analysing again keeps it"
+
+
+def test_only_known_preparation_statuses_and_own_works_can_be_changed(clients):
+    ana, berta = clients
+    work_id = analyze(ana).json()["work_id"]
+
+    assert ana.patch("/works/" + work_id, json={"preparation_status": "terminada"}).status_code == 422
+    assert berta.patch("/works/" + work_id, json={"preparation_status": "archived"}).status_code == 404
+    assert ana.patch("/works/not-a-uuid", json={"preparation_status": "ready"}).status_code == 404
+    assert ana.get("/works").json()["works"][0]["preparation_status"] == "review"
+
+
+def test_priorities_are_the_critical_passages_of_the_works_in_preparation(clients):
+    ana, berta = clients
+    preparing = analyze(ana).json()
+    analyze(ana, "high_density.musicxml")
+    assert ana.get("/works/priorities").json() == {"priorities": []}, "works only to be reviewed have no priorities"
+
+    ana.patch("/works/" + preparing["work_id"], json={"preparation_status": "preparing"})
+    priorities = ana.get("/works/priorities").json()["priorities"]
+
+    passages = preparing["difficulty"]["critical_passages"]
+    assert len(priorities) == len(passages) > 0
+    first, passage = priorities[0], passages[0]
+    assert first == {"work_id": preparing["work_id"], "title": preparing["title"], "instrument": passage["instrument"],
+                     "instrument_label_es": passage["instrument_label_es"], "family": passage["family"],
+                     "family_label_es": passage["family_label_es"], "measure_range": passage["measure_range"],
+                     "findings": passage["findings"], "origin": "analysis"}
+    assert berta.get("/works/priorities").json() == {"priorities": []}
