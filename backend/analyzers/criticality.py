@@ -20,6 +20,7 @@ from statistics import median
 from backend.analyzers.harmony import find_cadences
 from backend.analyzers.phrases import find_phrases
 from backend.domain.models import Finding, Score, ScorePart, TempoMark
+from backend.domain.timing import attack_count, measure_length
 from backend.rules.weights import RULE_WEIGHTS
 
 PERSISTENCE_RULES = {"SL005"}
@@ -62,8 +63,8 @@ def _quarter_bpm(marks: tuple[TempoMark, ...], number: int) -> float | None:
 
 
 def _notes_per_second(measure, bpm: float | None) -> float:
-    attacks = sum(1 for note in measure.notes if not note.is_rest)
-    quarters = measure.duration_quarters or sum(note.duration_quarters for note in measure.notes)
+    attacks = attack_count(measure)
+    quarters = measure_length(measure)
     if not bpm or not quarters:
         return 0.0
     return attacks / (quarters * 60.0 / bpm)

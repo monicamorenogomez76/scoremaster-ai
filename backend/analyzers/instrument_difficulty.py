@@ -7,6 +7,7 @@ from music21 import pitch
 
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import ScorePart
+from backend.domain.timing import attack_count, measure_length, melodic_lines, sounding_pitches
 from backend.analyzers.endurance import longest_active_run
 
 
@@ -204,11 +205,10 @@ def _clamp(value: float, maximum: float = 5.0) -> float:
 
 
 def _measure_attack_density(measure) -> float:
-    attacks = sum(1 for event in measure.notes if not event.is_rest)
-    measure_length = sum(event.duration_quarters for event in measure.notes)
+    attacks = attack_count(measure)
     if not attacks:
         return 0.0
-    return attacks / max(2.0, measure_length / 2.0)
+    return attacks / max(2.0, measure_length(measure) / 2.0)
 
 
 def grade_from_score(score: float) -> int:
@@ -237,10 +237,10 @@ def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = Non
         profile = InstrumentProfile(family, 48, 84, 36, 9, 8, 2.2, 135)
 
     pitches = [
-        pitch.Pitch(event.pitch)
+        pitch.Pitch(written)
         for measure in part.measures
         for event in measure.notes
-        if not event.is_rest and event.pitch is not None
+        for written in sounding_pitches(event)
     ]
     dimensions: dict[str, float] = {}
 
@@ -253,7 +253,12 @@ def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = Non
             if value < profile.comfortable_low or value > profile.comfortable_high
         )
         dimensions["register"] = _clamp(outside_notes / len(midi_values) * 5)
-        intervals = [abs(right - left) for left, right in zip(midi_values, midi_values[1:])]
+        # Leaps are measured along each voice, never between two players of one staff.
+        intervals = [
+            abs(pitch.Pitch(right).midi - pitch.Pitch(left).midi)
+            for line in melodic_lines(part.measures).values()
+            for left, right in zip(line, line[1:])
+        ]
         large_leaps = sum(1 for value in intervals if value >= profile.leap_threshold)
         dimensions["intervals"] = _clamp(large_leaps / max(1, len(intervals)) * 5)
 

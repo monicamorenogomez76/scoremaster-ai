@@ -357,12 +357,30 @@ que ninguna decida sola:
 
 Hay límite cuando la suma llega a 2: la cadencia cierra con nota alargada o con pausa, y sola no
 corta las partes que siguen moviéndose (decisiones de la autora, 2026-10-04). Sin transposiciones
-declaradas (partes «Voice» de un PDF) la armonía no es fiable y no se detectan cadencias; los
-acordes dentro de un pentagrama todavía no se leen. Los fragmentos separados por límites débiles se unen en
+declaradas (partes «Voice» de un PDF) la armonía no es fiable y no se detectan cadencias; de los
+acordes dentro de un pentagrama la armonía usa todavía solo la nota superior. Los fragmentos separados por límites débiles se unen en
 frases de **4 u 8 compases** (decisión de la autora): la frase se cierra al llegar a 4 o a 8, y de
 5 a 7 solo se une el siguiente fragmento si completa exactamente 8. Un silencio de un compás entero
 o una marca escrita es un límite fuerte que nunca se une. El parser conserva la posición de cada
 nota en el compás, la duración del compás y las marcas escritas.
+
+## Tiempos y ataques (paso 10, decisiones de la autora, 2026-10-05)
+
+El parser conserva voz, ligadura, nota de adorno y todas las notas de cada acorde
+(`ScoreNote.voice`, `tie`, `is_grace`, `chord_pitches`; `pitch` es la nota superior).
+`backend/domain/timing.py` fija qué es un ataque para todos los consumidores:
+
+- Un acorde es un solo ataque; la continuación o el final de una ligadura no es ataque.
+- Una nota de adorno es un ataque más, aunque no ocupe tiempo.
+- Cada voz de un pentagrama es un músico: un compás es tan denso como su voz más activa y su
+  duración es la escrita, no la suma de las voces.
+- Los intervalos se miden a lo largo de cada voz (nota superior de los acordes), nunca entre voces;
+  el rango incluye todas las notas de los acordes.
+
+Lo usan SL003, SL004, el rango, la dificultad por instrumento y la señal de velocidad de la
+criticidad. El baseline sintético no cambia (no tiene acordes, voces ni ligaduras). En las obras
+locales, las partes divisi escritas como acordes suben de grado y las notas ligadas dejan de contar
+como densidad. El tempo local y los descansos quedan para el paso 11.
 
 # 9. Windowing
 

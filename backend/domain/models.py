@@ -11,6 +11,14 @@ class ScoreNote:
 	offset_quarters: Optional[float] = None
 	# Written breath mark, caesura or fermata: a hint of a phrase ending.
 	phrase_mark: bool = False
+	# MusicXML voice inside the staff (None for a single voice or hand-built scores).
+	voice: Optional[str] = None
+	# "start", "continue" or "stop": a continued or stopped tie is not a new attack.
+	tie: Optional[str] = None
+	# Grace notes take no time but are attacked (author's decision, 2026-10-05).
+	is_grace: bool = False
+	# Every written pitch of a chord, lowest first; `pitch` is then its top note.
+	chord_pitches: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

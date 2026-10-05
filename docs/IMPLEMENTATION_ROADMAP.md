@@ -35,7 +35,7 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 07 | Metadatos del parser | Integrado: PR #29 |
 | 08 | Resolver determinista | Integrado: resolver (PR #30), dificultad (PR #31), sección rítmica (PR #32) y timbre (PR #33); BandFit con el paso 09 |
 | 09 | Confirmación humana | Integrado: PR #42; confirmación en «Mi banda» y BandFit por instrumento |
-| 10 | Tiempos y ataques musicales | Pendiente |
+| 10 | Tiempos y ataques musicales | En revisión: acordes, ligaduras, voces y adornos |
 | 11 | Características locales | Pendiente |
 | 12 | Políticas de dificultad | Pendiente |
 | 13 | Grados 1–6 | Pendiente |

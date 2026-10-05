@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from backend.domain.models import Finding, Score
+from backend.domain.timing import attack_count, measure_length
 
 
 def _measure_attack_density(measure) -> tuple[float, int, float]:
@@ -10,14 +11,14 @@ def _measure_attack_density(measure) -> tuple[float, int, float]:
     just two half notes is not. The key is to score how many note onsets occur
     within the measure length, not only the cumulative duration.
     """
-    non_rest = [note for note in measure.notes if not note.is_rest]
-    if not non_rest:
+    attacks = attack_count(measure)
+    if not attacks:
         return 0.0, 0, 0.0
 
-    measure_length_quarters = sum(note.duration_quarters for note in measure.notes)
+    measure_length_quarters = measure_length(measure)
     reference_window = max(2.0, measure_length_quarters / 2.0)
-    attack_density = len(non_rest) / reference_window
-    return attack_density, len(non_rest), measure_length_quarters
+    attack_density = attacks / reference_window
+    return attack_density, attacks, measure_length_quarters
 
 
 def find_high_rhythm_density(score: Score) -> list[Finding]:
