@@ -220,8 +220,9 @@ try {
   await priorities.getByText('Viento madera').waitFor();
   assert.match(await priorities.textContent(), /c\. 1.*Análisis/);
   await priorities.getByRole('button', { name: 'Untitled score' }).click();
-  await page.waitForFunction(() => document.querySelector('#full-score-rendering svg'), null, { timeout: 45000 });
-  assert.equal(await page.locator('#work-detail').isVisible(), true, 'each priority opens its work');
+  // The same work was open before, so its score may already be drawn: wait for the detail itself.
+  await page.locator('#work-detail').waitFor({ state: 'visible', timeout: 45000 });
+  assert.equal(await page.locator('[data-view-target=repertoire]').getAttribute('aria-current'), 'page', 'each priority opens its work');
   assert.deepEqual(errors, []);
   console.log('PASS: the summary lists the works in preparation and their passages as priorities');
 } finally {
