@@ -12,6 +12,10 @@ const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const score = name => readFileSync(new URL('../../../test-scores/' + name, import.meta.url));
 const iso = value => [value.getFullYear(), String(value.getMonth() + 1).padStart(2, '0'), String(value.getDate()).padStart(2, '0')].join('-');
+// Minutes of one work in an agenda calendar ("20:52 · 28 min").
+const minutesOf = (rehearsal, work) => rehearsal.locator('.calendar-slot').evaluateAll((slots, title) => slots
+  .filter(slot => slot.querySelector('.calendar-work').textContent === title)
+  .reduce((total, slot) => total + Number(/(\d+) min/.exec(slot.querySelector('.calendar-time').textContent)[1]), 0), work);
 const waitIdle = () => page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
 try {
   await page.goto(url);
@@ -39,7 +43,9 @@ try {
   await editor.getByLabel('Fecha del concierto').fill(iso(concertDay));
   await editor.getByLabel('High Density Study').check();
   await editor.getByLabel('Untitled score').check();
-  for (const day of ['lunes', 'miércoles', 'viernes']) await editor.getByLabel(day, { exact: true }).check();
+  // Today is one of the rehearsal days, so the first rehearsal can be reviewed during the walkthrough.
+  const names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  for (const offset of [0, 2, 4]) await editor.getByLabel(names[(new Date().getDay() + offset) % 7], { exact: true }).check();
   await editor.getByLabel('Hora de ensayo').fill('20:00');
   await editor.getByLabel('Duración de cada ensayo (minutos)').fill('90');
   const preview = await editor.locator('.pattern-preview li').count();
@@ -67,12 +73,52 @@ try {
   assert.match(await planning.textContent(), new RegExp('0 de ' + preview + ' ensayos revisados'));
   console.log('PASS: the app proposes the series up to the general rehearsal and saves it when reviewed');
 
+  // The director reviews today's rehearsal: what was left pending gains time in the next ones.
+  const series = planning.locator('.series-rehearsal');
+  const before = await minutesOf(series.nth(1), 'Untitled score');
+  await series.first().getByRole('button', { name: 'Revisar' }).click();
+  const review = page.locator('#rehearsal-review');
+  await review.waitFor();
+  const rows = review.locator('.review-block');
+  let first = true;
+  for (let index = 0; index < await rows.count(); index++) {
+    const row = rows.nth(index), text = await row.textContent();
+    if (text.includes('Untitled score')) {
+      await row.getByLabel('Pendiente').check();
+      if (first) { await row.getByLabel('Nota').fill('Entradas de clarinetes'); first = false; }
+    } else {
+      await row.getByLabel('Resuelto').check();
+    }
+  }
+  await review.getByLabel('Notas del ensayo').fill('Buen ensayo; los clarinetes siguen justos.');
+  await review.getByRole('button', { name: 'Guardar revisión' }).click();
+  await series.first().getByText('Revisado').waitFor();
+  await planning.getByRole('button', { name: 'Replanificar los ensayos siguientes' }).click();
+  const replanned = planning.locator('.planned-rehearsal');
+  await replanned.first().waitFor();
+  assert.equal(await replanned.count(), preview - 1, 'the reviewed rehearsal is kept');
+  assert.match(await planning.textContent(), /Se mantienen 1 ensayos/);
+  assert.ok(await minutesOf(replanned.first(), 'Untitled score') > before, 'what was left pending gains time');
+  await planning.getByRole('button', { name: 'Guardar planificación' }).click();
+  await planning.locator('.plan-preview').waitFor({ state: 'detached' });
+  assert.match(await planning.textContent(), new RegExp('1 de ' + preview + ' ensayos revisados'));
+  console.log('PASS: the director reviews a rehearsal and the next ones are replanned with it');
+
   const calendar = page.locator('.month-calendar');
   assert.ok(await calendar.locator('.event-rehearsal').count() >= 1, 'the month calendar shows the rehearsals');
   await page.locator('[data-view-target=rehearsal]').click();
   await page.waitForFunction(count => document.querySelectorAll('#rehearsals-upcoming .works-item').length >= count, preview);
+  await page.locator('[data-view-target=summary]').click();
+  await page.locator('#next-concert').getByText('Concierto de otoño').waitFor();
+  assert.match(await page.locator('#next-concert').textContent(), new RegExp('faltan 16 días · ' + (preview - 1) + ' ensayos'));
+  const priorities = page.locator('#summary-priorities');
+  await priorities.getByText('Revisión', { exact: true }).first().waitFor();
+  assert.match(await priorities.textContent(), /Pendiente · Entradas de clarinetes/);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 2), true,
+    'with a concert and the review the summary still fits on a computer screen');
   assert.deepEqual(errors, []);
-  console.log('PASS: the month calendar and Ensayos show the planned series');
+  console.log('PASS: the month calendar, Ensayos and the summary show the series and the review');
 } finally {
   await browser.close();
 }

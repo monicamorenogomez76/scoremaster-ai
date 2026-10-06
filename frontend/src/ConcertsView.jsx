@@ -3,7 +3,8 @@ import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { ConcertEditor } from './ConcertEditor.jsx';
 import { concertProgress, daysUntil, listConcerts, monthGrid, phaseLabel, planItemsToSave, proposeConcertPlan,
   saveConcertPlan } from './concerts.js';
-import { listRehearsals, proposalBlocks, rehearsalDateText, todayIso } from './rehearsals.js';
+import { RehearsalReview } from './RehearsalReview.jsx';
+import { canReview, listRehearsals, proposalBlocks, rehearsalDateText, todayIso } from './rehearsals.js';
 import { View } from './View.jsx';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -54,6 +55,7 @@ function ConcertPlanning({ concert, series, onChanged, onClose }) {
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reviewing, setReviewing] = useState(null);
   const progress = concertProgress(concert);
   const propose = async () => {
     setBusy(true); setError('');
@@ -75,9 +77,12 @@ function ConcertPlanning({ concert, series, onChanged, onClose }) {
     <p className="result-supporting">{progress.reviewed} de {progress.total} ensayos revisados · {concert.works.map(work => work.title).join(' · ') || 'Sin programa'}</p>
     {series.length > 0 && <ol className="series-list">{series.map(item => <li key={item.id} className="series-rehearsal">
       <div className="series-heading"><strong>{rehearsalDateText(item)}</strong><span className="status-tag">{phaseLabel(item.phase)}</span>
-        {item.reviewed_at && <span className="status-tag">Revisado</span>}{item.fixed && <span className="status-tag">Fijo</span>}</div>
+        {item.reviewed_at && <span className="status-tag">Revisado</span>}{item.fixed && <span className="status-tag">Fijo</span>}
+        {canReview(item) && <button type="button" className="link-action" onClick={() => { setPreview(null); setReviewing(item); }}>Revisar</button>}</div>
       <AgendaCalendar blocks={item.blocks} start={item.time} />
     </li>)}</ol>}
+    {reviewing && <RehearsalReview key={reviewing.id} rehearsal={reviewing}
+      onSaved={() => { setReviewing(null); onChanged(); }} onCancel={() => setReviewing(null)} />}
     <div className="editor-actions">
       <button type="button" className="primary-action" disabled={busy} onClick={propose}>
         {busy && !preview ? 'Calculando…' : series.length ? 'Replanificar los ensayos siguientes' : 'Proponer planificación'}</button>

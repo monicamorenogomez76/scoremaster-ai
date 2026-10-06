@@ -4,7 +4,8 @@ import { blockScoreLabel, calendarLabel, omittedBlockText, rehearsalBlockDetail,
 import { rehearsalSchedule } from './schedule.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { RehearsalEditor } from './RehearsalEditor.jsx';
-import { listRehearsals, rehearsalDateText, splitRehearsals } from './rehearsals.js';
+import { RehearsalReview } from './RehearsalReview.jsx';
+import { canReview, listRehearsals, rehearsalDateText, splitRehearsals } from './rehearsals.js';
 
 const VISIBLE_OMITTED = 5;
 
@@ -38,7 +39,7 @@ function RehearsalCalendar({ blocks, onOpenPassage }) {
   </div>;
 }
 
-function RehearsalList({ id, title, items, empty, onEdit }) {
+function RehearsalList({ id, title, items, empty, onEdit, onReview }) {
   return <section id={id} className="rehearsal-list" aria-labelledby={id + '-title'}>
     <h3 id={id + '-title'}>{title}</h3>
     {items.length === 0 ? <p className="result-supporting">{empty}</p>
@@ -50,7 +51,10 @@ function RehearsalList({ id, title, items, empty, onEdit }) {
             <p className="works-summary">{item.blocks.length === 1 ? '1 bloque' : item.blocks.length + ' bloques'}</p>
             <AgendaCalendar blocks={item.blocks} start={item.time} />
           </div>
-          <div className="works-actions"><button type="button" className="secondary-action" onClick={() => onEdit(item)}>Editar</button></div>
+          <div className="works-actions">
+            {canReview(item) && <button type="button" className="primary-action" onClick={() => onReview(item)}>{item.reviewed_at ? 'Ver revisión' : 'Revisar'}</button>}
+            <button type="button" className="secondary-action" onClick={() => onEdit(item)}>Editar</button>
+          </div>
         </li>)}</ul>}
   </section>;
 }
@@ -59,6 +63,7 @@ function RehearsalList({ id, title, items, empty, onEdit }) {
 function SavedRehearsals({ visible, editing, onEdit, onCloseEditor }) {
   const [rehearsals, setRehearsals] = useState([]);
   const [error, setError] = useState('');
+  const [reviewing, setReviewing] = useState(null);
   const refresh = () => listRehearsals().then(found => { setRehearsals(found); setError(''); }).catch(failure => setError(failure.message));
   useEffect(() => { if (visible) refresh(); }, [visible]);
   const { upcoming, past } = splitRehearsals(rehearsals);
@@ -70,8 +75,10 @@ function SavedRehearsals({ visible, editing, onEdit, onCloseEditor }) {
     {error && <p className="result-supporting" role="alert">{error}</p>}
     {editing && <RehearsalEditor key={editing.id || editing.key || 'new'} rehearsal={editing}
       onSaved={() => { onCloseEditor(); refresh(); }} onCancel={onCloseEditor} />}
-    <RehearsalList id="rehearsals-upcoming" title="Próximos" items={upcoming} empty="No hay ensayos programados." onEdit={onEdit} />
-    <RehearsalList id="rehearsals-past" title="Realizados" items={past} empty="Aún no hay ensayos realizados." onEdit={onEdit} />
+    {reviewing && <RehearsalReview key={reviewing.id} rehearsal={reviewing}
+      onSaved={() => { setReviewing(null); refresh(); }} onCancel={() => setReviewing(null)} />}
+    <RehearsalList id="rehearsals-upcoming" title="Próximos" items={upcoming} empty="No hay ensayos programados." onEdit={onEdit} onReview={setReviewing} />
+    <RehearsalList id="rehearsals-past" title="Realizados" items={past} empty="Aún no hay ensayos realizados." onEdit={onEdit} onReview={setReviewing} />
   </section>;
 }
 

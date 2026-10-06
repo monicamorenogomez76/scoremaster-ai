@@ -66,6 +66,11 @@ La navegación sigue la propuesta de interfaz de la autora (2026-10-05):
   dificultad) y estado del análisis. El detalle de una obra tiene las pestañas **Partitura**,
   **Dificultad** y **Grabaciones**.
 - **Mi banda**.
+- **Conciertos**: cada concierto con su fecha, su programa en orden de concierto y un patrón
+  semanal de ensayos. La aplicación propone la serie de ensayos por fases (lectura y pasajes,
+  integración y ensayo general con la pasada del programa). Tras cada ensayo el director lo revisa
+  bloque a bloque (resuelto, mejorable, pendiente) y se replanifican los ensayos siguientes. Incluye
+  un calendario mensual; el Resumen muestra el próximo concierto y lo pendiente de la última revisión.
 - **Ensayos**: ensayos guardados (fecha, hora, duración, lugar, objetivos y varias obras) con una
   agenda de bloques editable; cada bloque indica la obra que se trabaja. El Resumen muestra el
   ensayo de hoy o el próximo. Debajo sigue el plan calculado de la obra abierta.

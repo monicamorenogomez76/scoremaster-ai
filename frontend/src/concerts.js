@@ -68,3 +68,11 @@ export function planItemsToSave(plan) {
     blocks: proposalBlocks(item).map(({ work_title, ...block }) => block),
   }));
 }
+
+// The next concert from today, with the days left and its rehearsals still to do.
+export function nextConcert(concerts, today) {
+  const concert = concerts.filter(item => item.date >= today).sort((left, right) => left.date.localeCompare(right.date))[0];
+  if (!concert) return null;
+  const remaining = (concert.rehearsals || []).filter(item => item.date >= today && !item.reviewed).length;
+  return { concert, remaining, days: daysUntil(concert.date, today) };
+}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  concertProgress, createConcert, daysUntil, listConcerts, monthGrid, patternDates, phaseLabel, planItemsToSave,
+  concertProgress, createConcert, daysUntil, nextConcert, listConcerts, monthGrid, patternDates, phaseLabel, planItemsToSave,
   proposeConcertPlan, saveConcertPlan, weekdayOptions,
 } from '../../../frontend/src/concerts.js';
 
@@ -67,4 +67,14 @@ test('concerts are listed, created, planned and their series saved', async () =>
   assert.deepEqual(JSON.parse(calls[2].body), { today: '2026-10-12' });
   await saveConcertPlan('c1', '2026-10-12', []);
   assert.deepEqual(JSON.parse(calls[3].body), { today: '2026-10-12', rehearsals: [] });
+});
+
+test('the next concert and the rehearsals still to do before it', () => {
+  const concerts = [
+    { id: 'old', date: '2026-10-01', rehearsals: [] },
+    { id: 'next', date: '2026-10-29', rehearsals: [{ date: '2026-10-13', reviewed: true }, { date: '2026-10-20', reviewed: false }, { date: '2026-10-27', reviewed: false }] },
+    { id: 'later', date: '2026-12-20', rehearsals: [] },
+  ];
+  assert.deepEqual(nextConcert(concerts, '2026-10-14'), { concert: concerts[1], remaining: 2, days: 15 });
+  assert.equal(nextConcert(concerts, '2026-12-21'), null);
 });
