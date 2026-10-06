@@ -19,6 +19,8 @@ export function App({ session }) {
   const [workTab, setWorkTab] = useState('score');
   // Saved rehearsal open in the editor: {} for a new one, null when closed.
   const [rehearsalEditing, setRehearsalEditing] = useState(null);
+  // Rehearsal open in the director's review (from Ensayos or from the summary assistant).
+  const [rehearsalReviewing, setRehearsalReviewing] = useState(null);
   // revision changes with every successful analysis so explorers restart from the top.
   const [analysis, setAnalysis] = useState(null);
   const [bandDraft, setBandDraft] = useState({});
@@ -108,7 +110,7 @@ export function App({ session }) {
     return () => { current = false; stop(); };
   }, []);
   const signedIn = Boolean(user);
-  const enter = found => { setUser(found); setRepertoireMode('list'); setRehearsalEditing(null); navigate('summary'); };
+  const enter = found => { setUser(found); setRepertoireMode('list'); setRehearsalEditing(null); setRehearsalReviewing(null); navigate('summary'); };
   const leave = async () => { await signOut().catch(() => {}); setUser(null); upload.reset(); };
 
   return <>
@@ -117,7 +119,9 @@ export function App({ session }) {
       upload={upload} analysis={analysis} repertoireMode={repertoireMode} onRepertoireModeChange={setRepertoireMode}
       workTab={workTab} onWorkTabChange={setWorkTab} bandDraft={bandDraft}
       rehearsalEditing={rehearsalEditing} onEditRehearsal={rehearsal => { setRehearsalEditing(rehearsal); navigate('rehearsal'); }}
-      onCloseRehearsal={() => setRehearsalEditing(null)} onBandDraftChange={setBandDraft}
+      onCloseRehearsal={() => setRehearsalEditing(null)}
+      rehearsalReviewing={rehearsalReviewing} onReviewRehearsal={rehearsal => { setRehearsalEditing(null); setRehearsalReviewing(rehearsal); navigate('rehearsal'); }}
+      onCloseReview={() => setRehearsalReviewing(null)} onBandDraftChange={setBandDraft}
       minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onBandActivated={bandActivated} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />

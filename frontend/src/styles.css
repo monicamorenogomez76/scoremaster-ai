@@ -709,3 +709,9 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .rehearsal-editor .template-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 500; }
 .rehearsal-editor .template-row input { width: 80px; }
 .rehearsal-editor .template-row select { width: min(160px, 60%); }
+.draft-rehearsal { display: grid; gap: 4px; font-size: .86rem; }
+.summary-assistant > .primary-action, .summary-assistant > .secondary-action { width: 100%; }
+/* Inside the assistant the calendar is a compact preview: one line of work per box. */
+.summary-assistant .calendar-block { min-height: 44px; padding: 6px 7px; }
+.summary-assistant .calendar-work { -webkit-line-clamp: 1; }
+.summary-assistant .calendar-track { min-height: 0; }

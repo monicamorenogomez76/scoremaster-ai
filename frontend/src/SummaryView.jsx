@@ -20,7 +20,8 @@ function Card({ id, title, action, children }) {
 
 // Home of the director, as in the author's mock-up: next rehearsal, works in preparation and their
 // priorities on the left; the rehearsal assistant on the right.
-export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOpenBlock, onPlanRehearsal, onEditRehearsal, onReviewDraft, busy }) {
+export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOpenBlock, onPlanRehearsal, onEditRehearsal, onReviewDraft,
+  onReviewRehearsal, busy }) {
   const [works, setWorks] = useState(null);
   const [priorities, setPriorities] = useState(null);
   const [rehearsals, setRehearsals] = useState(null);
@@ -28,6 +29,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
   const [reviewPriorities, setReviewPriorities] = useState([]);
   const [error, setError] = useState('');
   const [detail, setDetail] = useState(false);
+  const [revision, setRevision] = useState(0);
   const visible = !hidden && active === 'summary';
   useEffect(() => {
     if (!visible) return undefined;
@@ -39,7 +41,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
       .catch(failure => { if (current) setError(failure.message); });
     // Leaving the summary folds the agenda again: every visit starts at a glance.
     return () => { current = false; setDetail(false); };
-  }, [visible, user?.email]);
+  }, [visible, user?.email, revision]);
   const preparing = (works || []).filter(work => work.preparation_status === 'preparing');
   const link = (label, view) => <button type="button" className="link-action" onClick={() => onNavigate(view)}>{label}</button>;
   const next = rehearsals && nextRehearsal(rehearsals);
@@ -109,7 +111,9 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
     </div>
     <div className="summary-side">
     <SummaryAssistant key={preparing.map(work => work.id).join('|')} works={preparing}
-      defaultMinutes={next?.duration_minutes} onReview={onReviewDraft} />
+      defaultMinutes={next?.duration_minutes} onReview={onReviewDraft} concerts={concerts} rehearsals={rehearsals || []}
+      onReviewRehearsal={onReviewRehearsal} onEditRehearsal={onEditRehearsal} onOpenBlock={onOpenBlock}
+      onChanged={() => setRevision(value => value + 1)} />
       <Card id="summary-works" title="Obras en preparación" action={link('Ver repertorio', 'repertoire')}>
         {works && preparing.length === 0 && <div className="empty-workspace"><h3>Ninguna obra en preparación</h3>
           <p>Marca en Repertorio las obras que estáis preparando para seguirlas desde aquí.</p></div>}

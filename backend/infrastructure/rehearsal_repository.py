@@ -70,7 +70,7 @@ class PostgresRehearsalRepository:
                        for item in row.blocks)
         draft = RehearsalDraft(row.scheduled_on, row.starts_at, row.duration_minutes, row.place, row.objectives,
                                tuple(work for work, _ in works), blocks, row.concert_id, row.fixed, row.phase)
-        return Rehearsal(row.id, draft, works, row.reviewed_at, row.review_notes)
+        return Rehearsal(row.id, draft, works, row.reviewed_at, row.review_notes, row.updated_at)
 
     def _check_works(self, session: Session, user_id: UUID, draft: RehearsalDraft) -> None:
         if len(self._titles(session, user_id, set(draft.work_ids))) != len(set(draft.work_ids)):
