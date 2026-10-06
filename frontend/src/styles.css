@@ -715,3 +715,7 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .summary-assistant .calendar-block { min-height: 44px; padding: 6px 7px; }
 .summary-assistant .calendar-work { -webkit-line-clamp: 1; }
 .summary-assistant .calendar-track { min-height: 0; }
+.next-step { display: grid; gap: 8px; margin: 0 0 10px; padding: 10px 12px; border-left: 3px solid var(--warning); border-radius: 6px; background: #fff8eb; }
+.next-step p { margin: 0; color: var(--text); font-size: .9rem; }
+.next-step > .primary-action { justify-self: start; }
+.next-step-preview { display: grid; gap: 8px; }

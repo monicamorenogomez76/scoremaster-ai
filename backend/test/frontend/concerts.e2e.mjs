@@ -73,16 +73,17 @@ try {
   assert.match(await planning.textContent(), new RegExp('0 de ' + preview + ' ensayos revisados'));
   console.log('PASS: the app proposes the series up to the general rehearsal and saves it when reviewed');
 
-  // The summary assistant suggests the next step of the concert: review today's rehearsal.
-  const assistant = page.locator('#summary-assistant');
+  // The rehearsal card suggests the next step of the concert: review today's rehearsal.
+  const nextStep = page.locator('#summary-rehearsal .next-step');
   await page.locator('[data-view-target=summary]').click();
-  await assistant.getByText(/Revisa el ensayo de hoy/).waitFor();
-  await assistant.getByRole('button', { name: 'Revisar ensayo' }).click();
+  await nextStep.getByText(/El ensayo de hoy está sin revisar/).waitFor();
+  assert.equal(await page.locator('#summary-assistant').count(), 0, 'no panel repeats the concert or the rehearsal');
+  await nextStep.getByRole('button', { name: 'Revisar ensayo' }).click();
   await page.locator('#rehearsal-review').waitFor();
   assert.equal(await page.locator('[data-view-target=rehearsal]').getAttribute('aria-current'), 'page');
   await page.locator('#rehearsal-review').getByRole('button', { name: 'Cancelar' }).click();
   await page.locator('[data-view-target=concerts]').click();
-  console.log('PASS: the assistant suggests reviewing the rehearsal already held');
+  console.log('PASS: the rehearsal card suggests reviewing the rehearsal already held');
 
   // The director reviews today's rehearsal: what was left pending gains time in the next ones.
   const series = planning.locator('.series-rehearsal');
@@ -105,7 +106,7 @@ try {
   await review.getByRole('button', { name: 'Guardar revisión' }).click();
   await series.first().getByText('Revisado').waitFor();
   await page.locator('[data-view-target=summary]').click();
-  await assistant.getByRole('button', { name: 'Replanificar los ensayos siguientes' }).waitFor();
+  await nextStep.getByRole('button', { name: 'Replanificar los ensayos siguientes' }).waitFor();
   await page.locator('[data-view-target=concerts]').click();
   await planning.getByRole('button', { name: 'Replanificar los ensayos siguientes' }).click();
   const replanned = planning.locator('.planned-rehearsal');
@@ -128,8 +129,8 @@ try {
   const priorities = page.locator('#summary-priorities');
   await priorities.getByText('Revisión', { exact: true }).first().waitFor();
   assert.match(await priorities.textContent(), /Pendiente · Entradas de clarinetes/);
-  // With everything reviewed and replanned the assistant shows the next rehearsal (after the summary reloads).
-  await assistant.getByText('Próximo ensayo del concierto').waitFor();
+  // With everything reviewed and replanned there is nothing to suggest (after the summary reloads).
+  await nextStep.waitFor({ state: 'detached' });
   // Everything is navigable: a block and a priority open the score at their passage with their instruments.
   const sectional = page.locator('#summary-rehearsal .calendar-slot--clarinets').first().getByRole('button');
   await sectional.click();

@@ -5,7 +5,7 @@ import { listPriorities, listWorks } from './library.js';
 import { blockWorkText, listRehearsals, listReviewPriorities, nextRehearsal, rehearsalDateText, summaryPriorityRows,
   todayIso } from './rehearsals.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
-import { SummaryAssistant } from './SummaryAssistant.jsx';
+import { NextStep } from './NextStep.jsx';
 import { View } from './View.jsx';
 
 // At a glance on a computer (author's request, 2026-10-05): a few rows, the rest one click away.
@@ -18,9 +18,9 @@ function Card({ id, title, action, children }) {
   </section>;
 }
 
-// Home of the director, as in the author's mock-up: next rehearsal, works in preparation and their
-// priorities on the left; the rehearsal assistant on the right.
-export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOpenBlock, onPlanRehearsal, onEditRehearsal, onReviewDraft,
+// Home of the director, after the author's mock-up: the next rehearsal (with the next step of the
+// concert) and the priorities on the left, the works in preparation on the right.
+export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOpenBlock, onPlanRehearsal, onEditRehearsal,
   onReviewRehearsal, busy }) {
   const [works, setWorks] = useState(null);
   const [priorities, setPriorities] = useState(null);
@@ -67,6 +67,8 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
               onClick={() => setDetail(open => !open)}>{detail ? 'Ocultar detalle' : 'Ver detalle'}</button>}
             <button id="edit-rehearsal" type="button" className="link-action" onClick={() => onEditRehearsal(next)}>Editar</button>
           </span> : link('Ir a Ensayos', 'rehearsal')}>
+        <NextStep concerts={concerts} rehearsals={rehearsals || []} onReviewRehearsal={onReviewRehearsal}
+          onOpenBlock={onOpenBlock} onChanged={() => setRevision(value => value + 1)} />
         {rehearsals && !next && <div className="empty-workspace"><h3>No hay ensayos programados</h3>
           <p>Planifica el próximo ensayo con sus obras y su agenda para tenerlo aquí.</p></div>}
         {next && <>
@@ -110,10 +112,6 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
       </Card>
     </div>
     <div className="summary-side">
-    <SummaryAssistant key={preparing.map(work => work.id).join('|')} works={preparing}
-      defaultMinutes={next?.duration_minutes} onReview={onReviewDraft} concerts={concerts} rehearsals={rehearsals || []}
-      onReviewRehearsal={onReviewRehearsal} onEditRehearsal={onEditRehearsal} onOpenBlock={onOpenBlock}
-      onChanged={() => setRevision(value => value + 1)} />
       <Card id="summary-works" title="Obras en preparación" action={link('Ver repertorio', 'repertoire')}>
         {works && preparing.length === 0 && <div className="empty-workspace"><h3>Ninguna obra en preparación</h3>
           <p>Marca en Repertorio las obras que estáis preparando para seguirlas desde aquí.</p></div>}
