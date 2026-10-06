@@ -79,7 +79,9 @@ def _rehearsal_groups(score: Score) -> dict[str, str]:
     return groups
 
 
-def build_rehearsal_plan(score: Score, total_minutes: int, difficulty: dict | None = None) -> dict:
+def build_rehearsal_plan(score: Score, total_minutes: int, difficulty: dict | None = None,
+                         tutti_share: float = TUTTI_SHARE) -> dict:
+    """tutti_share: part of the time for the final tutti (more as a concert comes closer)."""
     difficulty = difficulty if difficulty is not None else compute_difficulty_score(score)
     total = max(0, int(total_minutes))
     group_of = _rehearsal_groups(score)
@@ -107,7 +109,7 @@ def build_rehearsal_plan(score: Score, total_minutes: int, difficulty: dict | No
                 if lines or len(by_group) > 1:
                     joined_ranges.add(_range(start, end))
 
-    tutti_minutes = min(total, max(MIN_BLOCK_MINUTES, round(total * TUTTI_SHARE)))
+    tutti_minutes = min(total, max(MIN_BLOCK_MINUTES, round(total * tutti_share)))
     remaining = total - tutti_minutes
     capacity = remaining // MIN_BLOCK_MINUTES
     kept, dropped = candidates[:capacity], candidates[capacity:]
