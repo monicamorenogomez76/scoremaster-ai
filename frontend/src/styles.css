@@ -698,3 +698,14 @@ input[type=range] { accent-color: var(--primary); }
 .agenda-calendar button.calendar-block:hover { filter: brightness(1.12); }
 button.agenda-title, button.agenda-work { display: block; min-height: 0; text-align: left; }
 button.agenda-work { color: var(--primary); font-weight: 500; }
+
+/* Bands: the director's fixed templates. */
+.band-manager { display: grid; gap: 10px; margin-bottom: 18px; }
+.band-manager-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.band-select-field { display: grid; gap: 4px; font-size: .82rem; font-weight: 600; }
+.band-select-field select { min-width: 260px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.template-family h3 { margin: 8px 0 6px; font-size: .9rem; }
+.template-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 14px; }
+.rehearsal-editor .template-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 500; }
+.rehearsal-editor .template-row input { width: 80px; }
+.rehearsal-editor .template-row select { width: min(160px, 60%); }
