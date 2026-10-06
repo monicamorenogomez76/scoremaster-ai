@@ -162,3 +162,13 @@ def test_a_proposal_only_uses_the_owners_works_and_a_valid_duration(clients):
 
     assert ana.post("/rehearsals/proposal", json={"work_ids": [other], "duration_minutes": 60}).status_code == 422
     assert ana.post("/rehearsals/proposal", json={"work_ids": [work_id], "duration_minutes": 5}).status_code == 422
+
+
+def test_a_rehearsal_says_when_its_agenda_was_last_planned(clients):
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    saved = ana.post("/rehearsals", json=rehearsal(work_id)).json()
+
+    replanned = ana.put("/rehearsals/" + saved["id"], json=rehearsal(work_id, duration_minutes=45)).json()
+
+    assert saved["updated_at"] and replanned["updated_at"] > saved["updated_at"]

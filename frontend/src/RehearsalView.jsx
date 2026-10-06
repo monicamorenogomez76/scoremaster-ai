@@ -60,10 +60,9 @@ function RehearsalList({ id, title, items, empty, onEdit, onReview, onOpenBlock 
 }
 
 // Saved rehearsals: create one, edit its agenda, or consult the ones already held.
-function SavedRehearsals({ visible, editing, onEdit, onCloseEditor, onOpenBlock }) {
+function SavedRehearsals({ visible, editing, onEdit, onCloseEditor, onOpenBlock, reviewing, onReview, onCloseReview }) {
   const [rehearsals, setRehearsals] = useState([]);
   const [error, setError] = useState('');
-  const [reviewing, setReviewing] = useState(null);
   const refresh = () => listRehearsals().then(found => { setRehearsals(found); setError(''); }).catch(failure => setError(failure.message));
   useEffect(() => { if (visible) refresh(); }, [visible]);
   const { upcoming, past } = splitRehearsals(rehearsals);
@@ -76,19 +75,20 @@ function SavedRehearsals({ visible, editing, onEdit, onCloseEditor, onOpenBlock 
     {editing && <RehearsalEditor key={editing.id || editing.key || 'new'} rehearsal={editing}
       onSaved={() => { onCloseEditor(); refresh(); }} onCancel={onCloseEditor} />}
     {reviewing && <RehearsalReview key={reviewing.id} rehearsal={reviewing}
-      onSaved={() => { setReviewing(null); refresh(); }} onCancel={() => setReviewing(null)} />}
-    <RehearsalList id="rehearsals-upcoming" title="Próximos" items={upcoming} empty="No hay ensayos programados." onEdit={onEdit} onReview={setReviewing} onOpenBlock={onOpenBlock} />
-    <RehearsalList id="rehearsals-past" title="Realizados" items={past} empty="Aún no hay ensayos realizados." onEdit={onEdit} onReview={setReviewing} onOpenBlock={onOpenBlock} />
+      onSaved={() => { onCloseReview(); refresh(); }} onCancel={onCloseReview} />}
+    <RehearsalList id="rehearsals-upcoming" title="Próximos" items={upcoming} empty="No hay ensayos programados." onEdit={onEdit} onReview={onReview} onOpenBlock={onOpenBlock} />
+    <RehearsalList id="rehearsals-past" title="Realizados" items={past} empty="Aún no hay ensayos realizados." onEdit={onEdit} onReview={onReview} onOpenBlock={onOpenBlock} />
   </section>;
 }
 
-export function RehearsalView({ active, hidden, onOpenBlock, data, minutes, onMinutesChange, onRecalculate, busy, onOpenPassage, editing, onEdit, onCloseEditor }) {
+export function RehearsalView({ active, hidden, onOpenBlock, reviewing, onReview, onCloseReview, data, minutes, onMinutesChange, onRecalculate, busy, onOpenPassage, editing, onEdit, onCloseEditor }) {
   const plan = data?.rehearsal_plan || {};
   const blocks = plan.segments || [];
   const omitted = plan.omitted || [];
   return <View name="rehearsal" active={active} eyebrow="Ensayos" title="Ensayos"
     description="Programa las sesiones con su agenda y consulta las que ya se han hecho.">
-    <SavedRehearsals visible={!hidden && active === 'rehearsal'} editing={editing} onEdit={onEdit} onCloseEditor={onCloseEditor} onOpenBlock={onOpenBlock} />
+    <SavedRehearsals visible={!hidden && active === 'rehearsal'} editing={editing} onEdit={onEdit} onCloseEditor={onCloseEditor} onOpenBlock={onOpenBlock}
+      reviewing={reviewing} onReview={onReview} onCloseReview={onCloseReview} />
     <h2 className="calculated-plan-title">Plan calculado de la obra abierta</h2>
     <p className="result-supporting">Ensayo de conjunto: primero quienes tocan lo mismo, después las subsecciones y un tutti final para juntar.</p>
     <div className="rehearsal-settings surface">
