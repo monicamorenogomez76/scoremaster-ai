@@ -11,7 +11,8 @@ from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_proposal import WorkToRehearse, propose_rehearsal
 from backend.application.accounts import User
 from backend.application.library import LibraryRepository
-from backend.application.rehearsals import (BLOCK_GROUPS, Rehearsal, RehearsalBlock, RehearsalDraft, RehearsalRepository,
+from backend.application.rehearsals import (BLOCK_GROUPS, PHASES, REVIEW_STATUSES, BlockReview, Rehearsal,
+                                            RehearsalBlock, RehearsalDraft, RehearsalRepository, UnknownConcert,
                                             UnknownWork)
 from backend.app.dependencies import authenticated_user, get_library_repository, get_rehearsal_repository
 from backend.app.stored_scores import stored_score
@@ -19,8 +20,23 @@ from backend.app.stored_scores import stored_score
 router = APIRouter()
 NOT_FOUND = "El ensayo no existe."
 UNKNOWN_WORK = "Alguna obra del ensayo no existe."
+UNKNOWN_CONCERT = "El concierto del ensayo no existe."
 
 Short = Annotated[str, Field(min_length=1, max_length=80)]
+
+
+def _one_of(values: tuple[str, ...], message: str):
+    def check(cls, value):
+        if value is not None and value not in values:
+            raise ValueError(message)
+        return value
+    return classmethod(check)
+
+
+class ReviewIn(BaseModel):
+    status: str
+    note: str = Field("", max_length=500)
+    _known_status = field_validator("status")(_one_of(REVIEW_STATUSES, "Estado de revisión desconocido."))
 
 
 class BlockIn(BaseModel):
@@ -31,13 +47,9 @@ class BlockIn(BaseModel):
     measures: str = Field("", max_length=40)
     sections: list[Short] = Field(default_factory=list, max_length=20)
     group: str = "other"
-
-    @field_validator("group")
-    @classmethod
-    def known_group(cls, value: str) -> str:
-        if value not in BLOCK_GROUPS:
-            raise ValueError("Tipo de bloque desconocido.")
-        return value
+    # Sent back when an agenda already reviewed is edited, so its review is kept.
+    review: Optional[ReviewIn] = None
+    _known_group = field_validator("group")(_one_of(BLOCK_GROUPS, "Tipo de bloque desconocido."))
 
 
 class RehearsalIn(BaseModel):
@@ -48,6 +60,10 @@ class RehearsalIn(BaseModel):
     objectives: str = Field("", max_length=2000)
     work_ids: list[UUID] = Field(default_factory=list, max_length=50)
     blocks: list[BlockIn] = Field(default_factory=list, max_length=50)
+    concert_id: Optional[UUID] = None
+    fixed: bool = False
+    phase: Optional[str] = None
+    _known_phase = field_validator("phase")(_one_of(PHASES, "Fase de ensayo desconocida."))
 
     def draft(self) -> RehearsalDraft:
         if any(block.work_id and block.work_id not in self.work_ids for block in self.blocks):
@@ -55,7 +71,15 @@ class RehearsalIn(BaseModel):
         return RehearsalDraft(self.date, self.time, self.duration_minutes, self.place or None, self.objectives,
                               tuple(dict.fromkeys(self.work_ids)),
                               tuple(RehearsalBlock(block.title, block.minutes, block.objective, block.work_id,
-                                                   block.measures, tuple(block.sections), block.group) for block in self.blocks))
+                                                   block.measures, tuple(block.sections), block.group,
+                                                   block.review and BlockReview(block.review.status, block.review.note))
+                                    for block in self.blocks),
+                              self.concert_id, self.fixed, self.phase)
+
+
+class RehearsalReviewIn(BaseModel):
+    notes: str = Field("", max_length=2000)
+    blocks: list[ReviewIn] = Field(default_factory=list, max_length=50)
 
 
 class ProposalIn(BaseModel):
@@ -78,7 +102,12 @@ def _public(rehearsal: Rehearsal) -> dict:
             "blocks": [{"title": block.title, "minutes": block.minutes, "objective": block.objective,
                         "work_id": str(block.work_id) if block.work_id else None,
                         "work_title": titles.get(block.work_id), "measures": block.measures,
-                        "sections": list(block.sections), "group": block.group} for block in draft.blocks]}
+                        "sections": list(block.sections), "group": block.group,
+                        "review": block.review and {"status": block.review.status, "note": block.review.note}}
+                       for block in draft.blocks],
+            "concert_id": str(draft.concert_id) if draft.concert_id else None, "fixed": draft.fixed, "phase": draft.phase,
+            "reviewed_at": rehearsal.reviewed_at.isoformat() if rehearsal.reviewed_at else None,
+            "review_notes": rehearsal.review_notes}
 
 
 @router.get("/rehearsals")
@@ -94,6 +123,8 @@ def create_rehearsal(body: RehearsalIn, user: User = Depends(authenticated_user)
         return _public(rehearsals.create_rehearsal(user.id, body.draft()))
     except UnknownWork:
         raise HTTPException(status_code=422, detail=UNKNOWN_WORK) from None
+    except UnknownConcert:
+        raise HTTPException(status_code=422, detail=UNKNOWN_CONCERT) from None
 
 
 # Declared before /rehearsals/{rehearsal_id}. Nothing is saved: the director reviews the proposal.
@@ -126,6 +157,8 @@ def update_rehearsal(rehearsal_id: str, body: RehearsalIn, user: User = Depends(
         updated = rehearsals.update_rehearsal(user.id, _rehearsal_id(rehearsal_id), body.draft())
     except UnknownWork:
         raise HTTPException(status_code=422, detail=UNKNOWN_WORK) from None
+    except UnknownConcert:
+        raise HTTPException(status_code=422, detail=UNKNOWN_CONCERT) from None
     if updated is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return _public(updated)
@@ -137,3 +170,17 @@ def delete_rehearsal(rehearsal_id: str, user: User = Depends(authenticated_user)
     if not rehearsals.delete_rehearsal(user.id, _rehearsal_id(rehearsal_id)):
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return Response(status_code=204)
+
+
+@router.put("/rehearsals/{rehearsal_id}/review")
+def review_rehearsal(rehearsal_id: str, body: RehearsalReviewIn, user: User = Depends(authenticated_user),
+                     rehearsals: RehearsalRepository = Depends(get_rehearsal_repository)):
+    """The director's review after the rehearsal: one status and note per block, plus general notes."""
+    try:
+        reviewed = rehearsals.review_rehearsal(user.id, _rehearsal_id(rehearsal_id), body.notes,
+                                               tuple(BlockReview(item.status, item.note) for item in body.blocks))
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Indica una revisión por cada bloque del ensayo.") from None
+    if reviewed is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return _public(reviewed)
