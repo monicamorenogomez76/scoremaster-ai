@@ -88,6 +88,13 @@ export function App({ session }) {
     saveBand(readBandProfile(analysis?.data.band_fit?.requirements, bandDraft)).catch(() => {});
     recalculate();
   };
+  // Another band was activated: the open work is recalculated with its template.
+  const bandActivated = band => {
+    const requirements = analysis?.data.band_fit?.requirements;
+    const draft = initialBandDraft(requirements, band.profile);
+    setBandDraft(draft);
+    if (session.getFile()) upload.recalculate(undefined, readBandProfile(requirements, draft));
+  };
   const confirmInstruments = chosen => {
     const next = { ...confirmations, ...chosen };
     setConfirmations(next);
@@ -111,7 +118,7 @@ export function App({ session }) {
       workTab={workTab} onWorkTabChange={setWorkTab} bandDraft={bandDraft}
       rehearsalEditing={rehearsalEditing} onEditRehearsal={rehearsal => { setRehearsalEditing(rehearsal); navigate('rehearsal'); }}
       onCloseRehearsal={() => setRehearsalEditing(null)} onBandDraftChange={setBandDraft}
-      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock}
+      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onBandActivated={bandActivated} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />
   </>;

@@ -109,7 +109,8 @@ export function useScoreAnalysis(workspace, options) {
     return analyze(mapped.file, latest.current.getProfile());
   };
   // Band and rehearsal views recompute the current score without leaving their view.
-  const recalculate = confirmations => analyze(workspace.getFile(), latest.current.getProfile(), false,
+  // profile: the template to use now (another band was just activated); otherwise the one being edited.
+  const recalculate = (confirmations, profile) => analyze(workspace.getFile(), profile ?? latest.current.getProfile(), false,
     confirmations ?? latest.current.getConfirmations());
   return { state, parts, assignments, setAssignments, selectFile, reset, submit, recalculate, openWork };
 }

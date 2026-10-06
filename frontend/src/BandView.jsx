@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from './api.js';
+import { BandManager } from './BandManager.jsx';
 import { View } from './View.jsx';
 import { bandIssueText, bandStatusLabels, confirmationOptions, displayInstrumentName, unconfirmedStatusText } from './labels.js';
 
@@ -38,13 +39,15 @@ function InstrumentConfirmation({ items, onConfirm, busy }) {
   </section>;
 }
 
-export function BandView({ active, data, draft, onDraftChange, onUpdate, onConfirm, busy }) {
+export function BandView({ active, hidden, data, draft, onDraftChange, onUpdate, onConfirm, onBandActivated, busy }) {
   const bandFit = data?.band_fit || {};
   const requirements = bandFit.requirements || [];
   const unconfirmed = bandFit.unconfirmed || [];
   const issues = (bandFit.issues || []).map(bandIssueText);
   return <View name="band" active={active} eyebrow="BandFit" title="Mi banda"
-    description="Indica cuántos músicos tienes de cada instrumento que pide la obra.">
+    description="Tus bandas con su plantilla fija y, debajo, cómo encaja la obra abierta en la banda activa.">
+    <BandManager visible={!hidden && active === 'band'} onActivated={onBandActivated} />
+    <h2 className="calculated-plan-title">Adecuación de la obra abierta</h2>
     {unconfirmed.length > 0 && <InstrumentConfirmation items={unconfirmed} onConfirm={onConfirm} busy={busy} />}
     <div id="band-profile-editor" className="band-profile-editor surface" hidden={requirements.length === 0}>
       <fieldset>

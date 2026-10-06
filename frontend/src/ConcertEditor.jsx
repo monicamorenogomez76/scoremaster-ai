@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createConcert, deleteConcert, patternDates, updateConcert, weekdayOptions } from './concerts.js';
+import { listBands } from './bands.js';
 import { listWorks } from './library.js';
 import { todayIso } from './rehearsals.js';
 
@@ -11,6 +12,7 @@ function initialDraft(concert) {
   return {
     title: concert?.title || '', date: concert?.date || '', time: concert?.time || '', place: concert?.place || '', notes: concert?.notes || '',
     work_ids: (concert?.works || []).map(work => work.id),
+    band_id: concert?.band?.id || '',
     weekdays: schedule?.weekdays || [], rehearsal_time: schedule?.time || '20:00',
     duration: String(schedule?.duration_minutes || 90), start_date: schedule?.start_date || todayIso(),
   };
@@ -20,14 +22,29 @@ function initialDraft(concert) {
 export function ConcertEditor({ concert, onSaved, onCancel }) {
   const [draft, setDraft] = useState(() => initialDraft(concert));
   const [works, setWorks] = useState([]);
+  const [bands, setBands] = useState([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const heading = useRef(null);
   useEffect(() => { listWorks().then(setWorks).catch(failure => setError(failure.message)); }, []);
+  // A new concert is played by the active band and takes its rehearsal days.
+  useEffect(() => {
+    listBands().then(found => {
+      setBands(found);
+      const activeBand = found.find(band => band.active);
+      if (!concert?.id && activeBand) chooseBand(activeBand.id, found);
+    }).catch(failure => setError(failure.message));
+  }, []);
   useEffect(() => { heading.current?.focus(); }, []);
 
   const set = (field, value) => setDraft(current => ({ ...current, [field]: value }));
+  function chooseBand(id, list = bands) {
+    const band = list.find(item => item.id === id);
+    setDraft(current => ({ ...current, band_id: id, ...(band && band.rehearsal_weekdays.length ? {
+      weekdays: band.rehearsal_weekdays, rehearsal_time: band.rehearsal_time || current.rehearsal_time,
+      duration: String(band.rehearsal_minutes || current.duration) } : {}) }));
+  }
   // The programme keeps the order in which works are added; it can be reordered afterwards.
   const toggleWork = id => set('work_ids', draft.work_ids.includes(id) ? draft.work_ids.filter(work => work !== id) : [...draft.work_ids, id]);
   const move = (index, step) => {
@@ -46,7 +63,7 @@ export function ConcertEditor({ concert, onSaved, onCancel }) {
     event.preventDefault();
     setSaving(true); setError('');
     const body = { title: draft.title.trim(), date: draft.date, time: draft.time || null, place: draft.place.trim() || null,
-      notes: draft.notes.trim(), work_ids: draft.work_ids, schedule };
+      notes: draft.notes.trim(), work_ids: draft.work_ids, schedule, band_id: draft.band_id || null };
     try { onSaved(concert?.id ? await updateConcert(concert.id, body) : await createConcert(body)); }
     catch (failure) { setError(failure.message); } finally { setSaving(false); }
   };
@@ -60,6 +77,10 @@ export function ConcertEditor({ concert, onSaved, onCancel }) {
       <label>Hora del concierto<input type="time" value={draft.time} onChange={event => set('time', event.target.value)} /></label>
       <label>Lugar<input type="text" maxLength={200} value={draft.place} onChange={event => set('place', event.target.value)} /></label>
     </div>
+    <label>Banda<select value={draft.band_id} onChange={event => chooseBand(event.target.value)}>
+      <option value="">Sin indicar</option>
+      {bands.map(band => <option key={band.id} value={band.id}>{band.name}</option>)}
+    </select></label>
     <label className="editor-wide">Notas<textarea rows={2} maxLength={2000} value={draft.notes} onChange={event => set('notes', event.target.value)} /></label>
 
     <fieldset className="editor-works">
