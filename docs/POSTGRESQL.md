@@ -108,6 +108,15 @@ duración (10–600 min), lugar, objetivos, obras (`work_ids`, varias por ensayo
 cada bloque solo puede nombrar obras del ensayo. La respuesta incluye el título de la obra de cada
 bloque (`work_title`). Si se borra una obra, el ensayo y sus bloques se conservan sin ella.
 
+La migración `0006_concerts` añade los **conciertos** (`concerts`): título, fecha, hora, lugar,
+notas, programa en orden de concierto (`work_ids`) y patrón semanal de ensayos (`schedule`: días
+0 = lunes … 6 = domingo, hora, duración y fecha de inicio). Los ensayos pueden pertenecer a un
+concierto (`concert_id`, que queda vacío si se borra el concierto), marcarse como fijos (`fixed`,
+no se replanifican) y tener fase (`reading`, `passages`, `integration`, `general`). La revisión del
+director (`PUT /rehearsals/{id}/review`) guarda un estado por bloque (`resolved`, `improve`,
+`pending`, `not_done`) con nota, dentro de cada bloque, y una nota general con su fecha
+(`reviewed_at`, `review_notes`).
+
 Para arrancar con Python fuera de Docker, configurar `DATABASE_URL` en el entorno
 del proceso usando la conexión local de `.env.example` (por ejemplo en el entorno
 del IDE); Uvicorn no carga `.env` automáticamente. Después:
