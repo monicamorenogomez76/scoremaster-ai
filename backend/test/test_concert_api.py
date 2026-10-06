@@ -108,3 +108,69 @@ def test_editing_a_reviewed_agenda_keeps_the_reviews_it_sends_back(clients):
     again = ana.put("/rehearsals/" + saved["id"], json=rehearsal(work_id, blocks=blocks)).json()
 
     assert [block["review"]["status"] for block in again["blocks"]] == ["resolved", "pending", "improve"]
+
+
+SERIES = {"weekdays": [1, 3], "time": "20:00", "duration_minutes": 90, "start_date": "2026-10-13"}
+
+
+def saved_blocks(planned):
+    """The agenda the editor would save from a planned rehearsal."""
+    return [{"title": block["type"], "minutes": block["minutes"], "work_id": block["work_id"], "group": "tutti"}
+            for block in planned["blocks"]]
+
+
+def apply(client, concert_id, plan, today):
+    items = [{"id": item["id"], "date": item["date"], "time": item["time"], "duration_minutes": item["duration_minutes"],
+              "phase": item["phase"], "work_ids": item["work_ids"], "blocks": saved_blocks(item)} for item in plan]
+    return client.put("/concerts/" + concert_id + "/rehearsals", json={"today": today, "rehearsals": items})
+
+
+def test_the_app_proposes_the_series_of_rehearsals_up_to_the_concert_without_saving_it(clients):
+    ana, berta = clients
+    work_id = analyze(ana).json()["work_id"]
+    concert_id = ana.post("/concerts", json=concert([work_id], date="2026-10-29", schedule=SERIES)).json()["id"]
+
+    response = ana.post("/concerts/" + concert_id + "/plan", json={"today": "2026-10-12"})
+
+    assert response.status_code == 200
+    plan = response.json()["rehearsals"]
+    assert [(item["date"], item["phase"]) for item in plan] == [
+        ("2026-10-13", "reading"), ("2026-10-15", "passages"), ("2026-10-20", "passages"),
+        ("2026-10-22", "integration"), ("2026-10-27", "general")]
+    assert all(item["id"] is None and item["time"] == "20:00" for item in plan)
+    assert [block["type"] for block in plan[-1]["blocks"]] == ["warmup", "runthrough"]
+    assert ana.get("/concerts/" + concert_id).json()["rehearsals"] == [], "a proposal is not saved"
+    assert berta.post("/concerts/" + concert_id + "/plan", json={"today": "2026-10-12"}).status_code == 404
+
+
+def test_a_concert_without_pattern_nor_rehearsals_cannot_be_planned(clients):
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    concert_id = ana.post("/concerts", json=concert([work_id], schedule=None)).json()["id"]
+    assert ana.post("/concerts/" + concert_id + "/plan", json={"today": "2026-10-12"}).status_code == 422
+
+
+def test_after_a_review_only_the_next_unreviewed_and_not_fixed_rehearsals_are_replanned(clients):
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    concert_id = ana.post("/concerts", json=concert([work_id], date="2026-10-29", schedule=SERIES)).json()["id"]
+    plan = ana.post("/concerts/" + concert_id + "/plan", json={"today": "2026-10-12"}).json()["rehearsals"]
+    assert apply(ana, concert_id, plan, "2026-10-12").status_code == 200
+    series = ana.get("/concerts/" + concert_id).json()["rehearsals"]
+    assert [item["phase"] for item in series] == ["reading", "passages", "passages", "integration", "general"]
+    first, second = (ana.get("/rehearsals/" + item["id"]).json() for item in series[:2])
+    ana.put("/rehearsals/" + first["id"] + "/review", json={"notes": "", "blocks": [
+        {"status": "pending", "note": ""} for _ in first["blocks"]]})
+    keep = {key: second[key] for key in ("date", "time", "duration_minutes", "phase")}
+    keep["work_ids"] = [item["id"] for item in second["works"]]
+    ana.put("/rehearsals/" + second["id"], json={**keep, "concert_id": concert_id, "fixed": True, "blocks": [
+        {key: block[key] for key in ("title", "minutes", "work_id", "group")} for block in second["blocks"]]})
+
+    replanned = ana.post("/concerts/" + concert_id + "/plan", json={"today": "2026-10-14"}).json()
+
+    assert [item["id"] for item in replanned["rehearsals"]] == [item["id"] for item in series[2:]]
+    assert [item["phase"] for item in replanned["rehearsals"]] == ["passages", "integration", "general"]
+    assert set(replanned["kept"]) == {first["id"], second["id"]}
+    assert apply(ana, concert_id, replanned["rehearsals"], "2026-10-14").status_code == 200
+    reviewed_again = [{**replanned["rehearsals"][0], "id": first["id"]}]
+    assert apply(ana, concert_id, reviewed_again, "2026-10-14").status_code == 422, "a reviewed rehearsal is never replaced"

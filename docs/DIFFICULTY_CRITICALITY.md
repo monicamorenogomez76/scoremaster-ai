@@ -67,6 +67,20 @@ vuelven a leer desde su MusicXML guardado con los instrumentos confirmados en su
 La propuesta no se guarda: el director la revisa y ajusta en el editor. Estos repartos son reglas
 iniciales, no valores calibrados; el asistente IA (F2b) podrá ajustarlos a petición.
 
+### Serie de ensayos de un concierto (2026-10-06)
+
+Decisiones de la autora (`backend/analyzers/concert_plan.py`, `POST /concerts/{id}/plan`): las
+fechas salen del **patrón semanal** del concierto (días, hora y duración desde una fecha de inicio
+hasta la víspera). La serie avanza **por fases**: el primer tercio, lectura y pasajes (25 % de
+tutti); los intermedios, pasajes e integración (40 %); el penúltimo, integración (60 %), y el último
+es el **ensayo general**: calentamiento y **pasada completa** de cada obra en orden de concierto,
+con tiempo proporcional a su duración estimada. La **revisión del director** rectifica el plan: un
+pasaje pendiente pesa ×2, uno mejorable ×1,5 y uno resuelto ×0,25, y la obra con pendientes recibe
+más tiempo (×1,5; mejorable ×1,25; todo resuelto ×0,75). Una obra que no cabe en un ensayo va la
+primera en el siguiente. Solo se replanifican los ensayos futuros, sin revisar y no fijados; la
+propuesta no se guarda hasta que el director la revisa (`PUT /concerts/{id}/rehearsals`). Son
+reglas iniciales para calibrar con el uso.
+
 ---
 
 # 2. Difficulty

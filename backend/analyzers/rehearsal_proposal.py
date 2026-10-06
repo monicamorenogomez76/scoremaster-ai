@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from backend.analyzers.rehearsal_plan import build_rehearsal_plan
+from backend.analyzers.rehearsal_plan import TUTTI_SHARE, build_rehearsal_plan
 from backend.domain.models import Score
 
 WARMUP_SHARE = 0.15
@@ -24,10 +24,12 @@ class WorkToRehearse:
     title: str
     score: Score
     difficulty: dict
+    # Multiplies the grade when sharing the time (the director's review raises or lowers it).
+    weight: float = 1.0
 
 
-def _shares(grades: list[int], minutes: int) -> list[int]:
-    """Minutes proportional to the grade, at least MIN_WORK_MINUTES; leftovers to the hardest works."""
+def _shares(grades: list[float], minutes: int) -> list[int]:
+    """Minutes proportional to the weighted grade, at least MIN_WORK_MINUTES; leftovers to the hardest works."""
     shares = [MIN_WORK_MINUTES] * len(grades)
     free = [index for index in range(len(grades))]
     budget = minutes
@@ -48,7 +50,7 @@ def _shares(grades: list[int], minutes: int) -> list[int]:
     return shares
 
 
-def propose_rehearsal(works: list[WorkToRehearse], total_minutes: int) -> dict:
+def propose_rehearsal(works: list[WorkToRehearse], total_minutes: int, tutti_share: float = TUTTI_SHARE) -> dict:
     total = max(0, int(total_minutes))
     warmup = total if not works else min(total, max(MIN_WARMUP_MINUTES, round(total * WARMUP_SHARE)))
     remaining = total - warmup
@@ -56,13 +58,13 @@ def propose_rehearsal(works: list[WorkToRehearse], total_minutes: int) -> dict:
     if works and not planned:
         warmup = total
     grades = [max(1, int(item.difficulty.get("grade") or 1)) for item in planned]
-    shares = _shares(grades, remaining) if planned else []
+    shares = _shares([grade * item.weight for grade, item in zip(grades, planned)], remaining) if planned else []
 
     blocks = [{"type": "warmup", "group": None, "parts": [], "minutes": warmup, "findings": [],
                "work_id": None, "work_title": None}]
     omitted = []
     for item, minutes in zip(planned, shares):
-        plan = build_rehearsal_plan(item.score, minutes, item.difficulty)
+        plan = build_rehearsal_plan(item.score, minutes, item.difficulty, tutti_share)
         blocks += [{**segment, "work_id": item.work_id, "work_title": item.title} for segment in plan["segments"]]
         omitted += [{**block, "work_id": item.work_id, "work_title": item.title} for block in plan["omitted"]]
     return {
