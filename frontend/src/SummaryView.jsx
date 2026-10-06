@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { findingLabel, gradeScaleOf, gradeText } from './labels.js';
-import { groupPrioritiesBySection, listPriorities, listWorks } from './library.js';
-import { blockWorkText, listRehearsals, nextRehearsal, rehearsalDateText, todayIso } from './rehearsals.js';
+import { gradeScaleOf, gradeText } from './labels.js';
+import { listConcerts, nextConcert } from './concerts.js';
+import { listPriorities, listWorks } from './library.js';
+import { blockWorkText, listRehearsals, listReviewPriorities, nextRehearsal, rehearsalDateText, summaryPriorityRows,
+  todayIso } from './rehearsals.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { SummaryAssistant } from './SummaryAssistant.jsx';
 import { View } from './View.jsx';
 
 // At a glance on a computer (author's request, 2026-10-05): a few rows, the rest one click away.
 const VISIBLE_ROWS = 4;
-const measuresText = range => (String(range).includes('-') ? 'cc. ' + String(range).replace('-', '–') : 'c. ' + range);
 
 function Card({ id, title, action, children }) {
   return <section id={id} className="summary-card surface" aria-labelledby={id + '-title'}>
@@ -23,14 +24,18 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
   const [works, setWorks] = useState(null);
   const [priorities, setPriorities] = useState(null);
   const [rehearsals, setRehearsals] = useState(null);
+  const [concerts, setConcerts] = useState([]);
+  const [reviewPriorities, setReviewPriorities] = useState([]);
   const [error, setError] = useState('');
   const [detail, setDetail] = useState(false);
   const visible = !hidden && active === 'summary';
   useEffect(() => {
     if (!visible) return undefined;
     let current = true;
-    Promise.all([listWorks(), listPriorities(), listRehearsals()])
-      .then(([found, passages, saved]) => { if (current) { setWorks(found); setPriorities(passages); setRehearsals(saved); setError(''); } })
+    Promise.all([listWorks(), listPriorities(), listRehearsals(), listConcerts(), listReviewPriorities()])
+      .then(([found, passages, saved, programmed, reviewed]) => {
+        if (current) { setWorks(found); setPriorities(passages); setRehearsals(saved); setConcerts(programmed); setReviewPriorities(reviewed); setError(''); }
+      })
       .catch(failure => { if (current) setError(failure.message); });
     // Leaving the summary folds the agenda again: every visit starts at a glance.
     return () => { current = false; setDetail(false); };
@@ -38,24 +43,34 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
   const preparing = (works || []).filter(work => work.preparation_status === 'preparing');
   const link = (label, view) => <button type="button" className="link-action" onClick={() => onNavigate(view)}>{label}</button>;
   const next = rehearsals && nextRehearsal(rehearsals);
+  const concert = nextConcert(concerts, todayIso());
+  const priorityRows = priorities ? summaryPriorityRows(reviewPriorities, priorities) : null;
   const action = <button id="plan-rehearsal" className="primary-action" type="button" onClick={onPlanRehearsal}>Planificar ensayo</button>;
 
+  // The next concert takes the place of the description, so the summary still fits at a glance.
+  const description = concert
+    ? <span id="next-concert"><strong>Próximo concierto:</strong> {[concert.concert.title, rehearsalDateText(concert.concert),
+        concert.days === 0 ? 'hoy' : 'faltan ' + concert.days + (concert.days === 1 ? ' día' : ' días'),
+        concert.remaining + (concert.remaining === 1 ? ' ensayo' : ' ensayos')].join(' · ')}{' '}
+        <button type="button" className="link-action" onClick={() => onNavigate('concerts')}>Ver conciertos</button></span>
+    : 'Lo que necesitas para dirigir la próxima sesión.';
   return <View name="summary" active={active} eyebrow="Resumen" title="Tu próximo ensayo, preparado"
-    description="Lo que necesitas para dirigir la próxima sesión." action={action}>
+    description={description} action={action}>
     {error && <p className="result-supporting" role="alert">{error}</p>}
     <div className="summary-layout">
     <div className="summary-main">
       <Card id="summary-rehearsal" title={next?.date === todayIso() ? 'Ensayo de hoy' : 'Próximo ensayo'}
-        action={next ? <button id="edit-rehearsal" type="button" className="link-action" onClick={() => onEditRehearsal(next)}>Editar</button>
-          : link('Ir a Ensayos', 'rehearsal')}>
+        action={next ? <span className="card-actions">
+            {next.blocks.length > 0 && <button type="button" className="link-action detail-toggle" aria-expanded={detail}
+              onClick={() => setDetail(open => !open)}>{detail ? 'Ocultar detalle' : 'Ver detalle'}</button>}
+            <button id="edit-rehearsal" type="button" className="link-action" onClick={() => onEditRehearsal(next)}>Editar</button>
+          </span> : link('Ir a Ensayos', 'rehearsal')}>
         {rehearsals && !next && <div className="empty-workspace"><h3>No hay ensayos programados</h3>
           <p>Planifica el próximo ensayo con sus obras y su agenda para tenerlo aquí.</p></div>}
         {next && <>
           <p className="result-supporting">{[rehearsalDateText(next), next.duration_minutes + ' minutos', next.place].filter(Boolean).join(' · ')}</p>
           <AgendaCalendar blocks={next.blocks} start={next.time} />
           {next.blocks.length === 0 && <p className="result-supporting">Este ensayo aún no tiene agenda.</p>}
-          {next.blocks.length > 0 && <button type="button" className="link-action detail-toggle" aria-expanded={detail}
-            onClick={() => setDetail(open => !open)}>{detail ? 'Ocultar detalle' : 'Ver detalle'}</button>}
           {detail && next.blocks.length > 0 && <ol className="agenda-list">{next.blocks.map((block, index) => <li key={index} className="agenda-item">
                 <span className="agenda-number" aria-hidden="true">{index + 1}</span>
                 <span className="agenda-minutes">{block.minutes} min</span>
@@ -68,6 +83,27 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
         </>}
       </Card>
 
+
+      <Card id="summary-priorities" title="Prioridades por sección">
+        {priorityRows && priorityRows.length === 0 && <div className="empty-workspace"><h3>Sin prioridades por ahora</h3>
+          <p>Aquí aparecen lo pendiente de tu última revisión de ensayo y los pasajes críticos de las obras en preparación.</p></div>}
+        {priorityRows && priorityRows.length > 0 && <table className="summary-table">
+          <thead><tr><th scope="col">Sección</th><th scope="col">Obra</th><th scope="col">Pasaje</th><th scope="col">Motivo</th><th scope="col">Origen</th></tr></thead>
+          <tbody>{priorityRows.slice(0, VISIBLE_ROWS).map((row, index) => <tr key={index}>
+            <th scope="row">{row.section}</th>
+            <td><button type="button" className="link-action" disabled={busy} onClick={() => onOpenWork(row.work_id)}>{row.title}</button>
+              <span className="table-supporting">{row.detail}</span></td>
+            <td>{row.measures}</td>
+            <td>{row.reason}</td>
+            <td><span className="status-tag" title={row.originTitle}>{row.origin}</span></td>
+          </tr>)}</tbody>
+        </table>}
+        {priorityRows && priorityRows.length > VISIBLE_ROWS && <p className="table-supporting">Y {priorityRows.length - VISIBLE_ROWS} más.</p>}
+      </Card>
+    </div>
+    <div className="summary-side">
+    <SummaryAssistant key={preparing.map(work => work.id).join('|')} works={preparing}
+      defaultMinutes={next?.duration_minutes} onReview={onReviewDraft} />
       <Card id="summary-works" title="Obras en preparación" action={link('Ver repertorio', 'repertoire')}>
         {works && preparing.length === 0 && <div className="empty-workspace"><h3>Ninguna obra en preparación</h3>
           <p>Marca en Repertorio las obras que estáis preparando para seguirlas desde aquí.</p></div>}
@@ -83,27 +119,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
         </table>}
         {preparing.length > VISIBLE_ROWS && <p className="table-supporting">Y {preparing.length - VISIBLE_ROWS} más en Repertorio.</p>}
       </Card>
-
-      <Card id="summary-priorities" title="Prioridades por sección">
-        {priorities && priorities.length === 0 && <div className="empty-workspace"><h3>Sin prioridades por ahora</h3>
-          <p>Aquí aparecen los pasajes críticos de las obras en preparación. Más adelante se sumarán tus notas de ensayo.</p></div>}
-        {priorities && priorities.length > 0 && <table className="summary-table">
-          <thead><tr><th scope="col">Sección</th><th scope="col">Obra</th><th scope="col">Pasaje</th><th scope="col">Motivo</th><th scope="col">Origen</th></tr></thead>
-          <tbody>{groupPrioritiesBySection(priorities.slice(0, VISIBLE_ROWS)).flatMap(([section, items]) => items.map((item, index) =>
-            <tr key={[item.work_id, item.instrument, item.measure_range, index].join('|')}>
-              {index === 0 && <th scope="rowgroup" rowSpan={items.length}>{section}</th>}
-              <td><button type="button" className="link-action" disabled={busy} onClick={() => onOpenWork(item.work_id)}>{item.title}</button>
-                <span className="table-supporting">{item.instrument_label_es || item.instrument}</span></td>
-              <td>{measuresText(item.measure_range)}</td>
-              <td>{(item.findings || []).map(findingLabel).join(' · ')}</td>
-              <td><span className="status-tag">Análisis</span></td>
-            </tr>))}</tbody>
-        </table>}
-        {priorities && priorities.length > VISIBLE_ROWS && <p className="table-supporting">Y {priorities.length - VISIBLE_ROWS} pasajes más en las obras en preparación.</p>}
-      </Card>
     </div>
-    <SummaryAssistant key={preparing.map(work => work.id).join('|')} works={preparing}
-      defaultMinutes={next?.duration_minutes} onReview={onReviewDraft} />
     </div>
   </View>;
 }

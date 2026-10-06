@@ -174,3 +174,20 @@ def test_after_a_review_only_the_next_unreviewed_and_not_fixed_rehearsals_are_re
     assert apply(ana, concert_id, replanned["rehearsals"], "2026-10-14").status_code == 200
     reviewed_again = [{**replanned["rehearsals"][0], "id": first["id"]}]
     assert apply(ana, concert_id, reviewed_again, "2026-10-14").status_code == 422, "a reviewed rehearsal is never replaced"
+
+
+def test_priorities_from_the_last_review_are_what_was_left_pending_or_to_improve(clients):
+    ana, berta = clients
+    work = analyze(ana).json()
+    older = ana.post("/rehearsals", json=rehearsal(work["work_id"], date="2026-10-13")).json()
+    latest = ana.post("/rehearsals", json=rehearsal(work["work_id"], date="2026-10-15")).json()
+    ana.put("/rehearsals/" + older["id"] + "/review", json={"notes": "", "blocks": [{"status": "pending", "note": "antiguo"}] * 3})
+    ana.put("/rehearsals/" + latest["id"] + "/review", json={"notes": "", "blocks": [
+        {"status": "resolved", "note": ""}, {"status": "pending", "note": "Entradas de clarinetes"}, {"status": "improve", "note": ""}]})
+
+    priorities = ana.get("/rehearsals/priorities").json()["priorities"]
+
+    assert priorities == [{"rehearsal_id": latest["id"], "date": "2026-10-15", "work_id": work["work_id"], "title": work["title"],
+                           "block": "Pasajes prioritarios", "sections": ["Clarinetes"], "measure_range": "1-4",
+                           "status": "pending", "note": "Entradas de clarinetes", "origin": "review"}]
+    assert berta.get("/rehearsals/priorities").json() == {"priorities": []}

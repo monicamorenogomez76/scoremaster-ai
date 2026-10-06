@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  agendaCalendarLabel, agendaSchedule, blockGroup, agendaTime, blockTypeOptions, blockWorkText, createRehearsal, deleteRehearsal, duplicateBlock, listRehearsals, moveBlock,
+  agendaCalendarLabel, agendaSchedule, blockGroup, canReview, listReviewPriorities, reviewRehearsal, reviewStatusOptions,
+  summaryPriorityRows, agendaTime, blockTypeOptions, blockWorkText, createRehearsal, deleteRehearsal, duplicateBlock, listRehearsals, moveBlock,
   nextRehearsal, proposalBlocks, proposeRehearsal, rehearsalDateText, splitRehearsals, updateRehearsal,
 } from '../../../frontend/src/rehearsals.js';
 
@@ -123,4 +124,28 @@ test('a block without a type takes it from what the director wrote, so the calen
   assert.equal(blockGroup({ title: 'Línea común de graves' }), 'common');
   assert.equal(blockGroup({ title: 'Afinación', sections: ['Banda completa'] }), 'warmup');
   assert.equal(blockGroup({ title: 'Lectura' }), 'other');
+});
+
+test('the director reviews a rehearsal already held, block by block', async () => {
+  assert.deepEqual(reviewStatusOptions, [['resolved', 'Resuelto'], ['improve', 'Mejorable'], ['pending', 'Pendiente'], ['not_done', 'No se hizo']]);
+  assert.equal(canReview({ date: '2026-10-13' }, '2026-10-13'), true);
+  assert.equal(canReview({ date: '2026-10-14' }, '2026-10-13'), false, 'a rehearsal to come is not reviewed yet');
+  const calls = fakeServer({ 'PUT /rehearsals/r1/review': [200, { id: 'r1' }], 'GET /rehearsals/priorities': [200, { priorities: [] }] });
+  await reviewRehearsal('r1', 'Bien', [{ status: 'pending', note: 'c. 3' }]);
+  assert.deepEqual(JSON.parse(calls[0].body), { notes: 'Bien', blocks: [{ status: 'pending', note: 'c. 3' }] });
+  assert.deepEqual(await listReviewPriorities(), []);
+});
+
+test('the summary puts the director\'s review first, then the passages of the analysis', () => {
+  const rows = summaryPriorityRows(
+    [{ work_id: 'w1', title: 'Persis', sections: ['Clarinetes'], measure_range: '35-48', status: 'pending', note: 'Entradas', origin: 'review' },
+     { work_id: 'w1', title: 'Persis', sections: [], measure_range: '', status: 'improve', note: '', origin: 'review' }],
+    [{ work_id: 'w2', title: 'Spania', family_label_es: 'Viento metal', instrument_label_es: 'Trompeta', measure_range: '9',
+       findings: ['SL002'], origin: 'analysis' }]);
+  assert.deepEqual(rows.map(row => [row.section, row.title, row.measures, row.reason, row.origin]), [
+    ['Clarinetes', 'Persis', 'cc. 35–48', 'Pendiente · Entradas', 'Revisión'],
+    ['Toda la banda', 'Persis', '—', 'Mejorable', 'Revisión'],
+    ['Viento metal', 'Spania', 'c. 9', 'Registro agudo', 'Análisis'],
+  ]);
+  assert.deepEqual(rows.map(row => row.originTitle), ['Revisión del director', 'Revisión del director', 'Análisis de ScoreLint']);
 });

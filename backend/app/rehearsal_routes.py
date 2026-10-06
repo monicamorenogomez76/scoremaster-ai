@@ -141,6 +141,24 @@ def propose(body: ProposalIn, user: User = Depends(authenticated_user),
     return propose_rehearsal(works, body.duration_minutes)
 
 
+# Declared before /rehearsals/{rehearsal_id}.
+@router.get("/rehearsals/priorities")
+def review_priorities(user: User = Depends(authenticated_user),
+                      rehearsals: RehearsalRepository = Depends(get_rehearsal_repository)):
+    """What the director left pending or to improve in the last reviewed rehearsal, block by block."""
+    reviewed = [item for item in rehearsals.list_rehearsals(user.id) if item.reviewed_at]
+    if not reviewed:
+        return {"priorities": []}
+    last = max(reviewed, key=lambda item: (item.draft.date, item.reviewed_at))
+    titles = dict(last.works)
+    return {"priorities": [
+        {"rehearsal_id": str(last.id), "date": last.draft.date.isoformat(), "work_id": str(block.work_id),
+         "title": titles.get(block.work_id), "block": block.title, "sections": list(block.sections),
+         "measure_range": block.measures, "status": block.review.status, "note": block.review.note, "origin": "review"}
+        for block in last.draft.blocks
+        if block.work_id and block.review and block.review.status in ("pending", "improve")]}
+
+
 @router.get("/rehearsals/{rehearsal_id}")
 def get_rehearsal(rehearsal_id: str, user: User = Depends(authenticated_user),
                   rehearsals: RehearsalRepository = Depends(get_rehearsal_repository)):
