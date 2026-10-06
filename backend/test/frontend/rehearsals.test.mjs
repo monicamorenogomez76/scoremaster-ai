@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   agendaCalendarLabel, agendaSchedule, blockGroup, canReview, listReviewPriorities, reviewRehearsal, reviewStatusOptions,
-  summaryPriorityRows, agendaTime, blockTypeOptions, blockWorkText, createRehearsal, deleteRehearsal, duplicateBlock, listRehearsals, moveBlock,
+  passageRange, summaryPriorityRows, agendaTime, blockTypeOptions, blockWorkText, createRehearsal, deleteRehearsal, duplicateBlock, listRehearsals, moveBlock,
   nextRehearsal, proposalBlocks, proposeRehearsal, rehearsalDateText, splitRehearsals, updateRehearsal,
 } from '../../../frontend/src/rehearsals.js';
 
@@ -89,6 +89,7 @@ test('the proposed agenda becomes editable blocks, each with its work', async ()
     ['Tutti para juntar', 16, 'w1', '1-4, 9-16'],
   ]);
   assert.deepEqual(blocks[1].sections, ['Clarinetes']);
+  assert.deepEqual(blocks.map(block => block.parts), [[], ['Clarinet'], ['Trombone', 'Euphonium'], ['Clarinet', 'Trombone']]);
   assert.deepEqual(blocks.map(block => block.group), ['warmup', 'clarinets', 'common', 'tutti']);
   assert.deepEqual(blocks[3].sections, ['Toda la banda']);
   assert.match(blocks[1].objective, /Registro agudo/);
@@ -138,14 +139,23 @@ test('the director reviews a rehearsal already held, block by block', async () =
 
 test('the summary puts the director\'s review first, then the passages of the analysis', () => {
   const rows = summaryPriorityRows(
-    [{ work_id: 'w1', title: 'Persis', sections: ['Clarinetes'], measure_range: '35-48', status: 'pending', note: 'Entradas', origin: 'review' },
-     { work_id: 'w1', title: 'Persis', sections: [], measure_range: '', status: 'improve', note: '', origin: 'review' }],
-    [{ work_id: 'w2', title: 'Spania', family_label_es: 'Viento metal', instrument_label_es: 'Trompeta', measure_range: '9',
+    [{ work_id: 'w1', title: 'Persis', sections: ['Clarinetes'], parts: ['Clarinet'], measure_range: '35-48', status: 'pending', note: 'Entradas', origin: 'review' },
+     { work_id: 'w1', title: 'Persis', sections: [], parts: [], measure_range: '', status: 'improve', note: '', origin: 'review' }],
+    [{ work_id: 'w2', title: 'Spania', family_label_es: 'Viento metal', instrument: 'Trumpet', instrument_label_es: 'Trompeta', measure_range: '9',
        findings: ['SL002'], origin: 'analysis' }]);
   assert.deepEqual(rows.map(row => [row.section, row.title, row.measures, row.reason, row.origin]), [
     ['Clarinetes', 'Persis', 'cc. 35–48', 'Pendiente · Entradas', 'Revisión'],
     ['Toda la banda', 'Persis', '—', 'Mejorable', 'Revisión'],
     ['Viento metal', 'Spania', 'c. 9', 'Registro agudo', 'Análisis'],
   ]);
+  assert.deepEqual(rows.map(row => [row.parts, row.range]), [[['Clarinet'], '35-48'], [[], ''], [['Trumpet'], '9']],
+    'each priority opens its passage with its instruments');
   assert.deepEqual(rows.map(row => row.originTitle), ['Revisión del director', 'Revisión del director', 'Análisis de ScoreLint']);
+});
+
+test('the measures of a block become the passage the score viewer opens', () => {
+  assert.equal(passageRange('35-48'), '35-48');
+  assert.equal(passageRange('9'), '9');
+  assert.equal(passageRange('1-4, 9-16'), '1-16', 'a tutti over several passages opens from the first to the last');
+  assert.equal(passageRange(''), null, 'without measures the work itself is opened');
 });

@@ -45,7 +45,8 @@ def _values(draft: RehearsalDraft) -> dict:
                 concert_id=draft.concert_id, fixed=draft.fixed, phase=draft.phase,
                 blocks=[{"title": block.title, "minutes": block.minutes, "objective": block.objective,
                          "work_id": str(block.work_id) if block.work_id else None, "measures": block.measures,
-                         "sections": list(block.sections), "group": block.group, "review": _review(block.review)}
+                         "sections": list(block.sections), "group": block.group, "review": _review(block.review),
+                         "parts": list(block.parts)}
                         for block in draft.blocks])
 
 
@@ -64,7 +65,8 @@ class PostgresRehearsalRepository:
         blocks = tuple(RehearsalBlock(item["title"], item["minutes"], item.get("objective", ""),
                                       UUID(item["work_id"]) if item.get("work_id") and UUID(item["work_id"]) in titles else None,
                                       item.get("measures", ""), tuple(item.get("sections", ())), item.get("group", "other"),
-                                      BlockReview(item["review"]["status"], item["review"].get("note", "")) if item.get("review") else None)
+                                      BlockReview(item["review"]["status"], item["review"].get("note", "")) if item.get("review") else None,
+                                      tuple(item.get("parts", ())))
                        for item in row.blocks)
         draft = RehearsalDraft(row.scheduled_on, row.starts_at, row.duration_minutes, row.place, row.objectives,
                                tuple(work for work, _ in works), blocks, row.concert_id, row.fixed, row.phase)

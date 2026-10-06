@@ -16,7 +16,7 @@ def rehearsal(work_id, **changes):
         "blocks": [
             {"title": "Calentamiento", "minutes": 15, "objective": "Afinación y escalas", "group": "warmup"},
             {"title": "Pasajes prioritarios", "minutes": 25, "objective": "Clarinetes", "work_id": work_id,
-             "measures": "1-4", "sections": ["Clarinetes"], "group": "clarinets"},
+             "measures": "1-4", "sections": ["Clarinetes"], "group": "clarinets", "parts": ["Clarinet"]},
             {"title": "Tutti", "minutes": 20, "objective": "Juntar", "group": "tutti"},
         ],
     }
@@ -38,6 +38,8 @@ def test_a_rehearsal_is_saved_with_its_agenda_and_belongs_to_its_owner(clients):
     assert saved["blocks"][1]["work_id"] == work["work_id"] and saved["blocks"][1]["sections"] == ["Clarinetes"]
     # The type of each block colours the agenda calendar (author's request, 2026-10-05).
     assert [block["group"] for block in saved["blocks"]] == ["warmup", "clarinets", "tutti"]
+    # The parts of each block open the score at its passage with only its instruments.
+    assert [block["parts"] for block in saved["blocks"]] == [[], ["Clarinet"], []]
     assert ana.get("/rehearsals/" + saved["id"]).json() == saved
     assert [item["id"] for item in ana.get("/rehearsals").json()["rehearsals"]] == [saved["id"]]
     assert berta.get("/rehearsals").json() == {"rehearsals": []}
@@ -101,6 +103,7 @@ def test_rehearsals_are_listed_by_date_and_time(clients):
     {"blocks": [{"title": "Bloque", "minutes": 1}] * 51},
     {"blocks": [{"title": "Bloque", "minutes": 10, "sections": ["x" * 81]}]},
     {"blocks": [{"title": "Bloque", "minutes": 10, "group": "violines"}]},
+    {"blocks": [{"title": "Bloque", "minutes": 10, "parts": ["x" * 121]}]},
 ])
 def test_rehearsal_fields_are_validated(clients, changes):
     ana, _ = clients

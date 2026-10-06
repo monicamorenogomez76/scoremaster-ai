@@ -4,6 +4,7 @@ import { AppShell } from './AppShell.jsx';
 import { saveBand } from './library.js';
 import { LoginScreen } from './LoginScreen.jsx';
 import { initialBandDraft, readBandProfile } from './labels.js';
+import { passageRange } from './rehearsals.js';
 import { FullScoreViewer } from './score/FullScoreViewer.jsx';
 import { filterMusicXmlPassage } from './score/musicxml-passage.js';
 import { PassageDialog } from './score/PassageDialog.jsx';
@@ -59,7 +60,10 @@ export function App({ session }) {
     minutes,
     getProfile: () => readBandProfile(analysis?.data.band_fit?.requirements, bandDraft),
     getConfirmations: () => confirmations,
-    onReset: () => { setAnalysis(null); setBandDraft({}); setConfirmations({}); setRepertoireMode('add'); navigate('repertoire'); },
+    onReset: byUser => {
+      setAnalysis(null); setBandDraft({}); setConfirmations({});
+      if (byUser) { setRepertoireMode('add'); navigate('repertoire'); }
+    },
     onAnalysis: (data, profile, shouldNavigate) => {
       setAnalysis(previous => ({ data, fileName: session.getFile()?.name || '', revision: (previous?.revision || 0) + 1 }));
       setBandDraft(initialBandDraft(data.band_fit?.requirements, profile));
@@ -68,6 +72,16 @@ export function App({ session }) {
     },
   });
   const addWork = () => { setRepertoireMode('add'); navigate('repertoire'); };
+  // A block of a rehearsal or a priority opens the score at its passage with its instruments (the whole
+  // band when it names none), loading its work first if another one is open; without measures, its work.
+  const openBlock = async ({ work_id: workId, parts, measures, label }) => {
+    if (!workId) return;
+    const range = passageRange(measures);
+    if (!range) return upload.openWork(workId);
+    const data = analysis?.data?.work_id === workId ? analysis.data : await upload.openWork(workId, { navigate: false });
+    if (!data) return;
+    await workspace.openPassage(parts?.length ? parts : data.parts, range, label);
+  };
   const recalculate = () => (session.getFile() ? upload.recalculate() : addWork());
   // The edited template is saved for the user's next works; this analysis already sends it.
   const updateBand = () => {
@@ -97,7 +111,7 @@ export function App({ session }) {
       workTab={workTab} onWorkTabChange={setWorkTab} bandDraft={bandDraft}
       rehearsalEditing={rehearsalEditing} onEditRehearsal={rehearsal => { setRehearsalEditing(rehearsal); navigate('rehearsal'); }}
       onCloseRehearsal={() => setRehearsalEditing(null)} onBandDraftChange={setBandDraft}
-      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage}
+      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />
   </>;
