@@ -22,6 +22,7 @@ from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
 from backend.app.auth_routes import router as auth_router
 from backend.app.library_routes import router as library_router, valid_band_profile
+from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
     SAFE_METHODS, STORAGE_UNAVAILABLE, authenticated_user, close_analysis_engine, get_analysis_repository,
@@ -56,6 +57,7 @@ app = FastAPI(title="ScoreMasterAI API", lifespan=lifespan, docs_url=None if PRO
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 app.include_router(auth_router)
 app.include_router(library_router)
+app.include_router(rehearsal_router)
 
 # The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
 CONTENT_SECURITY_POLICY = "; ".join([
