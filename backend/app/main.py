@@ -5,7 +5,6 @@ import io
 import json
 import os
 from contextlib import asynccontextmanager
-from dataclasses import replace
 from pathlib import Path
 from urllib.parse import urlparse
 from tempfile import NamedTemporaryFile
@@ -23,6 +22,7 @@ from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
 from backend.app.auth_routes import router as auth_router
 from backend.app.library_routes import router as library_router, valid_band_profile
 from backend.app.rehearsal_routes import router as rehearsal_router
+from backend.app.stored_scores import confirm_instruments
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
     SAFE_METHODS, STORAGE_UNAVAILABLE, authenticated_user, close_analysis_engine, get_analysis_repository,
@@ -192,14 +192,6 @@ def _instrument_overrides(raw: str) -> dict[str, str]:
     return overrides
 
 
-def _confirm_instruments(score: Score, overrides: dict[str, str]) -> Score:
-    if not overrides:
-        return score
-    return replace(score, parts=tuple(
-        replace(part, metadata=replace(part.metadata, confirmed_id=overrides[part.name])) if part.name in overrides else part
-        for part in score.parts))
-
-
 @app.get("/instruments/catalog")
 def instrument_catalog():
     return {"instruments": [{"canonical_id": identity.canonical_id, "label_es": identity.label_es, "section": identity.section}
@@ -247,7 +239,7 @@ def analyze_score(
         temp_path.write_bytes(content)
 
     try:
-        score = _confirm_instruments(parse_musicxml(temp_path), overrides)
+        score = confirm_instruments(parse_musicxml(temp_path), overrides)
         # Template: what the work needs for instruments never configured, then the saved band,
         # then the musicians sent with this request.
         needed = {item["key"]: item["required"] for item in compute_band_fit(score, {})["requirements"]}

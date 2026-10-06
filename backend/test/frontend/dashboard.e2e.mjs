@@ -102,6 +102,8 @@ try {
   assert.equal(await page.getByLabel('Músicos de Clarinete en Si bemol').inputValue(), '0', 'rehearsal keeps the band template');
   const blocks = await page.locator('#rehearsal-content .rehearsal-block-title').allTextContents();
   assert.match(blocks[0], /^Seccional · Clarinetes · c\. 1/);
+  const planWorks = await page.locator('#rehearsal-content .rehearsal-block-work').allTextContents();
+  assert.ok(planWorks.length === blocks.length && planWorks.every(text => text === 'Obra: Untitled score'), 'each planned block names its work');
   assert.match(blocks.at(-1), /^Tutti para juntar/);
   assert.match(await page.locator('#rehearsal-content').textContent(), /Planificado: \d+ de 90 minutos/);
   console.log('PASS: rehearsal duration recalculates the plan with sectional blocks and a final tutti');
@@ -259,6 +261,19 @@ try {
   assert.equal(await editor.getByLabel('Hora').inputValue(), '19:00');
   assert.deepEqual(errors, []);
   console.log('PASS: a rehearsal is planned with an agenda that names the work of each block');
+
+  // The app proposes the agenda itself from the analysis of the chosen works.
+  await page.locator('#create-rehearsal').click();
+  await editor.getByLabel('Duración (minutos)').fill('60');
+  await editor.getByLabel('Untitled score').check();
+  await editor.getByRole('button', { name: 'Proponer agenda' }).click();
+  await editor.locator('.agenda-block').nth(1).waitFor();
+  assert.equal(await blocksOf().nth(0).getByLabel('Título').inputValue(), 'Calentamiento');
+  const proposedWorks = await blocksOf().evaluateAll(items => items.slice(1).map(item => item.querySelector('select').selectedOptions[0].textContent));
+  assert.ok(proposedWorks.length > 0 && proposedWorks.every(title => title === 'Untitled score'), 'every proposed block names its work');
+  assert.match(await editor.locator('#agenda-time').textContent(), /60 de 60 minutos/);
+  assert.deepEqual(errors, []);
+  console.log('PASS: the app proposes the agenda of the chosen works, every block with its work');
 } finally {
   await browser.close();
 }

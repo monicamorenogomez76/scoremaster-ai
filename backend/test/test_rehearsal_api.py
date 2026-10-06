@@ -131,3 +131,28 @@ def test_deleting_a_work_keeps_the_rehearsal_without_it(clients):
 def test_rehearsals_need_a_session():
     client = TestClient(app)
     assert client.get("/rehearsals").status_code == 401
+
+
+def test_the_app_proposes_an_agenda_for_the_chosen_works_without_saving_it(clients):
+    ana, _ = clients
+    first = analyze(ana).json()
+    second = analyze(ana, "high_density.musicxml").json()
+
+    response = ana.post("/rehearsals/proposal", json={"work_ids": [first["work_id"], second["work_id"]], "duration_minutes": 60})
+
+    assert response.status_code == 200
+    proposal = response.json()
+    assert proposal["blocks"][0]["type"] == "warmup" and proposal["blocks"][0]["work_title"] is None
+    titles = {block["work_title"] for block in proposal["blocks"][1:]}
+    assert titles == {first["title"], second["title"]}, "every block names its work"
+    assert sum(block["minutes"] for block in proposal["blocks"]) == 60
+    assert ana.get("/rehearsals").json() == {"rehearsals": []}, "a proposal is not saved"
+
+
+def test_a_proposal_only_uses_the_owners_works_and_a_valid_duration(clients):
+    ana, berta = clients
+    work_id = analyze(ana).json()["work_id"]
+    other = analyze(berta).json()["work_id"]
+
+    assert ana.post("/rehearsals/proposal", json={"work_ids": [other], "duration_minutes": 60}).status_code == 422
+    assert ana.post("/rehearsals/proposal", json={"work_ids": [work_id], "duration_minutes": 5}).status_code == 422

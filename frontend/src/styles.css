@@ -617,3 +617,6 @@ input[type=range] { accent-color: var(--primary); }
 .agenda-minutes { padding-top: 4px; color: var(--primary); font-weight: 600; }
 .agenda-title { display: block; }
 .agenda-work { display: block; margin-top: 2px; color: var(--text); font-size: .86rem; }
+.agenda-propose { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.proposal-note { margin: 0; padding: 10px 12px; border-left: 3px solid var(--primary); border-radius: 6px; background: var(--primary-soft); color: var(--text); font-size: .88rem; }
+.rehearsal-block-work { margin-top: 2px; color: var(--text); font-size: .86rem; font-weight: 600; }

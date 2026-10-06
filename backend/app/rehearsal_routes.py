@@ -7,10 +7,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
+from backend.analyzers.difficulty import compute_difficulty_score
+from backend.analyzers.rehearsal_proposal import WorkToRehearse, propose_rehearsal
 from backend.application.accounts import User
+from backend.application.library import LibraryRepository
 from backend.application.rehearsals import (Rehearsal, RehearsalBlock, RehearsalDraft, RehearsalRepository,
                                             UnknownWork)
-from backend.app.dependencies import authenticated_user, get_rehearsal_repository
+from backend.app.dependencies import authenticated_user, get_library_repository, get_rehearsal_repository
+from backend.app.stored_scores import stored_score
 
 router = APIRouter()
 NOT_FOUND = "El ensayo no existe."
@@ -46,6 +50,11 @@ class RehearsalIn(BaseModel):
                                                    block.measures, tuple(block.sections)) for block in self.blocks))
 
 
+class ProposalIn(BaseModel):
+    work_ids: list[UUID] = Field(default_factory=list, max_length=12)
+    duration_minutes: int = Field(ge=10, le=600)
+
+
 def _rehearsal_id(value: str) -> UUID:
     try:
         return UUID(value)
@@ -77,6 +86,20 @@ def create_rehearsal(body: RehearsalIn, user: User = Depends(authenticated_user)
         return _public(rehearsals.create_rehearsal(user.id, body.draft()))
     except UnknownWork:
         raise HTTPException(status_code=422, detail=UNKNOWN_WORK) from None
+
+
+# Declared before /rehearsals/{rehearsal_id}. Nothing is saved: the director reviews the proposal.
+@router.post("/rehearsals/proposal")
+def propose(body: ProposalIn, user: User = Depends(authenticated_user),
+            library: LibraryRepository = Depends(get_library_repository)):
+    works = []
+    for work_id in dict.fromkeys(body.work_ids):
+        found = stored_score(library, user.id, work_id)
+        if found is None:
+            raise HTTPException(status_code=422, detail=UNKNOWN_WORK)
+        title, score = found
+        works.append(WorkToRehearse(str(work_id), title, score, compute_difficulty_score(score)))
+    return propose_rehearsal(works, body.duration_minutes)
 
 
 @router.get("/rehearsals/{rehearsal_id}")

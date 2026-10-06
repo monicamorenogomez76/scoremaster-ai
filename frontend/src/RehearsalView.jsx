@@ -94,13 +94,14 @@ export function RehearsalView({ active, hidden, data, minutes, onMinutesChange, 
     {data
       ? <div id="rehearsal-content" className="view-content">
           <section className="result-section result-section--wide">
-            <h2>Bloques recomendados</h2>
+            <h2>Bloques recomendados · {data.title || 'Partitura sin título'}</h2>
             <p className="result-supporting">Duración total: {plan.total_minutes ?? 0} minutos · Planificado: {plan.planned_minutes ?? 0} de {plan.total_minutes ?? 0} minutos</p>
             {blocks.length > 0 && <RehearsalCalendar blocks={blocks} onOpenPassage={onOpenPassage} />}
             <ol className="result-list">{blocks.length === 0
               ? <li className="result-empty">No hay bloques de ensayo disponibles.</li>
               : blocks.map((block, index) => <li key={index} className={'rehearsal-block rehearsal-block--' + block.type}>
                   <strong className="rehearsal-block-title">{rehearsalBlockTitle(block)}</strong> · {block.minutes} min
+                  <div className="rehearsal-block-work">Obra: {data.title || 'Partitura sin título'}</div>
                   <div className="result-supporting">{rehearsalBlockDetail(block)}</div>
                 </li>)}</ol>
             {omitted.length > 0 && <>
