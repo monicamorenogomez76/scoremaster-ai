@@ -110,6 +110,23 @@ su agenda indica la obra que se trabaja (decisiones de la autora).
 16–19. Evidencias, feedback por análisis/pasaje/versiones y evaluación reproducible por obra, sin leakage.
 20–25. Salidas IA validadas, demo identificada, fallback, versiones, caché y comparación sin anchoring ni resultados inventados. El híbrido sigue siendo experimental.
 
+## Opcional: partituras en PDF con Audiveris (decisión de la autora, 2026-10-06)
+
+Importar PDF y convertirlos a MusicXML con Audiveris (OMR) queda como **opcional**, después de
+integrar lo pendiente y lanzar la evaluación (pasos 16–18). Amplía el alcance inicial, que excluía
+PDF y OCR. Condiciones si se aborda:
+
+- **O1, prueba de viabilidad (1 día):** imagen con Java 21, Audiveris en modo de línea de comandos
+  y Tesseract; convertir 2–3 PDF propios o de dominio público y medir tiempo y aciertos antes de
+  decidir O2–O4.
+- **O2–O4 (unos 3 días):** servicio `omr` en contenedor aparte, tras un perfil de Compose (el
+  arranque normal sigue ligero), sin red, con usuario sin privilegios, límites de CPU, memoria,
+  tamaño, páginas y tiempo; conversión asíncrona por trabajos; el MusicXML resultante pasa las
+  validaciones de siempre y la obra queda marcada como «leída de PDF», con aviso de revisión y
+  confirmación de instrumentos. Las obras leídas de PDF no entran en el benchmark.
+- **Licencia:** Audiveris es AGPL-3.0: usarlo sin modificar, en su contenedor, y enlazar su código
+  fuente. Antes, decidir la licencia del proyecto (el repositorio aún no tiene `LICENSE`).
+
 ## Más adelante
 
 PR independientes de autenticación, autorización y despliegue PostgreSQL gestionado, con backup/restauración. Audio: interfaz del renderer actual, eventos expresivos y muestras opcionales tras comprobar licencia; no sacrificar la evaluación musical.
