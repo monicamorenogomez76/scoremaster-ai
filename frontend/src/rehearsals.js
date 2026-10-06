@@ -65,18 +65,22 @@ const WARMUP_OBJECTIVE = 'Afinación, sonido y articulación de toda la banda.';
 
 function proposalTitle(segment) {
   if (segment.type === 'warmup') return 'Calentamiento';
+  if (segment.type === 'runthrough') return 'Pasada completa';
   if (segment.type === 'tutti') return 'Tutti para juntar';
   if (segment.type === 'common') return blockScoreLabel(segment);
   return 'Seccional · ' + blockScoreLabel(segment);
 }
 
 function proposalSections(segment) {
-  if (segment.type === 'warmup' || segment.type === 'tutti') return ['Toda la banda'];
+  if (['warmup', 'tutti', 'runthrough'].includes(segment.type)) return ['Toda la banda'];
   if (segment.type === 'common') return (segment.groups || []).map(rehearsalGroupName);
   return [rehearsalGroupName(segment.group)];
 }
 
-const proposalGroup = segment => (segment.type === 'sectional' ? segment.group || 'other' : segment.type);
+// A run-through of the general rehearsal has the colour of the tutti.
+const proposalGroup = segment => (segment.type === 'sectional' ? segment.group || 'other'
+  : segment.type === 'runthrough' ? 'tutti' : segment.type);
+const RUNTHROUGH_OBJECTIVE = 'Obra completa en orden de concierto.';
 
 // Blocks of the editor, each with its work and measures, within the API's limits.
 export function proposalBlocks(proposal) {
@@ -84,7 +88,8 @@ export function proposalBlocks(proposal) {
     title: proposalTitle(segment), minutes: segment.minutes, group: proposalGroup(segment), work_id: segment.work_id || null, work_title: segment.work_title || null,
     measures: (segment.type === 'tutti' ? (segment.measure_ranges || []).join(', ') : segment.measure_range || '').slice(0, 40),
     sections: [...new Set(proposalSections(segment))].slice(0, 20),
-    objective: (segment.type === 'warmup' ? WARMUP_OBJECTIVE : rehearsalBlockDetail(segment)).slice(0, 500),
+    objective: (segment.type === 'warmup' ? WARMUP_OBJECTIVE : segment.type === 'runthrough' ? RUNTHROUGH_OBJECTIVE
+      : rehearsalBlockDetail(segment)).slice(0, 500),
   }));
 }
 
@@ -117,7 +122,7 @@ export function agendaCalendarLabel(block) {
   const group = blockGroup(block);
   if (group === 'warmup') return 'Calentam.';
   if (group === 'common') return 'Común';
-  if (group === 'tutti') return 'Tutti';
+  if (group === 'tutti') return plain(block.title).startsWith('pasada') ? 'Pasada' : 'Tutti';
   return calendarLabel({ type: 'sectional', group: SECTIONS.includes(group) ? group : 'other' });
 }
 

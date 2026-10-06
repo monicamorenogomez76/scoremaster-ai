@@ -112,6 +112,8 @@ jobs:
         run: node backend/test/frontend/workflow.e2e.mjs
       - name: Panel, banda, ensayo y vídeos
         run: node backend/test/frontend/dashboard.e2e.mjs
+      - name: Conciertos y serie de ensayos
+        run: node backend/test/frontend/concerts.e2e.mjs
       - name: Registro del servidor
         if: failure()
         run: cat /tmp/uvicorn.log

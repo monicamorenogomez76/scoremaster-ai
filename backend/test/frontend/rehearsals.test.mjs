@@ -104,6 +104,7 @@ test('the type of a block colours the calendar like the rehearsal plan', () => {
   assert.deepEqual(options.slice(-2), [['tutti', 'Tutti'], ['other', 'Otro']]);
   assert.deepEqual(['warmup', 'common', 'clarinets', 'tutti', 'other'].map(group => agendaCalendarLabel({ group })),
     ['Calentam.', 'Común', 'Clarinetes', 'Tutti', 'Otros']);
+  assert.equal(agendaCalendarLabel({ group: 'tutti', title: 'Pasada completa' }), 'Pasada', 'a run-through says so');
 });
 
 test('the agenda calendar starts at the rehearsal time and counts typed minutes as numbers', () => {
