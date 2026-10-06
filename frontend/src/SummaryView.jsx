@@ -3,8 +3,11 @@ import { findingLabel, gradeScaleOf, gradeText } from './labels.js';
 import { groupPrioritiesBySection, listPriorities, listWorks } from './library.js';
 import { blockWorkText, listRehearsals, nextRehearsal, rehearsalDateText, todayIso } from './rehearsals.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
+import { SummaryAssistant } from './SummaryAssistant.jsx';
 import { View } from './View.jsx';
 
+// At a glance on a computer (author's request, 2026-10-05): a few rows, the rest one click away.
+const VISIBLE_ROWS = 4;
 const measuresText = range => (String(range).includes('-') ? 'cc. ' + String(range).replace('-', '–') : 'c. ' + range);
 
 function Card({ id, title, action, children }) {
@@ -14,12 +17,14 @@ function Card({ id, title, action, children }) {
   </section>;
 }
 
-// Home of the director: next rehearsal, works in preparation and the priorities found in them.
-export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPlanRehearsal, onEditRehearsal, busy }) {
+// Home of the director, as in the author's mock-up: next rehearsal, works in preparation and their
+// priorities on the left; the rehearsal assistant on the right.
+export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPlanRehearsal, onEditRehearsal, onReviewDraft, busy }) {
   const [works, setWorks] = useState(null);
   const [priorities, setPriorities] = useState(null);
   const [rehearsals, setRehearsals] = useState(null);
   const [error, setError] = useState('');
+  const [detail, setDetail] = useState(false);
   const visible = !hidden && active === 'summary';
   useEffect(() => {
     if (!visible) return undefined;
@@ -27,7 +32,8 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
     Promise.all([listWorks(), listPriorities(), listRehearsals()])
       .then(([found, passages, saved]) => { if (current) { setWorks(found); setPriorities(passages); setRehearsals(saved); setError(''); } })
       .catch(failure => { if (current) setError(failure.message); });
-    return () => { current = false; };
+    // Leaving the summary folds the agenda again: every visit starts at a glance.
+    return () => { current = false; setDetail(false); };
   }, [visible, user?.email]);
   const preparing = (works || []).filter(work => work.preparation_status === 'preparing');
   const link = (label, view) => <button type="button" className="link-action" onClick={() => onNavigate(view)}>{label}</button>;
@@ -37,7 +43,8 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
   return <View name="summary" active={active} eyebrow="Resumen" title="Tu próximo ensayo, preparado"
     description="Lo que necesitas para dirigir la próxima sesión." action={action}>
     {error && <p className="result-supporting" role="alert">{error}</p>}
-    <div className="summary-grid">
+    <div className="summary-layout">
+    <div className="summary-main">
       <Card id="summary-rehearsal" title={next?.date === todayIso() ? 'Ensayo de hoy' : 'Próximo ensayo'}
         action={next ? <button id="edit-rehearsal" type="button" className="link-action" onClick={() => onEditRehearsal(next)}>Editar</button>
           : link('Ir a Ensayos', 'rehearsal')}>
@@ -46,8 +53,10 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
         {next && <>
           <p className="result-supporting">{[rehearsalDateText(next), next.duration_minutes + ' minutos', next.place].filter(Boolean).join(' · ')}</p>
           <AgendaCalendar blocks={next.blocks} start={next.time} />
-          {next.blocks.length === 0 ? <p className="result-supporting">Este ensayo aún no tiene agenda.</p>
-            : <ol className="agenda-list">{next.blocks.map((block, index) => <li key={index} className="agenda-item">
+          {next.blocks.length === 0 && <p className="result-supporting">Este ensayo aún no tiene agenda.</p>}
+          {next.blocks.length > 0 && <button type="button" className="link-action detail-toggle" aria-expanded={detail}
+            onClick={() => setDetail(open => !open)}>{detail ? 'Ocultar detalle' : 'Ver detalle'}</button>}
+          {detail && next.blocks.length > 0 && <ol className="agenda-list">{next.blocks.map((block, index) => <li key={index} className="agenda-item">
                 <span className="agenda-number" aria-hidden="true">{index + 1}</span>
                 <span className="agenda-minutes">{block.minutes} min</span>
                 <div>
@@ -64,7 +73,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
           <p>Marca en Repertorio las obras que estáis preparando para seguirlas desde aquí.</p></div>}
         {preparing.length > 0 && <table className="summary-table">
           <thead><tr><th scope="col">Obra</th><th scope="col">Compositor</th><th scope="col">Dificultad</th></tr></thead>
-          <tbody>{preparing.map(work => <tr key={work.id}>
+          <tbody>{preparing.slice(0, VISIBLE_ROWS).map(work => <tr key={work.id}>
             <td><button type="button" className="link-action" disabled={busy} onClick={() => onOpenWork(work.id)}>{work.title}</button>
               <span className="table-supporting">{work.file_name}</span></td>
             <td>{work.composer || '—'}</td>
@@ -72,6 +81,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
               : gradeText(work.summary, gradeScaleOf({ scale: { grades: work.summary.grade_max } }))}</td>
           </tr>)}</tbody>
         </table>}
+        {preparing.length > VISIBLE_ROWS && <p className="table-supporting">Y {preparing.length - VISIBLE_ROWS} más en Repertorio.</p>}
       </Card>
 
       <Card id="summary-priorities" title="Prioridades por sección">
@@ -79,7 +89,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
           <p>Aquí aparecen los pasajes críticos de las obras en preparación. Más adelante se sumarán tus notas de ensayo.</p></div>}
         {priorities && priorities.length > 0 && <table className="summary-table">
           <thead><tr><th scope="col">Sección</th><th scope="col">Obra</th><th scope="col">Pasaje</th><th scope="col">Motivo</th><th scope="col">Origen</th></tr></thead>
-          <tbody>{groupPrioritiesBySection(priorities).flatMap(([section, items]) => items.map((item, index) =>
+          <tbody>{groupPrioritiesBySection(priorities.slice(0, VISIBLE_ROWS)).flatMap(([section, items]) => items.map((item, index) =>
             <tr key={[item.work_id, item.instrument, item.measure_range, index].join('|')}>
               {index === 0 && <th scope="rowgroup" rowSpan={items.length}>{section}</th>}
               <td><button type="button" className="link-action" disabled={busy} onClick={() => onOpenWork(item.work_id)}>{item.title}</button>
@@ -89,7 +99,11 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
               <td><span className="status-tag">Análisis</span></td>
             </tr>))}</tbody>
         </table>}
+        {priorities && priorities.length > VISIBLE_ROWS && <p className="table-supporting">Y {priorities.length - VISIBLE_ROWS} pasajes más en las obras en preparación.</p>}
       </Card>
+    </div>
+    <SummaryAssistant key={preparing.map(work => work.id).join('|')} works={preparing}
+      defaultMinutes={next?.duration_minutes} onReview={onReviewDraft} />
     </div>
   </View>;
 }
