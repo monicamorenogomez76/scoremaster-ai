@@ -23,6 +23,13 @@ async function detail(response, fallback) {
   catch { return fallback; }
 }
 
+// JSON request to the API; an error carries the server's message, or the fallback.
+export async function apiJson(url, options, fallback) {
+  const response = await apiFetch(url, options);
+  if (!response.ok) throw new Error(await detail(response, fallback));
+  return response.status === 204 ? null : response.json();
+}
+
 async function postJson(url, body, fallback) {
   const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

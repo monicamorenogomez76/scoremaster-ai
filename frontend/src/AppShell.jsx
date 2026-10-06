@@ -11,7 +11,7 @@ const views = [
   ['rehearsal', 'Ensayos', 'M8 3v4M16 3v4M3 10h18M4 5h16v16H4zM8 14h3M8 17h7'],
 ];
 
-export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, analysis, repertoireMode, onRepertoireModeChange, workTab, onWorkTabChange, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onUpdateBand, onConfirmInstruments, onOpenWork, onOpenPassage, scoreViewer }) {
+export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, analysis, repertoireMode, onRepertoireModeChange, workTab, onWorkTabChange, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onUpdateBand, onConfirmInstruments, onOpenWork, onOpenPassage, scoreViewer, rehearsalEditing, onEditRehearsal, onCloseRehearsal }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = analysis?.data;
   const go = name => { setMenuOpen(false); onNavigate(name); };
@@ -40,12 +40,13 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
         <span id="current-user" className="topbar-meta">{user?.display_name || user?.email || ''}</span>
       </header>
       <main className="workspace">
-        <SummaryView active={view} user={user} hidden={hidden} onNavigate={go} onOpenWork={onOpenWork} busy={busy} />
+        <SummaryView active={view} user={user} hidden={hidden} onNavigate={go} onOpenWork={onOpenWork} busy={busy}
+          onPlanRehearsal={() => onEditRehearsal({})} onEditRehearsal={onEditRehearsal} />
         <RepertoireView active={view} user={user} hidden={hidden} analysis={analysis} mode={repertoireMode}
           onModeChange={onRepertoireModeChange} tab={workTab} onTabChange={onWorkTabChange} upload={upload}
           onOpenWork={onOpenWork} onOpenPassage={onOpenPassage} scoreViewer={scoreViewer} />
         <BandView active={view} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onUpdateBand} onConfirm={onConfirmInstruments} busy={busy} />
-        <RehearsalView active={view} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
+        <RehearsalView active={view} hidden={hidden} editing={rehearsalEditing} onEdit={onEditRehearsal} onCloseEditor={onCloseRehearsal} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
       </main>
     </div>
   </div>;

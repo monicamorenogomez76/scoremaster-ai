@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from './View.jsx';
 import { blockScoreLabel, calendarLabel, omittedBlockText, rehearsalBlockDetail, rehearsalBlockTitle } from './labels.js';
 import { rehearsalSchedule } from './schedule.js';
+import { RehearsalEditor } from './RehearsalEditor.jsx';
+import { listRehearsals, rehearsalDateText, splitRehearsals } from './rehearsals.js';
 
 const VISIBLE_OMITTED = 5;
 
@@ -35,12 +37,51 @@ function RehearsalCalendar({ blocks, onOpenPassage }) {
   </div>;
 }
 
-export function RehearsalView({ active, data, minutes, onMinutesChange, onRecalculate, busy, onOpenPassage }) {
+function RehearsalList({ id, title, items, empty, onEdit }) {
+  return <section id={id} className="rehearsal-list" aria-labelledby={id + '-title'}>
+    <h3 id={id + '-title'}>{title}</h3>
+    {items.length === 0 ? <p className="result-supporting">{empty}</p>
+      : <ul className="works-list">{items.map(item => <li key={item.id} className="works-item rehearsal-item">
+          <div className="works-copy">
+            <h4 className="works-title">{rehearsalDateText(item)}</h4>
+            <p className="result-supporting">{[item.duration_minutes + ' minutos', item.place, item.works.map(work => work.title).join(', ') || 'Sin obras']
+              .filter(Boolean).join(' · ')}</p>
+            <p className="works-summary">{item.blocks.length === 1 ? '1 bloque' : item.blocks.length + ' bloques'}</p>
+          </div>
+          <div className="works-actions"><button type="button" className="secondary-action" onClick={() => onEdit(item)}>Editar</button></div>
+        </li>)}</ul>}
+  </section>;
+}
+
+// Saved rehearsals: create one, edit its agenda, or consult the ones already held.
+function SavedRehearsals({ visible, editing, onEdit, onCloseEditor }) {
+  const [rehearsals, setRehearsals] = useState([]);
+  const [error, setError] = useState('');
+  const refresh = () => listRehearsals().then(found => { setRehearsals(found); setError(''); }).catch(failure => setError(failure.message));
+  useEffect(() => { if (visible) refresh(); }, [visible]);
+  const { upcoming, past } = splitRehearsals(rehearsals);
+  return <section id="saved-rehearsals" className="saved-rehearsals" aria-labelledby="saved-rehearsals-title">
+    <div className="section-toolbar">
+      <h2 id="saved-rehearsals-title">Ensayos guardados</h2>
+      <button id="create-rehearsal" type="button" className="primary-action" onClick={() => onEdit({})}>Crear ensayo</button>
+    </div>
+    {error && <p className="result-supporting" role="alert">{error}</p>}
+    {editing && <RehearsalEditor key={editing.id || 'new'} rehearsal={editing}
+      onSaved={() => { onCloseEditor(); refresh(); }} onCancel={onCloseEditor} />}
+    <RehearsalList id="rehearsals-upcoming" title="Próximos" items={upcoming} empty="No hay ensayos programados." onEdit={onEdit} />
+    <RehearsalList id="rehearsals-past" title="Realizados" items={past} empty="Aún no hay ensayos realizados." onEdit={onEdit} />
+  </section>;
+}
+
+export function RehearsalView({ active, hidden, data, minutes, onMinutesChange, onRecalculate, busy, onOpenPassage, editing, onEdit, onCloseEditor }) {
   const plan = data?.rehearsal_plan || {};
   const blocks = plan.segments || [];
   const omitted = plan.omitted || [];
-  return <View name="rehearsal" active={active} eyebrow="RehearsalAI" title="Ensayos"
-    description="Ensayo de conjunto: primero quienes tocan lo mismo, después las subsecciones y un tutti final para juntar.">
+  return <View name="rehearsal" active={active} eyebrow="Ensayos" title="Ensayos"
+    description="Programa las sesiones con su agenda y consulta las que ya se han hecho.">
+    <SavedRehearsals visible={!hidden && active === 'rehearsal'} editing={editing} onEdit={onEdit} onCloseEditor={onCloseEditor} />
+    <h2 className="calculated-plan-title">Plan calculado de la obra abierta</h2>
+    <p className="result-supporting">Ensayo de conjunto: primero quienes tocan lo mismo, después las subsecciones y un tutti final para juntar.</p>
     <div className="rehearsal-settings surface">
       <label className="duration-field" htmlFor="total-minutes">Duración prevista del ensayo
         <span className="duration-input"><input id="total-minutes" type="number" min="10" value={minutes}

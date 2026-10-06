@@ -16,6 +16,8 @@ export function App({ session }) {
   // Repertoire: list of works, form to add one, or the detail of the open work and its tab.
   const [repertoireMode, setRepertoireMode] = useState('list');
   const [workTab, setWorkTab] = useState('score');
+  // Saved rehearsal open in the editor: {} for a new one, null when closed.
+  const [rehearsalEditing, setRehearsalEditing] = useState(null);
   // revision changes with every successful analysis so explorers restart from the top.
   const [analysis, setAnalysis] = useState(null);
   const [bandDraft, setBandDraft] = useState({});
@@ -85,14 +87,16 @@ export function App({ session }) {
     return () => { current = false; stop(); };
   }, []);
   const signedIn = Boolean(user);
-  const enter = found => { setUser(found); setRepertoireMode('list'); navigate('summary'); };
+  const enter = found => { setUser(found); setRepertoireMode('list'); setRehearsalEditing(null); navigate('summary'); };
   const leave = async () => { await signOut().catch(() => {}); setUser(null); upload.reset(); };
 
   return <>
     <LoginScreen hidden={signedIn || user === undefined} onSignedIn={enter} />
     <AppShell hidden={!signedIn} user={user} view={view} onNavigate={navigate} onSignOut={leave}
       upload={upload} analysis={analysis} repertoireMode={repertoireMode} onRepertoireModeChange={setRepertoireMode}
-      workTab={workTab} onWorkTabChange={setWorkTab} bandDraft={bandDraft} onBandDraftChange={setBandDraft}
+      workTab={workTab} onWorkTabChange={setWorkTab} bandDraft={bandDraft}
+      rehearsalEditing={rehearsalEditing} onEditRehearsal={rehearsal => { setRehearsalEditing(rehearsal); navigate('rehearsal'); }}
+      onCloseRehearsal={() => setRehearsalEditing(null)} onBandDraftChange={setBandDraft}
       minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />

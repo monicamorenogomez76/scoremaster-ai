@@ -65,7 +65,11 @@ La navegación sigue la propuesta de interfaz de la autora (2026-10-05):
 - **Repertorio**: buscador, «Añadir obra» y, por obra, estado de preparación (independiente de la
   dificultad) y estado del análisis. El detalle de una obra tiene las pestañas **Partitura**,
   **Dificultad** y **Grabaciones**.
-- **Mi banda** y **Ensayos**. El asistente IA se incorporará como panel contextual.
+- **Mi banda**.
+- **Ensayos**: ensayos guardados (fecha, hora, duración, lugar, objetivos y varias obras) con una
+  agenda de bloques editable; cada bloque indica la obra que se trabaja. El Resumen muestra el
+  ensayo de hoy o el próximo. Debajo sigue el plan calculado de la obra abierta.
+- El asistente IA se incorporará como panel contextual.
 
 Estilo: blanco frío, grafito y azul eléctrico (`#365CFF`) con la fuente Inter incluida en el build,
 sin peticiones a servicios de fuentes externos.

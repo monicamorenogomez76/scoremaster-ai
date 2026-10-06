@@ -80,6 +80,20 @@ Se priorizan la IA y la evaluación experimental, obligatorias para el TFM, sobr
 
 Las fases A3–A8 y el paso 25 se abordan solo si queda margen tras el paso 24.
 
+## Propuesta de interfaz (2026-10-05)
+
+Navegación de la autora: Resumen · Repertorio · Mi banda · Ensayos · Asistente IA · Configuración,
+con blanco frío, grafito y azul eléctrico. Un ensayo puede trabajar varias obras y cada bloque de
+su agenda indica la obra que se trabaja (decisiones de la autora).
+
+| Fase | Objetivo | Estado |
+|---|---|---|
+| F1 | Estado de preparación, prioridades, Resumen, Repertorio y detalle de obra | Integrado: PR #51 y #52 |
+| F2a | Ensayos guardados: varias obras, agenda por bloques editable y «Ensayo de hoy»; Configuración básica | En revisión: PR #53 (API) y siguiente (interfaz) |
+| F2b | Asistente IA (paso 20): borrador revisable que se guarda como agenda, modo demo identificado y nivel por sección en Mi banda | Pendiente |
+| — | Evaluación (pasos 16–18) | Pendiente, antes de F3 |
+| F3 | Observaciones de ensayo y cierre: «Prioridades por sección» con las notas del último ensayo | Pendiente |
+
 ## Criterios de aceptación
 
 1. Especificaciones enlazadas y distinción entre previsto e implementado.
