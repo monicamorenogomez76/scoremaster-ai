@@ -51,7 +51,7 @@ function MonthCalendar({ concerts, rehearsals }) {
 
 // The series that prepares a concert: proposed by the app, saved when the director has reviewed it,
 // and replanned after the director's review of each rehearsal.
-function ConcertPlanning({ concert, series, onChanged, onClose }) {
+function ConcertPlanning({ concert, series, onChanged, onClose, onOpenBlock }) {
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -79,7 +79,7 @@ function ConcertPlanning({ concert, series, onChanged, onClose }) {
       <div className="series-heading"><strong>{rehearsalDateText(item)}</strong><span className="status-tag">{phaseLabel(item.phase)}</span>
         {item.reviewed_at && <span className="status-tag">Revisado</span>}{item.fixed && <span className="status-tag">Fijo</span>}
         {canReview(item) && <button type="button" className="link-action" onClick={() => { setPreview(null); setReviewing(item); }}>Revisar</button>}</div>
-      <AgendaCalendar blocks={item.blocks} start={item.time} />
+      <AgendaCalendar blocks={item.blocks} start={item.time} onOpenBlock={onOpenBlock} />
     </li>)}</ol>}
     {reviewing && <RehearsalReview key={reviewing.id} rehearsal={reviewing}
       onSaved={() => { setReviewing(null); onChanged(); }} onCancel={() => setReviewing(null)} />}
@@ -95,7 +95,7 @@ function ConcertPlanning({ concert, series, onChanged, onClose }) {
       <ol className="series-list">{preview.rehearsals.map((item, index) => <li key={item.id || item.date} className="planned-rehearsal">
         <div className="series-heading"><strong>{rehearsalDateText(item)}</strong><span className="status-tag">{phaseLabel(item.phase)}</span>
           {!item.id && <button type="button" className="link-action" onClick={() => drop(index)}>Quitar</button>}</div>
-        <AgendaCalendar blocks={proposalBlocks(item)} start={item.time} />
+        <AgendaCalendar blocks={proposalBlocks(item)} start={item.time} onOpenBlock={onOpenBlock} />
         {item.omitted_works.length > 0 && <p className="table-supporting">No caben en este ensayo: {item.omitted_works.length} obra(s); irán las primeras en el siguiente.</p>}
       </li>)}</ol>
       <div className="editor-actions">
@@ -106,7 +106,7 @@ function ConcertPlanning({ concert, series, onChanged, onClose }) {
   </section>;
 }
 
-export function ConcertsView({ active, hidden }) {
+export function ConcertsView({ active, hidden, onOpenBlock }) {
   const [concerts, setConcerts] = useState([]);
   const [rehearsals, setRehearsals] = useState([]);
   const [error, setError] = useState('');
@@ -144,7 +144,8 @@ export function ConcertsView({ active, hidden }) {
     {editing && <ConcertEditor key={editing.id || 'new'} concert={editing}
       onSaved={() => { setEditing(null); refresh(); }} onCancel={() => setEditing(null)} />}
     {planned && <ConcertPlanning key={planned.id} concert={planned}
-      series={rehearsals.filter(rehearsal => rehearsal.concert_id === planned.id)} onChanged={refresh} onClose={() => setPlanning(null)} />}
+      series={rehearsals.filter(rehearsal => rehearsal.concert_id === planned.id)} onChanged={refresh} onClose={() => setPlanning(null)}
+      onOpenBlock={onOpenBlock} />}
     <div className="concerts-layout">
       <div>
         <section className="rehearsal-list" aria-labelledby="concerts-upcoming-title">

@@ -114,6 +114,17 @@ try {
   const priorities = page.locator('#summary-priorities');
   await priorities.getByText('Revisión', { exact: true }).first().waitFor();
   assert.match(await priorities.textContent(), /Pendiente · Entradas de clarinetes/);
+  // Everything is navigable: a block and a priority open the score at their passage with their instruments.
+  const sectional = page.locator('#summary-rehearsal .calendar-slot--clarinets').first().getByRole('button');
+  await sectional.click();
+  await page.waitForFunction(() => document.querySelector('#notation-score svg'), null, { timeout: 45000 });
+  assert.deepEqual(await page.evaluate(() => window.scoremasterWorkspace.getPassage().instruments), ['Clarinet']);
+  await page.locator('#notation-close').click();
+  await priorities.getByRole('button', { name: 'c. 1' }).first().click();
+  await page.waitForFunction(() => document.querySelector('#notation-score svg'), null, { timeout: 45000 });
+  await page.locator('#notation-close').click();
+  assert.equal(await page.locator('[data-view-target=summary]').getAttribute('aria-current'), 'page', 'the passage opens without leaving the summary');
+  console.log('PASS: a block and a priority open the score at their passage with their instruments');
   await page.setViewportSize({ width: 1440, height: 900 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 2), true,
     'with a concert and the review the summary still fits on a computer screen');

@@ -85,7 +85,7 @@ const RUNTHROUGH_OBJECTIVE = 'Obra completa en orden de concierto.';
 // Blocks of the editor, each with its work and measures, within the API's limits.
 export function proposalBlocks(proposal) {
   return proposal.blocks.map(segment => ({
-    title: proposalTitle(segment), minutes: segment.minutes, group: proposalGroup(segment), work_id: segment.work_id || null, work_title: segment.work_title || null,
+    title: proposalTitle(segment), minutes: segment.minutes, group: proposalGroup(segment), parts: segment.parts || [], work_id: segment.work_id || null, work_title: segment.work_title || null,
     measures: (segment.type === 'tutti' ? (segment.measure_ranges || []).join(', ') : segment.measure_range || '').slice(0, 40),
     sections: [...new Set(proposalSections(segment))].slice(0, 20),
     objective: (segment.type === 'warmup' ? WARMUP_OBJECTIVE : segment.type === 'runthrough' ? RUNTHROUGH_OBJECTIVE
@@ -147,10 +147,20 @@ const measuresOf = range => (!range ? '—' : (/[-,]/.test(range) ? 'cc. ' : 'c.
 export function summaryPriorityRows(reviewItems, analysisItems) {
   return [
     ...reviewItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.sections.join(', ') || 'Toda la banda',
+      parts: item.parts || [], range: item.measure_range || '',
       detail: item.block, measures: measuresOf(item.measure_range),
       reason: [statusLabel(item.status), item.note].filter(Boolean).join(' · '), origin: 'Revisión', originTitle: 'Revisión del director' })),
     ...analysisItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.family_label_es || item.family || 'Otras',
+      parts: item.instrument ? [item.instrument] : [], range: item.measure_range || '',
       detail: item.instrument_label_es || item.instrument, measures: measuresOf(item.measure_range),
       reason: (item.findings || []).map(findingLabel).join(' · '), origin: 'Análisis', originTitle: 'Análisis de ScoreLint' })),
   ];
+}
+
+// The passage a block opens in the score viewer: from its first to its last measure; null opens the work.
+export function passageRange(measures) {
+  const bounds = String(measures || '').split(/[,\-–]/).map(value => Number(value.trim())).filter(Number.isFinite).filter(Boolean);
+  if (!bounds.length) return null;
+  const first = Math.min(...bounds), last = Math.max(...bounds);
+  return first === last ? String(first) : first + '-' + last;
 }

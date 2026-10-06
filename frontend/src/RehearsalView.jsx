@@ -39,7 +39,7 @@ function RehearsalCalendar({ blocks, onOpenPassage }) {
   </div>;
 }
 
-function RehearsalList({ id, title, items, empty, onEdit, onReview }) {
+function RehearsalList({ id, title, items, empty, onEdit, onReview, onOpenBlock }) {
   return <section id={id} className="rehearsal-list" aria-labelledby={id + '-title'}>
     <h3 id={id + '-title'}>{title}</h3>
     {items.length === 0 ? <p className="result-supporting">{empty}</p>
@@ -49,7 +49,7 @@ function RehearsalList({ id, title, items, empty, onEdit, onReview }) {
             <p className="result-supporting">{[item.duration_minutes + ' minutos', item.place, item.works.map(work => work.title).join(', ') || 'Sin obras']
               .filter(Boolean).join(' · ')}</p>
             <p className="works-summary">{item.blocks.length === 1 ? '1 bloque' : item.blocks.length + ' bloques'}</p>
-            <AgendaCalendar blocks={item.blocks} start={item.time} />
+            <AgendaCalendar blocks={item.blocks} start={item.time} onOpenBlock={onOpenBlock} />
           </div>
           <div className="works-actions">
             {canReview(item) && <button type="button" className="primary-action" onClick={() => onReview(item)}>{item.reviewed_at ? 'Ver revisión' : 'Revisar'}</button>}
@@ -60,7 +60,7 @@ function RehearsalList({ id, title, items, empty, onEdit, onReview }) {
 }
 
 // Saved rehearsals: create one, edit its agenda, or consult the ones already held.
-function SavedRehearsals({ visible, editing, onEdit, onCloseEditor }) {
+function SavedRehearsals({ visible, editing, onEdit, onCloseEditor, onOpenBlock }) {
   const [rehearsals, setRehearsals] = useState([]);
   const [error, setError] = useState('');
   const [reviewing, setReviewing] = useState(null);
@@ -77,18 +77,18 @@ function SavedRehearsals({ visible, editing, onEdit, onCloseEditor }) {
       onSaved={() => { onCloseEditor(); refresh(); }} onCancel={onCloseEditor} />}
     {reviewing && <RehearsalReview key={reviewing.id} rehearsal={reviewing}
       onSaved={() => { setReviewing(null); refresh(); }} onCancel={() => setReviewing(null)} />}
-    <RehearsalList id="rehearsals-upcoming" title="Próximos" items={upcoming} empty="No hay ensayos programados." onEdit={onEdit} onReview={setReviewing} />
-    <RehearsalList id="rehearsals-past" title="Realizados" items={past} empty="Aún no hay ensayos realizados." onEdit={onEdit} onReview={setReviewing} />
+    <RehearsalList id="rehearsals-upcoming" title="Próximos" items={upcoming} empty="No hay ensayos programados." onEdit={onEdit} onReview={setReviewing} onOpenBlock={onOpenBlock} />
+    <RehearsalList id="rehearsals-past" title="Realizados" items={past} empty="Aún no hay ensayos realizados." onEdit={onEdit} onReview={setReviewing} onOpenBlock={onOpenBlock} />
   </section>;
 }
 
-export function RehearsalView({ active, hidden, data, minutes, onMinutesChange, onRecalculate, busy, onOpenPassage, editing, onEdit, onCloseEditor }) {
+export function RehearsalView({ active, hidden, onOpenBlock, data, minutes, onMinutesChange, onRecalculate, busy, onOpenPassage, editing, onEdit, onCloseEditor }) {
   const plan = data?.rehearsal_plan || {};
   const blocks = plan.segments || [];
   const omitted = plan.omitted || [];
   return <View name="rehearsal" active={active} eyebrow="Ensayos" title="Ensayos"
     description="Programa las sesiones con su agenda y consulta las que ya se han hecho.">
-    <SavedRehearsals visible={!hidden && active === 'rehearsal'} editing={editing} onEdit={onEdit} onCloseEditor={onCloseEditor} />
+    <SavedRehearsals visible={!hidden && active === 'rehearsal'} editing={editing} onEdit={onEdit} onCloseEditor={onCloseEditor} onOpenBlock={onOpenBlock} />
     <h2 className="calculated-plan-title">Plan calculado de la obra abierta</h2>
     <p className="result-supporting">Ensayo de conjunto: primero quienes tocan lo mismo, después las subsecciones y un tutti final para juntar.</p>
     <div className="rehearsal-settings surface">

@@ -3,7 +3,8 @@ import { agendaCalendarLabel, agendaSchedule, blockGroup, blockWorkText } from '
 
 // Coloured timeline of a saved agenda: each block as wide as its minutes, coloured by its type
 // like the rehearsal plan; the work rehearsed in it is its main text (author's request, 2026-10-05).
-export function AgendaCalendar({ blocks, start }) {
+// With onOpenBlock, the boxes of a work open its passage in the score.
+export function AgendaCalendar({ blocks, start, onOpenBlock }) {
   if (!blocks.length) return null;
   return <div className="rehearsal-calendar agenda-calendar">
     <div className="calendar-track" role="list" aria-label="Calendario de la agenda">
@@ -11,11 +12,17 @@ export function AgendaCalendar({ blocks, start }) {
         const description = [block.start + '–' + block.end, block.title || 'Bloque ' + (index + 1), blockWorkText(block), block.minutes + ' min'].join(' · ');
         return <div key={index} role="listitem" className={'calendar-slot calendar-slot--' + blockGroup(block)}
           style={{ flexGrow: block.share, flexBasis: 0 }}>
-          <div className="calendar-block" aria-label={description} title={description}>
-            <span className="calendar-time">{block.start} · {block.minutes} min</span>
-            <span className="calendar-work">{block.work_title || 'Toda la banda'}</span>
-            <span className="calendar-name">{agendaCalendarLabel(block)}</span>
-          </div>
+          {(() => {
+            const content = <>
+              <span className="calendar-time">{block.start} · {block.minutes} min</span>
+              <span className="calendar-work">{block.work_title || 'Toda la banda'}</span>
+              <span className="calendar-name">{agendaCalendarLabel(block)}</span>
+            </>;
+            return onOpenBlock && block.work_id
+              ? <button type="button" className="calendar-block" aria-label={'Abrir · ' + description} title={description}
+                  onClick={() => onOpenBlock({ ...block, label: block.title + ' · ' + block.work_title })}>{content}</button>
+              : <div className="calendar-block" aria-label={description} title={description}>{content}</div>;
+          })()}
         </div>;
       })}
     </div>

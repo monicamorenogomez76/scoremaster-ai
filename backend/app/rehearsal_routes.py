@@ -49,6 +49,7 @@ class BlockIn(BaseModel):
     group: str = "other"
     # Sent back when an agenda already reviewed is edited, so its review is kept.
     review: Optional[ReviewIn] = None
+    parts: list[Annotated[str, Field(min_length=1, max_length=120)]] = Field(default_factory=list, max_length=80)
     _known_group = field_validator("group")(_one_of(BLOCK_GROUPS, "Tipo de bloque desconocido."))
 
 
@@ -72,7 +73,8 @@ class RehearsalIn(BaseModel):
                               tuple(dict.fromkeys(self.work_ids)),
                               tuple(RehearsalBlock(block.title, block.minutes, block.objective, block.work_id,
                                                    block.measures, tuple(block.sections), block.group,
-                                                   block.review and BlockReview(block.review.status, block.review.note))
+                                                   block.review and BlockReview(block.review.status, block.review.note),
+                                                   tuple(block.parts))
                                     for block in self.blocks),
                               self.concert_id, self.fixed, self.phase)
 
@@ -103,7 +105,8 @@ def _public(rehearsal: Rehearsal) -> dict:
                         "work_id": str(block.work_id) if block.work_id else None,
                         "work_title": titles.get(block.work_id), "measures": block.measures,
                         "sections": list(block.sections), "group": block.group,
-                        "review": block.review and {"status": block.review.status, "note": block.review.note}}
+                        "review": block.review and {"status": block.review.status, "note": block.review.note},
+                        "parts": list(block.parts)}
                        for block in draft.blocks],
             "concert_id": str(draft.concert_id) if draft.concert_id else None, "fixed": draft.fixed, "phase": draft.phase,
             "reviewed_at": rehearsal.reviewed_at.isoformat() if rehearsal.reviewed_at else None,
@@ -153,7 +156,7 @@ def review_priorities(user: User = Depends(authenticated_user),
     titles = dict(last.works)
     return {"priorities": [
         {"rehearsal_id": str(last.id), "date": last.draft.date.isoformat(), "work_id": str(block.work_id),
-         "title": titles.get(block.work_id), "block": block.title, "sections": list(block.sections),
+         "title": titles.get(block.work_id), "block": block.title, "sections": list(block.sections), "parts": list(block.parts),
          "measure_range": block.measures, "status": block.review.status, "note": block.review.note, "origin": "review"}
         for block in last.draft.blocks
         if block.work_id and block.review and block.review.status in ("pending", "improve")]}

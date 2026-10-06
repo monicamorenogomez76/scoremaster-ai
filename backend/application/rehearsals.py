@@ -45,6 +45,8 @@ class RehearsalBlock:
     sections: tuple[str, ...] = ()
     group: str = "other"
     review: Optional[BlockReview] = None
+    # Score parts the block rehearses; empty for the whole band.
+    parts: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
