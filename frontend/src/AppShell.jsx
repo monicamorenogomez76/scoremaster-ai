@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BandView } from './BandView.jsx';
+import { ConcertsView } from './ConcertsView.jsx';
 import { RehearsalView } from './RehearsalView.jsx';
 import { RepertoireView } from './RepertoireView.jsx';
 import { SummaryView } from './SummaryView.jsx';
@@ -8,6 +9,7 @@ const views = [
   ['summary', 'Resumen', 'M3 10 12 3l9 7v10h-6v-6H9v6H3z'],
   ['repertoire', 'Repertorio', 'M3 6h6l2 2h10v11H3zM3 6v13'],
   ['band', 'Mi banda', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 4a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.8'],
+  ['concerts', 'Conciertos', 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z'],
   ['rehearsal', 'Ensayos', 'M8 3v4M16 3v4M3 10h18M4 5h16v16H4zM8 14h3M8 17h7'],
 ];
 
@@ -46,6 +48,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
           onModeChange={onRepertoireModeChange} tab={workTab} onTabChange={onWorkTabChange} upload={upload}
           onOpenWork={onOpenWork} onOpenPassage={onOpenPassage} scoreViewer={scoreViewer} />
         <BandView active={view} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onUpdateBand} onConfirm={onConfirmInstruments} busy={busy} />
+        <ConcertsView active={view} hidden={hidden} />
         <RehearsalView active={view} hidden={hidden} editing={rehearsalEditing} onEdit={onEditRehearsal} onCloseEditor={onCloseRehearsal} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
       </main>
     </div>
