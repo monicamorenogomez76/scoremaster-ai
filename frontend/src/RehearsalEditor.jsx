@@ -1,17 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { listWorks } from './library.js';
-import { agendaTime, createRehearsal, deleteRehearsal, duplicateBlock, moveBlock, proposalBlocks, proposeRehearsal, todayIso, updateRehearsal } from './rehearsals.js';
+import { agendaTime, blockTypeOptions, createRehearsal, deleteRehearsal, duplicateBlock, moveBlock, proposalBlocks, proposeRehearsal, todayIso, updateRehearsal } from './rehearsals.js';
 
 let nextKey = 0;
 const keyed = block => ({ ...block, key: ++nextKey });
-const emptyBlock = () => keyed({ title: '', minutes: '', objective: '', work_id: '', measures: '', sections: '' });
+const emptyBlock = () => keyed({ title: '', minutes: '', objective: '', work_id: '', measures: '', sections: '', group: 'other' });
 
 function initialDraft(rehearsal) {
   return {
     date: rehearsal?.date || todayIso(), time: rehearsal?.time || '', duration_minutes: String(rehearsal?.duration_minutes || 90),
     place: rehearsal?.place || '', objectives: rehearsal?.objectives || '',
     work_ids: (rehearsal?.works || []).map(work => work.id),
-    blocks: (rehearsal?.blocks || []).map(block => keyed({ ...block, minutes: String(block.minutes), work_id: block.work_id || '',
+    blocks: (rehearsal?.blocks || []).map(block => keyed({ ...block, minutes: String(block.minutes), work_id: block.work_id || '', group: block.group || 'other',
       sections: (block.sections || []).join(', ') })),
   };
 }
@@ -24,7 +25,7 @@ function payload(draft) {
     blocks: draft.blocks.map(block => ({
       title: block.title.trim(), minutes: Number(block.minutes), objective: block.objective.trim(),
       work_id: draft.work_ids.includes(block.work_id) ? block.work_id : null, measures: block.measures.trim(),
-      sections: block.sections.split(',').map(section => section.trim()).filter(Boolean),
+      sections: block.sections.split(',').map(section => section.trim()).filter(Boolean), group: block.group || 'other',
     })),
   };
 }
@@ -112,6 +113,8 @@ export function RehearsalEditor({ rehearsal, onSaved, onCancel }) {
         Asignado: {time.assigned} de {Number(draft.duration_minutes) || 0} minutos · {time.exceeded ? 'sobran ' + time.exceeded + ' (exceso)' : 'quedan ' + time.remaining}
       </p>
     </div>
+    <AgendaCalendar start={draft.time} blocks={draft.blocks.map(block => ({ ...block,
+      work_title: chosen.find(work => work.id === block.work_id)?.title || null }))} />
     {draft.work_ids.length === 0 && <p className="result-supporting">Elige las obras del ensayo para que la aplicación proponga la agenda.</p>}
     {proposalNote && <p className="proposal-note" role="status">{proposalNote}</p>}
     <ol className="agenda-editor">{draft.blocks.map((block, index) => <li key={block.key} className="agenda-block">
@@ -119,6 +122,9 @@ export function RehearsalEditor({ rehearsal, onSaved, onCancel }) {
         <legend>Bloque {index + 1}</legend>
         <div className="editor-grid">
           <label>Título<input type="text" required maxLength={120} value={block.title} onChange={event => setBlock(index, 'title', event.target.value)} /></label>
+          <label>Tipo<select value={block.group || 'other'} onChange={event => setBlock(index, 'group', event.target.value)}>
+            {blockTypeOptions().map(([group, label]) => <option key={group} value={group}>{label}</option>)}
+          </select></label>
           <label>Minutos<input type="number" min="1" max="600" required value={block.minutes} onChange={event => setBlock(index, 'minutes', event.target.value)} /></label>
           <label>Obra<select value={draft.work_ids.includes(block.work_id) ? block.work_id : ''} onChange={event => setBlock(index, 'work_id', event.target.value)}>
             <option value="">Toda la banda · sin obra concreta</option>

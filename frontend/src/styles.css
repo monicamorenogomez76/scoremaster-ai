@@ -510,7 +510,8 @@ input[type=range] { accent-color: var(--primary); }
 .calendar-slot--saxophones { --slot: #a16207; }
 .calendar-slot--high_brass { --slot: #c2410c; }
 .calendar-slot--low_voices { --slot: #9f1239; }
-.calendar-slot--percussion { --slot: var(--primary); }
+.calendar-slot--percussion { --slot: #7c3aed; }
+.calendar-slot--warmup { --slot: #4f46e5; }
 .calendar-slot--strings_rhythm { --slot: #1d4ed8; }
 .calendar-slot--other { --slot: #475569; }
 .calendar-slot--tutti { --slot: #111827; }
@@ -620,3 +621,5 @@ input[type=range] { accent-color: var(--primary); }
 .agenda-propose { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .proposal-note { margin: 0; padding: 10px 12px; border-left: 3px solid var(--primary); border-radius: 6px; background: var(--primary-soft); color: var(--text); font-size: .88rem; }
 .rehearsal-block-work { margin-top: 2px; color: var(--text); font-size: .86rem; font-weight: 600; }
+.agenda-calendar .calendar-block { cursor: default; }
+.calendar-work { font-size: .72rem; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

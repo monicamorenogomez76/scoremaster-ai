@@ -5,13 +5,13 @@ from typing import Annotated, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_proposal import WorkToRehearse, propose_rehearsal
 from backend.application.accounts import User
 from backend.application.library import LibraryRepository
-from backend.application.rehearsals import (Rehearsal, RehearsalBlock, RehearsalDraft, RehearsalRepository,
+from backend.application.rehearsals import (BLOCK_GROUPS, Rehearsal, RehearsalBlock, RehearsalDraft, RehearsalRepository,
                                             UnknownWork)
 from backend.app.dependencies import authenticated_user, get_library_repository, get_rehearsal_repository
 from backend.app.stored_scores import stored_score
@@ -30,6 +30,14 @@ class BlockIn(BaseModel):
     work_id: Optional[UUID] = None
     measures: str = Field("", max_length=40)
     sections: list[Short] = Field(default_factory=list, max_length=20)
+    group: str = "other"
+
+    @field_validator("group")
+    @classmethod
+    def known_group(cls, value: str) -> str:
+        if value not in BLOCK_GROUPS:
+            raise ValueError("Tipo de bloque desconocido.")
+        return value
 
 
 class RehearsalIn(BaseModel):
@@ -47,7 +55,7 @@ class RehearsalIn(BaseModel):
         return RehearsalDraft(self.date, self.time, self.duration_minutes, self.place or None, self.objectives,
                               tuple(dict.fromkeys(self.work_ids)),
                               tuple(RehearsalBlock(block.title, block.minutes, block.objective, block.work_id,
-                                                   block.measures, tuple(block.sections)) for block in self.blocks))
+                                                   block.measures, tuple(block.sections), block.group) for block in self.blocks))
 
 
 class ProposalIn(BaseModel):
@@ -70,7 +78,7 @@ def _public(rehearsal: Rehearsal) -> dict:
             "blocks": [{"title": block.title, "minutes": block.minutes, "objective": block.objective,
                         "work_id": str(block.work_id) if block.work_id else None,
                         "work_title": titles.get(block.work_id), "measures": block.measures,
-                        "sections": list(block.sections)} for block in draft.blocks]}
+                        "sections": list(block.sections), "group": block.group} for block in draft.blocks]}
 
 
 @router.get("/rehearsals")

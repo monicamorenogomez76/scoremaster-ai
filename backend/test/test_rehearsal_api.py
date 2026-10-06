@@ -14,10 +14,10 @@ def rehearsal(work_id, **changes):
         "date": "2026-10-20", "time": "19:00", "duration_minutes": 60, "place": "Sede de la banda",
         "objectives": "Entradas de maderas", "work_ids": [work_id],
         "blocks": [
-            {"title": "Calentamiento", "minutes": 15, "objective": "Afinación y escalas"},
+            {"title": "Calentamiento", "minutes": 15, "objective": "Afinación y escalas", "group": "warmup"},
             {"title": "Pasajes prioritarios", "minutes": 25, "objective": "Clarinetes", "work_id": work_id,
-             "measures": "1-4", "sections": ["Clarinetes"]},
-            {"title": "Tutti", "minutes": 20, "objective": "Juntar"},
+             "measures": "1-4", "sections": ["Clarinetes"], "group": "clarinets"},
+            {"title": "Tutti", "minutes": 20, "objective": "Juntar", "group": "tutti"},
         ],
     }
     return {**body, **changes}
@@ -36,6 +36,8 @@ def test_a_rehearsal_is_saved_with_its_agenda_and_belongs_to_its_owner(clients):
     assert [(block["title"], block["minutes"]) for block in saved["blocks"]] == [
         ("Calentamiento", 15), ("Pasajes prioritarios", 25), ("Tutti", 20)]
     assert saved["blocks"][1]["work_id"] == work["work_id"] and saved["blocks"][1]["sections"] == ["Clarinetes"]
+    # The type of each block colours the agenda calendar (author's request, 2026-10-05).
+    assert [block["group"] for block in saved["blocks"]] == ["warmup", "clarinets", "tutti"]
     assert ana.get("/rehearsals/" + saved["id"]).json() == saved
     assert [item["id"] for item in ana.get("/rehearsals").json()["rehearsals"]] == [saved["id"]]
     assert berta.get("/rehearsals").json() == {"rehearsals": []}
@@ -98,6 +100,7 @@ def test_rehearsals_are_listed_by_date_and_time(clients):
     {"blocks": [{"title": "", "minutes": 10}]},
     {"blocks": [{"title": "Bloque", "minutes": 1}] * 51},
     {"blocks": [{"title": "Bloque", "minutes": 10, "sections": ["x" * 81]}]},
+    {"blocks": [{"title": "Bloque", "minutes": 10, "group": "violines"}]},
 ])
 def test_rehearsal_fields_are_validated(clients, changes):
     ana, _ = clients

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  agendaTime, blockWorkText, createRehearsal, deleteRehearsal, duplicateBlock, listRehearsals, moveBlock,
+  agendaCalendarLabel, agendaSchedule, blockGroup, agendaTime, blockTypeOptions, blockWorkText, createRehearsal, deleteRehearsal, duplicateBlock, listRehearsals, moveBlock,
   nextRehearsal, proposalBlocks, proposeRehearsal, rehearsalDateText, splitRehearsals, updateRehearsal,
 } from '../../../frontend/src/rehearsals.js';
 
@@ -88,6 +88,7 @@ test('the proposed agenda becomes editable blocks, each with its work', async ()
     ['Tutti para juntar', 16, 'w1', '1-4, 9-16'],
   ]);
   assert.deepEqual(blocks[1].sections, ['Clarinetes']);
+  assert.deepEqual(blocks.map(block => block.group), ['warmup', 'clarinets', 'common', 'tutti']);
   assert.deepEqual(blocks[3].sections, ['Toda la banda']);
   assert.match(blocks[1].objective, /Registro agudo/);
   assert.ok(blocks.every(block => block.objective.length <= 500 && block.measures.length <= 40));
@@ -95,4 +96,30 @@ test('the proposed agenda becomes editable blocks, each with its work', async ()
   const calls = fakeServer({ 'POST /rehearsals/proposal': [200, proposal] });
   assert.equal((await proposeRehearsal(['w1'], 60)).blocks.length, 4);
   assert.deepEqual(JSON.parse(calls[0].body), { work_ids: ['w1'], duration_minutes: 60 });
+});
+
+test('the type of a block colours the calendar like the rehearsal plan', () => {
+  const options = blockTypeOptions();
+  assert.deepEqual(options.slice(0, 3), [['warmup', 'Calentamiento · banda completa'], ['common', 'Línea o ritmo común'], ['flutes', 'Seccional · Flautas']]);
+  assert.deepEqual(options.slice(-2), [['tutti', 'Tutti'], ['other', 'Otro']]);
+  assert.deepEqual(['warmup', 'common', 'clarinets', 'tutti', 'other'].map(group => agendaCalendarLabel({ group })),
+    ['Calentam.', 'Común', 'Clarinetes', 'Tutti', 'Otros']);
+});
+
+test('the agenda calendar starts at the rehearsal time and counts typed minutes as numbers', () => {
+  const schedule = agendaSchedule([{ minutes: '15', group: 'warmup' }, { minutes: '45', group: 'tutti' }], '19:30');
+  assert.deepEqual(schedule.map(block => [block.start, block.end, block.share]), [['19:30', '19:45', 0.25], ['19:45', '20:30', 0.75]]);
+  assert.equal(agendaSchedule([{ minutes: 10 }], null)[0].start, '19:00');
+});
+
+test('a block without a type takes it from what the director wrote, so the calendar is always coloured', () => {
+  assert.equal(blockGroup({ group: 'clarinets', title: 'Tutti' }), 'clarinets', 'a chosen type wins');
+  assert.equal(blockGroup({ group: 'other', title: 'Calentamiento' }), 'warmup');
+  assert.equal(blockGroup({ title: 'Tutti final' }), 'tutti');
+  assert.equal(blockGroup({ title: 'Pasajes', sections: ['Clarinetes'] }), 'clarinets');
+  assert.equal(blockGroup({ title: 'Pasajes', sections: 'Metales agudos' }), 'high_brass');
+  assert.equal(blockGroup({ title: 'Seccional de saxos' }), 'saxophones');
+  assert.equal(blockGroup({ title: 'Línea común de graves' }), 'common');
+  assert.equal(blockGroup({ title: 'Afinación', sections: ['Banda completa'] }), 'warmup');
+  assert.equal(blockGroup({ title: 'Lectura' }), 'other');
 });
