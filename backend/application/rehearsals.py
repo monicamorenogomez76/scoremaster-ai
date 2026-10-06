@@ -1,9 +1,10 @@
 """Saved rehearsals of each user: records and repository port (no database code).
 
-A rehearsal can work on several works; each block of its agenda may name one of them.
+A rehearsal can work on several works; each block of its agenda may name one of them. It may belong
+to a concert, and after it the director reviews each block (author's decisions, 2026-10-06).
 """
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Optional, Protocol
 from uuid import UUID
 
@@ -14,8 +15,24 @@ BLOCK_GROUPS = ("warmup", "common", "tutti", "flutes", "double_reeds", "clarinet
                 "low_voices", "percussion", "strings_rhythm", "other")
 
 
+# How a block went, according to the director: it changes the priority of its passage afterwards.
+REVIEW_STATUSES = ("resolved", "improve", "pending", "not_done")
+# Phase of a rehearsal in the series that prepares a concert.
+PHASES = ("reading", "passages", "integration", "general")
+
+
 class UnknownWork(ValueError):
     """A work that does not exist or belongs to another user."""
+
+
+class UnknownConcert(ValueError):
+    """A concert that does not exist or belongs to another user."""
+
+
+@dataclass(frozen=True)
+class BlockReview:
+    status: str
+    note: str = ""
 
 
 @dataclass(frozen=True)
@@ -27,6 +44,7 @@ class RehearsalBlock:
     measures: str = ""
     sections: tuple[str, ...] = ()
     group: str = "other"
+    review: Optional[BlockReview] = None
 
 
 @dataclass(frozen=True)
@@ -38,6 +56,10 @@ class RehearsalDraft:
     objectives: str
     work_ids: tuple[UUID, ...]
     blocks: tuple[RehearsalBlock, ...]
+    concert_id: Optional[UUID] = None
+    # A fixed rehearsal is never replanned.
+    fixed: bool = False
+    phase: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -46,11 +68,15 @@ class Rehearsal:
     draft: RehearsalDraft
     # (id, title) of the works that still exist, in the rehearsal's order.
     works: tuple[tuple[UUID, str], ...]
+    reviewed_at: Optional[datetime] = None
+    review_notes: str = ""
 
 
 class RehearsalRepository(Protocol):
-    def list_rehearsals(self, user_id: UUID) -> list[Rehearsal]: ...
+    def list_rehearsals(self, user_id: UUID, concert_id: Optional[UUID] = None) -> list[Rehearsal]: ...
     def get_rehearsal(self, user_id: UUID, rehearsal_id: UUID) -> Optional[Rehearsal]: ...
     def create_rehearsal(self, user_id: UUID, draft: RehearsalDraft) -> Rehearsal: ...
     def update_rehearsal(self, user_id: UUID, rehearsal_id: UUID, draft: RehearsalDraft) -> Optional[Rehearsal]: ...
     def delete_rehearsal(self, user_id: UUID, rehearsal_id: UUID) -> bool: ...
+    def review_rehearsal(self, user_id: UUID, rehearsal_id: UUID, notes: str,
+                         reviews: tuple[BlockReview, ...]) -> Optional[Rehearsal]: ...
