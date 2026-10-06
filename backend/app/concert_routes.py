@@ -11,6 +11,7 @@ from backend.analyzers.concert_plan import ReviewedBlock, Slot, phases, plan_con
 from backend.analyzers.difficulty import compute_difficulty_score
 from backend.analyzers.rehearsal_proposal import WorkToRehearse
 from backend.application.accounts import User
+from backend.application.bands import UnknownBand
 from backend.application.concerts import Concert, ConcertDraft, ConcertRepository, RehearsalPattern
 from backend.application.library import LibraryRepository
 from backend.application.rehearsals import NotReplannable, RehearsalRepository, UnknownWork, replannable
@@ -44,10 +45,12 @@ class ConcertIn(BaseModel):
     notes: str = Field("", max_length=2000)
     work_ids: list[UUID] = Field(default_factory=list, max_length=30)
     schedule: Optional[PatternIn] = None
+    band_id: Optional[UUID] = None
 
     def draft(self) -> ConcertDraft:
         return ConcertDraft(self.title.strip(), self.date, self.time, self.place or None, self.notes,
-                            tuple(dict.fromkeys(self.work_ids)), self.schedule.pattern() if self.schedule else None)
+                            tuple(dict.fromkeys(self.work_ids)), self.schedule.pattern() if self.schedule else None,
+                            self.band_id)
 
 
 def _concert_id(value: str) -> UUID:
@@ -61,6 +64,7 @@ def _public(concert: Concert, rehearsals: RehearsalRepository, user: User) -> di
     draft, pattern = concert.draft, concert.draft.schedule
     return {"id": str(concert.id), "title": draft.title, "date": draft.date.isoformat(), "time": draft.time,
             "place": draft.place, "notes": draft.notes,
+            "band": {"id": str(concert.band[0]), "name": concert.band[1]} if concert.band else None,
             "works": [{"id": str(work), "title": title} for work, title in concert.works],
             "schedule": None if pattern is None else {"weekdays": list(pattern.weekdays), "time": pattern.time,
                                                       "duration_minutes": pattern.duration_minutes,
@@ -84,6 +88,8 @@ def create_concert(body: ConcertIn, user: User = Depends(authenticated_user),
         return _public(concerts.create_concert(user.id, body.draft()), rehearsals, user)
     except UnknownWork:
         raise HTTPException(status_code=422, detail="Alguna obra del programa no existe.") from None
+    except UnknownBand:
+        raise HTTPException(status_code=422, detail="La banda del concierto no existe.") from None
 
 
 @router.get("/concerts/{concert_id}")
@@ -104,6 +110,8 @@ def update_concert(concert_id: str, body: ConcertIn, user: User = Depends(authen
         updated = concerts.update_concert(user.id, _concert_id(concert_id), body.draft())
     except UnknownWork:
         raise HTTPException(status_code=422, detail="Alguna obra del programa no existe.") from None
+    except UnknownBand:
+        raise HTTPException(status_code=422, detail="La banda del concierto no existe.") from None
     if updated is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return _public(updated, rehearsals, user)

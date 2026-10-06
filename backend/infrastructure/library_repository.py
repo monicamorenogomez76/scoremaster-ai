@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 from backend.application.analysis_repository import AnalysisRecord
 from backend.application.library import Work, WorkUpload
 from backend.infrastructure.analysis_repository import Base, StoredAnalysis, record_of
+from backend.infrastructure.band_repository import active_band, update_active_profile
 
 
 class StoredWork(Base):
@@ -26,15 +27,6 @@ class StoredWork(Base):
     size: Mapped[int] = mapped_column(Integer, nullable=False)
     preparation_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default='review')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
-class StoredBand(Base):
-    __tablename__ = 'bands'
-    user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'),
-                                          primary_key=True)
-    profile: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
-    section_levels: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -134,13 +126,12 @@ class PostgresLibraryRepository:
                     for row in session.execute(_PRIORITIES, {"user_id": user_id})]
 
     def band_profile(self, user_id: UUID) -> dict:
+        """Template of the active band (several bands per director since 2026-10-06)."""
         with Session(self.engine) as session:
-            return session.scalar(select(StoredBand.profile).where(StoredBand.user_id == user_id)) or {}
+            row = active_band(session, user_id)
+            return dict(row.profile) if row else {}
 
     def update_band_profile(self, user_id: UUID, changes: dict) -> dict:
-        """Merge the changes into the stored template: instruments of other works keep their musicians."""
-        statement = insert(StoredBand).values(user_id=user_id, profile=changes).on_conflict_do_update(
-            index_elements=['user_id'],
-            set_={'profile': StoredBand.profile.concat(changes), 'updated_at': func.now()}).returning(StoredBand.profile)
+        """Merge the changes into the active band: instruments of other works keep their musicians."""
         with Session(self.engine) as session, session.begin():
-            return session.execute(statement).scalar_one()
+            return update_active_profile(session, user_id, changes)

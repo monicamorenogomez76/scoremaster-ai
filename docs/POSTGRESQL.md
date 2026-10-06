@@ -117,6 +117,15 @@ director (`PUT /rehearsals/{id}/review`) guarda un estado por bloque (`resolved`
 `pending`, `not_done`) con nota, dentro de cada bloque, y una nota general con su fecha
 (`reviewed_at`, `review_notes`).
 
+La migración `0007_ensembles` permite **varias bandas por director** (`ensembles`): nombre,
+localidad, lugar, días, hora y duración de ensayo, plantilla completa (`profile`, músicos por
+instrumento del catálogo y `percussion` para el total de percusionistas) y nivel 1–6 por sección
+(`section_levels`, por subsección de ensayo). Una sola banda es la **activa** (índice único
+parcial); su plantilla es la que usan el análisis y BandFit (`GET/PATCH /band`). La plantilla única
+anterior (`bands`) pasa a la banda activa «Mi banda» y la tabla se elimina. Cada concierto puede
+indicar la banda que lo toca (`concerts.band_id`, vacío si se borra la banda). API: `/bands` para
+listar, crear, leer, sustituir y borrar, y `POST /bands/{id}/activate`.
+
 Para arrancar con Python fuera de Docker, configurar `DATABASE_URL` en el entorno
 del proceso usando la conexión local de `.env.example` (por ejemplo en el entorno
 del IDE); Uvicorn no carga `.env` automáticamente. Después:

@@ -24,6 +24,8 @@ class ConcertDraft:
     notes: str
     work_ids: tuple[UUID, ...]
     schedule: Optional[RehearsalPattern] = None
+    # The band that plays it, one of the director's.
+    band_id: Optional[UUID] = None
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,7 @@ class Concert:
     draft: ConcertDraft
     # (id, title) of the programme's works that still exist, in concert order.
     works: tuple[tuple[UUID, str], ...]
+    band: Optional[tuple[UUID, str]] = None
 
 
 class ConcertRepository(Protocol):
