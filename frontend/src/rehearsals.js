@@ -1,7 +1,7 @@
 // Saved rehearsals of the signed-in user: several works per rehearsal and an agenda of blocks,
 // each naming the work rehearsed in it (author's decisions, 2026-10-05).
 import { apiJson } from './api.js';
-import { blockScoreLabel, calendarLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
+import { blockScoreLabel, calendarLabel, findingLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
 import { rehearsalSchedule } from './schedule.js';
 
 const send = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -129,3 +129,28 @@ export function agendaCalendarLabel(block) {
 // Clock times of the agenda from the rehearsal's start; minutes typed in the editor are text.
 export const agendaSchedule = (blocks, start) => rehearsalSchedule(
   blocks.map(block => ({ ...block, minutes: Number(block.minutes) || 0 })), start || undefined);
+
+// The director's review after a rehearsal (author's decision, 2026-10-06): one status and note per block.
+export const reviewStatusOptions = [['resolved', 'Resuelto'], ['improve', 'Mejorable'], ['pending', 'Pendiente'], ['not_done', 'No se hizo']];
+const statusLabel = status => (reviewStatusOptions.find(([value]) => value === status) || [, status])[1];
+
+// Only a rehearsal held today or before can be reviewed.
+export const canReview = (rehearsal, today = todayIso()) => rehearsal.date <= today;
+
+export const reviewRehearsal = (id, notes, blocks) => apiJson(path(id) + '/review', send('PUT', { notes, blocks }),
+  'No se pudo guardar la revisión.');
+export const listReviewPriorities = async () => (await apiJson('/rehearsals/priorities', {}, 'No se pudieron cargar las prioridades.')).priorities;
+
+const measuresOf = range => (!range ? '—' : (/[-,]/.test(range) ? 'cc. ' : 'c. ') + range.replace(/-/g, '–'));
+
+// Rows of «Prioridades por sección»: what the director left pending first, then the analysis.
+export function summaryPriorityRows(reviewItems, analysisItems) {
+  return [
+    ...reviewItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.sections.join(', ') || 'Toda la banda',
+      detail: item.block, measures: measuresOf(item.measure_range),
+      reason: [statusLabel(item.status), item.note].filter(Boolean).join(' · '), origin: 'Revisión', originTitle: 'Revisión del director' })),
+    ...analysisItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.family_label_es || item.family || 'Otras',
+      detail: item.instrument_label_es || item.instrument, measures: measuresOf(item.measure_range),
+      reason: (item.findings || []).map(findingLabel).join(' · '), origin: 'Análisis', originTitle: 'Análisis de ScoreLint' })),
+  ];
+}

@@ -637,7 +637,7 @@ input[type=range] { accent-color: var(--primary); }
 .summary-card .empty-workspace { max-width: none; padding: 12px 14px; }
 .summary-table th, .summary-table td { padding: 7px 8px; }
 .summary-card .rehearsal-calendar { margin: 6px 0 4px; }
-.detail-toggle { margin-top: 4px; font-size: .88rem; }
+.detail-toggle { margin-top: 4px; }
 .calendar-block { align-content: start; }
 .calendar-work { font-size: .86rem; font-weight: 700; line-height: 1.2; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 1; }
 .calendar-name { font-size: .74rem; font-weight: 600; opacity: .9; }
@@ -687,3 +687,10 @@ input[type=range] { accent-color: var(--primary); }
 .series-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .series-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .plan-preview { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+#next-concert { color: var(--text); }
+.review-statuses { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.review-statuses input { width: 18px; height: 18px; min-height: 0; }
+.weekday-option { white-space: nowrap; }
+.summary-side { display: grid; gap: 14px; min-width: 0; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+.detail-toggle { margin-top: 0; }
