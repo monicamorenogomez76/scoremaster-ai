@@ -65,7 +65,11 @@ La navegación sigue la propuesta de interfaz de la autora (2026-10-05):
 - **Repertorio**: buscador, «Añadir obra» y, por obra, estado de preparación (independiente de la
   dificultad) y estado del análisis. El detalle de una obra tiene las pestañas **Partitura**,
   **Dificultad** y **Grabaciones**.
-- **Mi banda**.
+- **Mi banda**: varias bandas por director (por ejemplo, «Unió Musical d'Albalat dels Sorells»),
+  cada una con localidad, lugar y días de ensayo, plantilla completa por familias (la percusión
+  como total de percusionistas) y nivel orientativo por sección. La banda activa es la plantilla
+  del análisis y de BandFit; debajo se ve la adecuación de la obra abierta. Cada concierto indica
+  qué banda lo toca y toma sus días de ensayo.
 - **Conciertos**: cada concierto con su fecha, su programa en orden de concierto y un patrón
   semanal de ensayos. La aplicación propone la serie de ensayos por fases (lectura y pasajes,
   integración y ensayo general con la pasada del programa). Tras cada ensayo el director lo revisa
