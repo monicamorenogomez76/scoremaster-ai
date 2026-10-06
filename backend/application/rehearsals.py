@@ -80,3 +80,14 @@ class RehearsalRepository(Protocol):
     def delete_rehearsal(self, user_id: UUID, rehearsal_id: UUID) -> bool: ...
     def review_rehearsal(self, user_id: UUID, rehearsal_id: UUID, notes: str,
                          reviews: tuple[BlockReview, ...]) -> Optional[Rehearsal]: ...
+    def save_concert_plan(self, user_id: UUID, concert_id: UUID, items: list[tuple[Optional[UUID], RehearsalDraft]],
+                          today: date) -> list[Rehearsal]: ...
+
+
+def replannable(rehearsal: Rehearsal, today: date) -> bool:
+    """Only rehearsals still to come, not reviewed and not fixed by the director are replanned."""
+    return rehearsal.draft.date >= today and rehearsal.reviewed_at is None and not rehearsal.draft.fixed
+
+
+class NotReplannable(ValueError):
+    """A rehearsal already held, reviewed, fixed or of another concert cannot be replaced."""

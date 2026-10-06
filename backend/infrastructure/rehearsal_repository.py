@@ -7,8 +7,8 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from backend.application.rehearsals import (BlockReview, Rehearsal, RehearsalBlock, RehearsalDraft, UnknownConcert,
-                                            UnknownWork)
+from backend.application.rehearsals import (BlockReview, NotReplannable, Rehearsal, RehearsalBlock, RehearsalDraft,
+                                            UnknownConcert, UnknownWork, replannable)
 from backend.infrastructure.analysis_repository import Base
 from backend.infrastructure.concert_repository import StoredConcert, work_titles
 
@@ -132,3 +132,29 @@ class PostgresRehearsalRepository:
             row.reviewed_at = datetime.now(timezone.utc)
             session.flush()
             return self._rehearsal(session, row)
+
+    def save_concert_plan(self, user_id: UUID, concert_id: UUID, items: list[tuple[Optional[UUID], RehearsalDraft]],
+                          today: date) -> list[Rehearsal]:
+        """All or nothing: new rehearsals of the concert, or replannable ones replaced."""
+        with Session(self.engine) as session, session.begin():
+            concert = session.get(StoredConcert, concert_id)
+            if concert is None or concert.user_id != user_id:
+                raise UnknownConcert("El concierto no existe.")
+            saved = []
+            for rehearsal_id, draft in items:
+                draft = RehearsalDraft(**{**draft.__dict__, "concert_id": concert_id})
+                self._check_works(session, user_id, draft)
+                if rehearsal_id is None:
+                    row = StoredRehearsal(id=uuid4(), user_id=user_id, **_values(draft))
+                    session.add(row)
+                else:
+                    row = session.get(StoredRehearsal, rehearsal_id)
+                    if row is None or row.user_id != user_id or row.concert_id != concert_id \
+                            or not replannable(self._rehearsal(session, row), today):
+                        raise NotReplannable("Ese ensayo ya no se puede replanificar.")
+                    for key, value in _values(draft).items():
+                        setattr(row, key, value)
+                    row.updated_at = func.now()
+                session.flush()
+                saved.append(self._rehearsal(session, row))
+            return saved
