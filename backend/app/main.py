@@ -21,6 +21,7 @@ from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
 from backend.app.auth_routes import router as auth_router
 from backend.app.library_routes import router as library_router, valid_band_profile
+from backend.app.band_routes import router as band_router
 from backend.app.concert_routes import router as concert_router
 from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.stored_scores import confirm_instruments
@@ -60,6 +61,7 @@ app.include_router(auth_router)
 app.include_router(library_router)
 app.include_router(rehearsal_router)
 app.include_router(concert_router)
+app.include_router(band_router)
 
 # The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
 CONTENT_SECURITY_POLICY = "; ".join([

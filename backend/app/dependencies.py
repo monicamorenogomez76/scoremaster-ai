@@ -5,12 +5,14 @@ from fastapi import Depends, HTTPException, Request
 
 from backend.application.accounts import AccountRepository, User
 from backend.application.analysis_repository import AnalysisRepository
+from backend.application.bands import BandRepository
 from backend.application.concerts import ConcertRepository
 from backend.application.library import LibraryRepository
 from backend.application.rehearsals import RehearsalRepository
 from backend.application.auth import AuthService
 from backend.infrastructure.account_repository import PostgresAccountRepository
 from backend.infrastructure.analysis_repository import PostgresAnalysisRepository
+from backend.infrastructure.band_repository import PostgresBandRepository
 from backend.infrastructure.concert_repository import PostgresConcertRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
@@ -53,6 +55,13 @@ def get_library_repository() -> LibraryRepository:
 def get_rehearsal_repository() -> RehearsalRepository:
     try:
         return PostgresRehearsalRepository(analysis_engine())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+
+
+def get_band_repository() -> BandRepository:
+    try:
+        return PostgresBandRepository(analysis_engine())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
 
