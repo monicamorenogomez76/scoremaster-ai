@@ -3,7 +3,7 @@ import { applyInstrumentAssignments, inspectInstruments } from './instrument-ses
 import { apiFetch } from './api.js';
 import { loadWork } from './library.js';
 
-// options: { minutes, getProfile(), getConfirmations(), onReset(), onAnalysis(data, profile, navigate) }.
+// options: { minutes, getProfile(), getConfirmations(), onReset(byUser), onAnalysis(data, profile, navigate) }.
 // Read through a ref so changing them never aborts a request in flight.
 export function useScoreAnalysis(workspace, options) {
   const [state, setState] = useState({ busy: false, message: '', error: false });
@@ -16,16 +16,17 @@ export function useScoreAnalysis(workspace, options) {
     return ++generation.current;
   }, []);
 
-  const clearSelection = useCallback(async () => {
+  // byUser: «Nueva partitura»; opening another work or choosing a file also clears, without moving.
+  const clearSelection = useCallback(async (byUser = false) => {
     setParts([]); setAssignments({});
-    latest.current.onReset();
+    latest.current.onReset(byUser);
     await workspace.reset();
   }, [workspace]);
 
   const reset = useCallback(async () => {
     invalidate(); file.current = null; xml.current = null;
     setState({ busy: false, message: '', error: false });
-    await clearSelection();
+    await clearSelection(true);
   }, [clearSelection, invalidate]);
 
   const selectFile = async selected => {
@@ -78,8 +79,9 @@ export function useScoreAnalysis(workspace, options) {
     }
   }, [invalidate, workspace]);
 
-  // A saved work: its latest analysis and its original file, without uploading it again.
-  const openWork = useCallback(async id => {
+  // A saved work: its latest analysis and its original file, without uploading it again. With
+  // navigate false the current view stays (a passage opened from a rehearsal); returns the analysis.
+  const openWork = useCallback(async (id, { navigate = true } = {}) => {
     const version = invalidate();
     setState({ busy: true, message: 'Abriendo la obra…', error: false });
     try {
@@ -89,9 +91,10 @@ export function useScoreAnalysis(workspace, options) {
       file.current = saved; xml.current = null;
       workspace.setFile(saved);
       const profile = Object.fromEntries((data.band_fit?.requirements || []).map(item => [item.key, item.available]));
-      latest.current.onAnalysis(data, profile, true);
+      latest.current.onAnalysis(data, profile, navigate);
       workspace.showScore();
       setState({ busy: false, message: '', error: false });
+      return data;
     } catch (error) {
       if (version === generation.current) setState({ busy: false, message: error.message, error: true });
     }

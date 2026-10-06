@@ -694,3 +694,7 @@ input[type=range] { accent-color: var(--primary); }
 .summary-side { display: grid; gap: 14px; min-width: 0; }
 .card-actions { display: flex; flex-wrap: wrap; gap: 14px; }
 .detail-toggle { margin-top: 0; }
+.agenda-calendar button.calendar-block { cursor: pointer; }
+.agenda-calendar button.calendar-block:hover { filter: brightness(1.12); }
+button.agenda-title, button.agenda-work { display: block; min-height: 0; text-align: left; }
+button.agenda-work { color: var(--primary); font-weight: 500; }

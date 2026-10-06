@@ -188,6 +188,6 @@ def test_priorities_from_the_last_review_are_what_was_left_pending_or_to_improve
     priorities = ana.get("/rehearsals/priorities").json()["priorities"]
 
     assert priorities == [{"rehearsal_id": latest["id"], "date": "2026-10-15", "work_id": work["work_id"], "title": work["title"],
-                           "block": "Pasajes prioritarios", "sections": ["Clarinetes"], "measure_range": "1-4",
+                           "block": "Pasajes prioritarios", "sections": ["Clarinetes"], "parts": ["Clarinet"], "measure_range": "1-4",
                            "status": "pending", "note": "Entradas de clarinetes", "origin": "review"}]
     assert berta.get("/rehearsals/priorities").json() == {"priorities": []}

@@ -20,7 +20,7 @@ function Card({ id, title, action, children }) {
 
 // Home of the director, as in the author's mock-up: next rehearsal, works in preparation and their
 // priorities on the left; the rehearsal assistant on the right.
-export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPlanRehearsal, onEditRehearsal, onReviewDraft, busy }) {
+export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOpenBlock, onPlanRehearsal, onEditRehearsal, onReviewDraft, busy }) {
   const [works, setWorks] = useState(null);
   const [priorities, setPriorities] = useState(null);
   const [rehearsals, setRehearsals] = useState(null);
@@ -69,14 +69,18 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
           <p>Planifica el próximo ensayo con sus obras y su agenda para tenerlo aquí.</p></div>}
         {next && <>
           <p className="result-supporting">{[rehearsalDateText(next), next.duration_minutes + ' minutos', next.place].filter(Boolean).join(' · ')}</p>
-          <AgendaCalendar blocks={next.blocks} start={next.time} />
+          <AgendaCalendar blocks={next.blocks} start={next.time} onOpenBlock={onOpenBlock} />
           {next.blocks.length === 0 && <p className="result-supporting">Este ensayo aún no tiene agenda.</p>}
           {detail && next.blocks.length > 0 && <ol className="agenda-list">{next.blocks.map((block, index) => <li key={index} className="agenda-item">
                 <span className="agenda-number" aria-hidden="true">{index + 1}</span>
                 <span className="agenda-minutes">{block.minutes} min</span>
                 <div>
-                  <strong className="agenda-title">{block.title}</strong>
-                  <span className="agenda-work">{blockWorkText(block)}</span>
+                  {block.work_id
+                    ? <button type="button" className="link-action agenda-title" onClick={() => onOpenBlock({ ...block, label: block.title + ' · ' + block.work_title })}>{block.title}</button>
+                    : <strong className="agenda-title">{block.title}</strong>}
+                  {block.work_id
+                    ? <button type="button" className="link-action agenda-work" onClick={() => onOpenWork(block.work_id)}>{blockWorkText(block)}</button>
+                    : <span className="agenda-work">{blockWorkText(block)}</span>}
                   {block.objective && <span className="table-supporting">{block.objective}</span>}
                 </div>
               </li>)}</ol>}
@@ -93,7 +97,9 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onPl
             <th scope="row">{row.section}</th>
             <td><button type="button" className="link-action" disabled={busy} onClick={() => onOpenWork(row.work_id)}>{row.title}</button>
               <span className="table-supporting">{row.detail}</span></td>
-            <td>{row.measures}</td>
+            <td>{row.range ? <button type="button" className="link-action" disabled={busy}
+              onClick={() => onOpenBlock({ work_id: row.work_id, parts: row.parts, measures: row.range, label: row.section + ' · ' + row.title })}>{row.measures}</button>
+              : row.measures}</td>
             <td>{row.reason}</td>
             <td><span className="status-tag" title={row.originTitle}>{row.origin}</span></td>
           </tr>)}</tbody>
