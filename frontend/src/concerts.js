@@ -76,3 +76,21 @@ export function nextConcert(concerts, today) {
   const remaining = (concert.rehearsals || []).filter(item => item.date >= today && !item.reviewed).length;
   return { concert, remaining, days: daysUntil(concert.date, today) };
 }
+
+// Next step of the next concert for the summary assistant (author's decision, 2026-10-06): review the
+// rehearsal already held, replan after a review newer than the plan, plan a concert without series,
+// or show its next rehearsal. Without concerts the assistant proposes a single rehearsal.
+export function assistantStep(concerts, rehearsals, today) {
+  const upcoming = nextConcert(concerts, today);
+  if (!upcoming) return { step: 'free' };
+  const { concert } = upcoming;
+  const series = rehearsals.filter(item => item.concert_id === concert.id).sort((left, right) => left.date.localeCompare(right.date));
+  if (!series.length) return { step: 'plan', concert };
+  const unreviewed = series.filter(item => item.date <= today && !item.reviewed_at);
+  if (unreviewed.length) return { step: 'review', concert, rehearsal: unreviewed[unreviewed.length - 1] };
+  const coming = series.filter(item => item.date > today || (item.date === today && !item.reviewed_at));
+  const lastReview = series.map(item => item.reviewed_at).filter(Boolean).sort().pop();
+  const stale = coming.find(item => !item.fixed && !item.reviewed_at && lastReview && (item.updated_at || '') < lastReview);
+  if (stale) return { step: 'replan', concert, rehearsal: stale };
+  return coming.length ? { step: 'next', concert, rehearsal: coming[0] } : { step: 'plan', concert };
+}

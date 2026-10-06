@@ -72,6 +72,8 @@ class Rehearsal:
     works: tuple[tuple[UUID, str], ...]
     reviewed_at: Optional[datetime] = None
     review_notes: str = ""
+    # When its agenda was last saved: a review after it suggests replanning.
+    updated_at: Optional[datetime] = None
 
 
 class RehearsalRepository(Protocol):

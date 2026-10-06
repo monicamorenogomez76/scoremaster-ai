@@ -299,22 +299,16 @@ try {
   await todayCard.getByRole('button', { name: 'Ver detalle' }).click();
   await todayCard.locator('.agenda-list').waitFor();
   await todayCard.getByRole('button', { name: 'Ocultar detalle' }).click();
-  const assistant = page.locator('#summary-assistant');
-  assert.match(await assistant.textContent(), /sin IA/, 'the calculated proposal never passes for AI');
-  const box = await assistant.boundingBox(), rehearsalBox = await todayCard.boundingBox();
-  assert.ok(box.x > rehearsalBox.x + rehearsalBox.width - 1, 'the assistant is a column on the right');
+  // No panel repeats what the cards already say (author's decision, 2026-10-06).
+  assert.equal(await page.locator('#summary-assistant').count(), 0);
+  const worksCard = page.locator('#summary-works'), worksBox = await worksCard.boundingBox(), rehearsalBox = await todayCard.boundingBox();
+  assert.ok(worksBox.x > rehearsalBox.x + rehearsalBox.width - 1, 'the works in preparation are a column on the right');
   assert.equal(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 2), true,
     'the summary fits on a computer screen');
-  await assistant.getByRole('button', { name: 'Generar propuesta' }).click();
-  await assistant.locator('.draft-block').first().waitFor();
-  assert.match(await assistant.textContent(), /Borrador/);
-  await assistant.getByRole('button', { name: 'Revisar y editar' }).click();
-  await editor.waitFor({ state: 'visible' });
-  assert.ok(await blocksOf().count() > 1, 'the draft opens in the editor to be reviewed and saved');
-  assert.equal(await blocksOf().nth(0).getByLabel('Título').inputValue(), 'Calentamiento');
+  assert.equal(await todayCard.locator('.next-step').count(), 0, 'without a concert there is no step to suggest');
   await page.setViewportSize({ width: 1440, height: 1000 });
   assert.deepEqual(errors, []);
-  console.log('PASS: the summary shows everything at a glance with a calculated draft to review');
+  console.log('PASS: the summary shows everything at a glance without repeating information')
 } finally {
   await browser.close();
 }

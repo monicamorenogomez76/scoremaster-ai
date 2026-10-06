@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  concertProgress, createConcert, daysUntil, nextConcert, listConcerts, monthGrid, patternDates, phaseLabel, planItemsToSave,
+  assistantStep, concertProgress, createConcert, daysUntil, nextConcert, listConcerts, monthGrid, patternDates, phaseLabel, planItemsToSave,
   proposeConcertPlan, saveConcertPlan, weekdayOptions,
 } from '../../../frontend/src/concerts.js';
 
@@ -77,4 +77,20 @@ test('the next concert and the rehearsals still to do before it', () => {
   ];
   assert.deepEqual(nextConcert(concerts, '2026-10-14'), { concert: concerts[1], remaining: 2, days: 15 });
   assert.equal(nextConcert(concerts, '2026-12-21'), null);
+});
+
+test('the assistant suggests the next step of the next concert', () => {
+  const concert = { id: 'c1', date: '2026-10-29', rehearsals: [] };
+  const held = { id: 'r1', concert_id: 'c1', date: '2026-10-13', reviewed_at: null, fixed: false, updated_at: '2026-10-10T10:00:00Z' };
+  const next = { id: 'r2', concert_id: 'c1', date: '2026-10-15', reviewed_at: null, fixed: false, updated_at: '2026-10-10T10:00:00Z' };
+  const today = '2026-10-14';
+  assert.deepEqual(assistantStep([], [], today), { step: 'free' }, 'without concerts, a single rehearsal is proposed');
+  assert.deepEqual(assistantStep([concert], [], today), { step: 'plan', concert });
+  assert.deepEqual(assistantStep([concert], [held, next], today), { step: 'review', concert, rehearsal: held });
+  const reviewed = { ...held, reviewed_at: '2026-10-13T22:00:00Z' };
+  assert.deepEqual(assistantStep([concert], [reviewed, next], today), { step: 'replan', concert, rehearsal: next },
+    'a review after the next rehearsals were planned suggests replanning');
+  const replanned = { ...next, updated_at: '2026-10-14T09:00:00Z' };
+  assert.deepEqual(assistantStep([concert], [reviewed, replanned], today), { step: 'next', concert, rehearsal: replanned });
+  assert.deepEqual(assistantStep([concert], [reviewed, { ...next, fixed: true }], today).step, 'next', 'a fixed rehearsal is not replanned');
 });

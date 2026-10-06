@@ -110,7 +110,8 @@ def _public(rehearsal: Rehearsal) -> dict:
                        for block in draft.blocks],
             "concert_id": str(draft.concert_id) if draft.concert_id else None, "fixed": draft.fixed, "phase": draft.phase,
             "reviewed_at": rehearsal.reviewed_at.isoformat() if rehearsal.reviewed_at else None,
-            "review_notes": rehearsal.review_notes}
+            "review_notes": rehearsal.review_notes,
+            "updated_at": rehearsal.updated_at.isoformat() if rehearsal.updated_at else None}
 
 
 @router.get("/rehearsals")
