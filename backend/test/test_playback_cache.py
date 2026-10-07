@@ -37,3 +37,19 @@ def test_only_a_few_scores_are_kept_in_memory():
                  "measure_with_rest.musicxml"):
         build_playback(SCORES / name, "", 0, 999999)
     assert playback.parsed_score_count() == playback.PARSED_SCORES_KEPT == 4
+
+
+def test_how_many_scores_are_kept_can_be_lowered_for_small_servers(monkeypatch):
+    """Render's free plan has 512 MB: a single parsed band score is kept there (PLAYBACK_SCORES_KEPT=1)."""
+    import importlib
+    monkeypatch.setenv("PLAYBACK_SCORES_KEPT", "1")
+    reloaded = importlib.reload(playback)
+    try:
+        assert reloaded.PARSED_SCORES_KEPT == 1
+        reloaded.clear_parsed_scores()
+        for name in ("minimal.musicxml", "high_density.musicxml"):
+            reloaded.build_playback(SCORES / name, "", 0, 999999)
+        assert reloaded.parsed_score_count() == 1
+    finally:
+        monkeypatch.delenv("PLAYBACK_SCORES_KEPT")
+        importlib.reload(playback)

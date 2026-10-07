@@ -17,5 +17,10 @@ COPY --from=frontend /app/backend/app/static/frontend ./backend/app/static/front
 COPY migrations ./migrations
 COPY alembic.ini ./alembic.ini
 
-# Migrate, create the demo user when configured, then serve.
-CMD ["sh", "-c", "python -m alembic upgrade head && python -m backend.app.seed_demo && exec uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"]
+# The server runs without root privileges.
+RUN useradd --system --uid 10001 --no-create-home scoremaster
+USER scoremaster
+
+# Migrate, create the demo user when configured, then serve. PORT comes from the hosting platform
+# (Render) and defaults to 8000; behind its HTTPS proxy the forwarded scheme and client are trusted.
+CMD ["sh", "-c", "python -m alembic upgrade head && python -m backend.app.seed_demo && exec uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
