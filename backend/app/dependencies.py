@@ -19,6 +19,7 @@ from backend.infrastructure.concert_repository import PostgresConcertRepository
 from backend.infrastructure.evaluation_repository import PostgresEvaluationRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
+from backend.infrastructure.ai.gemini_provider import shared_provider
 from backend.infrastructure.prepared_store import PostgresPreparedStore
 from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
 from backend.infrastructure.database import database_engine
@@ -74,8 +75,8 @@ def get_score_store() -> Optional[PostgresPreparedStore]:
 
 
 def get_explanation_provider():
-    """The provider that writes explanations: the demo until a real one is configured (step 21)."""
-    return DemoExplanationProvider()
+    """Gemini when GEMINI_API_KEY is set (step 21); otherwise the demo, always identified as such."""
+    return shared_provider() or DemoExplanationProvider()
 
 
 def get_rehearsal_repository() -> RehearsalRepository:

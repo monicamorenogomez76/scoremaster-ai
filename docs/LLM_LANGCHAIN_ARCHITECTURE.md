@@ -24,6 +24,14 @@
   mejorable. Las notas de la directora viajan como datos, nunca como instrucciones. Salida: resumen,
   1–6 motivos que citan bloques existentes y un consejo para dirigirlo. Prompt `rehearsal-explanation-v1`.
 - Lo común (pedir, validar, respaldo y trazabilidad) está en `backend/application/explanations.py`.
+- **Adaptador Gemini con LangChain (paso 21)** `backend/infrastructure/ai/gemini_provider.py`:
+  `ChatGoogleGenerativeAI` (`langchain-google-genai` 2.1, `langchain-core` 0.3) con `with_structured_output`
+  y los mismos esquemas Pydantic que valida el servidor, temperatura 0, límite de 25 s y un reintento.
+  Los fallos se clasifican en timeout, rate_limit o error y responde la demo. Prompts versionados en
+  `backend/infrastructure/ai/prompts.py`: reglas como mensaje de sistema y evidencias como datos en el
+  mensaje humano. Se activa con `GEMINI_API_KEY` (modelo en `GEMINI_MODEL`, por defecto
+  `gemini-2.5-flash`); LangChain se importa solo al usarlo (~70 MB que un servidor sin clave no gasta).
+  Las pruebas usan un modelo simulado: nunca llaman a Google.
 
 ## 1. Objetivo
 
