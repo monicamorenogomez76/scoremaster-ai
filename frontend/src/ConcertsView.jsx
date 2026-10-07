@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { ActivityStatus } from './ActivityStatus.jsx';
+import { proposalActivity } from './progress.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { ConcertEditor } from './ConcertEditor.jsx';
 import { concertProgress, daysUntil, listConcerts, monthGrid, phaseLabel, planItemsToSave, proposeConcertPlan,
@@ -87,6 +89,7 @@ function ConcertPlanning({ concert, series, onChanged, onClose, onOpenBlock }) {
       <button type="button" className="primary-action" disabled={busy} onClick={propose}>
         {busy && !preview ? 'Calculando…' : series.length ? 'Replanificar los ensayos siguientes' : 'Proponer planificación'}</button>
     </div>
+    <ActivityStatus id="concert-plan-activity" label={busy && !preview ? proposalActivity('concert', (concert.works || []).length) : ''} />
     {error && <p className="result-supporting" role="alert">{error}</p>}
     {preview && <div className="plan-preview">
       <p className="proposal-note" role="status">Propuesta calculada con el análisis de cada obra{series.length ? ' y tus revisiones' : ''}: revísala antes de guardar.

@@ -732,3 +732,14 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .text-size-options legend { margin-bottom: 6px; font-size: .85rem; font-weight: 600; }
 .text-size-options .weekday-option { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; }
 .sidebar-bottom > .nav-item { margin-bottom: 4px; }
+
+/* A slow action in progress: what it is doing and for how long (no invented percentage). */
+.activity-status { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0; font-size: .85rem; color: var(--muted); }
+.activity-bar { position: relative; display: block; width: 100%; max-width: 320px; height: 4px; overflow: hidden; border-radius: 2px; background: var(--line); }
+.activity-bar span { position: absolute; inset: 0 auto 0 0; width: 35%; border-radius: 2px; background: var(--accent); animation: activity-slide 1.4s ease-in-out infinite; }
+@keyframes activity-slide { from { left: -35%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { .activity-bar span { animation: none; width: 100%; opacity: .5; } }
+.topbar-activity { flex: 1; min-width: 0; margin: 0 24px; }
+.topbar-activity .activity-bar { max-width: none; }
+.topbar-activity .activity-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 760px) { .topbar-activity { order: 3; flex-basis: 100%; margin: 0 0 8px; } .topbar-activity .activity-text { white-space: normal; } .topbar { flex-wrap: wrap; } }

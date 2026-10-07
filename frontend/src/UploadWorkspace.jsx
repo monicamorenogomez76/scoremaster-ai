@@ -26,7 +26,8 @@ export function UploadWorkspace({ upload }) {
         </label>)}
       </div>
     </form>
-    <div id="result" className="analysis-status" hidden={!state.message} aria-live="polite"
-      role={state.error ? 'alert' : 'status'} aria-busy={state.busy}>{state.message}</div>
+    {/* While busy, the step and its time are shown in the top bar, visible from every view. */}
+    <div id="result" className="analysis-status" hidden={!state.message || state.busy} aria-live="polite"
+      role={state.error ? 'alert' : 'status'}>{state.busy ? '' : state.message}</div>
   </>;
 }

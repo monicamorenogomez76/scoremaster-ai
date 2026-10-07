@@ -31,7 +31,7 @@ export function useScoreAnalysis(workspace, options) {
 
   const selectFile = async selected => {
     const version = invalidate(); file.current = selected; xml.current = null;
-    setState({ busy: Boolean(selected), message: selected ? 'Cargando datos de instrumentos…' : '', error: false });
+    setState({ busy: Boolean(selected), message: selected ? 'Leyendo los instrumentos del archivo' : '', error: false });
     try {
       await clearSelection();
       if (!selected || version !== generation.current) return;
@@ -52,7 +52,7 @@ export function useScoreAnalysis(workspace, options) {
     if (!selected) { setState({ busy: false, message: 'Selecciona un archivo MusicXML.', error: true }); return; }
     const version = invalidate();
     const request = new AbortController(); controller.current = request;
-    setState({ busy: true, message: 'Analizando la partitura. Puede tardar unos segundos…', error: false });
+    setState({ busy: true, message: 'Analizando la partitura', error: false });
     try {
       await workspace.prepareAnalysis();
       if (version !== generation.current) return;
@@ -83,9 +83,11 @@ export function useScoreAnalysis(workspace, options) {
   // navigate false the current view stays (a passage opened from a rehearsal); returns the analysis.
   const openWork = useCallback(async (id, { navigate = true } = {}) => {
     const version = invalidate();
-    setState({ busy: true, message: 'Abriendo la obra…', error: false });
+    setState({ busy: true, message: 'Abriendo la obra: análisis guardado', error: false });
     try {
-      const { data, file: saved } = await loadWork(id);
+      const { data, file: saved } = await loadWork(id, () => {
+        if (version === generation.current) setState({ busy: true, message: 'Abriendo la obra: descargando la partitura', error: false });
+      });
       if (version !== generation.current) return;
       await clearSelection();
       file.current = saved; xml.current = null;

@@ -12,8 +12,9 @@ const json = apiJson;
 export const listWorks = async () => (await json('/works', {}, 'No se pudo cargar la biblioteca.')).works;
 
 // The latest analysis and the original file, so the score opens without uploading it again.
-export async function loadWork(id) {
+export async function loadWork(id, onDownloading = () => {}) {
   const data = await json('/works/' + encodeURIComponent(id), {}, 'No se pudo abrir la obra.');
+  onDownloading();
   const response = await apiFetch('/works/' + encodeURIComponent(id) + '/file');
   if (!response.ok) throw await failure(response, 'No se pudo abrir la obra.');
   const name = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') || '')?.[1] || 'obra.musicxml';

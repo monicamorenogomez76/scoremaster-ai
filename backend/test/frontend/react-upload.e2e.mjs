@@ -50,9 +50,13 @@ try {
   await page.locator('#upload-form button[type=submit]').click();
   await received;
   assert.equal(await page.locator('#upload-form').getAttribute('aria-busy'), 'true');
-  assert.match(await page.locator('#result').textContent(), /Analizando la partitura/);
+  assert.match(await page.locator('#app-activity').textContent(), /Analizando la partitura/);
   await page.locator('[data-view-target=summary]').click();
   assert.equal(await page.locator('[data-view=summary]').isVisible(), true);
+  // On a slow server the wait is visible from any view and counts the seconds (2026-10-07).
+  assert.equal(await page.locator('#app-activity').isVisible(), true);
+  await page.waitForFunction(() => /Analizando la partitura… \d+ s/.test(document.querySelector('#app-activity')?.textContent || ''),
+    null, { timeout: 10000 });
   await page.locator('[data-view-target=repertoire]').click();
   await page.locator('#new-score').click();
   release();
@@ -62,6 +66,7 @@ try {
   assert.equal(await page.locator('#overview-result').isVisible(), false);
   assert.equal(await page.locator('#embedded-score').isVisible(), false);
   assert.equal(await page.locator('#result').isVisible(), false);
+  assert.equal(await page.locator('#app-activity').count(), 0, 'nothing in progress once reset');
   assert.equal(await page.locator('#file').evaluate(input => input === document.activeElement), true);
   console.log('PASS: loading leaves navigation usable; reset aborts and discards a late result');
 

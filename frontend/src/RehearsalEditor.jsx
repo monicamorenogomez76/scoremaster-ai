@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ActivityStatus } from './ActivityStatus.jsx';
+import { proposalActivity } from './progress.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { listWorks } from './library.js';
 import { agendaTime, blockTypeOptions, createRehearsal, deleteRehearsal, duplicateBlock, moveBlock, proposalBlocks, proposeRehearsal, todayIso, updateRehearsal } from './rehearsals.js';
@@ -109,6 +111,7 @@ export function RehearsalEditor({ rehearsal, onSaved, onCancel }) {
           : <button id="propose-agenda" type="button" className="primary-action" disabled={proposing || draft.work_ids.length === 0}
               onClick={askPropose}>{proposing ? 'Calculando…' : 'Proponer agenda'}</button>}
       </div>
+      <ActivityStatus id="agenda-activity" label={proposing ? proposalActivity('agenda', draft.work_ids.length) : ''} />
       <p id="agenda-time" className={time.exceeded ? 'agenda-time is-over' : 'agenda-time'} aria-live="polite">
         Asignado: {time.assigned} de {Number(draft.duration_minutes) || 0} minutos · {time.exceeded ? 'sobran ' + time.exceeded + ' (exceso)' : 'quedan ' + time.remaining}
       </p>
