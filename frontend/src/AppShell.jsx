@@ -17,7 +17,7 @@ const views = [
   ['evaluation', 'Valoraciones', 'M9 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-3M9 5a3 3 0 0 1 6 0v1H9zM9 13l2 2 4-4'],
 ];
 
-export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, analysis, repertoireMode, onRepertoireModeChange, workTab, onWorkTabChange, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onUpdateBand, onConfirmInstruments, onBandActivated, onOpenWork, onOpenPassage, scoreViewer, rehearsalEditing, onEditRehearsal, onCloseRehearsal, onOpenBlock,
+export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, analysis, repertoireMode, onRepertoireModeChange, workTab, onWorkTabChange, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onUpdateBand, onConfirmInstruments, onBandActivated, onOpenWork, onOpenPassage, scoreViewer, rehearsalEditing, onEditRehearsal, onCloseRehearsal, onOpenBlock, onOpenEvaluationPassage,
   rehearsalReviewing, onReviewRehearsal, onCloseReview, onUserChanged }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = analysis?.data;
@@ -61,7 +61,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
         <BandView active={view} hidden={hidden} onBandActivated={onBandActivated} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onUpdateBand} onConfirm={onConfirmInstruments} busy={busy} />
         <SettingsView active={view} user={user} onUserChanged={onUserChanged} />
         <ConcertsView active={view} hidden={hidden} onOpenBlock={onOpenBlock} />
-        <EvaluationView active={view} hidden={hidden} onOpenBlock={onOpenBlock} />
+        <EvaluationView active={view} hidden={hidden} onOpenBlock={onOpenBlock} onOpenEvaluationPassage={onOpenEvaluationPassage} />
         <RehearsalView active={view} hidden={hidden} onOpenBlock={onOpenBlock} reviewing={rehearsalReviewing}
           onReview={onReviewRehearsal} onCloseReview={onCloseReview} editing={rehearsalEditing} onEdit={onEditRehearsal} onCloseEditor={onCloseRehearsal} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
       </main>

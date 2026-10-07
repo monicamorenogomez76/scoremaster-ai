@@ -4,23 +4,27 @@ import { filterMusicXmlPassage, parseMeasureRange } from './musicxml-passage.js'
 import { nextFrame, openSheetMusicDisplay, toggleFullscreen } from './notation.js';
 import { highlightMeasure } from './playback-guide.js';
 import { passageTimeline, preparePlayback } from './playback.js';
+import { createScoreSession } from './score-session.js';
 import { Icon, TransportBar } from './TransportBar.jsx';
 import { useTransport } from './useTransport.js';
 
 const ZOOM = { min: .75, max: 1.5, step: .1 };
+// Beyond the last measure of any band work: the range of a whole part.
+const WHOLE_WORK = 99999;
 
 // One instrument over a measure range: the whole passage is drawn and scrolls inside the dialog.
 export function PassageDialog({ ref, session }) {
   const dialog = useRef(null), frame = useRef(null), container = useRef(null), passage = useRef(null);
   const [info, setInfo] = useState({ title: 'Partitura del pasaje', status: 'Selecciona un pasaje para abrir la partitura.', range: '', zoom: '100%', position: '' });
   const show = changes => setInfo(previous => ({ ...previous, ...changes }));
+  const sessionOf = state => state?.session || session;
   const transport = useTransport({
-    prepare: onStatus => preparePlayback(session.getFile(), passage.current, onStatus),
+    prepare: onStatus => preparePlayback(sessionOf(passage.current).getFile(), passage.current, onStatus),
     onPosition: measure => {
       const state = passage.current;
       if (!state || measure === state.currentMeasure) return;
       state.currentMeasure = measure;
-      show({ position: 'Compás ' + measure + ' de ' + state.firstMeasure + '–' + state.lastMeasure });
+      show({ position: 'Compás ' + measure + (state.wholePart ? '' : ' de ' + state.firstMeasure + '–' + state.lastMeasure) });
       highlightMeasure(state.renderer, measure, container.current);
     },
     stoppedMessage: '',
@@ -37,7 +41,8 @@ export function PassageDialog({ ref, session }) {
   async function render() {
     const state = passage.current;
     const { firstMeasure: first, lastMeasure: last } = state;
-    show({ range: 'Pasaje completo · compases ' + first + '–' + last + ' · ' + (last - first + 1) + ' compases · desplázate para revisarlos',
+    show({ range: state.wholePart ? 'Parte completa · toda la obra · desplázate para revisarla'
+      : 'Pasaje completo · compases ' + first + '–' + last + ' · ' + (last - first + 1) + ' compases · desplázate para revisarlos',
       status: 'Cargando el pasaje completo…' });
     await nextFrame();
     const stale = () => state !== passage.current || !dialog.current.open;
@@ -66,21 +71,26 @@ export function PassageDialog({ ref, session }) {
 
   useImperativeHandle(ref, () => ({
     // One instrument (a critical passage) or several (a rehearsal block, labelled by its section).
-    async open(selection, measureRange, label) {
+    // A file of its own (a passage rated by an invited musician) leaves the open work untouched;
+    // wholePart shows those parts through the whole work.
+    async open(selection, measureRange, label, { file = null, wholePart = false } = {}) {
       stop();
-      const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
+      const [firstMeasure, lastMeasure] = wholePart ? [1, WHOLE_WORK] : parseMeasureRange(measureRange);
       const instruments = Array.isArray(selection) ? selection : null;
       const instrument = instruments ? null : selection;
-      const state = { instrument, instruments, label: label || displayInstrumentName(instrument), firstMeasure, lastMeasure, zoom: 1 };
+      const own = file ? createScoreSession() : null;
+      own?.setFile(file);
+      const state = { instrument, instruments, label: label || displayInstrumentName(instrument), firstMeasure, lastMeasure, zoom: 1,
+        session: own, wholePart };
       passage.current = state;
       // Never show the previous passage while the new one loads.
       container.current.replaceChildren();
-      show({ title: state.label + ' · compases ' + measureRange, status: 'Cargando el pasaje completo…', range: '' });
+      show({ title: state.label + (wholePart ? ' · toda la obra' : ' · compases ' + measureRange), status: 'Cargando el pasaje completo…', range: '' });
       if (!dialog.current.open) dialog.current.showModal();
       // Its audio starts being prepared now, so play does not wait for the server.
-      passageTimeline(session.getFile(), state).catch(() => {});
+      passageTimeline(sessionOf(state).getFile(), state).catch(() => {});
       try {
-        state.source = await session.loadSource();
+        state.source = await sessionOf(state).loadSource();
         if (state === passage.current) await render();
       } catch (error) {
         show({ status: error.message || 'No se pudo representar este pasaje.' });
@@ -94,6 +104,7 @@ export function PassageDialog({ ref, session }) {
       show({ title: label, status: 'Cargando la obra…', range: '' });
       if (!dialog.current.open) dialog.current.showModal();
     },
+    failed: message => show({ status: message }),
     getPassage: () => passage.current,
     highlight: measure => highlightMeasure(passage.current?.renderer, measure, container.current),
     stop,
