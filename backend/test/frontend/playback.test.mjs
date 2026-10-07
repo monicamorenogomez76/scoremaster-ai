@@ -15,16 +15,18 @@ function harness() {
     { instrument: 'Flute', program: 73, events: [{ note: 72, time: 0, duration: 4 }] },
     { instrument: 'Clarinet', program: 71, events: [{ note: 60, time: 0, duration: 2 }, { note: 62, time: 4, duration: 2 }] }
   ] };
-  const current = { data, failNext: false };
-  const apiCalls = [];
+  const current = { data, failNext: false, hold: null };
+  const apiCalls = [], timers = [];
   const scope = { exports: {}, withRecordings, window: { AudioContext: function () { return audio; } },
     FormData: class { append(key, value) { formFields.push([key, value]); } }, AbortController,
     fetch: async () => ({ ok: true, json: async () => current.data }),
     // playback.js calls the API through api.js; the test answers directly.
     apiFetch: async (url, options) => { apiCalls.push(url);
+      if (current.hold) { const hold = current.hold; current.hold = null; await hold; }
       if (current.failNext) { current.failNext = false; return { ok: false, json: async () => ({}) }; }
       return { ok: true, json: async () => current.data }; },
-    setTimeout: () => 1, clearTimeout() {},
+    setTimeout: (callback, ms) => { timers.push({ callback, ms, cleared: false }); return timers.length; },
+    clearTimeout(id) { if (timers[id - 1]) timers[id - 1].cleared = true; },
     setInterval: (callback) => { callbacks.add(callback); return callback; },
     clearInterval: (callback) => callbacks.delete(callback),
     fakeSampler: (_, options) => {
@@ -48,7 +50,8 @@ function harness() {
     .replace(/export /g, '')
     .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont, get Sampler() { return withRecordings.value ? fakeSampler : undefined; } })');
   vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage, passageTimeline });', scope);
-  return { api: scope.exports, apiCalls, failNext: () => { current.failNext = true; }, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings, formFields, gains, compressors,
+  return { api: scope.exports, apiCalls, timers, failNext: () => { current.failNext = true; },
+    holdNext: () => { let release; current.hold = new Promise(resolve => { release = resolve; }); return release; }, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings, formFields, gains, compressors,
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
 
@@ -217,4 +220,22 @@ test('loading the sounds tells how many instruments are ready', async () => {
   await api.preparePlayback({ name: 'a.musicxml', size: 1, lastModified: 1 }, null, message => messages.push(message));
   assert.ok(messages.includes('Cargando sonidos: 0 de 2 instrumentos… La primera carga puede tardar.'));
   assert.ok(messages.includes('Cargando sonidos: 2 de 2 instrumentos…'));
+});
+
+test('a slow server has three minutes and the musician is told it is preparing the work', async () => {
+  // Render's free plan took more than the 60 s the browser waited to read Persis (2026-10-07).
+  for (const passage of [{ instrument: 'Flute', firstMeasure: 1, lastMeasure: 8 }, null]) {
+    const { api, timers, holdNext } = harness();
+    const release = holdNext();
+    const messages = [];
+    const ready = api.preparePlayback({ name: 'persis.musicxml', size: 9, lastModified: 3 }, passage, message => messages.push(message));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.ok(timers.some(timer => timer.ms === 180000), 'the request is abandoned only after three minutes');
+    const notice = timers.find(timer => timer.ms === 10000);
+    notice.callback();
+    assert.ok(messages.includes('El servidor está preparando la obra. La primera vez puede tardar un par de minutos…'));
+    release();
+    await ready;
+    assert.ok(notice.cleared, 'no notice once the timeline has arrived');
+  }
 });

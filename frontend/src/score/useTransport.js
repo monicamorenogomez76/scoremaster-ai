@@ -44,7 +44,7 @@ export function useTransport({ prepare, onPosition, stoppedMessage }) {
       await ready.play();
     } catch (error) {
       if (!isCurrent()) return;
-      reset(error.name === 'AbortError' ? 'Carga cancelada o demasiado lenta. Puedes volver a intentarlo.' : error.message || 'No se pudo cargar el sonido. Comprueba la conexión a Internet.');
+      reset(error.name === 'AbortError' ? 'El servidor no terminó de preparar la obra a tiempo. Sigue preparándola: vuelve a intentarlo en un momento.' : error.message || 'No se pudo cargar el sonido. Comprueba la conexión a Internet.');
     } finally {
       if (isCurrent()) setState(previous => ({ ...previous, loading: false }));
     }

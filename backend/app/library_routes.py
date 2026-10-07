@@ -2,12 +2,13 @@
 user's work answers 404, the same as a work that does not exist."""
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from pydantic import BaseModel, field_validator
 
 from backend.application.accounts import User
 from backend.application.library import PREPARATION_STATUSES, LibraryRepository, Work
 from backend.app.dependencies import authenticated_user, get_library_repository
+from backend.parsers.playback import prepare_playback, preparation_enabled
 
 router = APIRouter()
 NOT_FOUND = "La obra no existe."
@@ -82,12 +83,15 @@ def get_work(work_id: str, user: User = Depends(authenticated_user),
 
 
 @router.get("/works/{work_id}/file")
-def work_file(work_id: str, user: User = Depends(authenticated_user),
+def work_file(work_id: str, background: BackgroundTasks, user: User = Depends(authenticated_user),
               library: LibraryRepository = Depends(get_library_repository)):
     found = library.work_file(user.id, _work_id(work_id))
     if found is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     content, file_name = found
+    # Opening a saved work also prepares its audio: a restarted server has forgotten it.
+    if preparation_enabled():
+        background.add_task(prepare_playback, content)
     safe_name = "".join(character for character in file_name if character.isalnum() or character in "._- ") or "obra.musicxml"
     return Response(content=content, media_type="application/octet-stream",
                     headers={"Content-Disposition": 'attachment; filename="{}"'.format(safe_name)})

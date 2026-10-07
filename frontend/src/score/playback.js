@@ -96,6 +96,11 @@ export function stopPlayback() {
 // reuses the same request; a failed one is asked again next time.
 const passageTimelines = new Map();
 const PASSAGES_KEPT = 8;
+// The first time, Render's free plan took more than a minute to read a long work (2026-10-07):
+// the browser waits longer and says why. The server keeps preparing it even if the wait runs out.
+const SERVER_WAIT_MS = 180000;
+const SLOW_NOTICE_MS = 10000;
+export const SLOW_SERVER_NOTICE = 'El servidor está preparando la obra. La primera vez puede tardar un par de minutos…';
 const passageKey = (file, passage) => [file?.name, file?.size, file?.lastModified,
   passage.instrument || (passage.instruments || []).join('|'), passage.firstMeasure, passage.lastMeasure].join('·');
 
@@ -110,7 +115,7 @@ export function passageTimeline(file, passage) {
     body.append('first_measure', passage.firstMeasure);
     body.append('last_measure', passage.lastMeasure);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const timeout = setTimeout(() => controller.abort(), SERVER_WAIT_MS);
     const request = apiFetch('/playback', { method: 'POST', body, signal: controller.signal })
       .then(async response => {
         if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
@@ -131,21 +136,24 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   await ctx.resume();
   onStatus(passage ? 'Preparando audio del pasaje…' : 'Preparando todas las voces…');
   let data;
-  if (passage) data = await passageTimeline(file, passage);
-  else data = wholeScoreCache.get(file);
-  if (!data) {
-    const body = new FormData();
-    body.append('file', file);
-    pendingRequest = new AbortController();
-    const request = pendingRequest;
-    const timeout = setTimeout(() => request.abort(), 60000);
-    try {
-      const response = await apiFetch('/playback', { method: 'POST', body, signal: request.signal });
-      if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
-      data = await response.json();
-      wholeScoreCache.set(file, data);
-    } finally { clearTimeout(timeout); }
-  }
+  const notice = setTimeout(() => { if (token === generation) onStatus(SLOW_SERVER_NOTICE); }, SLOW_NOTICE_MS);
+  try {
+    if (passage) data = await passageTimeline(file, passage);
+    else data = wholeScoreCache.get(file);
+    if (!data) {
+      const body = new FormData();
+      body.append('file', file);
+      pendingRequest = new AbortController();
+      const request = pendingRequest;
+      const timeout = setTimeout(() => request.abort(), SERVER_WAIT_MS);
+      try {
+        const response = await apiFetch('/playback', { method: 'POST', body, signal: request.signal });
+        if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
+        data = await response.json();
+        wholeScoreCache.set(file, data);
+      } finally { clearTimeout(timeout); }
+    }
+  } finally { clearTimeout(notice); }
   if (token !== generation) return null;
   const tracks = data.tracks || [data];
   if (!tracks.some((track) => track.events.length || track.percussion?.length)) {

@@ -8,6 +8,9 @@ from sqlalchemy import create_engine, text
 
 from backend.infrastructure.database import database_engine
 
+# Tests that need the background audio preparation turn it on themselves.
+os.environ.setdefault('PLAYBACK_WARMUP', '0')
+
 
 @pytest.fixture
 def postgres_engine():

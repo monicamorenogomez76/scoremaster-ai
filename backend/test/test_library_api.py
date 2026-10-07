@@ -185,3 +185,26 @@ def test_priorities_are_the_critical_passages_of_the_works_in_preparation(client
                      "family_label_es": passage["family_label_es"], "measure_range": passage["measure_range"],
                      "findings": passage["findings"], "origin": "analysis"}
     assert berta.get("/works/priorities").json() == {"priorities": []}
+
+
+def test_analysing_a_work_prepares_its_audio_in_the_background(clients, monkeypatch):
+    """On a slow server the first passage waited for the whole score to be read (2026-10-07, Render)."""
+    from backend.parsers import playback
+    ana, _ = clients
+    monkeypatch.setenv("PLAYBACK_WARMUP", "1")
+    playback.clear_timelines()
+    analyze(ana)
+    assert playback.prepared_count() == 1
+
+
+def test_opening_a_saved_work_prepares_its_audio_in_the_background(clients, monkeypatch):
+    """After a restart the server forgets prepared works: opening the work prepares it again."""
+    from backend.parsers import playback
+    ana, berta = clients
+    work_id = analyze(ana).json()["work_id"]
+    monkeypatch.setenv("PLAYBACK_WARMUP", "1")
+    playback.clear_timelines()
+    assert berta.get("/works/" + work_id + "/file").status_code == 404
+    assert playback.prepared_count() == 0, "nothing is prepared for someone else's work"
+    ana.get("/works/" + work_id + "/file")
+    assert playback.prepared_count() == 1
