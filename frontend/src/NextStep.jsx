@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { ActivityStatus } from './ActivityStatus.jsx';
+import { proposalActivity } from './progress.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { assistantStep, phaseLabel, planItemsToSave, proposeConcertPlan, saveConcertPlan } from './concerts.js';
 import { proposalBlocks, rehearsalDateText, todayIso } from './rehearsals.js';
@@ -16,6 +18,7 @@ function SeriesProposal({ concert, label, onSaved, onOpenBlock }) {
   const save = () => run(async () => { await saveConcertPlan(concert.id, todayIso(), planItemsToSave(preview.rehearsals)); setPreview(null); onSaved(); });
   return <>
     {!preview && <button type="button" className="primary-action" disabled={busy} onClick={propose}>{busy ? 'Calculando…' : label}</button>}
+    <ActivityStatus label={busy && !preview ? proposalActivity('concert', (concert.works || []).length) : ''} />
     {error && <p className="result-supporting" role="alert">{error}</p>}
     {preview && <div className="next-step-preview">
       <p className="table-supporting">Propuesta calculada con el análisis de cada obra y tus revisiones: revísala antes de guardar.</p>

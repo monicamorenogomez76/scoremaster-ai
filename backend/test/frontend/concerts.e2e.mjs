@@ -59,9 +59,19 @@ try {
 
   await card.getByRole('button', { name: 'Planificación' }).click();
   const planning = page.locator('#concert-planning');
+  // On a slow server the proposal says what it is doing while it waits (2026-10-07).
+  let releasePlan;
+  const planGate = new Promise(resolve => { releasePlan = resolve; });
+  await page.route('**/concerts/*/plan', async route => { await planGate; await route.continue(); });
   await planning.getByRole('button', { name: 'Proponer planificación' }).click();
+  await page.locator('#concert-plan-activity').waitFor();
+  assert.match(await page.locator('#concert-plan-activity').textContent(),
+    /Calculando la planificación del concierto con el análisis de 2 obras/);
+  releasePlan();
   const proposed = planning.locator('.planned-rehearsal');
   await proposed.first().waitFor();
+  await page.unroute('**/concerts/*/plan');
+  assert.equal(await page.locator('#concert-plan-activity').count(), 0, 'nothing in progress once proposed');
   assert.equal(await proposed.count(), preview, 'one rehearsal per date of the pattern');
   assert.match(await proposed.last().textContent(), /Ensayo general/);
   assert.deepEqual(await proposed.last().locator('.calendar-work').allTextContents(), ['Toda la banda', 'High Density Study', 'Untitled score'],

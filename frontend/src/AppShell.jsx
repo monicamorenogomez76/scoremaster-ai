@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ActivityStatus } from './ActivityStatus.jsx';
 import { BandView } from './BandView.jsx';
 import { ConcertsView } from './ConcertsView.jsx';
 import { RehearsalView } from './RehearsalView.jsx';
@@ -45,6 +46,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
         <button id="mobile-menu-button" className="mobile-menu-button" type="button" aria-label="Abrir menú"
           aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>Menú</button>
         <p id="current-page-title" className="topbar-title">{(view === 'settings' ? 'Configuración' : (views.find(([name]) => name === view) || views[0])[1])}</p>
+        <ActivityStatus id="app-activity" className="topbar-activity" label={busy ? upload.state.message : ''} />
         <span id="current-user" className="topbar-meta">{user?.display_name || user?.email || ''}</span>
       </header>
       <main className="workspace">
