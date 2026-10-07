@@ -21,3 +21,6 @@ class ExplanationProvider(Protocol):
 
     def explain_difficulty(self, evidence: dict) -> dict:
         """The raw answer to the difficulty explanation schema; validated by the caller."""
+
+    def explain_rehearsal(self, evidence: dict) -> dict:
+        """The raw answer to the rehearsal explanation schema; validated by the caller."""

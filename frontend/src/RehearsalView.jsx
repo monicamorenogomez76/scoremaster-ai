@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View } from './View.jsx';
+import { ActivityStatus } from './ActivityStatus.jsx';
+import { explainRehearsal, sourceText } from './explanations.js';
 import { blockScoreLabel, calendarLabel, omittedBlockText, rehearsalBlockDetail, rehearsalBlockTitle } from './labels.js';
 import { rehearsalSchedule } from './schedule.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
@@ -39,6 +41,43 @@ function RehearsalCalendar({ blocks, onOpenPassage }) {
   </div>;
 }
 
+// «¿Por qué este plan?» (step 20): written only from the rehearsal, its works' analysis, its concert and
+// the last review, by AI or by the demo, always saying which; each cited block opens its passage.
+function RehearsalWhy({ rehearsal, onOpenBlock }) {
+  const [state, setState] = useState({ open: false, loading: false, result: null, error: '' });
+  const toggle = async () => {
+    if (state.open) { setState(current => ({ ...current, open: false })); return; }
+    if (state.result) { setState(current => ({ ...current, open: true })); return; }
+    setState({ open: true, loading: true, result: null, error: '' });
+    try { setState({ open: true, loading: false, result: await explainRehearsal(rehearsal.id), error: '' }); }
+    catch (failure) { setState({ open: true, loading: false, result: null, error: failure.message }); }
+  };
+  const { result } = state;
+  const label = block => [block.title, block.work_title, block.measures && 'compases ' + block.measures].filter(Boolean).join(' · ');
+  return <div className="rehearsal-why">
+    <button type="button" className="link-action" aria-expanded={state.open} onClick={toggle}>
+      {state.open ? 'Ocultar la explicación' : '¿Por qué este plan?'}</button>
+    {state.open && <>
+      <ActivityStatus label={state.loading ? 'Preparando la explicación del ensayo' : ''} />
+      {state.error && <p className="result-supporting" role="alert">{state.error}</p>}
+      {result && <div className="explanation-body" aria-live="polite">
+        <p className={'explanation-source' + (result.mode === 'llm' ? ' is-ai' : ' is-demo')}>{sourceText(result)}</p>
+        <p className="explanation-summary">{result.explanation.summary}</p>
+        <ul className="explanation-factors">{result.explanation.reasons.map((reason, index) => <li key={index}>
+          <p>{reason.text}</p>
+          <div className="passage-actions">{reason.blocks.map(code => {
+            const block = result.blocks[code];
+            return block && <button key={code} type="button" className="passage-open" disabled={!block.work_id}
+              onClick={() => onOpenBlock({ work_id: block.work_id, parts: block.parts, measures: block.measures, label: block.title })}>
+              {label(block)}</button>;
+          })}</div>
+        </li>)}</ul>
+        <p className="explanation-tip"><strong>Para dirigirlo:</strong> {result.explanation.advice}</p>
+      </div>}
+    </>}
+  </div>;
+}
+
 function RehearsalList({ id, title, items, empty, onEdit, onReview, onOpenBlock }) {
   return <section id={id} className="rehearsal-list" aria-labelledby={id + '-title'}>
     <h3 id={id + '-title'}>{title}</h3>
@@ -50,6 +89,7 @@ function RehearsalList({ id, title, items, empty, onEdit, onReview, onOpenBlock 
               .filter(Boolean).join(' · ')}</p>
             <p className="works-summary">{item.blocks.length === 1 ? '1 bloque' : item.blocks.length + ' bloques'}</p>
             <AgendaCalendar blocks={item.blocks} start={item.time} onOpenBlock={onOpenBlock} />
+            {item.blocks.length > 0 && <RehearsalWhy rehearsal={item} onOpenBlock={onOpenBlock} />}
           </div>
           <div className="works-actions">
             {canReview(item) && <button type="button" className="primary-action" onClick={() => onReview(item)}>{item.reviewed_at ? 'Ver revisión' : 'Revisar'}</button>}

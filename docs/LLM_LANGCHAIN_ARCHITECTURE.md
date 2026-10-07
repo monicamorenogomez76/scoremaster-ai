@@ -17,7 +17,13 @@
   personales) y responde la demo, indicando por qué en la interfaz.
 - **Demo** `backend/infrastructure/ai/demo_provider.py`: reglas deterministas sobre las mismas
   evidencias; la interfaz la identifica siempre como «Modo demo · … sin IA».
-- Siguiente uso aprobado: explicar el ensayo («¿Por qué este plan?»).
+- **Segundo uso: «¿Por qué este plan?»** en cada ensayo guardado (`backend/application/rehearsal_explanation.py`,
+  `GET /rehearsals/{id}/explanation`). Evidencias `rehearsal-evidence-v1`: fecha, duración, fase y
+  concierto (días que faltan), bloques `B1…` con su tipo, obra, partes, compases, objetivo y los pasajes
+  críticos del análisis que tocan, grado de cada obra y lo que la última revisión dejó pendiente o
+  mejorable. Las notas de la directora viajan como datos, nunca como instrucciones. Salida: resumen,
+  1–6 motivos que citan bloques existentes y un consejo para dirigirlo. Prompt `rehearsal-explanation-v1`.
+- Lo común (pedir, validar, respaldo y trazabilidad) está en `backend/application/explanations.py`.
 
 ## 1. Objetivo
 
