@@ -15,12 +15,15 @@ function harness() {
     { instrument: 'Flute', program: 73, events: [{ note: 72, time: 0, duration: 4 }] },
     { instrument: 'Clarinet', program: 71, events: [{ note: 60, time: 0, duration: 2 }, { note: 62, time: 4, duration: 2 }] }
   ] };
-  const current = { data };
+  const current = { data, failNext: false };
+  const apiCalls = [];
   const scope = { exports: {}, withRecordings, window: { AudioContext: function () { return audio; } },
     FormData: class { append(key, value) { formFields.push([key, value]); } }, AbortController,
     fetch: async () => ({ ok: true, json: async () => current.data }),
     // playback.js calls the API through api.js; the test answers directly.
-    apiFetch: async () => ({ ok: true, json: async () => current.data }),
+    apiFetch: async (url, options) => { apiCalls.push(url);
+      if (current.failNext) { current.failNext = false; return { ok: false, json: async () => ({}) }; }
+      return { ok: true, json: async () => current.data }; },
     setTimeout: () => 1, clearTimeout() {},
     setInterval: (callback) => { callbacks.add(callback); return callback; },
     clearInterval: (callback) => callbacks.delete(callback),
@@ -44,8 +47,8 @@ function harness() {
     .replace(/^import .*\n/gm, '')
     .replace(/export /g, '')
     .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont, get Sampler() { return withRecordings.value ? fakeSampler : undefined; } })');
-  vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage });', scope);
-  return { api: scope.exports, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings, formFields, gains, compressors,
+  vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage, passageTimeline });', scope);
+  return { api: scope.exports, apiCalls, failNext: () => { current.failNext = true; }, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings, formFields, gains, compressors,
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
 
@@ -183,4 +186,35 @@ test('playback is loud enough: measured output was 10-20 times too quiet', async
   await t.play();
   assert.ok(h.starts.every(event => event.velocity === 100));
   t.stop();
+});
+
+test('a passage is requested once: prepared when it opens, reused when it plays', async () => {
+  const { api, apiCalls } = harness();
+  const file = { name: 'persis.musicxml', size: 10, lastModified: 1 };
+  const passage = { instruments: ['Flute', 'Clarinet'], firstMeasure: 70, lastMeasure: 71 };
+  const [first, again] = await Promise.all([api.passageTimeline(file, passage), api.passageTimeline(file, passage)]);
+  assert.equal(first, again);
+  assert.equal(apiCalls.length, 1);
+  await api.preparePlayback(file, passage);
+  assert.equal(apiCalls.length, 1, 'playing reuses the timeline prepared when the passage opened');
+  await api.passageTimeline(file, { ...passage, lastMeasure: 72 });
+  assert.equal(apiCalls.length, 2, 'another range is another request');
+});
+
+test('a failed preparation is asked again the next time', async () => {
+  const { api, apiCalls, failNext } = harness();
+  const file = { name: 'unity.mxl', size: 20, lastModified: 2 };
+  const passage = { instrument: 'Flute', firstMeasure: 1, lastMeasure: 8 };
+  failNext();
+  await assert.rejects(api.passageTimeline(file, passage));
+  await api.passageTimeline(file, passage);
+  assert.equal(apiCalls.length, 2);
+});
+
+test('loading the sounds tells how many instruments are ready', async () => {
+  const { api } = harness();
+  const messages = [];
+  await api.preparePlayback({ name: 'a.musicxml', size: 1, lastModified: 1 }, null, message => messages.push(message));
+  assert.ok(messages.includes('Cargando sonidos: 0 de 2 instrumentos… La primera carga puede tardar.'));
+  assert.ok(messages.includes('Cargando sonidos: 2 de 2 instrumentos…'));
 });

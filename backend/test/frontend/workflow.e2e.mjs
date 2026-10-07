@@ -111,7 +111,9 @@ try {
 
   const controls = await page.locator('.passage-transport').boundingBox(), notation = await page.locator('#notation-score').boundingBox();
   assert.ok(controls.y < notation.y, 'playback controls appear before the score');
-  assert.equal(autoplayRequests, 0, 'opening a passage never starts playback');
+  // Opening prepares the passage's audio in advance (2026-10-07) but never plays it.
+  assert.ok(autoplayRequests <= 1, 'at most the passage timeline is prepared');
+  assert.equal(await page.locator('#passage-play').getAttribute('aria-label'), 'Reproducir', 'opening a passage never starts playback');
   await page.locator('#notation-close').click();
   assert.equal(await page.locator('#notation-dialog').isVisible(), false);
   console.log('PASS: one passage action opens notation with playback controls and no autoplay');

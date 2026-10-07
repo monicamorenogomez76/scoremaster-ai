@@ -187,6 +187,8 @@ try {
   await page.locator('#sign-out').click();
   await page.locator('#login-screen').waitFor({ state: 'visible' });
   await page.reload();
+  // The app checks the session first; wait until it shows either the access screen or the workspace.
+  await page.waitForFunction(() => [...document.querySelectorAll('#login-screen, #app-shell')].some(node => !node.hidden));
   assert.equal(await page.locator('#login-screen').isVisible(), true, 'signing out closes the session');
   assert.equal((await page.request.post(url + '/analyze')).status(), 401, 'the API refuses requests without a session');
   assert.deepEqual(errors, []);

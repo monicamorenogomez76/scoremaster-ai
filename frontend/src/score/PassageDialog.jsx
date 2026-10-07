@@ -3,7 +3,7 @@ import { displayInstrumentName } from '../labels.js';
 import { filterMusicXmlPassage, parseMeasureRange } from './musicxml-passage.js';
 import { nextFrame, openSheetMusicDisplay, toggleFullscreen } from './notation.js';
 import { highlightMeasure } from './playback-guide.js';
-import { preparePlayback } from './playback.js';
+import { passageTimeline, preparePlayback } from './playback.js';
 import { Icon, TransportBar } from './TransportBar.jsx';
 import { useTransport } from './useTransport.js';
 
@@ -77,12 +77,22 @@ export function PassageDialog({ ref, session }) {
       container.current.replaceChildren();
       show({ title: state.label + ' · compases ' + measureRange, status: 'Cargando el pasaje completo…', range: '' });
       if (!dialog.current.open) dialog.current.showModal();
+      // Its audio starts being prepared now, so play does not wait for the server.
+      passageTimeline(session.getFile(), state).catch(() => {});
       try {
         state.source = await session.loadSource();
         if (state === passage.current) await render();
       } catch (error) {
         show({ status: error.message || 'No se pudo representar este pasaje.' });
       }
+    },
+    // A passage of another work: the dialog answers at once while the work loads.
+    loading(label) {
+      stop();
+      passage.current = null;
+      container.current.replaceChildren();
+      show({ title: label, status: 'Cargando la obra…', range: '' });
+      if (!dialog.current.open) dialog.current.showModal();
     },
     getPassage: () => passage.current,
     highlight: measure => highlightMeasure(passage.current?.renderer, measure, container.current),

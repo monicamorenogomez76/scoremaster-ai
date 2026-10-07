@@ -132,9 +132,17 @@ try {
   // With everything reviewed and replanned there is nothing to suggest (after the summary reloads).
   await nextStep.waitFor({ state: 'detached' });
   // Everything is navigable: a block and a priority open the score at their passage with their instruments.
+  // Opening a passage of another work: the dialog answers at once while the work loads, and the
+  // passage's audio starts being prepared before play is pressed (author's report, 2026-10-07).
+  await page.route('**/works/*/file', async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue(); });
+  const prepared = page.waitForRequest(request => request.url().endsWith('/playback'), { timeout: 45000 });
   const sectional = page.locator('#summary-rehearsal .calendar-slot--clarinets').first().getByRole('button');
   await sectional.click();
+  await page.locator('#notation-status').getByText('Cargando la obra…').waitFor({ timeout: 1000 });
+  assert.equal(await page.locator('#notation-dialog').evaluate(dialog => dialog.open), true, 'the dialog opens while the work loads');
+  await page.unroute('**/works/*/file');
   await page.waitForFunction(() => document.querySelector('#notation-score svg'), null, { timeout: 45000 });
+  await prepared;
   assert.deepEqual(await page.evaluate(() => window.scoremasterWorkspace.getPassage().instruments), ['Clarinet']);
   await page.locator('#notation-close').click();
   await priorities.getByRole('button', { name: 'c. 1' }).first().click();
