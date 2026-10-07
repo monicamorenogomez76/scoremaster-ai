@@ -15,7 +15,7 @@ function harness() {
     { instrument: 'Flute', program: 73, events: [{ note: 72, time: 0, duration: 4 }] },
     { instrument: 'Clarinet', program: 71, events: [{ note: 60, time: 0, duration: 2 }, { note: 62, time: 4, duration: 2 }] }
   ] };
-  const current = { data, failNext: false, hold: null };
+  const current = { data, failNext: false, hold: null, queue: [] };
   const apiCalls = [], timers = [];
   const scope = { exports: {}, withRecordings, window: { AudioContext: function () { return audio; } },
     FormData: class { append(key, value) { formFields.push([key, value]); } }, AbortController,
@@ -23,6 +23,8 @@ function harness() {
     // playback.js calls the API through api.js; the test answers directly.
     apiFetch: async (url, options) => { apiCalls.push(url);
       if (current.hold) { const hold = current.hold; current.hold = null; await hold; }
+      if (current.queue.length) { const [status, body] = current.queue.shift();
+        return { ok: status < 400, status, json: async () => body }; }
       if (current.failNext) { current.failNext = false; return { ok: false, json: async () => ({}) }; }
       return { ok: true, json: async () => current.data }; },
     setTimeout: (callback, ms) => { timers.push({ callback, ms, cleared: false }); return timers.length; },
@@ -51,6 +53,7 @@ function harness() {
     .replace(/import\([^)]*SMPLR_URL\)/, 'Promise.resolve({ Soundfont: fakeSoundfont, get Sampler() { return withRecordings.value ? fakeSampler : undefined; } })');
   vm.runInNewContext(source + '\nObject.assign(exports, { stopPlayback, preparePlayback, playPassage, passageTimeline });', scope);
   return { api: scope.exports, apiCalls, timers, failNext: () => { current.failNext = true; },
+    queue: (...responses) => current.queue.push(...responses),
     holdNext: () => { let release; current.hold = new Promise(resolve => { release = resolve; }); return release; }, starts, audio, callbacks, instruments, optionsUsed, setData: value => { current.data = value; }, samplersUsed, failRecorded, withRecordings, formFields, gains, compressors,
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
@@ -222,7 +225,7 @@ test('loading the sounds tells how many instruments are ready', async () => {
   assert.ok(messages.includes('Cargando sonidos: 2 de 2 instrumentos…'));
 });
 
-test('a slow server has three minutes and the musician is told it is preparing the work', async () => {
+test('a slow server has fifteen minutes and the musician is told it is preparing the work', async () => {
   // Render's free plan took more than the 60 s the browser waited to read Persis (2026-10-07).
   for (const passage of [{ instrument: 'Flute', firstMeasure: 1, lastMeasure: 8 }, null]) {
     const { api, timers, holdNext } = harness();
@@ -230,7 +233,7 @@ test('a slow server has three minutes and the musician is told it is preparing t
     const messages = [];
     const ready = api.preparePlayback({ name: 'persis.musicxml', size: 9, lastModified: 3 }, passage, message => messages.push(message));
     await new Promise(resolve => setImmediate(resolve));
-    assert.ok(timers.some(timer => timer.ms === 180000), 'the request is abandoned only after three minutes');
+    assert.ok(timers.some(timer => timer.ms === 900000), 'the browser gives up only after fifteen minutes');
     const notice = timers.find(timer => timer.ms === 10000);
     notice.callback();
     assert.ok(messages.includes('El servidor está preparando la obra. La primera vez puede tardar un par de minutos…'));
@@ -238,4 +241,58 @@ test('a slow server has three minutes and the musician is told it is preparing t
     await ready;
     assert.ok(notice.cleared, 'no notice once the timeline has arrived');
   }
+});
+
+async function until(condition) {
+  for (let i = 0; i < 200 && !condition(); i++) await new Promise(resolve => setImmediate(resolve));
+  assert.ok(condition(), 'condition reached');
+}
+async function firePolls(timers, count) {
+  for (let i = 0; i < count; i++) {
+    await until(() => timers.some(timer => timer.ms === 3000 && !timer.fired && !timer.cleared));
+    const poll = timers.find(timer => timer.ms === 3000 && !timer.fired && !timer.cleared);
+    poll.fired = true; poll.callback();
+  }
+}
+const longWork = { name: 'persis.musicxml', size: 9, lastModified: 4 };
+const piccolo = { instrument: 'Piccolo', firstMeasure: 9, lastMeasure: 16 };
+
+test('a long work is followed while the server prepares it, then the passage is asked again', async () => {
+  // Render's free plan took ~3 min to read Persis: no request stays open that long (2026-10-07).
+  const { api, apiCalls, timers, queue } = harness();
+  queue([202, { preparing: 'k1' }], [200, { status: 'preparing' }], [200, { status: 'ready' }]);
+  const messages = [];
+  const ready = api.preparePlayback(longWork, piccolo, message => messages.push(message));
+  await firePolls(timers, 2);
+  assert.ok(await ready);
+  assert.deepEqual(apiCalls, ['/playback', '/playback/preparations/k1', '/playback/preparations/k1', '/playback']);
+  assert.ok(messages.some(message => /^El servidor está preparando la obra .*… \d+ s$/.test(message)), messages.join(' | '));
+});
+
+test('a preparation that fails is reported, and asked again the next time', async () => {
+  const { api, apiCalls, timers, queue } = harness();
+  queue([202, { preparing: 'k2' }], [200, { status: 'failed' }]);
+  const failed = api.passageTimeline(longWork, piccolo);
+  await firePolls(timers, 1);
+  await assert.rejects(failed, /No se pudo preparar la reproducción/);
+  await api.passageTimeline(longWork, piccolo);
+  assert.equal(apiCalls.filter(url => url === '/playback').length, 2);
+});
+
+test('a server that restarted and forgot the work receives it again', async () => {
+  const { api, apiCalls, timers, queue } = harness();
+  queue([202, { preparing: 'k3' }], [200, { status: 'unknown' }]);
+  const ready = api.passageTimeline(longWork, piccolo);
+  await firePolls(timers, 1);
+  await ready;
+  assert.deepEqual(apiCalls, ['/playback', '/playback/preparations/k3', '/playback']);
+});
+
+test('the whole score is followed in the same way', async () => {
+  const { api, apiCalls, timers, queue } = harness();
+  queue([202, { preparing: 'k4' }], [200, { status: 'ready' }]);
+  const ready = api.preparePlayback(longWork, null);
+  await firePolls(timers, 1);
+  assert.ok(await ready);
+  assert.deepEqual(apiCalls, ['/playback', '/playback/preparations/k4', '/playback']);
 });

@@ -61,3 +61,17 @@ def signed_in_test_user(request):
     finally:
         app.dependency_overrides.pop(authenticated_user, None)
         app.dependency_overrides.pop(get_library_repository, None)
+
+
+@pytest.fixture(autouse=True)
+def no_prepared_store():
+    """Prepared works stay in memory, never in the database of DATABASE_URL, unless a test gives a store."""
+    from backend.app.dependencies import get_playback_store, get_score_store
+    from backend.app.main import app
+    app.dependency_overrides[get_playback_store] = lambda: None
+    app.dependency_overrides[get_score_store] = lambda: None
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_playback_store, None)
+        app.dependency_overrides.pop(get_score_store, None)

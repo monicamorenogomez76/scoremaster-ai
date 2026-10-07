@@ -6,8 +6,11 @@ pitch (written pitch plus the declared MusicXML transposition), or only the same
 """
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Iterable
+from functools import lru_cache
+from threading import Lock
+from typing import Iterable, NamedTuple
 
 from music21 import pitch as m21_pitch
 
@@ -73,24 +76,59 @@ LINE_INTERVAL_SHARE = 0.85   # within a measure, share of equal melodic interval
 SHARED_MEASURE_SHARE = 0.75  # share of the measures where either part plays that must coincide
 
 
-def _measures(part: ScorePart, first: int, last: int) -> dict[int, list[tuple[float, int | None, bool]]]:
-    """(duration, sounding MIDI or None, is_rest) per measure, using the declared transposition."""
+class _Bar(NamedTuple):
+    events: tuple            # (duration, sounding MIDI or None, is_rest) of each note
+    rhythm: tuple            # (duration, is_rest) of each note
+    plays: bool
+
+
+_SILENT = _Bar((), (), False)
+
+
+@lru_cache(maxsize=4096)
+def _midi(name: str) -> int:
+    return m21_pitch.Pitch(name).midi
+
+
+# The events of each part are worked out once: the planners compare the same parts for every
+# rehearsal window and every rehearsal of a concert (2026-10-07: a concert plan with Persis took
+# minutes on Render's free plan). Keyed by the part object, which is immutable.
+_PARTS_KEPT = 256
+_part_bars: OrderedDict = OrderedDict()
+_part_lock = Lock()
+
+
+def _all_measures(part: ScorePart) -> dict[int, _Bar]:
+    with _part_lock:
+        entry = _part_bars.get(id(part))
+        if entry is not None and entry[0] is part:
+            _part_bars.move_to_end(id(part))
+            return entry[1]
     transposition = part.metadata.transposition
     shift = transposition.chromatic + 12 * transposition.octave_change if transposition else 0
-    return {measure.number: [(round(note.duration_quarters, 4),
-                              None if note.is_rest or note.pitch is None else m21_pitch.Pitch(note.pitch).midi + shift,
-                              note.is_rest) for note in measure.notes]
-            for measure in part.measures if first <= measure.number <= last}
+    bars = {}
+    for measure in part.measures:
+        events = tuple((round(note.duration_quarters, 4),
+                        None if note.is_rest or note.pitch is None else _midi(note.pitch) + shift,
+                        note.is_rest) for note in measure.notes)
+        bars[measure.number] = _Bar(events, tuple((duration, rest) for duration, _, rest in events),
+                                    any(not rest for _, _, rest in events))
+    with _part_lock:
+        _part_bars[id(part)] = (part, bars)
+        while len(_part_bars) > _PARTS_KEPT:
+            _part_bars.popitem(last=False)
+    return bars
 
 
-def _plays(events) -> bool:
-    return any(not rest for _, _, rest in events)
+def _measures(part: ScorePart, first: int, last: int) -> dict[int, _Bar]:
+    """Each measure's notes in sounding pitch, using the declared transposition."""
+    return {number: bar for number, bar in _all_measures(part).items() if first <= number <= last}
 
 
-def _measure_kind(left, right) -> str | None:
-    if not _plays(left) or [(d, rest) for d, _, rest in left] != [(d, rest) for d, _, rest in right]:
+def _measure_kind(left: _Bar, right: _Bar) -> str | None:
+    if not left.plays or left.rhythm != right.rhythm:
         return None
-    pitches = [(a, b) for (_, a, rest), (_, b, _) in zip(left, right) if not rest]
+    pitches = [(a, b) for (_, a, rest), (_, b, _) in zip(left.events, right.events) if not rest]
     if len(pitches) >= 2 and all(a is not None and b is not None for a, b in pitches):
         intervals = [(a2 - a1, b2 - b1) for (a1, b1), (a2, b2) in zip(pitches, pitches[1:])]
         if sum(1 for x, y in intervals if x == y) / len(intervals) >= LINE_INTERVAL_SHARE:
@@ -100,10 +138,18 @@ def _measure_kind(left, right) -> str | None:
 
 def _pair_kind(left: dict, right: dict) -> str | None:
     active = [number for number in sorted(set(left) | set(right))
-              if _plays(left.get(number, [])) or _plays(right.get(number, []))]
+              if left.get(number, _SILENT).plays or right.get(number, _SILENT).plays]
     if not active:
         return None
-    kinds = [_measure_kind(left.get(number, []), right.get(number, [])) for number in active]
+    kinds, missing = [], 0
+    for number in active:
+        kind = _measure_kind(left.get(number, _SILENT), right.get(number, _SILENT))
+        kinds.append(kind)
+        if kind is None:
+            missing += 1
+            # Not enough shared measures any more: the rest cannot change the answer.
+            if (len(active) - missing) / len(active) < SHARED_MEASURE_SHARE:
+                return None
     if sum(1 for kind in kinds if kind) / len(active) < SHARED_MEASURE_SHARE:
         return None
     return "line" if kinds.count("line") / len(active) >= SHARED_MEASURE_SHARE else "rhythm"
@@ -116,7 +162,7 @@ def find_common_lines(score: Score, critical_parts: Iterable[str], first: int, l
     of them was flagged as difficult. A group is a "line" only when all its pairs share the line.
     """
     measures = {part.name: _measures(part, first, last) for part in score.parts}
-    names = [name for name, bars in measures.items() if any(_plays(events) for events in bars.values())]
+    names = [name for name, bars in measures.items() if any(bar.plays for bar in bars.values())]
     parent = {name: name for name in names}
 
     def root(name):
