@@ -208,3 +208,47 @@ def test_opening_a_saved_work_prepares_its_audio_in_the_background(clients, monk
     assert playback.prepared_count() == 0, "nothing is prepared for someone else's work"
     ana.get("/works/" + work_id + "/file")
     assert playback.prepared_count() == 1
+
+
+def test_the_preparation_of_a_work_for_playback_needs_a_session(clients):
+    ana, _ = clients
+    assert TestClient(app).get("/playback/preparations/" + "0" * 64).status_code == 401
+    assert ana.get("/playback/preparations/" + "0" * 64).json() == {"status": "unknown"}
+
+
+def test_prepared_works_are_kept_in_postgresql(postgres_engine):
+    """Read back after a restart; another version of the algorithm prepares the work again."""
+    from backend.infrastructure.prepared_store import PostgresPreparedStore
+    store = PostgresPreparedStore(postgres_engine, "playback")
+    assert store.load("a" * 64, "v1") is None
+    store.save("a" * 64, "v1", b"first")
+    assert store.load("a" * 64, "v1") == b"first"
+    assert store.load("a" * 64, "v2") is None
+    store.save("a" * 64, "v2", b"second")
+    assert store.load("a" * 64, "v2") == b"second"
+
+
+def test_proposals_use_the_kept_model_of_each_work_without_reading_it_again(clients, postgres_engine, monkeypatch):
+    """Proposing a concert plan with Persis read every work again: minutes on Render (2026-10-07)."""
+    from backend.app import stored_scores
+    from backend.app.dependencies import get_score_store
+    from backend.infrastructure.prepared_store import PostgresPreparedStore
+    app.dependency_overrides[get_score_store] = lambda: PostgresPreparedStore(postgres_engine, "score")
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    stored_scores.clear_parsed_works()                   # the server restarted
+    monkeypatch.setattr(stored_scores, "parse_musicxml", lambda *args: pytest.fail("the work was read again"))
+    response = ana.post("/rehearsals/proposal", json={"work_ids": [work_id], "duration_minutes": 60})
+    assert response.status_code == 200 and response.json()["blocks"]
+
+
+def test_works_uploaded_before_are_listed_until_they_are_prepared(clients, postgres_engine):
+    from backend.infrastructure.prepared_store import PostgresPreparedStore
+    from backend.parsers.score_codec import SCORE_VERSION
+    ana, _ = clients
+    analyze(ana)
+    store = PostgresPreparedStore(postgres_engine, "score")
+    assert list(store.missing_sources(SCORE_VERSION)) == [(SCORES / "high_register.musicxml").read_bytes()]
+    store.save(__import__("hashlib").sha256((SCORES / "high_register.musicxml").read_bytes()).hexdigest(), SCORE_VERSION, b"x")
+    assert list(store.missing_sources(SCORE_VERSION)) == []
+    assert list(store.missing_sources("score-v0")) != [], "another version is prepared again"

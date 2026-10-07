@@ -3,14 +3,15 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlparse
-from tempfile import NamedTemporaryFile
+from threading import Thread
 from zipfile import ZipFile, is_zipfile
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Path as FastAPIPath, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
@@ -24,11 +25,11 @@ from backend.app.library_routes import router as library_router, valid_band_prof
 from backend.app.band_routes import router as band_router
 from backend.app.concert_routes import router as concert_router
 from backend.app.rehearsal_routes import router as rehearsal_router
-from backend.app.stored_scores import confirm_instruments
+from backend.app.stored_scores import confirm_instruments, parsed_work, prepare_missing_works
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
     SAFE_METHODS, STORAGE_UNAVAILABLE, authenticated_user, close_analysis_engine, get_analysis_repository,
-    get_library_repository,
+    get_library_repository, get_playback_store, get_score_store,
 )
 from backend.application.accounts import User
 from backend.application.analysis_repository import AnalysisRepository
@@ -37,19 +38,31 @@ from backend.application.save_analysis import save_analysis
 from backend.domain.instrument_catalog import catalog_entries, identity_by_id
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score
-from backend.parsers.musicxml_parser import parse_musicxml
 from backend.parsers.musicxml_source import extract_musicxml
-from backend.parsers.playback import NotMusicXML, build_playback, prepare_playback, preparation_enabled
+from backend.parsers.playback import (NotMusicXML, StillPreparing, build_playback, prepare_playback, preparation_enabled,
+                                      preparation_status)
 
 BASE_DIR = Path(__file__).resolve().parent
 
 
 @asynccontextmanager
 async def lifespan(app):
+    # Works uploaded before are read once in the background, so the first proposal or passage after
+    # a deploy does not wait minutes for music21 (Render's free plan, 2026-10-07).
+    score_store, playback_store = get_score_store(), get_playback_store()
+    if preparation_enabled() and score_store is not None and playback_store is not None:
+        Thread(target=_prepare_missing, args=(score_store, playback_store), daemon=True, name='prepare-works').start()
     try:
         yield
     finally:
         close_analysis_engine()
+
+
+def _prepare_missing(score_store, playback_store):
+    try:
+        prepare_missing_works(score_store, playback_store)
+    except Exception:
+        logging.getLogger(__name__).warning("No se pudieron preparar las obras guardadas.", exc_info=True)
 
 
 PRODUCTION = os.environ.get("APP_ENV") == "production"
@@ -164,16 +177,26 @@ def playback(
     instruments: list[str] = Form([]),
     first_measure: int = Form(0, ge=0),
     last_measure: int = Form(999999, ge=0),
+    store=Depends(get_playback_store),
 ):
     if last_measure < first_measure:
         raise HTTPException(status_code=400, detail="El rango de compases no es válido.")
     selection = [name[:200] for name in instruments[:64]] if instruments else instrument
     try:
-        return build_playback(_read_upload(file), selection, first_measure, last_measure)
+        return build_playback(_read_upload(file), selection, first_measure, last_measure, store, answer_quickly=True)
+    except StillPreparing as preparing:
+        # A long work: the browser follows /playback/preparations/{key} and asks again when it is ready.
+        return JSONResponse(status_code=202, content={"preparing": preparing.key})
     except NotMusicXML as exc:
         raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail="No se pudo preparar el audio del pasaje.") from exc
+
+
+@app.get("/playback/preparations/{key}", dependencies=[Depends(authenticated_user)])
+def playback_preparation(key: str = FastAPIPath(..., pattern="^[0-9a-f]{64}$")):
+    """ready, preparing, failed or unknown (a restarted server: the browser sends the work again)."""
+    return {"status": preparation_status(key)}
 
 
 MAX_INSTRUMENT_OVERRIDES = 256
@@ -208,6 +231,8 @@ def analyze_score(
     instrument_overrides: str = Form("{}", max_length=64 * 1024),
     repository: AnalysisRepository = Depends(get_analysis_repository),
     library: LibraryRepository = Depends(get_library_repository),
+    playback_store=Depends(get_playback_store),
+    score_store=Depends(get_score_store),
     user: User = Depends(authenticated_user),
 ):
     """Analyse a score and keep it in the user's library; the saved band completes the template."""
@@ -235,46 +260,40 @@ def analyze_score(
     if not musicxml_suffix:
         raise HTTPException(status_code=400, detail="Uploaded file is not valid MusicXML.")
 
-    with NamedTemporaryFile(suffix=musicxml_suffix, delete=False) as temp_file:
-        temp_path = Path(temp_file.name)
-        temp_path.write_bytes(content)
-
+    # Parsed once per file: updating the band or the rehearsal minutes reuses the kept model.
+    score = confirm_instruments(parsed_work(content, score_store), overrides)
+    # Template: what the work needs for instruments never configured, then the saved band,
+    # then the musicians sent with this request.
+    needed = {item["key"]: item["required"] for item in compute_band_fit(score, {})["requirements"]}
     try:
-        score = confirm_instruments(parse_musicxml(temp_path), overrides)
-        # Template: what the work needs for instruments never configured, then the saved band,
-        # then the musicians sent with this request.
-        needed = {item["key"]: item["required"] for item in compute_band_fit(score, {})["requirements"]}
-        try:
-            profile = {**needed, **library.band_profile(user.id), **profile}
-        except SQLAlchemyError as exc:
-            raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
-        difficulty = compute_difficulty_score(score)
-        band_fit = compute_band_fit(score, profile)
-        rehearsal_plan = build_rehearsal_plan(score, total_minutes, difficulty)
+        profile = {**needed, **library.band_profile(user.id), **profile}
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+    difficulty = compute_difficulty_score(score)
+    band_fit = compute_band_fit(score, profile)
+    rehearsal_plan = build_rehearsal_plan(score, total_minutes, difficulty)
 
-        result = {
-            "title": score.title,
-            "composer": score.composer,
-            "parts": [part.name for part in score.parts],
-            "instruments": [resolve_part(part).as_dict() for part in score.parts],
-            "difficulty": difficulty,
-            "tempo": compute_tempo_metrics(score),
-            "duration": estimate_duration(score),
-            "band_fit": band_fit,
-            "rehearsal_plan": rehearsal_plan,
-        }
-        title = (score.title or "").strip() or Path(file.filename).stem
-        try:
-            work = library.store_work(user.id, WorkUpload(title, score.composer, Path(file.filename).name, content,
-                                                          hashlib.sha256(content).hexdigest()))
-            saved = save_analysis(result, content, profile, total_minutes, repository,
-                                  {part.name: overrides[part.name] for part in score.parts if part.name in overrides},
-                                  user_id=user.id, work_id=work.id)
-            # Its passages will sound sooner: the work is read for playback after answering.
-            if preparation_enabled():
-                background.add_task(prepare_playback, content)
-            return {**saved, "work_id": str(work.id)}
-        except SQLAlchemyError as exc:
-            raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
-    finally:
-        temp_path.unlink(missing_ok=True)
+    result = {
+        "title": score.title,
+        "composer": score.composer,
+        "parts": [part.name for part in score.parts],
+        "instruments": [resolve_part(part).as_dict() for part in score.parts],
+        "difficulty": difficulty,
+        "tempo": compute_tempo_metrics(score),
+        "duration": estimate_duration(score),
+        "band_fit": band_fit,
+        "rehearsal_plan": rehearsal_plan,
+    }
+    title = (score.title or "").strip() or Path(file.filename).stem
+    try:
+        work = library.store_work(user.id, WorkUpload(title, score.composer, Path(file.filename).name, content,
+                                                      hashlib.sha256(content).hexdigest()))
+        saved = save_analysis(result, content, profile, total_minutes, repository,
+                              {part.name: overrides[part.name] for part in score.parts if part.name in overrides},
+                              user_id=user.id, work_id=work.id)
+        # Its passages will sound sooner: the work is read for playback after answering.
+        if preparation_enabled():
+            background.add_task(prepare_playback, content, playback_store)
+        return {**saved, "work_id": str(work.id)}
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc

@@ -15,7 +15,7 @@ from backend.application.bands import UnknownBand
 from backend.application.concerts import Concert, ConcertDraft, ConcertRepository, RehearsalPattern
 from backend.application.library import LibraryRepository
 from backend.application.rehearsals import NotReplannable, RehearsalRepository, UnknownWork, replannable
-from backend.app.dependencies import (authenticated_user, get_concert_repository, get_library_repository,
+from backend.app.dependencies import (authenticated_user, get_concert_repository, get_library_repository, get_score_store,
                                       get_rehearsal_repository)
 from backend.app.rehearsal_routes import RehearsalIn, _public as rehearsal_public
 from backend.app.stored_scores import stored_score
@@ -149,7 +149,8 @@ def _owned_concert(concerts: ConcertRepository, user: User, concert_id: str) -> 
 def propose_concert_plan(concert_id: str, body: PlanIn, user: User = Depends(authenticated_user),
                          concerts: ConcertRepository = Depends(get_concert_repository),
                          rehearsals: RehearsalRepository = Depends(get_rehearsal_repository),
-                         library: LibraryRepository = Depends(get_library_repository)):
+                         library: LibraryRepository = Depends(get_library_repository),
+                         score_store=Depends(get_score_store)):
     """The series up to the concert, or the rest of it after a review. Nothing is saved."""
     concert = _owned_concert(concerts, user, concert_id)
     series = rehearsals.list_rehearsals(user.id, concert.id)
@@ -165,7 +166,7 @@ def propose_concert_plan(concert_id: str, body: PlanIn, user: User = Depends(aut
         slots = [(None, Slot(day, pattern.time, pattern.duration_minutes, phase)) for day, phase in zip(dates, phases(len(dates)))]
     programme = []
     for work_id, _ in concert.works:
-        found = stored_score(library, user.id, work_id)
+        found = stored_score(library, user.id, work_id, score_store)
         if found is not None:
             title, score = found
             programme.append(WorkToRehearse(str(work_id), title, score, compute_difficulty_score(score)))

@@ -93,22 +93,15 @@ def test_only_a_few_works_are_kept_in_memory():
     for name in ("minimal.musicxml", "high_density.musicxml", "high_register.musicxml", "large_intervals.musicxml",
                  "measure_with_rest.musicxml"):
         build_playback(SCORES / name, "", 0, 999999)
-    assert playback.prepared_count() == playback.TIMELINES_KEPT == 4
+    assert playback.prepared_count() == 4
 
 
 def test_how_many_works_are_kept_can_be_changed_for_small_servers(monkeypatch):
-    import importlib
     monkeypatch.setenv("PLAYBACK_SCORES_KEPT", "1")
-    reloaded = importlib.reload(playback)
-    try:
-        assert reloaded.TIMELINES_KEPT == 1
-        reloaded.clear_timelines()
-        for name in ("minimal.musicxml", "high_density.musicxml"):
-            reloaded.build_playback(SCORES / name, "", 0, 999999)
-        assert reloaded.prepared_count() == 1
-    finally:
-        monkeypatch.delenv("PLAYBACK_SCORES_KEPT")
-        importlib.reload(playback)
+    playback.clear_timelines()
+    for name in ("minimal.musicxml", "high_density.musicxml"):
+        build_playback(SCORES / name, "", 0, 999999)
+    assert playback.prepared_count() == 1
 
 
 def test_a_prepared_work_does_not_wait_while_another_one_is_being_read():
@@ -117,7 +110,8 @@ def test_a_prepared_work_does_not_wait_while_another_one_is_being_read():
     playback.clear_timelines()
     content = (SCORES / "high_density.musicxml").read_bytes()
     prepare_playback(content)
-    done = threading.Event()
-    with playback._build_lock:          # another work is being read
-        threading.Thread(target=lambda: build_playback(content, "Clarinet", 1, 1) and done.set()).start()
-        assert done.wait(5), "the prepared work was cut without waiting for the other one"
+    done, busy = threading.Event(), threading.Event()
+    playback._reader.submit(busy.wait, 10)          # another work is being read
+    threading.Thread(target=lambda: build_playback(content, "Clarinet", 1, 1) and done.set()).start()
+    assert done.wait(5), "the prepared work was cut without waiting for the other one"
+    busy.set()

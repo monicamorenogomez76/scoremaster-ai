@@ -87,3 +87,19 @@ def test_only_lines_that_involve_a_critical_part_are_rehearsal_groups():
                              part("Flute", [["C6", "G5"]] * 4, duration=2.0)))
 
     assert lines(score, ["Flute"]) == set()
+
+
+def test_the_notes_of_each_part_are_read_once_for_every_rehearsal_window(monkeypatch):
+    """A concert plan compares the same parts for every window and rehearsal: minutes with Persis on
+    Render's free plan while every note was converted again each time (2026-10-07)."""
+    from pathlib import Path
+
+    from backend.analyzers import rehearsal_passages
+    from backend.parsers.musicxml_parser import parse_musicxml
+    score = parse_musicxml(Path(__file__).resolve().parents[2] / "test-scores" / "high_density.musicxml")
+    names = [part.name for part in score.parts]
+    first = find_common_lines(score, names, 1, 1)
+    calls = []
+    monkeypatch.setattr(rehearsal_passages, "_midi", lambda name: calls.append(name) or 60)
+    assert find_common_lines(score, names, 1, 1) == first
+    assert calls == []

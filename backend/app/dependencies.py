@@ -1,5 +1,6 @@
 import secrets
 from functools import lru_cache
+from typing import Optional
 
 from fastapi import Depends, HTTPException, Request
 
@@ -15,6 +16,7 @@ from backend.infrastructure.analysis_repository import PostgresAnalysisRepositor
 from backend.infrastructure.band_repository import PostgresBandRepository
 from backend.infrastructure.concert_repository import PostgresConcertRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
+from backend.infrastructure.prepared_store import PostgresPreparedStore
 from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
 from backend.infrastructure.database import database_engine
 
@@ -50,6 +52,22 @@ def get_library_repository() -> LibraryRepository:
         return PostgresLibraryRepository(analysis_engine())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+
+
+def get_playback_store() -> Optional[PostgresPreparedStore]:
+    """Works prepared for playback; without a database they are kept only in memory."""
+    try:
+        return PostgresPreparedStore(analysis_engine(), 'playback')
+    except ValueError:
+        return None
+
+
+def get_score_store() -> Optional[PostgresPreparedStore]:
+    """Parsed musical models of the works; without a database they are kept only in memory."""
+    try:
+        return PostgresPreparedStore(analysis_engine(), 'score')
+    except ValueError:
+        return None
 
 
 def get_rehearsal_repository() -> RehearsalRepository:

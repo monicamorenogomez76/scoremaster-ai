@@ -96,11 +96,52 @@ export function stopPlayback() {
 // reuses the same request; a failed one is asked again next time.
 const passageTimelines = new Map();
 const PASSAGES_KEPT = 8;
-// The first time, Render's free plan took more than a minute to read a long work (2026-10-07):
-// the browser waits longer and says why. The server keeps preparing it even if the wait runs out.
-const SERVER_WAIT_MS = 180000;
+// A long work answers 202 while the server prepares it: the browser asks how it goes every few seconds
+// and then asks for the passage again, so no request stays open for minutes (2026-10-07: Persis took
+// ~3 min on Render's free plan and went past the browser's wait). The server keeps it afterwards.
+const MAX_PREPARATION_MS = 15 * 60000;
+const POLL_MS = 3000;
 const SLOW_NOTICE_MS = 10000;
 export const SLOW_SERVER_NOTICE = 'El servidor está preparando la obra. La primera vez puede tardar un par de minutos…';
+const elapsedText = seconds => (seconds < 60 ? seconds + ' s'
+  : Math.floor(seconds / 60) + ' min' + (seconds % 60 ? ' ' + (seconds % 60) + ' s' : ''));
+const waitingText = seconds => 'El servidor está preparando la obra (solo la primera vez)… ' + elapsedText(seconds);
+// Who is waiting for a preparation now: the transport being prepared, to show how long it takes.
+let onWaiting = null;
+
+const pause = (ms, signal) => new Promise((resolve, reject) => {
+  const id = setTimeout(resolve, ms);
+  signal.addEventListener('abort', () => { clearTimeout(id); reject(new DOMException('Cancelado', 'AbortError')); }, { once: true });
+});
+
+async function fetchTimeline(body, signal) {
+  const started = Date.now();
+  for (;;) {
+    const response = await apiFetch('/playback', { method: 'POST', body, signal });
+    if (response.status !== 202) {
+      if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
+      return response.json();
+    }
+    const { preparing } = await response.json();
+    let status = 'preparing';
+    while (status === 'preparing') {
+      onWaiting?.(Math.round((Date.now() - started) / 1000));
+      await pause(POLL_MS, signal);
+      const progress = await apiFetch('/playback/preparations/' + encodeURIComponent(preparing), { signal });
+      status = progress.ok ? (await progress.json()).status : 'failed';
+    }
+    if (status === 'failed') throw new Error('No se pudo preparar la reproducción.');
+    // ready, or unknown after a restart: the work is sent again.
+  }
+}
+
+function timelineRequest(body, onAbandon) {
+  const controller = new AbortController();
+  onAbandon?.(controller);
+  const timeout = setTimeout(() => controller.abort(), MAX_PREPARATION_MS);
+  return fetchTimeline(body, controller.signal).finally(() => clearTimeout(timeout));
+}
+
 const passageKey = (file, passage) => [file?.name, file?.size, file?.lastModified,
   passage.instrument || (passage.instruments || []).join('|'), passage.firstMeasure, passage.lastMeasure].join('·');
 
@@ -114,14 +155,7 @@ export function passageTimeline(file, passage) {
     else body.append('instrument', passage.instrument);
     body.append('first_measure', passage.firstMeasure);
     body.append('last_measure', passage.lastMeasure);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), SERVER_WAIT_MS);
-    const request = apiFetch('/playback', { method: 'POST', body, signal: controller.signal })
-      .then(async response => {
-        if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
-        return response.json();
-      })
-      .finally(() => clearTimeout(timeout));
+    const request = timelineRequest(body);
     request.catch(() => passageTimelines.delete(key));
     passageTimelines.set(key, request);
     while (passageTimelines.size > PASSAGES_KEPT) passageTimelines.delete(passageTimelines.keys().next().value);
@@ -137,23 +171,21 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   onStatus(passage ? 'Preparando audio del pasaje…' : 'Preparando todas las voces…');
   let data;
   const notice = setTimeout(() => { if (token === generation) onStatus(SLOW_SERVER_NOTICE); }, SLOW_NOTICE_MS);
+  const waiting = seconds => { clearTimeout(notice); if (token === generation) onStatus(waitingText(seconds)); };
+  onWaiting = waiting;
   try {
     if (passage) data = await passageTimeline(file, passage);
     else data = wholeScoreCache.get(file);
     if (!data) {
       const body = new FormData();
       body.append('file', file);
-      pendingRequest = new AbortController();
-      const request = pendingRequest;
-      const timeout = setTimeout(() => request.abort(), SERVER_WAIT_MS);
-      try {
-        const response = await apiFetch('/playback', { method: 'POST', body, signal: request.signal });
-        if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
-        data = await response.json();
-        wholeScoreCache.set(file, data);
-      } finally { clearTimeout(timeout); }
+      data = await timelineRequest(body, controller => { pendingRequest = controller; });
+      wholeScoreCache.set(file, data);
     }
-  } finally { clearTimeout(notice); }
+  } finally {
+    clearTimeout(notice);
+    if (onWaiting === waiting) onWaiting = null;
+  }
   if (token !== generation) return null;
   const tracks = data.tracks || [data];
   if (!tracks.some((track) => track.events.length || track.percussion?.length)) {

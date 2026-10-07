@@ -14,7 +14,7 @@ from backend.application.library import LibraryRepository
 from backend.application.rehearsals import (BLOCK_GROUPS, PHASES, REVIEW_STATUSES, BlockReview, Rehearsal,
                                             RehearsalBlock, RehearsalDraft, RehearsalRepository, UnknownConcert,
                                             UnknownWork)
-from backend.app.dependencies import authenticated_user, get_library_repository, get_rehearsal_repository
+from backend.app.dependencies import authenticated_user, get_library_repository, get_rehearsal_repository, get_score_store
 from backend.app.stored_scores import stored_score
 
 router = APIRouter()
@@ -134,10 +134,10 @@ def create_rehearsal(body: RehearsalIn, user: User = Depends(authenticated_user)
 # Declared before /rehearsals/{rehearsal_id}. Nothing is saved: the director reviews the proposal.
 @router.post("/rehearsals/proposal")
 def propose(body: ProposalIn, user: User = Depends(authenticated_user),
-            library: LibraryRepository = Depends(get_library_repository)):
+            library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store)):
     works = []
     for work_id in dict.fromkeys(body.work_ids):
-        found = stored_score(library, user.id, work_id)
+        found = stored_score(library, user.id, work_id, score_store)
         if found is None:
             raise HTTPException(status_code=422, detail=UNKNOWN_WORK)
         title, score = found
