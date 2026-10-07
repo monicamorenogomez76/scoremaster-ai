@@ -34,7 +34,8 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
 | Limitación | Consecuencia | Qué hacer |
 |---|---|---|
 | El servicio se duerme tras 15 min sin uso | El primer acceso tarda alrededor de un minuto | Abrir la aplicación un rato antes de una demostración |
-| 512 MB de memoria | Analizar una obra grande y preparar un tutti usa ~450 MB | `PLAYBACK_SCORES_KEPT=1`; si Render reinicia el servicio con obras muy grandes, subir a un plan de pago |
+| 512 MB de memoria | Analizar una obra grande usa ~450 MB, y preparar su audio ~330 MB durante la lectura (después, ~1 MB por obra) | Esperar a que termine un análisis antes de subir otra obra; si Render reinicia el servicio con obras muy grandes, subir a un plan de pago |
+| CPU muy limitada | Leer una obra grande para el audio puede tardar un par de minutos la primera vez | La obra se prepara en segundo plano al analizarla o abrirla, y después cada pasaje suena al momento. El navegador espera hasta 3 minutos y avisa de que el servidor está preparando la obra |
 | La base de datos gratuita caduca a los 30 días | Se perderían las cuentas, obras y valoraciones | Exportar las valoraciones y hacer copia antes (ver abajo), o pasar la base de datos a un plan de pago (~6 $/mes; precios en render.com/pricing) |
 
 Para cambiar de plan basta con editar `plan:` en `render.yaml` (o hacerlo desde el panel de Render).

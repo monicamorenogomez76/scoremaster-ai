@@ -29,8 +29,6 @@ services:
         value: "8000"
       - key: PYTHONUNBUFFERED
         value: "1"
-      - key: PLAYBACK_SCORES_KEPT
-        value: "1"           # 512 MB of memory: one parsed band score at a time
       - key: DEMO_USER_EMAIL
         value: demo@scoremaster.local
       - key: DEMO_USER_PASSWORD

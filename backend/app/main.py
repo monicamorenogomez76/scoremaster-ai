@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile, is_zipfile
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
@@ -39,7 +39,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score
 from backend.parsers.musicxml_parser import parse_musicxml
 from backend.parsers.musicxml_source import extract_musicxml
-from backend.parsers.playback import build_playback
+from backend.parsers.playback import NotMusicXML, build_playback, prepare_playback, preparation_enabled
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -167,17 +167,13 @@ def playback(
 ):
     if last_measure < first_measure:
         raise HTTPException(status_code=400, detail="El rango de compases no es válido.")
-    source = extract_musicxml(_read_upload(file))
-    if source is None:
-        raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.")
-    with NamedTemporaryFile(suffix=".musicxml") as temporary:
-        temporary.write(source)
-        temporary.flush()
-        try:
-            selection = [name[:200] for name in instruments[:64]] if instruments else instrument
-            return build_playback(temporary.name, selection, first_measure, last_measure)
-        except Exception as exc:
-            raise HTTPException(status_code=400, detail="No se pudo preparar el audio del pasaje.") from exc
+    selection = [name[:200] for name in instruments[:64]] if instruments else instrument
+    try:
+        return build_playback(_read_upload(file), selection, first_measure, last_measure)
+    except NotMusicXML as exc:
+        raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="No se pudo preparar el audio del pasaje.") from exc
 
 
 MAX_INSTRUMENT_OVERRIDES = 256
@@ -205,6 +201,7 @@ def instrument_catalog():
 
 @app.post("/analyze")
 def analyze_score(
+    background: BackgroundTasks,
     file: UploadFile = File(...),
     band_profile: str = Form("{}", max_length=64 * 1024),
     total_minutes: int = Form(60, ge=5, le=600),
@@ -273,6 +270,9 @@ def analyze_score(
             saved = save_analysis(result, content, profile, total_minutes, repository,
                                   {part.name: overrides[part.name] for part in score.parts if part.name in overrides},
                                   user_id=user.id, work_id=work.id)
+            # Its passages will sound sooner: the work is read for playback after answering.
+            if preparation_enabled():
+                background.add_task(prepare_playback, content)
             return {**saved, "work_id": str(work.id)}
         except SQLAlchemyError as exc:
             raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
