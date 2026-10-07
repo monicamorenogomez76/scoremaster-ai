@@ -77,6 +77,10 @@ class PostgresAccountRepository:
         with Session(self.engine) as session, session.begin():
             session.execute(update(StoredUser).where(StoredUser.id == user_id).values(google_sub=sub))
 
+    def rename_user(self, user_id: UUID, display_name: str) -> None:
+        with Session(self.engine) as session, session.begin():
+            session.execute(update(StoredUser).where(StoredUser.id == user_id).values(display_name=display_name))
+
     def add_session(self, stored: StoredSession) -> None:
         with Session(self.engine) as session, session.begin():
             session.add(StoredSessionRow(token_hash=stored.token_hash, user_id=stored.user_id,

@@ -121,7 +121,7 @@ export function App({ session }) {
       rehearsalEditing={rehearsalEditing} onEditRehearsal={rehearsal => { setRehearsalEditing(rehearsal); navigate('rehearsal'); }}
       onCloseRehearsal={() => setRehearsalEditing(null)}
       rehearsalReviewing={rehearsalReviewing} onReviewRehearsal={rehearsal => { setRehearsalEditing(null); setRehearsalReviewing(rehearsal); navigate('rehearsal'); }}
-      onCloseReview={() => setRehearsalReviewing(null)} onBandDraftChange={setBandDraft}
+      onCloseReview={() => setRehearsalReviewing(null)} onUserChanged={setUser} onBandDraftChange={setBandDraft}
       minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onBandActivated={bandActivated} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />

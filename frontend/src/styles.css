@@ -719,3 +719,16 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .next-step p { margin: 0; color: var(--text); font-size: .9rem; }
 .next-step > .primary-action { justify-self: start; }
 .next-step-preview { display: grid; gap: 8px; }
+
+/* Configuración. */
+.settings-grid { display: grid; gap: 16px; max-width: 980px; }
+@media (min-width: 900px) { .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+.settings-card { display: grid; gap: 10px; }
+.settings-card h2 { margin: 0; font-size: 1.1rem; }
+.settings-card label { display: grid; gap: 5px; font-size: .85rem; font-weight: 600; }
+.settings-card input[type=text] { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-weight: 400; }
+.settings-card .primary-action { justify-self: start; }
+.text-size-options { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.text-size-options legend { margin-bottom: 6px; font-size: .85rem; font-weight: 600; }
+.text-size-options .weekday-option { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.sidebar-bottom > .nav-item { margin-bottom: 4px; }

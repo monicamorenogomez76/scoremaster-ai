@@ -25,6 +25,9 @@ class InMemoryAccounts:
     def link_google(self, user_id, sub):
         self.users[user_id] = replace(self.users[user_id], google_sub=sub)
 
+    def rename_user(self, user_id, display_name):
+        self.users[user_id] = replace(self.users[user_id], display_name=display_name)
+
     def add_session(self, session):
         self.sessions[session.token_hash] = session
 

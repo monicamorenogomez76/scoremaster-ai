@@ -138,3 +138,16 @@ def test_uploads_are_limited_before_parsing(client):
     response = client.post("/analyze", files={"file": ("entity.musicxml", entity, "application/xml")},
                            headers={"X-CSRF-Token": csrf})
     assert response.status_code == 400
+
+
+def test_the_user_changes_the_name_shown_in_the_app(client):
+    csrf = register(client).json()["csrf_token"]
+
+    assert client.patch("/auth/me", json={"display_name": "Mónica"}).status_code == 403, "the CSRF token is required"
+    changed = client.patch("/auth/me", json={"display_name": "  Mónica  "}, headers={"X-CSRF-Token": csrf})
+
+    assert changed.status_code == 200 and changed.json()["user"] == {"email": "directora@banda.org", "display_name": "Mónica"}
+    assert client.get("/auth/me").json()["user"]["display_name"] == "Mónica"
+    for name in ("", "   ", "x" * 101):
+        assert client.patch("/auth/me", json={"display_name": name}, headers={"X-CSRF-Token": csrf}).status_code == 422
+    assert TestClient(app).patch("/auth/me", json={"display_name": "Otra"}).status_code == 401

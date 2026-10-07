@@ -3,6 +3,7 @@ import { BandView } from './BandView.jsx';
 import { ConcertsView } from './ConcertsView.jsx';
 import { RehearsalView } from './RehearsalView.jsx';
 import { RepertoireView } from './RepertoireView.jsx';
+import { SettingsView } from './SettingsView.jsx';
 import { SummaryView } from './SummaryView.jsx';
 
 const views = [
@@ -14,7 +15,7 @@ const views = [
 ];
 
 export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, analysis, repertoireMode, onRepertoireModeChange, workTab, onWorkTabChange, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onUpdateBand, onConfirmInstruments, onBandActivated, onOpenWork, onOpenPassage, scoreViewer, rehearsalEditing, onEditRehearsal, onCloseRehearsal, onOpenBlock,
-  rehearsalReviewing, onReviewRehearsal, onCloseReview }) {
+  rehearsalReviewing, onReviewRehearsal, onCloseReview, onUserChanged }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = analysis?.data;
   const go = name => { setMenuOpen(false); onNavigate(name); };
@@ -30,6 +31,10 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
         </button>)}
       </nav>
       <div className="sidebar-bottom">
+        <button type="button" className="nav-item" data-view-target="settings" aria-current={view === 'settings' ? 'page' : undefined}
+          onClick={() => go('settings')}>
+          <span className="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></span>Configuración
+        </button>
         <div className="demo-identity"><strong>{user?.display_name || 'Sesión iniciada'}</strong><span>{user?.email || ''}</span></div>
         <button id="sign-out" className="sign-out" type="button" onClick={onSignOut}>Cerrar sesión</button>
       </div>
@@ -39,7 +44,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
       <header className="topbar">
         <button id="mobile-menu-button" className="mobile-menu-button" type="button" aria-label="Abrir menú"
           aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>Menú</button>
-        <p id="current-page-title" className="topbar-title">{(views.find(([name]) => name === view) || views[0])[1]}</p>
+        <p id="current-page-title" className="topbar-title">{(view === 'settings' ? 'Configuración' : (views.find(([name]) => name === view) || views[0])[1])}</p>
         <span id="current-user" className="topbar-meta">{user?.display_name || user?.email || ''}</span>
       </header>
       <main className="workspace">
@@ -50,6 +55,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
           onModeChange={onRepertoireModeChange} tab={workTab} onTabChange={onWorkTabChange} upload={upload}
           onOpenWork={onOpenWork} onOpenPassage={onOpenPassage} scoreViewer={scoreViewer} />
         <BandView active={view} hidden={hidden} onBandActivated={onBandActivated} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onUpdateBand} onConfirm={onConfirmInstruments} busy={busy} />
+        <SettingsView active={view} user={user} onUserChanged={onUserChanged} />
         <ConcertsView active={view} hidden={hidden} onOpenBlock={onOpenBlock} />
         <RehearsalView active={view} hidden={hidden} onOpenBlock={onOpenBlock} reviewing={rehearsalReviewing}
           onReview={onReviewRehearsal} onCloseReview={onCloseReview} editing={rehearsalEditing} onEdit={onEditRehearsal} onCloseEditor={onCloseRehearsal} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
