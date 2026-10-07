@@ -62,10 +62,10 @@ nivel por sección y coordinación del conjunto. Una PR por fase, con TDD.
 | A1 | Cuentas y sesión (email/contraseña, Google opcional, CSRF, cabeceras, límites de subida) | Integrado: PR #45 |
 | A2 | Biblioteca de obras y banda por usuario (MusicXML privado y borrable) | Integrado: PR #46 |
 | A3 | Sustitutos de instrumento (tabla revisable, tesitura y músicos libres) | Pendiente |
-| A4 | Conciertos y calendario de ensayos con varias obras | En revisión: PR #58–#61 (calendario de conciertos) |
-| A5 | Diario de ensayos (pendiente/resuelto, notas y propuestas confirmadas) | En revisión: revisión por bloque y replanificación (PR #58–#61) |
+| A4 | Conciertos y calendario de ensayos con varias obras | Integrado: PR #58–#61 y #65 |
+| A5 | Diario de ensayos (pendiente/resuelto, notas y propuestas confirmadas) | Integrado: revisión por bloque y replanificación (PR #58–#61) |
 | A6 | Asistente conversacional con evidencias (demo y proveedor real) | Pendiente |
-| A7 | Nivel por sección en la banda | Pendiente |
+| A7 | Nivel por sección en la banda | Integrado: PR #63–#64 (varias bandas con plantilla fija); aún no lo usa el planificador |
 | A8 | Dificultad de coordinación del conjunto | Pendiente |
 
 ## Orden de trabajo acordado (2026-10-05)
@@ -89,10 +89,10 @@ su agenda indica la obra que se trabaja (decisiones de la autora).
 | Fase | Objetivo | Estado |
 |---|---|---|
 | F1 | Estado de preparación, prioridades, Resumen, Repertorio y detalle de obra | Integrado: PR #51 y #52 |
-| F2a | Ensayos guardados: varias obras, agenda por bloques editable y «Ensayo de hoy»; Configuración básica | Integrado: PR #53–#57; Configuración pendiente |
-| F2b | Asistente IA (paso 20): borrador revisable que se guarda como agenda, modo demo identificado y nivel por sección en Mi banda | Pendiente |
+| F2a | Ensayos guardados: varias obras, agenda por bloques editable y «Ensayo de hoy»; Configuración básica | Integrado: PR #53–#57; Configuración en revisión |
+| F2b | Asistente IA (paso 20): conversación sobre el ensayo y explicación del plan, con modo demo identificado; el panel solo vuelve con lo que aporte la IA | Pendiente |
 | — | Evaluación (pasos 16–18) | Pendiente, antes de F3 |
-| C1–C4 | Calendario de conciertos (2026-10-06): programa, patrón semanal, serie por fases hasta el ensayo general, revisión por bloque y replanificación | En revisión: PR #58–#61 |
+| C1–C4 | Calendario de conciertos (2026-10-06): programa, patrón semanal, serie por fases hasta el ensayo general, revisión por bloque y replanificación | Integrado: PR #58–#62 y #65 (navegación a los pasajes y siguiente paso en el Resumen) |
 | F3 | Observaciones de ensayo y cierre: «Prioridades por sección» con las notas del último ensayo | Adelantado en C4: lo pendiente de la última revisión |
 
 ## Criterios de aceptación

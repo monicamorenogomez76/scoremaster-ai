@@ -12,9 +12,9 @@ from authlib.jose import JsonWebKey, jwt
 from authlib.jose.errors import JoseError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from backend.application.accounts import AccountRepository
+from backend.application.accounts import AccountRepository, User
 from backend.application.auth import (
     SESSION_DAYS, AuthService, InvalidCredentials, InvalidRegistration, LoginLimiter, SignedIn, TooManyAttempts,
 )
@@ -33,6 +33,18 @@ class RegisterBody(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=256)
     display_name: str = Field("", max_length=100)
+
+
+class ProfileBody(BaseModel):
+    display_name: str
+
+    @field_validator("display_name")
+    @classmethod
+    def visible_name(cls, value: str) -> str:
+        value = value.strip()
+        if not 1 <= len(value) <= 100:
+            raise ValueError("El nombre debe tener entre 1 y 100 caracteres.")
+        return value
 
 
 class LoginBody(BaseModel):
@@ -106,6 +118,14 @@ def me(request: Request, service: AuthService = Depends(_service)):
         raise HTTPException(status_code=401, detail="Inicia sesión para continuar.")
     user, session = current
     return {"user": {"email": user.email, "display_name": user.display_name}, "csrf_token": session.csrf_token}
+
+
+@router.patch("/me")
+def update_me(body: ProfileBody, user: User = Depends(authenticated_user),
+              accounts: AccountRepository = Depends(get_account_repository)):
+    """The name shown in the app (Configuración); the email cannot be changed here."""
+    accounts.rename_user(user.id, body.display_name)
+    return {"user": {"email": user.email, "display_name": body.display_name}}
 
 
 @router.get("/config")

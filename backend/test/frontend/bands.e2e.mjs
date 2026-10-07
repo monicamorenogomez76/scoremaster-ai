@@ -70,6 +70,22 @@ try {
   assert.equal(await concert.getByLabel('Duración de cada ensayo (minutos)').inputValue(), '120');
   assert.deepEqual(errors, []);
   console.log('PASS: a concert is played by one band and takes its rehearsal days');
+
+  // Configuración: the visible name is saved in the account and the text size on this device.
+  await page.locator('[data-view-target=settings]').click();
+  const settings = page.locator('[data-view=settings]');
+  await settings.getByLabel('Nombre visible').fill('Mónica');
+  await settings.getByRole('button', { name: 'Guardar nombre' }).click();
+  await page.locator('#current-user').getByText('Mónica').waitFor();
+  await settings.getByLabel('Grande', { exact: true }).check();
+  const rootSize = () => page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
+  assert.equal(await rootSize(), '18px');
+  await page.reload();
+  await page.locator('#app-shell').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#current-user').textContent(), 'Mónica', 'the name is kept in the account');
+  assert.equal(await rootSize(), '18px', 'the text size is kept on this device');
+  assert.deepEqual(errors, []);
+  console.log('PASS: the visible name and the text size are set in Configuración');
 } finally {
   await browser.close();
 }
