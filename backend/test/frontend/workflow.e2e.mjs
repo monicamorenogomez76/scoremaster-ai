@@ -41,6 +41,18 @@ try {
   await page.locator('#work-tab-difficulty').click();
   assert.equal(await page.locator('.family-chart').isVisible(), true);
   assert.equal(await page.locator('#difficulty-content .tree-node').first().isVisible(), true, 'the dashboard and the difficulty share the analysis view');
+  // Step 20: the difficulty is explained from the analysis; without a provider, by the demo, never as AI.
+  await page.getByRole('button', { name: 'Explicar la dificultad' }).click();
+  await page.locator('#explanation-source').waitFor();
+  assert.match(await page.locator('#explanation-source').textContent(), /^Modo demo · explicación redactada con reglas .* sin IA\.$/);
+  assert.match(await page.locator('#work-explanation .explanation-summary').textContent(), /^«.*» tiene grado [1-6]/);
+  const cited = page.locator('#work-explanation .passage-open');
+  if (await cited.count()) {
+    await cited.first().click();
+    await page.waitForFunction(() => document.querySelector('#notation-score svg'), null, { timeout: 60000 });
+    await page.locator('#notation-close').click();
+  }
+  console.log('PASS: the difficulty is explained in demo mode and its cited passages open');
   await page.screenshot({ path: '/tmp/scoremaster-redesign-dashboard.png', fullPage: true, animations: 'disabled' });
   await page.locator('#add-work').click();
   await page.locator('#new-score').click();

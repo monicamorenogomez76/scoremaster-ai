@@ -2,6 +2,23 @@
 
 # LLM / LangChain Architecture
 
+## Implementado: puerto IA y demo (paso 20, decisiones de la autora, 2026-10-07)
+
+- **Puerto** `backend/application/ai.py`: `ExplanationProvider` con `ProviderInfo` (`demo` o `llm`,
+  proveedor y modelo) y `ProviderFailure` (timeout, rate_limit, error). El dominio no conoce ningún
+  proveedor concreto. Proveedor real elegido para el paso 21: **Google Gemini** (nivel gratuito).
+- **Primer uso: explicar la dificultad de una obra** (`backend/application/difficulty_explanation.py`,
+  `GET /works/{id}/explanation`, pestaña Dificultad). Evidencias `difficulty-evidence-v1` construidas
+  solo con el análisis guardado (grado y rúbrica, familias, 8 instrumentos más difíciles con sus
+  dimensiones y hallazgos, 8 pasajes críticos con identificador `P1…`, tempo y duración). Salida
+  validada con Pydantic: resumen, 1–4 factores con dimensión de un enum, instrumentos y pasajes citados
+  —que deben existir en las evidencias— y consejo de estudio. Prompt `difficulty-explanation-v1`.
+- **Fallback**: ante timeout, límite, error o respuesta inválida se registra el motivo (sin datos
+  personales) y responde la demo, indicando por qué en la interfaz.
+- **Demo** `backend/infrastructure/ai/demo_provider.py`: reglas deterministas sobre las mismas
+  evidencias; la interfaz la identifica siempre como «Modo demo · … sin IA».
+- Siguiente uso aprobado: explicar el ensayo («¿Por qué este plan?»).
+
 ## 1. Objetivo
 
 Utilizar LangChain como infraestructura de IA sin convertir el proyecto en una aplicación dependiente de LangChain.

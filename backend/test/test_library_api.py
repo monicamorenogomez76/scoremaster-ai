@@ -255,3 +255,17 @@ def test_works_uploaded_before_are_listed_until_they_are_prepared(clients, postg
     store.save(__import__("hashlib").sha256((SCORES / "high_register.musicxml").read_bytes()).hexdigest(), SCORE_VERSION, b"x")
     assert list(store.missing_sources(SCORE_VERSION)) == []
     assert list(store.missing_sources("score-v0")) != [], "another version is prepared again"
+
+
+def test_the_difficulty_of_a_work_is_explained_to_its_owner_in_demo_mode(clients):
+    """Step 20: without a real provider the demo answers, always identified as such."""
+    ana, berta = clients
+    work_id = analyze(ana, "evaluation_study.musicxml").json()["work_id"]
+    response = ana.get("/works/" + work_id + "/explanation")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "demo" and body["provider"] == "demo" and body["fallback_reason"] is None
+    assert body["explanation"]["summary"].startswith("«") and body["explanation"]["factors"]
+    assert all(code in body["passages"] for factor in body["explanation"]["factors"] for code in factor["passages"])
+    assert berta.get("/works/" + work_id + "/explanation").status_code == 404
+    assert TestClient(app).get("/works/" + work_id + "/explanation").status_code == 401

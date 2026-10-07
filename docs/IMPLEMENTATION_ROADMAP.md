@@ -41,11 +41,11 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 13 | Grados 1–6 | Integrado: PR #49 |
 | 14 | Detector de criticidad | Integrado: frases (PR #40), detector con señal de velocidad (PR #41) y cadencias armónicas (PR #43) |
 | 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Integrado: PR #37, calendario (PR #38) y similitud de estructura (PR #39) |
-| 16 | Evidencias en interfaz | Pendiente |
-| 17 | Persistencia de feedback | Pendiente |
-| 18 | Formulario de valoración | Pendiente |
+| 16 | Evidencias en interfaz | Integrado: campañas con la predicción de cada pasaje (PR #70, #74) |
+| 17 | Persistencia de feedback | Integrado: PR #70 (migración 0009) |
+| 18 | Formulario de valoración | Integrado: PR #76 |
 | 19 | Herramienta de evaluación | Pendiente |
-| 20 | Puerto IA y fake/demo | Pendiente |
+| 20 | Puerto IA y fake/demo | En revisión: puerto, demo identificada y «¿Por qué esta dificultad?» de la obra |
 | 21 | Adaptador LangChain | Pendiente |
 | 22 | Revisión independiente | Pendiente |
 | 23 | Caché y trazabilidad | Pendiente |
