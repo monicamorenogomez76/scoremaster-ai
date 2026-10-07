@@ -116,6 +116,8 @@ jobs:
         run: node backend/test/frontend/concerts.e2e.mjs
       - name: Bandas y plantilla activa
         run: node backend/test/frontend/bands.e2e.mjs
+      - name: Campañas de valoración de la directora
+        run: node backend/test/frontend/evaluation.e2e.mjs
       - name: Registro del servidor
         if: failure()
         run: cat /tmp/uvicorn.log
