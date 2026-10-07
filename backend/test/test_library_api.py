@@ -7,12 +7,14 @@ from fastapi.testclient import TestClient
 
 from backend.app import auth_routes
 from backend.app.dependencies import (get_account_repository, get_analysis_repository, get_band_repository, get_concert_repository,
+                                      get_evaluation_repository,
                                       get_library_repository, get_rehearsal_repository)
 from backend.app.main import app
 from backend.infrastructure.account_repository import PostgresAccountRepository
 from backend.infrastructure.analysis_repository import PostgresAnalysisRepository
 from backend.infrastructure.band_repository import PostgresBandRepository
 from backend.infrastructure.concert_repository import PostgresConcertRepository
+from backend.infrastructure.evaluation_repository import PostgresEvaluationRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
 
@@ -30,6 +32,7 @@ def clients(postgres_engine):
     app.dependency_overrides[get_rehearsal_repository] = lambda: PostgresRehearsalRepository(postgres_engine)
     app.dependency_overrides[get_concert_repository] = lambda: PostgresConcertRepository(postgres_engine)
     app.dependency_overrides[get_band_repository] = lambda: PostgresBandRepository(postgres_engine)
+    app.dependency_overrides[get_evaluation_repository] = lambda: PostgresEvaluationRepository(postgres_engine)
     signed_in = []
     for name in ("ana", "berta"):
         client = TestClient(app)

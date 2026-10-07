@@ -24,6 +24,7 @@ from backend.app.auth_routes import router as auth_router
 from backend.app.library_routes import router as library_router, valid_band_profile
 from backend.app.band_routes import router as band_router
 from backend.app.concert_routes import router as concert_router
+from backend.app.evaluation_routes import router as evaluation_router
 from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.stored_scores import confirm_instruments, parsed_work, prepare_missing_works
 from backend.app.youtube import search_videos
@@ -75,6 +76,7 @@ app.include_router(library_router)
 app.include_router(rehearsal_router)
 app.include_router(concert_router)
 app.include_router(band_router)
+app.include_router(evaluation_router)
 
 # The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
 CONTENT_SECURITY_POLICY = "; ".join([

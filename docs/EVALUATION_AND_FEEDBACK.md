@@ -2,6 +2,24 @@
 
 # Evaluation and Expert Feedback
 
+## Implementado: campañas de valoración (pasos 16–18, decisiones de la autora, 2026-10-07)
+
+- **Campaña** de la directora con título e instrucciones; estados borrador → abierta → cerrada.
+- **Pasajes propuestos** (`backend/analyzers/evaluation_sample.py`): muestra reproducible de sus obras,
+  ~40 % críticos y ~60 % no críticos repartidos por grados y obras; cada pasaje es una parte de
+  4–12 compases y guarda la **predicción de ScoreLint para ese fragmento** (grado 1–6, índice 0–10,
+  crítico, hallazgos y versiones de escala, detector y muestra). El orden se baraja de forma
+  determinista para que los críticos no se agrupen. En borrador se pueden quitar pasajes.
+- **Invitación por email**: el músico entra con su cuenta y ve la campaña (no en borrador); indica
+  nivel de experiencia (estudiante, amateur, profesional, docente) e instrumento principal; puede
+  abrir la obra completa; **nunca ve la predicción**.
+- **Valoración**: dificultad 1–6 (misma rúbrica), crítico sí/no, prioridad de ensayo 1–5 y comentario
+  opcional; editable mientras la campaña está abierta.
+- **Exportación** para el paso 19: pasajes con su predicción y todas las valoraciones, con los
+  evaluadores como «Evaluador n» (sin email ni nombre).
+- Datos mínimos: email de la cuenta, nivel e instrumento. API: `/evaluations` (ver
+  `backend/app/evaluation_routes.py`); tablas de la migración `0009_evaluations`.
+
 ## 1. Objetivo
 
 No ajustar ScoreLint únicamente mediante intuición.
