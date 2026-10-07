@@ -16,6 +16,12 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
      la de desarrollo; compartirla solo con el tribunal o los evaluadores.
    - `YOUTUBE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`:
      opcionales; vacíos desactivan esas funciones.
+   - La clave de YouTube la usa **el servidor**, no el navegador. En Google Cloud, en la clave:
+     *Restricciones de API* → solo «YouTube Data API v3» (activada en el proyecto); *Restricciones
+     de aplicación* → **Ninguna**. Con «Sitios web (referentes HTTP)», Google rechaza las llamadas
+     del servidor (`API_KEY_HTTP_REFERRER_BLOCKED`), y el plan gratuito de Render no tiene IP fija para
+     restringir por dirección. Si la búsqueda falla, los logs de Render dicen el motivo
+     («YouTube rechazó la búsqueda: HTTP 403, motivo: …»), nunca la clave.
 4. **Apply**. La primera construcción tarda varios minutos. Al arrancar, el contenedor aplica las
    migraciones y crea el usuario demo. La URL pública es `https://scoremaster-….onrender.com`.
 5. Cada integración en `main` se despliega sola (`autoDeploy`).
