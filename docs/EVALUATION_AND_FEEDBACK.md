@@ -18,7 +18,7 @@
 - **Exportación** para el paso 19: pasajes con su predicción y todas las valoraciones, con los
   evaluadores como «Evaluador n» (sin email ni nombre).
 - Datos mínimos: email de la cuenta, nivel e instrumento. API: `/evaluations` (ver
-  `backend/app/evaluation_routes.py`); tablas de la migración `0008_evaluations`.
+  `backend/app/evaluation_routes.py`); tablas de la migración `0009_evaluations`.
 
 ## 1. Objetivo
 
