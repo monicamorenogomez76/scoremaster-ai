@@ -38,6 +38,7 @@ export function App({ session }) {
     async prepareAnalysis() { fullScore.current.clear(); passage.current.stop(); },
     showScore() { fullScore.current.load(); },
     openPassage(selection, measureRange, label) { fullScore.current.stop(); return passage.current.open(selection, measureRange, label); },
+    passageLoading(label) { fullScore.current.stop(); passage.current.loading(label); },
   }), [session]);
 
   // Diagnostic handle used by the browser tests to load synthetic scores and passages.
@@ -80,7 +81,9 @@ export function App({ session }) {
     if (!workId) return;
     const range = passageRange(measures);
     if (!range) return upload.openWork(workId);
-    const data = analysis?.data?.work_id === workId ? analysis.data : await upload.openWork(workId, { navigate: false });
+    const loaded = analysis?.data?.work_id === workId;
+    if (!loaded) workspace.passageLoading(label);
+    const data = loaded ? analysis.data : await upload.openWork(workId, { navigate: false });
     if (!data) return;
     await workspace.openPassage(parts?.length ? parts : data.parts, range, label);
   };

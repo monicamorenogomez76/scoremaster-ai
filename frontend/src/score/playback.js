@@ -91,23 +91,51 @@ export function stopPlayback() {
   activeTransport = null;
 }
 
+// Timelines of the passages opened (author's report, 2026-10-07: with real band scores a passage took
+// many seconds to sound). A passage starts being prepared when its dialog opens, so pressing play
+// reuses the same request; a failed one is asked again next time.
+const passageTimelines = new Map();
+const PASSAGES_KEPT = 8;
+const passageKey = (file, passage) => [file?.name, file?.size, file?.lastModified,
+  passage.instrument || (passage.instruments || []).join('|'), passage.firstMeasure, passage.lastMeasure].join('·');
+
+export function passageTimeline(file, passage) {
+  const key = passageKey(file, passage);
+  if (!passageTimelines.has(key)) {
+    const body = new FormData();
+    body.append('file', file);
+    // A rehearsal block plays several instruments together; a passage, a single one.
+    if (passage.instruments) passage.instruments.forEach(name => body.append('instruments', name));
+    else body.append('instrument', passage.instrument);
+    body.append('first_measure', passage.firstMeasure);
+    body.append('last_measure', passage.lastMeasure);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    const request = apiFetch('/playback', { method: 'POST', body, signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
+        return response.json();
+      })
+      .finally(() => clearTimeout(timeout));
+    request.catch(() => passageTimelines.delete(key));
+    passageTimelines.set(key, request);
+    while (passageTimelines.size > PASSAGES_KEPT) passageTimelines.delete(passageTimelines.keys().next().value);
+  }
+  return passageTimelines.get(key);
+}
+
 export async function preparePlayback(file, passage, onStatus = () => {}) {
   stopPlayback();
   const token = generation;
   const ctx = audioContext();
   await ctx.resume();
   onStatus(passage ? 'Preparando audio del pasaje…' : 'Preparando todas las voces…');
-  const body = new FormData();
-  body.append('file', file);
-  if (passage) {
-    // A rehearsal block plays several instruments together; a passage, a single one.
-    if (passage.instruments) passage.instruments.forEach(name => body.append('instruments', name));
-    else body.append('instrument', passage.instrument);
-    body.append('first_measure', passage.firstMeasure);
-    body.append('last_measure', passage.lastMeasure);
-  }
-  let data = !passage && wholeScoreCache.get(file);
+  let data;
+  if (passage) data = await passageTimeline(file, passage);
+  else data = wholeScoreCache.get(file);
   if (!data) {
+    const body = new FormData();
+    body.append('file', file);
     pendingRequest = new AbortController();
     const request = pendingRequest;
     const timeout = setTimeout(() => request.abort(), 60000);
@@ -115,7 +143,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
       const response = await apiFetch('/playback', { method: 'POST', body, signal: request.signal });
       if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
       data = await response.json();
-      if (!passage) wholeScoreCache.set(file, data);
+      wholeScoreCache.set(file, data);
     } finally { clearTimeout(timeout); }
   }
   if (token !== generation) return null;
@@ -123,7 +151,6 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   if (!tracks.some((track) => track.events.length || track.percussion?.length)) {
     throw new Error('La partitura no contiene notas reproducibles.');
   }
-  onStatus('Cargando sonidos de los instrumentos… La primera carga puede tardar.');
   library ||= import(/* @vite-ignore */ SMPLR_URL).catch((error) => { library = null; throw error; });
   const { Soundfont, Sampler } = await library;
   if (token !== generation) return null;
@@ -169,9 +196,14 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
       // External loop points change pitch in some MP3 samples (e.g. clarinet D4).
       destination: master, loadLoopData: false, notesToLoad: { notes: [...group.notes] } }));
   }
+  // A whole band means many instruments to download the first time: say how many are ready.
+  let readyCount = 0;
+  onStatus('Cargando sonidos: 0 de ' + instruments.size + ' instrumentos… La primera carga puede tardar.');
   try {
     await Promise.all([...instruments].map(async ([sound, group]) => {
       const loaded = await loadPlayer(sound, group);
+      readyCount += 1;
+      if (token === generation) onStatus('Cargando sonidos: ' + readyCount + ' de ' + instruments.size + ' instrumentos…');
       if (token === generation) group.events.forEach((event) => timeline.push({ ...event, player: loaded }));
     }));
   } catch (error) {

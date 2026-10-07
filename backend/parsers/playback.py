@@ -1,6 +1,8 @@
 """Sounding-pitch timelines for solo passages and the full ensemble."""
-from collections import Counter
+from collections import Counter, OrderedDict
+from hashlib import sha256
 import re
+from threading import Lock
 
 from pathlib import Path
 
@@ -29,13 +31,50 @@ def _identity(part, name, declared):
     return resolve_part(ScorePart(name, (), metadata_for_part(part, declared))).identity
 
 
+# Passages of the same work reuse the parsed score (2026-10-07: parsing a real band score took most of
+# the 10-20 s the author waited per passage). Keyed by content, so each request's temporary file name
+# does not matter; the timeline never modifies the score (it works on copies of each part).
+PARSED_SCORES_KEPT = 4
+_parsed_scores: OrderedDict = OrderedDict()
+# One timeline at a time: music21 objects are shared between requests.
+_build_lock = Lock()
+
+
+def clear_parsed_scores() -> None:
+    with _build_lock:
+        _parsed_scores.clear()
+
+
+def parsed_score_count() -> int:
+    return len(_parsed_scores)
+
+
+def _parsed_score(content: bytes):
+    """Parsed score and declared part metadata of a MusicXML content (the last few kept)."""
+    key = sha256(content).hexdigest()
+    if key in _parsed_scores:
+        _parsed_scores.move_to_end(key)
+        return _parsed_scores[key]
+    # From the bytes, as the analysis parser: music21 then does not write its own cache to disk.
+    parsed = (converter.parse(content, format='musicxml'), read_part_metadata(content))
+    _parsed_scores[key] = parsed
+    while len(_parsed_scores) > PARSED_SCORES_KEPT:
+        _parsed_scores.popitem(last=False)
+    return parsed
+
+
 def build_playback(source, instrument_name, first: int, last: int) -> dict:
     """Timeline for one part (str), several parts (list: a sectional rehearsal block) or the whole score ('')."""
+    with _build_lock:
+        return _build_playback(source, instrument_name, first, last)
+
+
+def _build_playback(source, instrument_name, first: int, last: int) -> dict:
     solo = isinstance(instrument_name, str) and bool(instrument_name)
     wanted = [instrument_name] if isinstance(instrument_name, str) else list(instrument_name or ())
     wanted = [name for name in wanted if name]
-    score = converter.parse(str(source), format='musicxml')
-    declared = read_part_metadata(extract_musicxml(Path(source).read_bytes()) or b'<score-partwise/>')
+    raw = Path(source).read_bytes()
+    score, declared = _parsed_score(extract_musicxml(raw) or raw)
     raw_names = [part.partName or (part.id if isinstance(part.id, str) else f'Part {i}')
                  for i, part in enumerate(score.parts, 1)]
     counts, indexes = Counter(raw_names), Counter()
