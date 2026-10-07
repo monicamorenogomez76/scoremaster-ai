@@ -21,6 +21,10 @@
   con sus obras analizadas y el número de pasajes (avisa si las obras dan menos), revisar cada pasaje con
   la predicción de ScoreLint, verlo y escucharlo en la partitura, quitarlo en borrador, invitar músicos
   por email y ver su avance, abrir (con confirmación), cerrar y exportar los resultados en JSON.
+- **Pantalla del músico** (el mismo menú, «Te han invitado a valorar»): indica su experiencia e
+  instrumento, y valora los pasajes uno a uno tras verlos y escucharlos (o ver su parte en toda la
+  obra), con la rúbrica de grados de `docs/DIFFICULTY_CRITICALITY.md`; cada valoración se guarda al
+  pasar al siguiente y puede seguir otro día. Con la campaña cerrada solo puede consultarlas.
 - Datos mínimos: email de la cuenta, nivel e instrumento. API: `/evaluations` (ver
   `backend/app/evaluation_routes.py`); tablas de la migración `0009_evaluations`.
 

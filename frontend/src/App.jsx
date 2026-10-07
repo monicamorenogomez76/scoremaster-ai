@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { currentUser, onUnauthorized, signOut } from './api.js';
 import { AppShell } from './AppShell.jsx';
+import { evaluationWorkFile } from './evaluations.js';
 import { saveBand } from './library.js';
 import { LoginScreen } from './LoginScreen.jsx';
 import { initialBandDraft, readBandProfile } from './labels.js';
@@ -87,6 +88,21 @@ export function App({ session }) {
     if (!data) return;
     await workspace.openPassage(parts?.length ? parts : data.parts, range, label);
   };
+  // A passage of an evaluation campaign: the invited musician does not have the work in their own
+  // repertoire, so it is fetched through the campaign (kept for the next passages of the same work).
+  const evaluationFiles = useRef(new Map());
+  const openEvaluationPassage = async (campaignId, item, wholePart = false) => {
+    const key = campaignId + '/' + item.work_id;
+    workspace.passageLoading(item.label);
+    try {
+      if (!evaluationFiles.current.has(key)) evaluationFiles.current.set(key, await evaluationWorkFile(campaignId, item.work_id));
+      fullScore.current.stop();
+      await passage.current.open(item.parts, item.measure_range, item.label, { file: evaluationFiles.current.get(key), wholePart });
+    } catch (error) {
+      evaluationFiles.current.delete(key);
+      passage.current.failed(error.message);
+    }
+  };
   const recalculate = () => (session.getFile() ? upload.recalculate() : addWork());
   // The edited template is saved for the user's next works; this analysis already sends it.
   const updateBand = () => {
@@ -125,7 +141,7 @@ export function App({ session }) {
       onCloseRehearsal={() => setRehearsalEditing(null)}
       rehearsalReviewing={rehearsalReviewing} onReviewRehearsal={rehearsal => { setRehearsalEditing(null); setRehearsalReviewing(rehearsal); navigate('rehearsal'); }}
       onCloseReview={() => setRehearsalReviewing(null)} onUserChanged={setUser} onBandDraftChange={setBandDraft}
-      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onBandActivated={bandActivated} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock}
+      minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onBandActivated={bandActivated} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock} onOpenEvaluationPassage={openEvaluationPassage}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
     <PassageDialog ref={passage} session={session} />
   </>;

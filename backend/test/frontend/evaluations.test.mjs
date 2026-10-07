@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   createCampaign, exportFileName, invitationProgress, listCampaigns, parseEmails, predictionText, removePassage,
   setCampaignStatus, setInvitations, shortfallText, statusLabel, campaignSummary,
+  GRADE_RUBRIC, EXPERIENCE_OPTIONS, PRIORITY_LABELS, nextToRate, ratedCount, ratingDraft, ratingToSend, saveProfile, saveRating,
 } from '../../../frontend/src/evaluations.js';
 
 function fakeServer(routes) {
@@ -63,4 +64,42 @@ test('campaigns are listed, created, trimmed, shared and opened through the API'
 test('the director is told when the works give fewer passages than asked', () => {
   assert.equal(shortfallText(20, 9), 'Se han propuesto 9 de los 20 pasajes pedidos: las obras elegidas no dan para más. Añade obras si necesitas más.');
   assert.equal(shortfallText(20, 20), '');
+});
+
+test('the musician rates with the same rubric as ScoreLint, grade by grade', () => {
+  assert.deepEqual(GRADE_RUBRIC.map(item => item.grade), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(GRADE_RUBRIC[3], { grade: 4, label: 'Intermedio', band: 'Banda amateur media' });
+  assert.deepEqual(EXPERIENCE_OPTIONS.map(([value]) => value), ['estudiante', 'amateur', 'profesional', 'docente']);
+  assert.equal(PRIORITY_LABELS[1], 'Puede esperar');
+  assert.equal(PRIORITY_LABELS[5], 'Ensayarlo cuanto antes');
+});
+
+test('a rating starts empty and is sent only when complete', () => {
+  const draft = ratingDraft(null);
+  assert.deepEqual(draft, { difficulty: '', critical: '', priority: '', comment: '' });
+  assert.equal(ratingToSend(draft), null);
+  assert.deepEqual(ratingToSend({ difficulty: '4', critical: 'yes', priority: '3', comment: '  Entradas  ' }),
+    { difficulty: 4, critical: true, priority: 3, comment: 'Entradas' });
+  assert.deepEqual(ratingDraft({ difficulty: 2, critical: false, priority: 1, comment: '' }),
+    { difficulty: '2', critical: 'no', priority: '1', comment: '' });
+});
+
+test('after saving, the musician goes on to the next passage still to rate', () => {
+  const passages = [{ rating: { difficulty: 1 } }, { rating: null }, { rating: { difficulty: 3 } }, { rating: null }];
+  assert.equal(ratedCount({ passages }), 2);
+  assert.equal(nextToRate(passages, 1), 3, 'the next one without a rating');
+  assert.equal(nextToRate(passages, 3), 1, 'from the end, back to the first one left');
+  assert.equal(nextToRate(passages.map(item => ({ rating: { difficulty: 2 } })), 1), 2, 'all rated: simply the next one');
+  assert.equal(nextToRate([{ rating: { difficulty: 2 } }], 0), 0);
+});
+
+test('the profile and each rating are saved through the API', async () => {
+  const calls = fakeServer({
+    'PUT /evaluations/c1/profile': [200, { experience_level: 'amateur', main_instrument: 'Clarinete' }],
+    'PUT /evaluations/c1/passages/p1/rating': [200, { difficulty: 4, critical: true, priority: 3, comment: '' }],
+  });
+  await saveProfile('c1', 'amateur', ' Clarinete ');
+  assert.deepEqual(JSON.parse(calls[0].body), { experience_level: 'amateur', main_instrument: 'Clarinete' });
+  await saveRating('c1', 'p1', { difficulty: 4, critical: true, priority: 3, comment: '' });
+  assert.equal(calls[1].method, 'PUT');
 });

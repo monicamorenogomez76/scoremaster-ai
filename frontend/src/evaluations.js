@@ -63,3 +63,52 @@ export function shortfallText(requested, proposed) {
   return 'Se han propuesto ' + proposed + ' de los ' + requested + ' pasajes pedidos: las obras elegidas no dan para más. '
     + 'Añade obras si necesitas más.';
 }
+
+// The musician's side: the same rubric as ScoreLint (docs/DIFFICULTY_CRITICALITY.md), never its prediction.
+export const GRADE_RUBRIC = [
+  { grade: 1, label: 'Iniciación', band: 'Primer año, escuela de música' },
+  { grade: 2, label: 'Elemental', band: 'Banda infantil, segundo o tercer año' },
+  { grade: 3, label: 'Intermedio bajo', band: 'Banda juvenil' },
+  { grade: 4, label: 'Intermedio', band: 'Banda amateur media' },
+  { grade: 5, label: 'Avanzado', band: 'Banda amateur de alto nivel, conservatorio profesional' },
+  { grade: 6, label: 'Superior', band: 'Banda profesional o de concurso, repertorio virtuoso' },
+];
+export const EXPERIENCE_OPTIONS = [['estudiante', 'Estudiante'], ['amateur', 'Músico amateur'], ['profesional', 'Profesional'],
+  ['docente', 'Docente o director']];
+export const PRIORITY_LABELS = { 1: 'Puede esperar', 2: 'Baja', 3: 'Media', 4: 'Alta', 5: 'Ensayarlo cuanto antes' };
+
+export const saveProfile = (id, level, instrument) => apiJson(path(id) + '/profile',
+  send('PUT', { experience_level: level, main_instrument: instrument.trim() }), 'No se pudo guardar tu perfil.');
+export const saveRating = (id, passageId, rating) => apiJson(path(id) + '/passages/' + encodeURIComponent(passageId) + '/rating',
+  send('PUT', rating), 'No se pudo guardar la valoración.');
+// The whole work of a passage: musicians do not have it in their own repertoire.
+export async function evaluationWorkFile(id, workId) {
+  const response = await apiFetch(path(id) + '/works/' + encodeURIComponent(workId) + '/file');
+  if (!response.ok) throw new Error('No se pudo abrir la obra del pasaje.');
+  const name = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') || '')?.[1] || 'obra.musicxml';
+  return new File([await response.blob()], name);
+}
+
+// The form keeps strings (radio buttons); the API receives numbers and a boolean.
+export function ratingDraft(rating) {
+  if (!rating) return { difficulty: '', critical: '', priority: '', comment: '' };
+  return { difficulty: String(rating.difficulty), critical: rating.critical ? 'yes' : 'no', priority: String(rating.priority),
+    comment: rating.comment || '' };
+}
+
+export function ratingToSend(draft) {
+  if (!draft.difficulty || !draft.critical || !draft.priority) return null;
+  return { difficulty: Number(draft.difficulty), critical: draft.critical === 'yes', priority: Number(draft.priority),
+    comment: draft.comment.trim() };
+}
+
+export const ratedCount = campaign => (campaign.passages || []).filter(item => item.rating).length;
+
+// The next passage without a rating after the current one (wrapping round); when all are rated, the next one.
+export function nextToRate(passages, current) {
+  for (let step = 1; step <= passages.length; step++) {
+    const index = (current + step) % passages.length;
+    if (!passages[index].rating) return index;
+  }
+  return Math.min(current + 1, passages.length - 1);
+}
