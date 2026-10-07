@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../api.js';
-import { MAX_QUERY, embedUrl, initialVideoQuery, isVideoId, parseYouTubeVideoId, safeSearchUrl } from './youtube.js';
+import { MAX_QUERY, embedUrl, initialVideoQuery, isVideoId, parseYouTubeVideoId, safeSearchUrl, searchStatus } from './youtube.js';
 
 // Searches through the server (the YouTube key never reaches the browser) and embeds the
 // privacy-enhanced player. Without results, a manual link can be played instead.
@@ -23,8 +23,7 @@ export function VideoSearch({ title, composer, fileName }) {
       const result = await response.json();
       if (token !== request.current) return;
       const videos = (result.videos || []).filter(video => isVideoId(video.video_id));
-      setSearch({ status: videos.length ? 'Reproduciendo la mejor coincidencia. Elige otra versión para cambiarla.'
-        : 'No hay coincidencias integradas. Busca en YouTube o pega aquí un enlace.', videos, searchUrl: safeSearchUrl(result.search_url), searched: normalized });
+      setSearch({ status: searchStatus(result, videos.length), videos, searchUrl: safeSearchUrl(result.search_url), searched: normalized });
       if (videos.length) setSelected({ id: videos[0].video_id, title: videos[0].title });
     } catch (error) {
       if (token === request.current) setSearch(previous => ({ ...previous, status: error.message || 'Búsqueda de vídeo no disponible.' }));

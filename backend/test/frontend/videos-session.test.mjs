@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialVideoQuery, parseYouTubeVideoId, safeSearchUrl } from '../../../frontend/src/videos/youtube.js';
+import { initialVideoQuery, parseYouTubeVideoId, safeSearchUrl, searchStatus } from '../../../frontend/src/videos/youtube.js';
 import { createScoreSession } from '../../../frontend/src/score/score-session.js';
 
 test('only YouTube links become embeddable video ids', () => {
@@ -48,4 +48,13 @@ test('score source is fetched once per file and retried after a failure', async 
   assert.equal(calls.length, 2, 'a locally mapped score is not downloaded again');
   session.clear();
   assert.equal(session.getFile(), null);
+});
+
+test('without integrated results the musician is told why', () => {
+  // 2026-10-07: on Render the search "did not work" and the page only said there were no matches.
+  assert.equal(searchStatus({ mode: 'api', reason: null }, 2), 'Reproduciendo la mejor coincidencia. Elige otra versión para cambiarla.');
+  assert.equal(searchStatus({ mode: 'api', reason: null }, 0), 'No hay coincidencias integradas. Busca en YouTube o pega aquí un enlace.');
+  assert.match(searchStatus({ mode: 'link', reason: 'no_key' }, 0), /^La búsqueda integrada de YouTube no está configurada en este servidor/);
+  assert.match(searchStatus({ mode: 'link', reason: 'rejected' }, 0), /^YouTube ha rechazado la búsqueda integrada/);
+  assert.match(searchStatus({ mode: 'link', reason: 'unavailable' }, 0), /^No se pudo contactar con YouTube/);
 });

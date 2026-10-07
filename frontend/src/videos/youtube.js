@@ -32,3 +32,16 @@ export function initialVideoQuery(title, composer, fileName = '') {
   const fileDetails = fileTitle.split(/\s+/).filter(word => word && !titleWords.has(word.toLowerCase())).join(' ');
   return [scoreTitle, composer || fileDetails].filter(Boolean).join(' ').trim();
 }
+
+// What the search found or, with only a link, why (the server logs Google's exact reason).
+const LINK_ONLY = ' Busca en YouTube o pega aquí un enlace.';
+const REASONS = {
+  no_key: 'La búsqueda integrada de YouTube no está configurada en este servidor.',
+  rejected: 'YouTube ha rechazado la búsqueda integrada: hay que revisar la clave del servidor.',
+  unavailable: 'No se pudo contactar con YouTube.',
+};
+
+export function searchStatus(result, found) {
+  if (found) return 'Reproduciendo la mejor coincidencia. Elige otra versión para cambiarla.';
+  return (REASONS[result?.reason] || 'No hay coincidencias integradas.') + LINK_ONLY;
+}
