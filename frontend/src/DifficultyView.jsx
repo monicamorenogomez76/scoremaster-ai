@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { ActivityStatus } from './ActivityStatus.jsx';
+import { explainWork, sourceText } from './explanations.js';
 import { byDifficulty, dimensionLabelsEs, displayFamilyName, displayInstrumentName, findingLabel, gradeOf, gradeScaleOf, gradeText } from './labels.js';
 
 function Bar({ percent }) {
@@ -78,9 +80,44 @@ function DifficultyTree({ difficulty, onOpenPassage }) {
   </div>;
 }
 
+// Why the work has its difficulty (step 20): written only from its analysis, by AI or by the demo,
+// and always saying which; each cited passage opens in the score.
+function WorkExplanation({ workId, onOpenPassage }) {
+  const [state, setState] = useState({ loading: false, result: null, error: '' });
+  const ask = async () => {
+    setState({ loading: true, result: null, error: '' });
+    try { setState({ loading: false, result: await explainWork(workId), error: '' }); }
+    catch (failure) { setState({ loading: false, result: null, error: failure.message }); }
+  };
+  const { result } = state;
+  return <section id="work-explanation" className="surface work-explanation" aria-labelledby="work-explanation-title">
+    <div className="summary-card-heading">
+      <h2 id="work-explanation-title">¿Por qué esta dificultad?</h2>
+      <button type="button" className="secondary-action" disabled={state.loading || !workId} onClick={ask}>
+        {result ? 'Volver a explicar' : 'Explicar la dificultad'}</button>
+    </div>
+    <ActivityStatus label={state.loading ? 'Preparando la explicación a partir del análisis' : ''} />
+    {state.error && <p className="result-supporting" role="alert">{state.error}</p>}
+    {result && <div className="explanation-body" aria-live="polite">
+      <p id="explanation-source" className={'explanation-source' + (result.mode === 'llm' ? ' is-ai' : ' is-demo')}>{sourceText(result)}</p>
+      <p className="explanation-summary">{result.explanation.summary}</p>
+      <ul className="explanation-factors">{result.explanation.factors.map((factor, index) => <li key={index}>
+        <p>{factor.text}</p>
+        {factor.passages.length > 0 && <div className="passage-actions">{factor.passages.map(code => {
+          const passage = result.passages[code];
+          return passage && <button key={code} type="button" className="passage-open"
+            onClick={() => onOpenPassage(passage.instrument, passage.measures)}>{passage.label} · compases {passage.measures}</button>;
+        })}</div>}
+      </li>)}</ul>
+      <p className="explanation-tip"><strong>Para estudiarla:</strong> {result.explanation.study_tip}</p>
+    </div>}
+  </section>;
+}
+
 // Explorer from family to instrument, below the dashboard of the analysis view.
 export function DifficultyPanel({ data, onOpenPassage }) {
   return <div id="difficulty-content" className="view-content">
+    <WorkExplanation key={data.work_id} workId={data.work_id} onOpenPassage={onOpenPassage} />
     <section className="result-section result-section--wide">
       <h2>Dificultad por familias e instrumentos</h2>
       <p className="result-supporting">Explora de la familia al instrumento y abre la partitura en el pasaje señalado.</p>
