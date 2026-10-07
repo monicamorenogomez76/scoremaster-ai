@@ -136,3 +136,16 @@ def test_results_are_exported_with_anonymous_evaluators(clients):
     assert "berta" not in str(exported).lower(), "no email or name of the musicians"
     assert len(exported["passages"]) == len(body["passages"])
     assert berta.get(path + "/export").status_code == 404
+
+
+def test_a_campaign_uses_the_kept_model_of_each_work_without_reading_it_again(clients, postgres_engine, monkeypatch):
+    """On Render's free plan reading a band score again took minutes (2026-10-07)."""
+    from backend.app import stored_scores
+    from backend.app.dependencies import get_score_store
+    from backend.infrastructure.prepared_store import PostgresPreparedStore
+    app.dependency_overrides[get_score_store] = lambda: PostgresPreparedStore(postgres_engine, "score")
+    ana, _ = clients
+    work_id = analyze(ana, "evaluation_study.musicxml").json()["work_id"]
+    stored_scores.clear_parsed_works()
+    monkeypatch.setattr(stored_scores, "parse_musicxml", lambda *args: pytest.fail("the work was read again"))
+    assert ana.post("/evaluations", json={"title": "x", "work_ids": [work_id], "size": 10}).status_code == 201

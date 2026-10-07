@@ -17,6 +17,10 @@
   opcional; editable mientras la campaña está abierta.
 - **Exportación** para el paso 19: pasajes con su predicción y todas las valoraciones, con los
   evaluadores como «Evaluador n» (sin email ni nombre).
+- **Pantalla de la directora** (menú «Valoraciones», `frontend/src/EvaluationView.jsx`): crear la campaña
+  con sus obras analizadas y el número de pasajes (avisa si las obras dan menos), revisar cada pasaje con
+  la predicción de ScoreLint, verlo y escucharlo en la partitura, quitarlo en borrador, invitar músicos
+  por email y ver su avance, abrir (con confirmación), cerrar y exportar los resultados en JSON.
 - Datos mínimos: email de la cuenta, nivel e instrumento. API: `/evaluations` (ver
   `backend/app/evaluation_routes.py`); tablas de la migración `0009_evaluations`.
 

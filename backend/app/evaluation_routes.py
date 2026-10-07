@@ -12,7 +12,8 @@ from backend.application.accounts import User
 from backend.application.evaluations import (EXPERIENCE_LEVELS, Campaign, CampaignLocked, EvaluationRepository,
                                              Rating)
 from backend.application.library import LibraryRepository
-from backend.app.dependencies import authenticated_user, get_evaluation_repository, get_library_repository
+from backend.app.dependencies import (authenticated_user, get_evaluation_repository, get_library_repository,
+                                      get_score_store)
 from backend.app.stored_scores import stored_score
 
 router = APIRouter()
@@ -111,11 +112,12 @@ def _owned(evaluations: EvaluationRepository, user: User, campaign_id: str) -> C
 @router.post("/evaluations", status_code=201)
 def create_campaign(body: CampaignIn, user: User = Depends(authenticated_user),
                     evaluations: EvaluationRepository = Depends(get_evaluation_repository),
-                    library: LibraryRepository = Depends(get_library_repository)):
+                    library: LibraryRepository = Depends(get_library_repository),
+                    score_store=Depends(get_score_store)):
     """Proposes the passages of the chosen works from their stored analysis; the director reviews them."""
     samples = []
     for work_id in dict.fromkeys(body.work_ids):
-        found, latest = stored_score(library, user.id, work_id), library.latest_analysis(user.id, work_id)
+        found, latest = stored_score(library, user.id, work_id, score_store), library.latest_analysis(user.id, work_id)
         if found is None or latest is None:
             raise HTTPException(status_code=422, detail="Alguna obra no existe o no tiene análisis.")
         title, score = found

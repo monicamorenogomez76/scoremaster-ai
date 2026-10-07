@@ -743,3 +743,25 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .topbar-activity .activity-bar { max-width: none; }
 .topbar-activity .activity-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 760px) { .topbar-activity { order: 3; flex-basis: 100%; margin: 0 0 8px; } .topbar-activity .activity-text { white-space: normal; } .topbar { flex-wrap: wrap; } }
+
+/* Evaluation campaigns (steps 16-18). */
+.campaign-detail { display: grid; gap: 12px; margin-bottom: 20px; }
+.campaign-detail > * { min-width: 0; }
+.campaign-detail h3 { margin: 8px 0 0; font-size: 1rem; }
+.campaign-instructions { margin: 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--panel-alt); color: var(--text); }
+.campaign-invitations { display: grid; gap: 8px; }
+.campaign-invitations label { display: grid; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
+.campaign-invitations textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-weight: 400; }
+.campaign-invitations h3, .campaign-passages-panel h3 { margin: 0; }
+.campaign-body { display: grid; gap: 24px; }
+.campaign-body > * { min-width: 0; }
+@media (min-width: 1100px) { .campaign-body { grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); align-items: start; } }
+.campaign-passages-panel { display: grid; gap: 8px; }
+.invitation-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.invitation-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.campaign-passages { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.campaign-passages th, .campaign-passages td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.campaign-actions { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
+.campaign-passages .link-action { min-height: 0; }
+.campaign-item .works-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.table-scroll { position: relative; max-width: 100%; overflow-x: auto; }
