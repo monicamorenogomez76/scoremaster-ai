@@ -38,7 +38,7 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 10 | Tiempos y ataques musicales | Integrado: PR #48; acordes, ligaduras, voces y adornos |
 | 11 | Características locales | Pendiente |
 | 12 | Políticas de dificultad | Pendiente |
-| 13 | Grados 1–6 | En revisión: rúbrica, índice 0–10 y escala declarada |
+| 13 | Grados 1–6 | Integrado: PR #49 |
 | 14 | Detector de criticidad | Integrado: frases (PR #40), detector con señal de velocidad (PR #41) y cadencias armónicas (PR #43) |
 | 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Integrado: PR #37, calendario (PR #38) y similitud de estructura (PR #39) |
 | 16 | Evidencias en interfaz | Pendiente |
@@ -94,6 +94,11 @@ su agenda indica la obra que se trabaja (decisiones de la autora).
 | — | Evaluación (pasos 16–18) | Pendiente, antes de F3 |
 | C1–C4 | Calendario de conciertos (2026-10-06): programa, patrón semanal, serie por fases hasta el ensayo general, revisión por bloque y replanificación | Integrado: PR #58–#62 y #65 (navegación a los pasajes y siguiente paso en el Resumen) |
 | F3 | Observaciones de ensayo y cierre: «Prioridades por sección» con las notas del último ensayo | Adelantado en C4: lo pendiente de la última revisión |
+
+## Despliegue adelantado (2026-10-07)
+
+Para que los músicos valoren con cuenta propia, la aplicación se publica en Render antes de la
+evaluación (plan gratuito, decisión de la autora): ver [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Criterios de aceptación
 

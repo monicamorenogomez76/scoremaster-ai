@@ -1,6 +1,7 @@
 """Sounding-pitch timelines for solo passages and the full ensemble."""
 from collections import Counter, OrderedDict
 from hashlib import sha256
+import os
 import re
 from threading import Lock
 
@@ -34,7 +35,15 @@ def _identity(part, name, declared):
 # Passages of the same work reuse the parsed score (2026-10-07: parsing a real band score took most of
 # the 10-20 s the author waited per passage). Keyed by content, so each request's temporary file name
 # does not matter; the timeline never modifies the score (it works on copies of each part).
-PARSED_SCORES_KEPT = 4
+# A parsed band score can take ~100-200 MB: small servers keep fewer (Render's free plan: 1).
+def _scores_kept() -> int:
+    try:
+        return max(1, int(os.environ.get('PLAYBACK_SCORES_KEPT', '4')))
+    except ValueError:
+        return 4
+
+
+PARSED_SCORES_KEPT = _scores_kept()
 _parsed_scores: OrderedDict = OrderedDict()
 # One timeline at a time: music21 objects are shared between requests.
 _build_lock = Lock()

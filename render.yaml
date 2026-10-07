@@ -1,0 +1,45 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec): the same Docker image as `docker compose up`
+# with a managed PostgreSQL. Free plan chosen by the author (2026-10-07): the service sleeps after
+# 15 minutes without use and the free database expires after 30 days (see docs/DEPLOYMENT.md).
+databases:
+  - name: scoremaster-db
+    plan: free
+    region: frankfurt
+    databaseName: scoremaster
+    user: scoremaster
+    postgresMajorVersion: "17"
+    ipAllowList: []          # only Render services reach it
+
+services:
+  - type: web
+    name: scoremaster
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeploy: true         # every merge into main
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: scoremaster-db
+          property: connectionString
+      - key: APP_ENV
+        value: production    # Secure cookies and no interactive API docs (Render serves HTTPS)
+      - key: PORT
+        value: "8000"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PLAYBACK_SCORES_KEPT
+        value: "1"           # 512 MB of memory: one parsed band score at a time
+      - key: DEMO_USER_EMAIL
+        value: demo@scoremaster.local
+      - key: DEMO_USER_PASSWORD
+        sync: false          # asked when the Blueprint is created; never in the repository
+      - key: YOUTUBE_API_KEY
+        sync: false          # optional
+      - key: GOOGLE_CLIENT_ID
+        sync: false          # optional: Google sign-in stays off while empty
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false

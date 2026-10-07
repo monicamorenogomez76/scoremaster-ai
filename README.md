@@ -27,6 +27,11 @@ El flujo de trabajo y las pautas de cambios están en [CONTRIBUTING.md](CONTRIBU
 `skills/`. Las partituras comerciales para pruebas manuales van en
 `test-scores/local/`, que no se versiona.
 
+## Despliegue
+
+La aplicación se publica en Render con la misma imagen Docker y un PostgreSQL gestionado:
+[guía de despliegue](docs/DEPLOYMENT.md) y [`render.yaml`](render.yaml).
+
 ## Arranque rápido y credenciales de prueba
 
 ```sh
