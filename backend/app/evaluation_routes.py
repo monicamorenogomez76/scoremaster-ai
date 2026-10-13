@@ -12,7 +12,7 @@ from backend.application.accounts import User
 from backend.application.evaluations import (EXPERIENCE_LEVELS, Campaign, CampaignLocked, EvaluationRepository,
                                              Rating)
 from backend.application.library import LibraryRepository
-from backend.app.dependencies import (authenticated_user, get_evaluation_repository, get_explanation_provider,
+from backend.app.dependencies import (authenticated_user, get_evaluation_repository, get_review_provider,
                                       get_library_repository, get_score_store)
 from backend.analyzers.passage_features import FEATURES_VERSION, passage_features
 from backend.application import llm_review_jobs
@@ -249,7 +249,7 @@ def _review_status(campaign: Campaign, reviews: list, provider) -> dict:
 @router.get("/evaluations/{campaign_id}/llm-review")
 def llm_review_status(campaign_id: str, user: User = Depends(authenticated_user),
                       evaluations: EvaluationRepository = Depends(get_evaluation_repository),
-                      provider=Depends(get_explanation_provider)):
+                      provider=Depends(get_review_provider)):
     """How far the independent review of the LLM (method B, step 22) has gone."""
     campaign = _owned(evaluations, user, campaign_id)
     return _review_status(campaign, evaluations.llm_reviews(user.id, campaign.id) or [], provider)
@@ -259,7 +259,7 @@ def llm_review_status(campaign_id: str, user: User = Depends(authenticated_user)
 def start_llm_review(campaign_id: str, user: User = Depends(authenticated_user),
                      evaluations: EvaluationRepository = Depends(get_evaluation_repository),
                      library: LibraryRepository = Depends(get_library_repository),
-                     score_store=Depends(get_score_store), provider=Depends(get_explanation_provider)):
+                     score_store=Depends(get_score_store), provider=Depends(get_review_provider)):
     """Asks the LLM about every passage still without a review with the current versions, in the background."""
     campaign = _owned(evaluations, user, campaign_id)
     if not _reviewing(provider):

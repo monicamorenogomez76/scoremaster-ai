@@ -19,7 +19,7 @@ from backend.infrastructure.concert_repository import PostgresConcertRepository
 from backend.infrastructure.evaluation_repository import PostgresEvaluationRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
-from backend.infrastructure.ai.gemini_provider import shared_provider
+from backend.infrastructure.ai.gemini_provider import shared_provider, shared_review_provider
 from backend.infrastructure.explanation_cache import PostgresExplanationCache
 from backend.infrastructure.prepared_store import PostgresPreparedStore
 from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
@@ -78,6 +78,12 @@ def get_score_store() -> Optional[PostgresPreparedStore]:
 def get_explanation_provider():
     """Gemini when GEMINI_API_KEY is set (step 21); otherwise the demo, always identified as such."""
     return shared_provider() or DemoExplanationProvider()
+
+
+def get_review_provider():
+    """The provider of the independent review (method B): GEMINI_REVIEW_MODEL or the same as the explanations.
+    Without a key it is the demo, which cannot review: the campaign answers 409."""
+    return shared_review_provider() or DemoExplanationProvider()
 
 
 def get_explanation_cache() -> Optional[PostgresExplanationCache]:

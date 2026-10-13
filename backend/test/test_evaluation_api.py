@@ -173,13 +173,13 @@ class ReviewingProvider:
 
 @pytest.fixture
 def reviewer(monkeypatch):
-    from backend.app.dependencies import get_explanation_provider
+    from backend.app.dependencies import get_review_provider
     from backend.application import llm_review_jobs
     monkeypatch.setattr(llm_review_jobs, "PAUSE_SECONDS", 0)
     chosen = {"provider": ReviewingProvider()}
-    app.dependency_overrides[get_explanation_provider] = lambda: chosen["provider"]
+    app.dependency_overrides[get_review_provider] = lambda: chosen["provider"]
     yield chosen
-    app.dependency_overrides.pop(get_explanation_provider, None)
+    app.dependency_overrides.pop(get_review_provider, None)
 
 
 def run_review(client, campaign_id):

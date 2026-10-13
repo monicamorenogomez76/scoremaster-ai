@@ -100,7 +100,26 @@ def shared_provider() -> Optional[GeminiExplanationProvider]:
         return _shared
 
 
-def reset_shared_provider() -> None:
-    global _shared
+_shared_review: Optional[GeminiExplanationProvider] = None
+
+
+def shared_review_provider() -> Optional[GeminiExplanationProvider]:
+    """The independent review of method B (step 22) may use its own model: GEMINI_REVIEW_MODEL (2026-10-13:
+    gemini-3.5-flash-lite allows 500 requests a day against 20 of gemini-3.8-flash). Otherwise, the same."""
+    global _shared_review
+    model = os.environ.get("GEMINI_REVIEW_MODEL", "").strip()
+    if not model:
+        return shared_provider()
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key:
+        return None
     with _shared_lock:
-        _shared = None
+        if _shared_review is None or _shared_review.info.model != model:
+            _shared_review = GeminiExplanationProvider(key, model)
+        return _shared_review
+
+
+def reset_shared_provider() -> None:
+    global _shared, _shared_review
+    with _shared_lock:
+        _shared = _shared_review = None

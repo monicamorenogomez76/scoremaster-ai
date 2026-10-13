@@ -139,3 +139,23 @@ def test_gemini_has_a_minute_and_the_limit_can_be_changed(monkeypatch):
     monkeypatch.setenv("GEMINI_TIMEOUT_SECONDS", "90")
     GeminiExplanationProvider("k", "m")._chat(dict)
     assert seen["timeout"] == 90
+
+
+def test_the_independent_review_can_use_its_own_model(monkeypatch):
+    """2026-10-13: gemini-3.8-flash allows 20 requests a day and gemini-3.5-flash-lite 500; method B uses
+    the lite one for a whole campaign while the explanations keep the more capable model."""
+    from backend.app.dependencies import get_review_provider
+    gemini_provider.reset_shared_provider()
+    monkeypatch.setenv("GEMINI_API_KEY", "secret-gemini-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.8-flash")
+    monkeypatch.delenv("GEMINI_REVIEW_MODEL", raising=False)
+    assert get_review_provider().info.model == "gemini-3.8-flash", "the same model unless told otherwise"
+    gemini_provider.reset_shared_provider()
+    monkeypatch.setenv("GEMINI_REVIEW_MODEL", "gemini-3.5-flash-lite")
+    assert get_review_provider().info.model == "gemini-3.5-flash-lite"
+    assert get_explanation_provider().info.model == "gemini-3.8-flash"
+    assert get_review_provider() is get_review_provider()
+    monkeypatch.delenv("GEMINI_API_KEY")
+    gemini_provider.reset_shared_provider()
+    assert isinstance(get_review_provider(), DemoExplanationProvider), "without a key there is no review (409)"
+    gemini_provider.reset_shared_provider()
