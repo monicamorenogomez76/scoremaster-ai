@@ -121,10 +121,10 @@ def readable_rehearsal(explanation: RehearsalExplanation, evidence: dict) -> Reh
 
 
 def explain_rehearsal(rehearsal: dict, analyses: dict, concert: Optional[dict], pending, provider: ExplanationProvider,
-                      demo: ExplanationProvider) -> dict:
+                      demo: ExplanationProvider, cache=None) -> dict:
     evidence = rehearsal_evidence(rehearsal, analyses, concert, pending)
     shown = run_explanation(evidence, lambda who, data: who.explain_rehearsal(data), validate_rehearsal_explanation,
-                            provider, demo, PROMPT_VERSION, readable_rehearsal)
+                            provider, demo, PROMPT_VERSION, readable_rehearsal, cache)
     raw = rehearsal.get("blocks") or []
     return {**shown, "blocks": {block["id"]: {"title": item.get("title"), "work_id": item.get("work_id"),
                                               "work_title": item.get("work_title"), "measures": item.get("measures"),

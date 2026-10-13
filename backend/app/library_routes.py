@@ -7,7 +7,8 @@ from pydantic import BaseModel, field_validator
 
 from backend.application.accounts import User
 from backend.application.library import PREPARATION_STATUSES, LibraryRepository, Work
-from backend.app.dependencies import authenticated_user, get_explanation_provider, get_library_repository, get_playback_store
+from backend.app.dependencies import (authenticated_user, get_explanation_cache, get_explanation_provider, get_library_repository,
+                                      get_playback_store)
 from backend.application.difficulty_explanation import explain_difficulty
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.parsers.playback import prepare_playback, preparation_enabled
@@ -87,12 +88,12 @@ def get_work(work_id: str, user: User = Depends(authenticated_user),
 @router.get("/works/{work_id}/explanation")
 def work_explanation(work_id: str, user: User = Depends(authenticated_user),
                      library: LibraryRepository = Depends(get_library_repository),
-                     provider=Depends(get_explanation_provider)):
+                     provider=Depends(get_explanation_provider), cache=Depends(get_explanation_cache)):
     """Why the work has its difficulty, written only from its latest analysis (step 20)."""
     record = library.latest_analysis(user.id, _work_id(work_id))
     if record is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
-    return explain_difficulty(record.result, provider, DemoExplanationProvider())
+    return explain_difficulty(record.result, provider, DemoExplanationProvider(), cache)
 
 
 @router.get("/works/{work_id}/file")

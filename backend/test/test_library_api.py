@@ -269,3 +269,26 @@ def test_the_difficulty_of_a_work_is_explained_to_its_owner_in_demo_mode(clients
     assert all(code in body["passages"] for factor in body["explanation"]["factors"] for code in factor["passages"])
     assert berta.get("/works/" + work_id + "/explanation").status_code == 404
     assert TestClient(app).get("/works/" + work_id + "/explanation").status_code == 401
+
+
+def test_an_ai_explanation_is_kept_in_postgresql_and_reused(clients, postgres_engine):
+    """Step 23: the second time the same work is explained, Gemini is not asked (20 requests a day)."""
+    from backend.app.dependencies import get_explanation_cache, get_explanation_provider
+    from backend.application.ai import ProviderInfo
+    from backend.infrastructure.explanation_cache import PostgresExplanationCache
+
+    class Llm:
+        info, calls = ProviderInfo("llm", "gemini", "gemini-test"), 0
+
+        def explain_difficulty(self, evidence):
+            Llm.calls += 1
+            return {"summary": "Grado medio.", "factors": [{"dimension": "general", "text": "Moderada."}],
+                    "study_tip": "Despacio."}
+    app.dependency_overrides[get_explanation_provider] = lambda: Llm()
+    app.dependency_overrides[get_explanation_cache] = lambda: PostgresExplanationCache(postgres_engine)
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    first = ana.get("/works/" + work_id + "/explanation").json()
+    again = ana.get("/works/" + work_id + "/explanation").json()
+    assert Llm.calls == 1 and (first["cached"], again["cached"]) == (False, True)
+    assert again["explanation"] == first["explanation"] and again["mode"] == "llm"

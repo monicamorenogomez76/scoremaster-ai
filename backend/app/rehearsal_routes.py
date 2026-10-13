@@ -14,7 +14,7 @@ from backend.application.library import LibraryRepository
 from backend.application.rehearsals import (BLOCK_GROUPS, PHASES, REVIEW_STATUSES, BlockReview, Rehearsal,
                                             RehearsalBlock, RehearsalDraft, RehearsalRepository, UnknownConcert,
                                             UnknownWork)
-from backend.app.dependencies import (authenticated_user, get_concert_repository, get_explanation_provider,
+from backend.app.dependencies import (authenticated_user, get_concert_repository, get_explanation_cache, get_explanation_provider,
                                       get_library_repository, get_rehearsal_repository, get_score_store)
 from backend.application.concerts import ConcertRepository
 from backend.application.rehearsal_explanation import explain_rehearsal
@@ -154,7 +154,7 @@ def rehearsal_explanation(rehearsal_id: str, user: User = Depends(authenticated_
                           rehearsals: RehearsalRepository = Depends(get_rehearsal_repository),
                           library: LibraryRepository = Depends(get_library_repository),
                           concerts: ConcertRepository = Depends(get_concert_repository),
-                          provider=Depends(get_explanation_provider)):
+                          provider=Depends(get_explanation_provider), cache=Depends(get_explanation_cache)):
     """«¿Por qué este plan?» (step 20): from its blocks, its works' analysis, its concert and the last review."""
     found = rehearsals.get_rehearsal(user.id, _rehearsal_id(rehearsal_id))
     if found is None:
@@ -178,7 +178,7 @@ def rehearsal_explanation(rehearsal_id: str, user: User = Depends(authenticated_
                if block.work_id and block.review and block.review.status in ("pending", "improve")]
     return explain_rehearsal(_public(found), analyses,
                              {"title": concert.draft.title, "date": concert.draft.date.isoformat()} if concert else None,
-                             pending, provider, DemoExplanationProvider())
+                             pending, provider, DemoExplanationProvider(), cache)
 
 
 # Declared before /rehearsals/{rehearsal_id}.

@@ -32,6 +32,12 @@
   mensaje humano. Se activa con `GEMINI_API_KEY` (modelo en `GEMINI_MODEL`, por defecto
   `gemini-3.8-flash`); LangChain se importa solo al usarlo (~70 MB que un servidor sin clave no gasta).
   Las pruebas usan un modelo simulado: nunca llaman a Google.
+- **Caché (paso 23)**: con el cupo gratuito de `gemini-3.8-flash` (5 peticiones por minuto y 20 al día en la
+  cuenta de la autora), cada explicación válida de la IA se guarda en `ai_explanations` (migración 0011) con
+  la clave sha256 de las evidencias exactas, el proveedor, el modelo y la versión del prompt; repetirla no
+  gasta cupo y la interfaz lo dice. Cambiar cualquiera de esas piezas (reanalizar, otro modelo, otro prompt)
+  vuelve a preguntar. Nunca se guardan errores, respaldos ni el demo; una entrada que ya no valida se pide de
+  nuevo. Las valoraciones del método B se guardan con lo enviado en `evaluation_llm_reviews` (paso 22).
 - **Primera respuesta real (2026-10-13, `gemini-3.8-flash`, *Persis Overture*)**: fiel a las evidencias
   (grado, instrumentos y los pasajes de cada factor coinciden con sus hallazgos), pero escribía nombres de
   parte en inglés («Concert Snare Drum») e identificadores internos («como P3, P4 y P5»). **Prompts v2**

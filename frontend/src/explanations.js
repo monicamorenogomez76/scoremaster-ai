@@ -15,7 +15,8 @@ const FALLBACKS = {
 export function sourceText(result) {
   if (result.mode === 'llm') {
     return 'Redactada con IA (' + result.provider + (result.model ? ' · ' + result.model : '') + ') solo a partir del '
-      + 'análisis de ScoreLint. Puede contener imprecisiones: contrástala con la partitura.';
+      + 'análisis de ScoreLint. Puede contener imprecisiones: contrástala con la partitura.'
+      + (result.cached ? ' Respuesta guardada: no gasta cupo.' : '');
   }
   if (result.fallback_reason) return (FALLBACKS[result.fallback_reason] || FALLBACKS.error) + ': se muestra el modo demo, redactado con reglas, sin IA.';
   return 'Modo demo · explicación redactada con reglas a partir del análisis de ScoreLint, sin IA.';

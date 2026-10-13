@@ -106,10 +106,10 @@ def readable_difficulty(explanation: DifficultyExplanation, evidence: dict) -> D
         "factors": [factor.model_copy(update={"text": fix(factor.text)}) for factor in explanation.factors]})
 
 
-def explain_difficulty(result: dict, provider: ExplanationProvider, demo: ExplanationProvider) -> dict:
+def explain_difficulty(result: dict, provider: ExplanationProvider, demo: ExplanationProvider, cache=None) -> dict:
     """The explanation shown to the director, with which provider wrote it and why the demo answered."""
     evidence = difficulty_evidence(result)
     shown = run_explanation(evidence, lambda who, data: who.explain_difficulty(data), validate_explanation,
-                            provider, demo, PROMPT_VERSION, readable_difficulty)
+                            provider, demo, PROMPT_VERSION, readable_difficulty, cache)
     return {**shown, "passages": {item["id"]: {"instrument": item["instrument"], "label": item["label"],
                                                "measures": item["measures"]} for item in evidence["passages"]}}
