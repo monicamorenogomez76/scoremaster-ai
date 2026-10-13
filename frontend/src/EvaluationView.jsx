@@ -3,7 +3,7 @@ import { ActivityStatus } from './ActivityStatus.jsx';
 import {
   campaignSummary, createCampaign, exportCampaign, getCampaign, invitationProgress, listCampaigns, parseEmails,
   predictionText, removePassage, setCampaignStatus, setInvitations, shortfallText, statusLabel,
-  EXPERIENCE_OPTIONS, GRADE_RUBRIC, PRIORITY_LABELS, nextToRate, ratedCount, ratingDraft, ratingToSend, saveProfile, saveRating,
+  EXPERIENCE_OPTIONS, GRADE_RUBRIC, PRIORITY_LABELS, getLlmReview, llmReviewText, startLlmReview, nextToRate, ratedCount, ratingDraft, ratingToSend, saveProfile, saveRating,
 } from './evaluations.js';
 import { listWorks } from './library.js';
 import { displayInstrumentName } from './labels.js';
@@ -88,6 +88,38 @@ function Invitations({ campaign, onChanged }) {
   </section>;
 }
 
+// Method B of the evaluation (step 22): the LLM rates every passage with the musicians' rubric from its
+// measurements and notes, never seeing ScoreLint; only the director sees it. Followed while it runs.
+function LlmReview({ campaignId, onReviewed }) {
+  const [status, setStatus] = useState(null);
+  const [error, setError] = useState('');
+  const refresh = () => getLlmReview(campaignId).then(found => { setStatus(found); return found; }).catch(failure => setError(failure.message));
+  useEffect(() => { refresh(); }, [campaignId]);
+  useEffect(() => {
+    if (status?.state !== 'running') return undefined;
+    const timer = setInterval(() => refresh().then(found => { if (found && found.state !== 'running') onReviewed(); }), 5000);
+    return () => clearInterval(timer);
+  }, [status?.state]);
+  const start = async () => {
+    setError('');
+    try { setStatus(await startLlmReview(campaignId)); } catch (failure) { setError(failure.message); }
+  };
+  if (!status) return null;
+  const complete = status.available && status.total > 0 && status.done >= status.total;
+  return <section id="llm-review" className="llm-review" aria-labelledby="llm-review-title">
+    <div className="summary-card-heading">
+      <h3 id="llm-review-title">Valoración independiente con IA</h3>
+      <button type="button" className="secondary-action" disabled={!status.available || status.state === 'running' || complete}
+        onClick={start}>{status.done && !complete ? 'Valorar los pendientes' : 'Valorar con IA'}</button>
+    </div>
+    <p className="result-supporting">La IA valora cada pasaje con la misma rúbrica que los músicos, a partir de sus medidas y
+      sus notas, sin ver la predicción de ScoreLint. Es el método B de la evaluación: solo lo ves tú.</p>
+    <ActivityStatus label={status.state === 'running' ? 'Valorando con IA: ' + status.done + ' de ' + status.total + ' pasajes' : ''} />
+    {status.state !== 'running' && <p id="llm-review-status" className="table-supporting" role="status">{llmReviewText(status)}</p>}
+    {error && <p className="result-supporting" role="alert">{error}</p>}
+  </section>;
+}
+
 // The campaign of the director: its passages with ScoreLint's prediction, the musicians and its status.
 function CampaignDetail({ id, notice, onClose, onChanged, onOpenBlock }) {
   const [campaign, setCampaign] = useState(null);
@@ -123,6 +155,7 @@ function CampaignDetail({ id, notice, onClose, onChanged, onOpenBlock }) {
       <button type="button" className="secondary-action" onClick={() => run(() => exportCampaign(campaign))}>Exportar resultados</button>
     </div>
     {error && <p className="result-supporting" role="alert">{error}</p>}
+    <LlmReview campaignId={campaign.id} onReviewed={() => getCampaign(campaign.id).then(setCampaign).catch(() => {})} />
     <div className="campaign-body">
       <section className="campaign-passages-panel" aria-labelledby="campaign-passages-title">
         <h3 id="campaign-passages-title">Pasajes</h3>
@@ -130,13 +163,14 @@ function CampaignDetail({ id, notice, onClose, onChanged, onOpenBlock }) {
         <div className="table-scroll">
           <table className="campaign-passages">
             <thead><tr><th scope="col">#</th><th scope="col">Obra</th><th scope="col">Parte</th><th scope="col">Compases</th>
-              <th scope="col">Predicción</th><th scope="col"><span className="visually-hidden">Acciones</span></th></tr></thead>
+              <th scope="col">ScoreLint</th><th scope="col">IA</th><th scope="col"><span className="visually-hidden">Acciones</span></th></tr></thead>
             <tbody>{campaign.passages.map((passage, index) => <tr key={passage.id}>
               <td>{index + 1}</td>
               <td>{passage.work_title}</td>
               <td>{passage.parts.map(displayInstrumentName).join(', ')}</td>
               <td>{passage.measure_range}</td>
               <td>{predictionText(passage.snapshot)}</td>
+              <td title={passage.llm_review?.reason || ''}>{passage.llm_review ? predictionText(passage.llm_review) : '—'}</td>
               <td><span className="campaign-actions">
                 <button type="button" className="link-action" onClick={() => onOpenBlock({ work_id: passage.work_id, parts: passage.parts,
                   measures: passage.measure_range, label: passage.label })}>Ver y escuchar</button>

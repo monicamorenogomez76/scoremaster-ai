@@ -25,6 +25,17 @@
   instrumento, y valora los pasajes uno a uno tras verlos y escucharlos (o ver su parte en toda la
   obra), con la rúbrica de grados de `docs/DIFFICULTY_CRITICALITY.md`; cada valoración se guarda al
   pasar al siguiente y puede seguir otro día. Con la campaña cerrada solo puede consultarlas.
+- **Método B, LLM independiente (paso 22, decisiones de la autora, 2026-10-13)**: botón «Valorar con IA» en la
+  campaña. Gemini recibe de cada pasaje solo **medidas objetivas y sus notas** (`passage-features-v1`:
+  instrumento, compases, tempo vigente, duración, ataques y notas por segundo, figura más breve, tesitura
+  escrita y real, transposición, salto mayor y medio, tramo más largo sin descanso, proporción de silencio,
+  acordes, apoyaturas y las notas compás a compás), **nunca** el grado, el índice, las dimensiones ni los
+  hallazgos de ScoreLint. Responde con la misma rúbrica 1–6 y la misma pregunta de criticidad que los
+  músicos, más confianza, factores y motivo (`passage-review-v1`). Sin proveedor real no hay sustituto: un
+  demo con reglas sería otra heurística. Cada valoración se guarda con proveedor, modelo, versiones y lo
+  enviado (tabla `evaluation_llm_reviews`, migración 0010); repetir no vuelve a preguntar lo ya valorado con
+  las mismas versiones, y un fallo se reintenta la vez siguiente. La exportación incluye `llm_reviews` y el
+  informe añade una fila «LLM (proveedor · modelo · prompt)» por versión.
 - Datos mínimos: email de la cuenta, nivel e instrumento. API: `/evaluations` (ver
   `backend/app/evaluation_routes.py`); tablas de la migración `0009_evaluations`.
 

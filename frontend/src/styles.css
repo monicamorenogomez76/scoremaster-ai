@@ -799,3 +799,5 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .explanation-factors p { margin: 0 0 6px; color: var(--text); }
 .explanation-tip { margin: 0; color: var(--text); }
 .rehearsal-why { display: grid; gap: 10px; margin-top: 10px; }
+.llm-review { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-alt); }
+.llm-review h3 { margin: 0; }

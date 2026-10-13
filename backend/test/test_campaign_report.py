@@ -98,3 +98,25 @@ def test_empty_campaign_produces_a_report_without_invented_figures():
     text = to_markdown(build_report({"campaign": {"title": "Vacía"}, "passages": [], "ratings": []}))
     assert "| Heurística (ScoreLint) | 0 | — |" in text
     assert "no se puede medir el acuerdo" in text
+
+
+def _review(pid, grade, critical, model="gemini-3.8-flash", prompt="passage-review-v1"):
+    return {"passage_id": pid, "provider": "gemini", "model": model, "prompt_version": prompt,
+            "features_version": "passage-features-v1", "grade": grade, "critical": critical, "confidence": 0.7,
+            "main_factors": ["rhythm"], "reason": "x", "created_at": "2026-10-13T10:00:00+00:00"}
+
+
+def test_the_llm_gets_its_own_row_per_version_and_only_on_the_passages_it_reviewed():
+    """Step 22, method B: one row per provider, model and prompt, so versions never mix."""
+    export = {**EXPORT, "llm_reviews": [_review("p1", 2, False), _review("p2", 5, True), _review("p3", 4, False),
+                                        _review("p1", 1, False, prompt="passage-review-v0")]}
+    report = build_report(export)
+    label = "LLM (gemini · gemini-3.8-flash · passage-review-v1)"
+    assert list(report["methods"]) == [HEURISTIC, label, "LLM (gemini · gemini-3.8-flash · passage-review-v0)"]
+    llm = report["methods"][label]
+    assert llm["difficulty"]["n"] == 3, "p4 has no review with this version"
+    # p1: 2 vs 2, p2: 5 vs 4.5, p3: 4 vs 3.5
+    assert llm["difficulty"]["mae"] == pytest.approx((0 + 0.5 + 0.5) / 3)
+    assert llm["critical"]["n"] == 2, "p3 is a tie and p4 was not reviewed"
+    markdown = to_markdown(report)
+    assert "| " + label + " | 3 |" in markdown

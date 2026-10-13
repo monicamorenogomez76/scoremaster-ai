@@ -68,9 +68,20 @@ def _f_beta(precision: Optional[float], recall: Optional[float], beta: float) ->
     return (1 + weight) * precision * recall / (weight * precision + recall)
 
 
+def llm_methods(export: dict) -> dict:
+    """Method B (step 22): one method per provider, model and prompt version, so versions never mix.
+    label → {passage id: review}; in the order they were first reviewed."""
+    methods = {}
+    for review in export.get("llm_reviews", []):
+        label = "LLM ({} · {} · {})".format(review["provider"], review["model"], review["prompt_version"])
+        methods.setdefault(label, {})[review["passage_id"]] = review
+    return methods
+
+
 def aggregate(export: dict, min_ratings: int = 1, levels: Optional[Iterable[str]] = None) -> dict:
     """One row per passage with its prediction and the musicians' aggregated judgement."""
     allowed = set(levels) if levels else None
+    llm = llm_methods(export)
     by_passage = defaultdict(list)
     for rating in export.get("ratings", []):
         if allowed is None or rating.get("experience_level") in allowed:
@@ -89,7 +100,10 @@ def aggregate(export: dict, min_ratings: int = 1, levels: Optional[Iterable[str]
             "passage_id": passage["passage_id"], "work_title": passage.get("work_title"),
             "parts": passage.get("parts", []), "measure_range": passage.get("measure_range"),
             "family": snapshot.get("family") or "sin familia",
-            "predicted": {HEURISTIC: {"grade": snapshot.get("grade"), "critical": bool(snapshot.get("critical"))}},
+            "predicted": {HEURISTIC: {"grade": snapshot.get("grade"), "critical": bool(snapshot.get("critical"))},
+                          **{label: {"grade": (reviews.get(passage["passage_id"]) or {}).get("grade"),
+                                     "critical": (reviews.get(passage["passage_id"]) or {}).get("critical")}
+                             for label, reviews in llm.items()}},
             "ratings": len(ratings),
             "expert_grade": median(grades),
             "grade_spread": max(grades) - min(grades),
@@ -110,7 +124,7 @@ def difficulty_metrics(pairs: list[tuple[float, float]]) -> dict:
         "n": len(pairs),
         "mae": mean(abs(x) for x in errors),
         "rmse": math.sqrt(mean(x * x for x in errors)),
-        # Positive: ScoreLint rates harder than the musicians.
+        # Positive: the method rates harder than the musicians.
         "bias": mean(errors),
         "spearman": spearman([p for p, _ in pairs], [e for _, e in pairs]),
         "exact": mean(1.0 if abs(x) < 0.5 else 0.0 for x in errors),
@@ -133,7 +147,7 @@ def _method_metrics(rows: list[dict], method: str) -> dict:
     graded = [(r["predicted"][method]["grade"], r["expert_grade"]) for r in rows
               if r["predicted"][method]["grade"] is not None]
     decided = [(r["predicted"][method]["critical"], r["expert_critical"]) for r in rows
-               if r["expert_critical"] is not None]
+               if r["expert_critical"] is not None and r["predicted"][method]["critical"] is not None]
     return {"difficulty": difficulty_metrics(graded), "critical": critical_metrics(decided),
             "undecided_critical": sum(1 for r in rows if r["expert_critical"] is None)}
 
@@ -169,7 +183,7 @@ def build_report(export: dict, min_ratings: int = 1, levels: Optional[Iterable[s
                  source_sha256: Optional[str] = None) -> dict:
     aggregated = aggregate(export, min_ratings, levels)
     rows = aggregated["rows"]
-    methods = [HEURISTIC]
+    methods = [HEURISTIC, *llm_methods(export)]
     return {
         "report_version": REPORT_VERSION,
         "campaign": export.get("campaign", {}),
@@ -235,7 +249,7 @@ def to_markdown(report: dict) -> str:
         c = metrics["critical"]
         lines += [f"Criticidad de {name}: {c['tp']} aciertos, {c['fp']} falsos positivos, {c['fn']} críticos no "
                   f"detectados y {c['tn']} no críticos correctos; {metrics['undecided_critical']} pasajes empatados "
-                  "quedan fuera. Sesgo positivo: ScoreLint puntúa más difícil que los músicos.", ""]
+                  "quedan fuera. Sesgo positivo: el método puntúa más difícil que los músicos.", ""]
     lines += ["## Acuerdo entre evaluadores", ""]
     if a["passages"]:
         lines.append(f"En {a['passages']} pasajes con dos o más valoraciones: diferencia media entre dos evaluadores "

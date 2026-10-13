@@ -10,7 +10,7 @@ from threading import Lock
 from typing import Optional
 
 from backend.application.ai import ProviderFailure, ProviderInfo
-from backend.infrastructure.ai.prompts import DIFFICULTY_PROMPT, REHEARSAL_PROMPT, human_message
+from backend.infrastructure.ai.prompts import DIFFICULTY_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT, human_message
 
 # 2026-10-13: gemini-2.5-flash answered NotFound for a new key (Google keeps it only for accounts that
 # used it before); 3.8 Flash is free on the standard tier.
@@ -78,6 +78,10 @@ class GeminiExplanationProvider:
     def explain_rehearsal(self, evidence: dict) -> dict:
         from backend.application.rehearsal_explanation import RehearsalExplanation
         return self._ask(RehearsalExplanation, REHEARSAL_PROMPT, evidence)
+
+    def review_passage(self, features: dict) -> dict:
+        from backend.application.llm_review import PassageReview
+        return self._ask(PassageReview, PASSAGE_REVIEW_PROMPT, features)
 
 
 _shared: Optional[GeminiExplanationProvider] = None
