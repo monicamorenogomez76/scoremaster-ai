@@ -125,6 +125,10 @@ export function llmReviewText(status) {
   if (!status.available) return 'Necesita configurar GEMINI_API_KEY en el servidor: sin IA real no hay método B (un sustituto con reglas sería otra heurística).';
   const who = status.provider + ' (' + status.model + ')';
   if (status.state === 'running') return 'Valorando con IA: ' + status.done + ' de ' + status.total + ' pasajes · ' + who;
+  if (status.state === 'paused') {
+    return status.done + ' de ' + status.total + ' pasajes valorados. La IA ha agotado su cupo gratuito: vuelve a pulsar más tarde '
+      + '(el cupo diario se renueva cada día) y seguirá donde se quedó.';
+  }
   if (status.failed) {
     return status.done + ' de ' + status.total + ' pasajes valorados. ' + status.failed + ' no se pudieron valorar ('
       + (REVIEW_ERRORS[status.last_error] || REVIEW_ERRORS.error) + '): vuelve a pulsar para reintentarlos.';
