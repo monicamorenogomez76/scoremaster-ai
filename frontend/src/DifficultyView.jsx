@@ -82,7 +82,7 @@ function DifficultyTree({ difficulty, onOpenPassage }) {
 
 // Why the work has its difficulty (step 20): written only from its analysis, by AI or by the demo,
 // and always saying which; each cited passage opens in the score.
-function WorkExplanation({ workId, onOpenPassage }) {
+export function WorkExplanation({ workId, onOpenPassage }) {
   const [state, setState] = useState({ loading: false, result: null, error: '' });
   const ask = async () => {
     setState({ loading: true, result: null, error: '' });
@@ -117,7 +117,6 @@ function WorkExplanation({ workId, onOpenPassage }) {
 // Explorer from family to instrument, below the dashboard of the analysis view.
 export function DifficultyPanel({ data, onOpenPassage }) {
   return <div id="difficulty-content" className="view-content">
-    <WorkExplanation key={data.work_id} workId={data.work_id} onOpenPassage={onOpenPassage} />
     <section className="result-section result-section--wide">
       <h2>Dificultad por familias e instrumentos</h2>
       <p className="result-supporting">Explora de la familia al instrumento y abre la partitura en el pasaje señalado.</p>

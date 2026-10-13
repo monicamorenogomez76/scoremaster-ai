@@ -16,6 +16,11 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
      la de desarrollo; compartirla solo con el tribunal o los evaluadores.
    - `YOUTUBE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`:
      opcionales; vacíos desactivan esas funciones.
+   - `GEMINI_API_KEY` (opcional): las explicaciones «¿Por qué esta dificultad?» y «¿Por qué este plan?»
+     las redacta Gemini; sin ella responde la demo identificada. Se crea gratis en
+     https://aistudio.google.com/apikey. `GEMINI_MODEL` cambia el modelo (por defecto `gemini-3.8-flash`).
+     En el nivel gratuito Google puede usar lo enviado para mejorar sus productos: solo se envían datos
+     derivados del análisis (grados, dimensiones, compases, bloques), nunca la partitura, emails ni nombres.
    - La clave de YouTube la usa **el servidor**, no el navegador. En Google Cloud, en la clave:
      *Restricciones de API* → solo «YouTube Data API v3» (activada en el proyecto); *Restricciones
      de aplicación* → **Ninguna**. Con «Sitios web (referentes HTTP)», Google rechaza las llamadas

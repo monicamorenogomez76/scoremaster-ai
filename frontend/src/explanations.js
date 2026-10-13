@@ -20,3 +20,6 @@ export function sourceText(result) {
   if (result.fallback_reason) return (FALLBACKS[result.fallback_reason] || FALLBACKS.error) + ': se muestra el modo demo, redactado con reglas, sin IA.';
   return 'Modo demo · explicación redactada con reglas a partir del análisis de ScoreLint, sin IA.';
 }
+
+export const explainRehearsal = id => apiJson('/rehearsals/' + encodeURIComponent(id) + '/explanation', {},
+  'No se pudo explicar el ensayo.');

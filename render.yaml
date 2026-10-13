@@ -35,6 +35,8 @@ services:
         sync: false          # asked when the Blueprint is created; never in the repository
       - key: YOUTUBE_API_KEY
         sync: false          # optional
+      - key: GEMINI_API_KEY
+        sync: false          # optional: without it the explanations use the identified demo
       - key: GOOGLE_CLIENT_ID
         sync: false          # optional: Google sign-in stays off while empty
       - key: GOOGLE_CLIENT_SECRET

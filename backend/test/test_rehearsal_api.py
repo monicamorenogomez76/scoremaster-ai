@@ -172,3 +172,23 @@ def test_a_rehearsal_says_when_its_agenda_was_last_planned(clients):
     replanned = ana.put("/rehearsals/" + saved["id"], json=rehearsal(work_id, duration_minutes=45)).json()
 
     assert saved["updated_at"] and replanned["updated_at"] > saved["updated_at"]
+
+
+def test_a_rehearsal_is_explained_to_its_owner_with_what_the_last_review_left_pending(clients):
+    """«¿Por qué este plan?» (step 20): in demo mode, citing its own blocks and the last review."""
+    ana, berta = clients
+    work_id = analyze(ana, "evaluation_study.musicxml").json()["work_id"]
+    held = ana.post("/rehearsals", json=rehearsal(work_id, date="2026-10-13")).json()
+    review = [{"status": "resolved", "note": ""}, {"status": "pending", "note": "Afinación"}, {"status": "improve", "note": ""}]
+    assert ana.put("/rehearsals/" + held["id"] + "/review", json={"notes": "", "blocks": review}).status_code == 200
+    next_one = ana.post("/rehearsals", json=rehearsal(work_id)).json()
+
+    response = ana.get("/rehearsals/" + next_one["id"] + "/explanation")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "demo" and body["fallback_reason"] is None
+    assert body["explanation"]["summary"].startswith("Ensayo de 60 minutos.")
+    assert set(body["blocks"]) == {"B1", "B2", "B3"} and body["blocks"]["B2"]["work_id"] == work_id
+    assert any("pendiente" in reason["text"] for reason in body["explanation"]["reasons"])
+    assert berta.get("/rehearsals/" + next_one["id"] + "/explanation").status_code == 404

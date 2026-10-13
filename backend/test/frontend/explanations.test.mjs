@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { explainWork, sourceText } from '../../../frontend/src/explanations.js';
+import { explainRehearsal, explainWork, sourceText } from '../../../frontend/src/explanations.js';
 
 // The demo is never presented as AI (original brief), and a fallback says why the AI did not write it.
 test('who wrote the explanation is always said', () => {
@@ -20,4 +20,11 @@ test('the explanation of a work is asked to the server', async () => {
   globalThis.fetch = async url => { calls.push(url); return new Response(JSON.stringify({ mode: 'demo' }), { status: 200 }); };
   assert.equal((await explainWork('w 1')).mode, 'demo');
   assert.deepEqual(calls, ['/works/w%201/explanation']);
+});
+
+test('the explanation of a rehearsal is asked to the server', async () => {
+  const calls = [];
+  globalThis.fetch = async url => { calls.push(url); return new Response(JSON.stringify({ mode: 'demo' }), { status: 200 }); };
+  assert.equal((await explainRehearsal('r1')).mode, 'demo');
+  assert.deepEqual(calls, ['/rehearsals/r1/explanation']);
 });

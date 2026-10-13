@@ -1,5 +1,5 @@
 import React from 'react';
-import { DifficultyPanel } from './DifficultyView.jsx';
+import { DifficultyPanel, WorkExplanation } from './DifficultyView.jsx';
 import { OverviewPanel } from './OverviewView.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
@@ -43,6 +43,8 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
       </div>
       <div id="work-panel-score" role="tabpanel" aria-labelledby="work-tab-score" hidden={tab !== 'score'}>{scoreViewer}</div>
       <div id="work-panel-difficulty" role="tabpanel" aria-labelledby="work-tab-difficulty" hidden={tab !== 'difficulty'}>
+        {/* First in the tab, where it is seen without scrolling (author, 2026-10-07: «¿dónde lo veo?»). */}
+        {data && <WorkExplanation key={data.work_id} workId={data.work_id} onOpenPassage={onOpenPassage} />}
         <OverviewPanel data={data} onStart={() => onModeChange('add')}
           onOpenDifficulty={() => document.getElementById('difficulty-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         {data && <DifficultyPanel key={analysis.revision} data={data} onOpenPassage={onOpenPassage} />}

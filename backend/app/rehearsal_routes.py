@@ -14,7 +14,11 @@ from backend.application.library import LibraryRepository
 from backend.application.rehearsals import (BLOCK_GROUPS, PHASES, REVIEW_STATUSES, BlockReview, Rehearsal,
                                             RehearsalBlock, RehearsalDraft, RehearsalRepository, UnknownConcert,
                                             UnknownWork)
-from backend.app.dependencies import authenticated_user, get_library_repository, get_rehearsal_repository, get_score_store
+from backend.app.dependencies import (authenticated_user, get_concert_repository, get_explanation_provider,
+                                      get_library_repository, get_rehearsal_repository, get_score_store)
+from backend.application.concerts import ConcertRepository
+from backend.application.rehearsal_explanation import explain_rehearsal
+from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.app.stored_scores import stored_score
 
 router = APIRouter()
@@ -143,6 +147,38 @@ def propose(body: ProposalIn, user: User = Depends(authenticated_user),
         title, score = found
         works.append(WorkToRehearse(str(work_id), title, score, compute_difficulty_score(score)))
     return propose_rehearsal(works, body.duration_minutes)
+
+
+@router.get("/rehearsals/{rehearsal_id}/explanation")
+def rehearsal_explanation(rehearsal_id: str, user: User = Depends(authenticated_user),
+                          rehearsals: RehearsalRepository = Depends(get_rehearsal_repository),
+                          library: LibraryRepository = Depends(get_library_repository),
+                          concerts: ConcertRepository = Depends(get_concert_repository),
+                          provider=Depends(get_explanation_provider)):
+    """«¿Por qué este plan?» (step 20): from its blocks, its works' analysis, its concert and the last review."""
+    found = rehearsals.get_rehearsal(user.id, _rehearsal_id(rehearsal_id))
+    if found is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    if not found.draft.blocks:
+        raise HTTPException(status_code=422, detail="El ensayo no tiene bloques que explicar.")
+    analyses = {}
+    for work_id, _ in found.works:
+        latest = library.latest_analysis(user.id, work_id)
+        if latest is not None:
+            analyses[str(work_id)] = latest.result
+    concert = concerts.get_concert(user.id, found.draft.concert_id) if found.draft.concert_id else None
+    # The last rehearsal reviewed before this one (of the same concert, when it has one).
+    earlier = [item for item in rehearsals.list_rehearsals(user.id, found.draft.concert_id)
+               if item.reviewed_at and item.draft.date < found.draft.date]
+    last = max(earlier, key=lambda item: (item.draft.date, item.reviewed_at), default=None)
+    titles = dict(last.works) if last else {}
+    pending = [{"work_id": str(block.work_id), "work_title": titles.get(block.work_id), "measures": block.measures,
+                "block": block.title, "status": block.review.status}
+               for block in (last.draft.blocks if last else ())
+               if block.work_id and block.review and block.review.status in ("pending", "improve")]
+    return explain_rehearsal(_public(found), analyses,
+                             {"title": concert.draft.title, "date": concert.draft.date.isoformat()} if concert else None,
+                             pending, provider, DemoExplanationProvider())
 
 
 # Declared before /rehearsals/{rehearsal_id}.
