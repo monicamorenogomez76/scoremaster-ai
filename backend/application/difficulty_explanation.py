@@ -4,12 +4,12 @@ Data → algorithms → rules → generative AI: the evidence is built only from
 analysis, the provider answers a fixed schema, and every instrument and passage it cites must be in
 that evidence. Anything else (timeout, rate limit, error, invalid answer) falls back to the demo,
 which is deterministic and always identified as such."""
-import logging
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
-from backend.application.ai import ExplanationProvider, ProviderFailure
+from backend.application.ai import ExplanationProvider
+from backend.application.explanations import InvalidExplanation, run_explanation
 
 EVIDENCE_VERSION = "difficulty-evidence-v1"
 PROMPT_VERSION = "difficulty-explanation-v1"
@@ -21,11 +21,6 @@ GRADE_BANDS = {1: "primer año, escuela de música", 2: "banda infantil, segundo
                6: "banda profesional o de concurso, repertorio virtuoso"}
 FINDING_LABELS = {"SL002": "Registro agudo", "SL003": "Alta densidad rítmica", "SL004": "Intervalos amplios",
                   "SL005": "Pasaje prolongado sin descanso"}
-logger = logging.getLogger(__name__)
-
-
-class InvalidExplanation(ValueError):
-    """The answer does not follow the schema or cites what is not in the evidence."""
 
 
 class Factor(BaseModel):
@@ -97,23 +92,7 @@ def validate_explanation(answer, evidence: dict) -> DifficultyExplanation:
 def explain_difficulty(result: dict, provider: ExplanationProvider, demo: ExplanationProvider) -> dict:
     """The explanation shown to the director, with which provider wrote it and why the demo answered."""
     evidence = difficulty_evidence(result)
-    used, fallback_reason = provider, None
-    try:
-        explanation = validate_explanation(provider.explain_difficulty(evidence), evidence)
-    except ProviderFailure as failure:
-        fallback_reason = str(failure) if str(failure) in ("timeout", "rate_limit") else "error"
-    except InvalidExplanation as invalid:
-        fallback_reason = "invalid"
-        logger.warning("Explicación de IA descartada: %s", str(invalid)[:300])
-    except Exception:
-        fallback_reason = "error"
-        logger.warning("El proveedor de IA falló al explicar la dificultad.", exc_info=True)
-    if fallback_reason:
-        used = demo
-        explanation = validate_explanation(demo.explain_difficulty(evidence), evidence)
-    llm = used.info.kind == "llm"
-    return {"mode": used.info.kind, "provider": used.info.name, "model": used.info.model,
-            "prompt_version": PROMPT_VERSION if llm else None, "evidence_version": EVIDENCE_VERSION,
-            "fallback_reason": fallback_reason, "explanation": explanation.model_dump(),
-            "passages": {item["id"]: {"instrument": item["instrument"], "label": item["label"], "measures": item["measures"]}
-                         for item in evidence["passages"]}}
+    shown = run_explanation(evidence, lambda who, data: who.explain_difficulty(data), validate_explanation,
+                            provider, demo, PROMPT_VERSION)
+    return {**shown, "passages": {item["id"]: {"instrument": item["instrument"], "label": item["label"],
+                                               "measures": item["measures"]} for item in evidence["passages"]}}

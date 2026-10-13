@@ -254,6 +254,18 @@ try {
   await editor.getByRole('button', { name: 'Guardar ensayo' }).click();
   await page.locator('#rehearsals-upcoming').getByText('Hoy · 19:00').waitFor();
   assert.equal(await page.locator('#rehearsals-upcoming .agenda-calendar .calendar-slot').count(), 2, 'each saved rehearsal shows its coloured calendar');
+  // «¿Por qué este plan?» (step 20): explained in demo mode, citing its blocks, which open their passage.
+  const why = page.locator('#rehearsals-upcoming .rehearsal-why');
+  await why.getByRole('button', { name: '¿Por qué este plan?' }).click();
+  await why.locator('.explanation-source').waitFor();
+  assert.match(await why.locator('.explanation-source').textContent(), /^Modo demo · .* sin IA\.$/);
+  assert.match(await why.locator('.explanation-summary').textContent(), /^Ensayo de 60 minutos\./);
+  await why.getByRole('button', { name: /Pasajes prioritarios · Untitled score · compases 1-4/ }).first().click();
+  await page.waitForFunction(() => document.querySelector('#notation-score svg'), null, { timeout: 60000 });
+  await page.locator('#notation-close').click();
+  await page.locator('[data-view-target=rehearsal]').click();
+  await why.getByRole('button', { name: 'Ocultar la explicación' }).click();
+  console.log('PASS: a saved rehearsal explains its plan in demo mode and its blocks open their passage');
   await page.locator('[data-view-target=summary]').click();
   const next = page.locator('#summary-rehearsal');
   await next.getByText('Ensayo de hoy').waitFor();

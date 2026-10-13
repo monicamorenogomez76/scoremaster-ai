@@ -68,3 +68,69 @@ class DemoExplanationProvider:
             summary += " Lo más exigente está en " + _joined(leading)
             summary += "; hay {} pasajes críticos señalados.".format(len(evidence["passages"])) if evidence["passages"] else "."
         return {"summary": summary, "factors": factors, "study_tip": STUDY_TIPS[factors[0]["dimension"]]}
+
+    def explain_rehearsal(self, evidence: dict) -> dict:
+        rehearsal, blocks = evidence["rehearsal"], evidence["blocks"]
+        ids = lambda chosen: [block["id"] for block in chosen][:6]
+        summary = "Ensayo de {} minutos".format(rehearsal["duration_minutes"])
+        if rehearsal["phase"]:
+            summary += " ({})".format(rehearsal["phase"])
+        concert = rehearsal["concert"]
+        if concert:
+            days = concert["days_before"]
+            summary += " para «{}», {} {} antes del concierto".format(concert["title"], days, "día" if days == 1 else "días")
+        summary += "."
+        per_work = {}
+        for block in blocks:
+            if block["work"]:
+                per_work[block["work"]] = per_work.get(block["work"], 0) + (block["minutes"] or 0)
+        warmup = sum(block["minutes"] or 0 for block in blocks if block["kind"] == "Calentamiento")
+        shares = ["{} {} min".format(work, minutes) for work, minutes in sorted(per_work.items(), key=lambda item: -item[1])]
+        if shares:
+            summary += " Reparte el tiempo entre " + _joined(shares)
+            summary += (", más {} min de calentamiento.".format(warmup) if warmup else ".")
+        reasons = []
+        warm = [block for block in blocks if block["kind"] == "Calentamiento"]
+        if warm:
+            reasons.append({"blocks": ids(warm), "text": "El calentamiento con toda la banda prepara el sonido, la afinación "
+                                                         "y el pulso antes de lo difícil."})
+        common = [block for block in blocks if block["kind"] == "Línea o ritmo común"]
+        if common:
+            reasons.append({"blocks": ids(common), "text": "Primero se trabajan juntas las partes que tocan la misma línea "
+                                                           "o el mismo ritmo, para corregirlo una sola vez."})
+        sectional = [block for block in blocks if block["kind"].startswith("Seccional")]
+        if sectional:
+            names = sorted({block["kind"].split(" · ", 1)[1].lower() for block in sectional})
+            reasons.append({"blocks": ids(sectional), "text": "Las seccionales de {} trabajan por separado lo más difícil "
+                                                              "de cada sección.".format(_joined(names))})
+        critical = [block for block in blocks if block["critical_passages"] and block["kind"] != "Tutti"]
+        if critical:
+            examples = ["{} {} ({})".format(item["instrument"], item["measures"], ", ".join(item["findings"]).lower())
+                        for block in critical for item in block["critical_passages"]][:2]
+            reasons.append({"blocks": ids(critical), "text": "Estos bloques recogen pasajes críticos del análisis: "
+                                                             + _joined(examples) + "."})
+        pending = [item for item in evidence["pending_from_review"] if item["blocks"]]
+        if pending:
+            cited = sorted({code for item in pending for code in item["blocks"]}, key=lambda code: int(code[1:]))
+            what = _joined(["{} {} ({})".format(item["work"], item["measures"], item["status"].lower()) for item in pending[:2]])
+            reasons.append({"blocks": cited[:6], "text": "Incluye lo que quedó pendiente en la última revisión, " + what
+                                                         + ": por eso gana tiempo en este ensayo."})
+        through = [block for block in blocks if block["kind"] == "Pasada completa"]
+        if through:
+            reasons.append({"blocks": ids(through), "text": "La pasada completa toca cada obra seguida y en orden, como en el concierto."})
+        tutti = [block for block in blocks if block["kind"] == "Tutti"]
+        if tutti:
+            reasons.append({"blocks": ids(tutti), "text": "Los tutti juntan lo trabajado por secciones y comprueban el "
+                                                          "equilibrio de la banda."})
+        if not reasons and blocks:
+            reasons.append({"blocks": ids(blocks), "text": "Los bloques siguen el orden en que la directora los ha planificado."})
+        return {"summary": summary, "reasons": reasons[:6], "advice": PHASE_ADVICE.get(rehearsal["phase"], PHASE_ADVICE[None])}
+
+
+PHASE_ADVICE = {
+    "Lectura y pasajes": "En esta fase prima leer y localizar las dificultades: tempo cómodo, sin buscar todavía el detalle.",
+    "Pasajes e integración": "Trabaja los pasajes a tempo creciente y guarda el final para juntarlos con toda la banda.",
+    "Integración": "Prioriza el equilibrio y las transiciones entre secciones: los pasajes ya deberían estar resueltos.",
+    "Ensayo general": "Toca sin parar, como en el concierto, y anota lo que falle para trabajarlo aparte.",
+    None: "Respeta el tiempo de cada bloque y anota en la revisión lo que quede pendiente.",
+}
