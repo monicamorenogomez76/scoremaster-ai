@@ -112,7 +112,9 @@ def test_the_llm_gets_its_own_row_per_version_and_only_on_the_passages_it_review
                                         _review("p1", 1, False, prompt="passage-review-v0")]}
     report = build_report(export)
     label = "LLM (gemini · gemini-3.8-flash · passage-review-v1)"
-    assert list(report["methods"]) == [HEURISTIC, label, "LLM (gemini · gemini-3.8-flash · passage-review-v0)"]
+    other = "LLM (gemini · gemini-3.8-flash · passage-review-v0)"
+    assert list(report["methods"]) == [HEURISTIC, label, other, "Híbrido (ScoreLint + LLM gemini · gemini-3.8-flash · passage-review-v1)",
+                                       "Híbrido (ScoreLint + LLM gemini · gemini-3.8-flash · passage-review-v0)"]
     llm = report["methods"][label]
     assert llm["difficulty"]["n"] == 3, "p4 has no review with this version"
     # p1: 2 vs 2, p2: 5 vs 4.5, p3: 4 vs 3.5
@@ -120,3 +122,36 @@ def test_the_llm_gets_its_own_row_per_version_and_only_on_the_passages_it_review
     assert llm["critical"]["n"] == 2, "p3 is a tie and p4 was not reviewed"
     markdown = to_markdown(report)
     assert "| " + label + " | 3 |" in markdown
+
+
+def test_the_hybrid_is_the_preregistered_rule_on_the_passages_with_both_predictions():
+    """Step 24, method C, fixed by the author on 2026-10-13 before any musician's rating: grade = mean of
+    ScoreLint and the LLM rounding halves up; critical only when both say so. Never tuned on the data."""
+    from evaluation.campaign_report import HYBRID_RULE, hybrid_grade
+    assert (hybrid_grade(2, 3), hybrid_grade(2, 4), hybrid_grade(5, 6), hybrid_grade(1, 1)) == (3, 3, 6, 1)
+    export = {**EXPORT, "llm_reviews": [_review("p1", 3, True), _review("p2", 5, True), _review("p3", 4, False)]}
+    report = build_report(export)
+    hybrid = "Híbrido (ScoreLint + LLM gemini · gemini-3.8-flash · passage-review-v1)"
+    assert list(report["methods"])[-1] == hybrid
+    rows = {row["passage_id"]: row["predicted"][hybrid] for row in report["rows"]}
+    # p1: ScoreLint 2 / no + LLM 3 / yes → 3 / no; p2: 4 / yes + 5 / yes → 5 / yes; p3: 5 / yes + 4 / no → 5 / no
+    assert rows["p1"] == {"grade": 3, "critical": False}
+    assert rows["p2"] == {"grade": 5, "critical": True}
+    assert rows["p3"] == {"grade": 5, "critical": False}
+    assert rows["p4"] == {"grade": None, "critical": None}, "no LLM review: no hybrid"
+    assert report["methods"][hybrid]["difficulty"]["n"] == 3
+    assert "2026-10-13" in HYBRID_RULE and HYBRID_RULE in to_markdown(report)
+
+
+def test_methods_are_also_compared_on_exactly_the_same_passages():
+    """A method measured on other passages is not comparable: the fair table keeps only the passages
+    that every method predicted (here p4 has no LLM review)."""
+    export = {**EXPORT, "llm_reviews": [_review("p1", 3, True), _review("p2", 5, True), _review("p3", 4, False)]}
+    report = build_report(export)
+    common = report["same_passages"]
+    assert common["passages"] == 3
+    assert {name: metrics["difficulty"]["n"] for name, metrics in common["methods"].items()} == \
+        {name: 3 for name in report["methods"]}
+    # ScoreLint on p1, p2, p3: |2-2|, |4-4.5|, |5-3.5| → MAE 2/3
+    assert common["methods"][HEURISTIC]["difficulty"]["mae"] == pytest.approx(2 / 3)
+    assert "## Comparación en los mismos pasajes (3)" in to_markdown(report)

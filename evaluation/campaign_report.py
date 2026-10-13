@@ -25,8 +25,25 @@ from typing import Iterable, Optional
 
 from backend.application.evaluations import EXPERIENCE_LEVELS
 
-REPORT_VERSION = "campaign-report-v1"
+REPORT_VERSION = "campaign-report-v2"
 HEURISTIC = "Heurística (ScoreLint)"
+# Method C, preregistered by the author before any musician's rating: never tuned on the data.
+HYBRID_RULE = ("Regla del híbrido, fijada el 2026-10-13 antes de recibir valoraciones: grado = media de ScoreLint y "
+               "del LLM, redondeando hacia arriba los medios puntos; crítico solo si ScoreLint y el LLM coinciden en que lo es.")
+
+
+def hybrid_grade(heuristic: int, llm: int) -> int:
+    return math.floor((heuristic + llm) / 2 + 0.5)
+
+
+def _hybrid_label(llm_label: str) -> str:
+    return "Híbrido (ScoreLint + " + llm_label[:-1].replace("LLM (", "LLM ", 1) + ")"
+
+
+def _hybrid(heuristic: dict, llm: dict) -> dict:
+    if heuristic["grade"] is None or llm["grade"] is None:
+        return {"grade": None, "critical": None}
+    return {"grade": hybrid_grade(heuristic["grade"], llm["grade"]), "critical": bool(heuristic["critical"] and llm["critical"])}
 
 
 def _ranks(values: list[float]) -> list[float]:
@@ -112,6 +129,9 @@ def aggregate(export: dict, min_ratings: int = 1, levels: Optional[Iterable[str]
             "expert_priority": mean(r["priority"] for r in ratings) if all(r.get("priority") for r in ratings) else None,
             "grades": grades,
         })
+        predicted = rows[-1]["predicted"]
+        for label in llm:
+            predicted[_hybrid_label(label)] = _hybrid(predicted[HEURISTIC], predicted[label])
     return {"rows": rows, "skipped": skipped}
 
 
@@ -179,11 +199,28 @@ def _versions(export: dict) -> dict:
     return {name: sorted(values) for name, values in sorted(found.items())}
 
 
+def _same_passages(rows: list[dict], methods: list[str]) -> dict:
+    shared = [row for row in rows if all(row["predicted"][method]["grade"] is not None for method in methods)]
+    return {"passages": len(shared), "methods": {method: _method_metrics(shared, method) for method in methods}}
+
+
+def _results(lines: list[str], methods: dict) -> None:
+    lines += ["| Método | Pasajes | MAE | RMSE | Spearman | Exacto | ±1 grado | Precisión | Recall | F1 | F0.5 |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
+    for name, metrics in methods.items():
+        d, c = metrics["difficulty"], metrics["critical"]
+        lines.append(f"| {name} | {d['n']} | {_fmt(d['mae'])} | {_fmt(d['rmse'])} | {_fmt(d['spearman'])} | "
+                     f"{_pct(d['exact'])} | {_pct(d['within_one'])} | {_pct(c['precision'])} | {_pct(c['recall'])} | "
+                     f"{_fmt(c['f1'])} | {_fmt(c['f05'])} |")
+    lines.append("")
+
+
 def build_report(export: dict, min_ratings: int = 1, levels: Optional[Iterable[str]] = None,
                  source_sha256: Optional[str] = None) -> dict:
     aggregated = aggregate(export, min_ratings, levels)
     rows = aggregated["rows"]
-    methods = [HEURISTIC, *llm_methods(export)]
+    llm = list(llm_methods(export))
+    methods = [HEURISTIC, *llm, *(_hybrid_label(label) for label in llm)]
     return {
         "report_version": REPORT_VERSION,
         "campaign": export.get("campaign", {}),
@@ -195,6 +232,8 @@ def build_report(export: dict, min_ratings: int = 1, levels: Optional[Iterable[s
                      "ratings": sum(r["ratings"] for r in rows),
                      "evaluators": len({r["evaluator"] for r in export.get("ratings", [])})},
         "agreement": agreement(rows),
+        # The fair comparison: only the passages every method predicted.
+        "same_passages": _same_passages(rows, methods),
         "methods": {method: {
             **_method_metrics(rows, method),
             "by_family": _breakdown(rows, method, lambda r: r["family"]),
@@ -236,15 +275,14 @@ def to_markdown(report: dict) -> str:
              f"valoraciones de {p['evaluators']} evaluadores. Quedan fuera {p['left_out']} pasajes con menos de "
              f"{report['settings']['min_ratings']} valoraciones. Experiencia: {report['settings']['experience_levels']}.",
              "Versiones de la predicción: " + (", ".join(f"{k} {'/'.join(v)}" for k, v in report["prediction_versions"].items()) or "—") + ".",
-             "", "## Resultados", "",
-             "| Método | Pasajes | MAE | RMSE | Spearman | Exacto | ±1 grado | Precisión | Recall | F1 | F0.5 |",
-             "|---|---|---|---|---|---|---|---|---|---|---|"]
-    for name, metrics in report["methods"].items():
-        d, c = metrics["difficulty"], metrics["critical"]
-        lines.append(f"| {name} | {d['n']} | {_fmt(d['mae'])} | {_fmt(d['rmse'])} | {_fmt(d['spearman'])} | "
-                     f"{_pct(d['exact'])} | {_pct(d['within_one'])} | {_pct(c['precision'])} | {_pct(c['recall'])} | "
-                     f"{_fmt(c['f1'])} | {_fmt(c['f05'])} |")
-    lines.append("")
+             *([HYBRID_RULE] if any(name.startswith("Híbrido") for name in report["methods"]) else []),
+             "", "## Resultados", ""]
+    _results(lines, report["methods"])
+    if len(report["methods"]) > 1:
+        same = report["same_passages"]
+        lines += [f"## Comparación en los mismos pasajes ({same['passages']})", "",
+                  "Solo los pasajes con predicción de todos los métodos: es la comparación justa entre ellos.", ""]
+        _results(lines, same["methods"])
     for name, metrics in report["methods"].items():
         c = metrics["critical"]
         lines += [f"Criticidad de {name}: {c['tp']} aciertos, {c['fp']} falsos positivos, {c['fn']} críticos no "

@@ -61,3 +61,15 @@ Protocolo, fijado antes de ver resultados:
 
 No se calibra nada con estos datos: si más adelante se ajustan umbrales, la partición debe hacerse por
 obra para evitar leakage. Las exportaciones contienen valoraciones de personas reales: guárdalas en `evaluation/exports/`, que Git ignora.
+
+## Métodos comparados (paso 24)
+
+| Método | Qué es |
+|---|---|
+| A · Heurística (ScoreLint) | La predicción guardada al crear la campaña |
+| B · LLM | La valoración independiente de «Valorar con IA» (paso 22), una fila por proveedor, modelo y prompt |
+| C · Híbrido | **Regla preregistrada el 2026-10-13, antes de recibir valoraciones**: grado = media de A y B redondeando hacia arriba los medios puntos; crítico solo si A y B coinciden. No se ajusta a los datos |
+| D · Músicos | La referencia: mediana de sus grados y criticidad por mayoría |
+
+El informe da dos tablas: cada método sobre todos los pasajes que predijo y, la comparación justa, todos
+sobre **los mismos pasajes** (los que tienen predicción de todos los métodos).
