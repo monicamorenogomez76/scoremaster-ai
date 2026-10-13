@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   createCampaign, exportFileName, invitationProgress, listCampaigns, parseEmails, predictionText, removePassage,
   setCampaignStatus, setInvitations, shortfallText, statusLabel, campaignSummary,
+  getLlmReview, llmReviewText, startLlmReview,
   GRADE_RUBRIC, EXPERIENCE_OPTIONS, PRIORITY_LABELS, nextToRate, ratedCount, ratingDraft, ratingToSend, saveProfile, saveRating,
 } from '../../../frontend/src/evaluations.js';
 
@@ -102,4 +103,22 @@ test('the profile and each rating are saved through the API', async () => {
   assert.deepEqual(JSON.parse(calls[0].body), { experience_level: 'amateur', main_instrument: 'Clarinete' });
   await saveRating('c1', 'p1', { difficulty: 4, critical: true, priority: 3, comment: '' });
   assert.equal(calls[1].method, 'PUT');
+});
+
+test('the independent review of the AI says how far it is and why it stopped', () => {
+  const base = { available: true, provider: 'gemini', model: 'gemini-3.8-flash', total: 40, failed: 0, last_error: null };
+  assert.equal(llmReviewText({ ...base, available: false }),
+    'Necesita configurar GEMINI_API_KEY en el servidor: sin IA real no hay método B (un sustituto con reglas sería otra heurística).');
+  assert.equal(llmReviewText({ ...base, state: 'idle', done: 0 }), 'Sin valorar todavía · gemini (gemini-3.8-flash).');
+  assert.equal(llmReviewText({ ...base, state: 'running', done: 12 }), 'Valorando con IA: 12 de 40 pasajes · gemini (gemini-3.8-flash)');
+  assert.equal(llmReviewText({ ...base, state: 'done', done: 40 }), 'Los 40 pasajes están valorados por gemini (gemini-3.8-flash).');
+  assert.equal(llmReviewText({ ...base, state: 'done', done: 37, failed: 3, last_error: 'timeout' }),
+    '37 de 40 pasajes valorados. 3 no se pudieron valorar (la IA no respondió a tiempo): vuelve a pulsar para reintentarlos.');
+});
+
+test('the review is followed and started through the API', async () => {
+  const calls = fakeServer({ 'GET /evaluations/c1/llm-review': [200, { state: 'idle' }], 'POST /evaluations/c1/llm-review': [202, { state: 'running' }] });
+  assert.equal((await getLlmReview('c1')).state, 'idle');
+  assert.equal((await startLlmReview('c1')).state, 'running');
+  assert.equal(calls[1].method, 'POST');
 });

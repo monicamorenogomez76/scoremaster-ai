@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import (Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
+from sqlalchemy import (Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
                         delete, func, select)
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID, insert
 from sqlalchemy.engine import Engine
@@ -67,6 +67,35 @@ class StoredRating(Base):
     comment: Mapped[str] = mapped_column(Text, nullable=False, server_default='')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class StoredLlmReview(Base):
+    __tablename__ = 'evaluation_llm_reviews'
+    __table_args__ = (UniqueConstraint('passage_id', 'provider', 'model', 'prompt_version', 'features_version',
+                                       name='uq_evaluation_llm_reviews_version'),
+                      CheckConstraint('grade between 1 and 6', name='ck_evaluation_llm_reviews_grade'),
+                      CheckConstraint('confidence between 0 and 1', name='ck_evaluation_llm_reviews_confidence'),
+                      Index('ix_evaluation_llm_reviews_passage_id', 'passage_id'))
+    id: Mapped[UUID] = mapped_column(ID, primary_key=True)
+    passage_id: Mapped[UUID] = mapped_column(ID, ForeignKey('evaluation_passages.id', ondelete='CASCADE'), nullable=False)
+    provider: Mapped[str] = mapped_column(String(40), nullable=False)
+    model: Mapped[str] = mapped_column(String(80), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(60), nullable=False)
+    features_version: Mapped[str] = mapped_column(String(60), nullable=False)
+    grade: Mapped[int] = mapped_column(Integer, nullable=False)
+    critical: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    main_factors: Mapped[list] = mapped_column(JSONB, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    features: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+def _review(row: StoredLlmReview) -> dict:
+    return {"passage_id": str(row.passage_id), "provider": row.provider, "model": row.model,
+            "prompt_version": row.prompt_version, "features_version": row.features_version, "grade": row.grade,
+            "critical": row.critical, "confidence": row.confidence, "main_factors": list(row.main_factors),
+            "reason": row.reason, "created_at": row.created_at.isoformat() if row.created_at else None}
 
 
 def _email(value: str) -> str:
@@ -217,6 +246,31 @@ class PostgresEvaluationRepository:
             work = session.get(StoredWork, work_id)
             return (bytes(work.source), work.file_name) if work else None
 
+    def llm_reviews(self, owner_id: UUID, campaign_id: UUID) -> Optional[list[dict]]:
+        """Every independent review of the campaign's passages, newest first; None if not the owner's."""
+        with Session(self.engine) as session:
+            if self._owned(session, owner_id, campaign_id) is None:
+                return None
+            rows = session.scalars(select(StoredLlmReview).join(StoredPassage)
+                                   .where(StoredPassage.campaign_id == campaign_id)
+                                   .order_by(StoredLlmReview.created_at.desc())).all()
+            return [_review(row) for row in rows]
+
+    def save_llm_review(self, owner_id: UUID, campaign_id: UUID, passage_id: UUID, review: dict, features: dict) -> bool:
+        """Kept once per passage and versions (the same versions replace the previous answer)."""
+        with Session(self.engine) as session, session.begin():
+            passage = session.get(StoredPassage, passage_id)
+            if self._owned(session, owner_id, campaign_id) is None or passage is None or passage.campaign_id != campaign_id:
+                return False
+            values = {key: review[key] for key in ("provider", "model", "prompt_version", "features_version", "grade",
+                                                   "critical", "confidence", "main_factors", "reason")}
+            statement = insert(StoredLlmReview).values(id=uuid4(), passage_id=passage_id, features=features, **values)
+            session.execute(statement.on_conflict_do_update(
+                constraint='uq_evaluation_llm_reviews_version',
+                set_={**{key: values[key] for key in ("grade", "critical", "confidence", "main_factors", "reason")},
+                      "features": features, "created_at": func.now()}))
+            return True
+
     def export(self, owner_id: UUID, campaign_id: UUID) -> Optional[dict]:
         """Passages with ScoreLint's prediction and every rating; evaluators are «Evaluador n», no email."""
         with Session(self.engine) as session:
@@ -242,4 +296,8 @@ class PostgresEvaluationRepository:
                              "main_instrument": profiles[item.invitation_id].main_instrument,
                              "difficulty": item.difficulty, "critical": item.critical, "priority": item.priority,
                              "comment": item.comment} for item in ratings],
+                # Method B (step 22): the LLM's independent reviews with their versions.
+                "llm_reviews": [_review(item) for item in session.scalars(
+                    select(StoredLlmReview).join(StoredPassage).where(StoredPassage.campaign_id == campaign_id)
+                    .order_by(StoredPassage.position, StoredLlmReview.created_at))],
             }

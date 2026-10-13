@@ -53,6 +53,11 @@ try {
   assert.match(await page.locator('#campaign-notice').textContent(), new RegExp('Se han propuesto ' + proposed + ' de los 20 pasajes pedidos'));
   assert.match(await page.locator('#campaign-summary').textContent(), new RegExp('^' + proposed + ' pasajes · \\d+ críticos según ScoreLint · 0 músicos invitados$'));
   assert.match(await rows.first().locator('td').nth(4).textContent(), /^Grado [1-6]( · crítico)?$/, 'the director sees the prediction');
+  // Step 22: without a real AI provider the independent review cannot run, and the page says why.
+  await page.locator('#llm-review-status').waitFor();
+  assert.match(await page.locator('#llm-review-status').textContent(), /^Necesita configurar GEMINI_API_KEY/);
+  assert.equal(await page.locator('#llm-review').getByRole('button', { name: 'Valorar con IA' }).isDisabled(), true);
+  assert.equal(await rows.first().locator('td').nth(5).textContent(), '—', 'no AI review yet');
   console.log('PASS: the app proposes the passages of the chosen works with ScoreLint\'s prediction');
 
   await rows.first().getByRole('button', { name: 'Quitar' }).click();

@@ -153,3 +153,95 @@ def test_a_campaign_uses_the_kept_model_of_each_work_without_reading_it_again(cl
     stored_scores.clear_parsed_works()
     monkeypatch.setattr(stored_scores, "parse_musicxml", lambda *args: pytest.fail("the work was read again"))
     assert ana.post("/evaluations", json={"title": "x", "work_ids": [work_id], "size": 10}).status_code == 201
+
+
+class ReviewingProvider:
+    """A real-looking provider for the independent review; fails on the passages it is told to."""
+    from backend.application.ai import ProviderInfo
+    info = ProviderInfo("llm", "fake", "fake-model")
+
+    def __init__(self, fail_measures=()):
+        self.seen, self.fail_measures = [], set(fail_measures)
+
+    def review_passage(self, features):
+        from backend.application.ai import ProviderFailure
+        self.seen.append(features)
+        if features["measures"] in self.fail_measures:
+            raise ProviderFailure("timeout")
+        return {"grade": 3, "critical": False, "confidence": 0.6, "main_factors": ["rhythm"], "reason": "Corcheas seguidas."}
+
+
+@pytest.fixture
+def reviewer(monkeypatch):
+    from backend.app.dependencies import get_explanation_provider
+    from backend.application import llm_review_jobs
+    monkeypatch.setattr(llm_review_jobs, "PAUSE_SECONDS", 0)
+    chosen = {"provider": ReviewingProvider()}
+    app.dependency_overrides[get_explanation_provider] = lambda: chosen["provider"]
+    yield chosen
+    app.dependency_overrides.pop(get_explanation_provider, None)
+
+
+def run_review(client, campaign_id):
+    from backend.application import llm_review_jobs
+    started = client.post("/evaluations/" + campaign_id + "/llm-review")
+    llm_review_jobs.wait_for_jobs()
+    return started, client.get("/evaluations/" + campaign_id + "/llm-review").json()
+
+
+def test_the_independent_review_needs_a_real_ai_provider(clients):
+    ana, _ = clients
+    body = campaign(ana).json()
+    status = ana.get("/evaluations/" + body["id"] + "/llm-review").json()
+    assert status["available"] is False and status["state"] == "idle"
+    assert ana.post("/evaluations/" + body["id"] + "/llm-review").status_code == 409
+
+
+def test_the_llm_reviews_every_passage_once_without_scorelint_prediction(clients, reviewer):
+    ana, berta = clients
+    body = campaign(ana).json()
+    started, status = run_review(ana, body["id"])
+    total = len(body["passages"])
+    assert started.status_code == 202
+    assert (status["available"], status["state"], status["done"], status["total"], status["failed"]) == (True, "done", total, total, 0)
+    assert (status["provider"], status["model"], status["prompt_version"]) == ("fake", "fake-model", "passage-review-v1")
+    sent = reviewer["provider"].seen
+    assert len(sent) == total and all("notation" in item for item in sent)
+    assert not any(key in str(item).lower() for item in sent for key in ("snapshot", "grade", "finding", "technical_index")), \
+        "method B never sees ScoreLint's prediction"
+
+    view = ana.get("/evaluations/" + body["id"]).json()
+    assert all(item["llm_review"]["grade"] == 3 for item in view["passages"])
+    exported = ana.get("/evaluations/" + body["id"] + "/export").json()
+    assert len(exported["llm_reviews"]) == total
+    assert {(item["provider"], item["model"], item["prompt_version"], item["features_version"]) for item in exported["llm_reviews"]} \
+        == {("fake", "fake-model", "passage-review-v1", "passage-features-v1")}
+
+    _, again = run_review(ana, body["id"])
+    assert len(reviewer["provider"].seen) == total, "a passage already reviewed with these versions is not asked again"
+    assert again["done"] == total
+    assert berta.get("/evaluations/" + body["id"] + "/llm-review").status_code == 404
+    assert berta.post("/evaluations/" + body["id"] + "/llm-review").status_code == 404
+
+
+def test_a_failed_passage_is_counted_and_asked_again_next_time(clients, reviewer):
+    ana, _ = clients
+    body = campaign(ana).json()
+    failing = body["passages"][0]["measure_range"]
+    reviewer["provider"] = ReviewingProvider(fail_measures=[failing])
+    _, status = run_review(ana, body["id"])
+    assert status["failed"] >= 1 and status["last_error"] == "timeout" and status["state"] == "done"
+    reviewer["provider"] = ReviewingProvider()
+    _, status = run_review(ana, body["id"])
+    assert status["failed"] == 0 and status["done"] == status["total"]
+    assert {item["measures"] for item in reviewer["provider"].seen} == {failing}
+
+
+def test_invited_musicians_never_see_the_llm_review(clients, reviewer):
+    ana, berta = clients
+    body = campaign(ana).json()
+    run_review(ana, body["id"])
+    ana.put("/evaluations/" + body["id"] + "/invitations", json={"emails": ["berta@banda.org"]})
+    ana.post("/evaluations/" + body["id"] + "/status", json={"status": "open"})
+    seen = berta.get("/evaluations/" + body["id"]).json()
+    assert all("llm_review" not in item for item in seen["passages"])

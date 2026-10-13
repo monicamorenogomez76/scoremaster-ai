@@ -12,8 +12,11 @@ from backend.application.accounts import User
 from backend.application.evaluations import (EXPERIENCE_LEVELS, Campaign, CampaignLocked, EvaluationRepository,
                                              Rating)
 from backend.application.library import LibraryRepository
-from backend.app.dependencies import (authenticated_user, get_evaluation_repository, get_library_repository,
-                                      get_score_store)
+from backend.app.dependencies import (authenticated_user, get_evaluation_repository, get_explanation_provider,
+                                      get_library_repository, get_score_store)
+from backend.analyzers.passage_features import FEATURES_VERSION, passage_features
+from backend.application import llm_review_jobs
+from backend.application.llm_review import PROMPT_VERSION as REVIEW_PROMPT_VERSION, review_passage
 from backend.app.stored_scores import stored_score
 
 router = APIRouter()
@@ -81,11 +84,15 @@ def _summary(campaign: Campaign, role: str) -> dict:
             "passages": len(campaign.passages), "rated": done, "invitations": len(campaign.invitations)}
 
 
-def _owner_view(campaign: Campaign) -> dict:
+def _owner_view(campaign: Campaign, reviews: Optional[list] = None) -> dict:
+    """The owner sees ScoreLint's prediction and, when it has run, the LLM's independent review (newest)."""
+    latest = {}
+    for review in reviews or []:
+        latest.setdefault(review["passage_id"], review)
     return {**_summary(campaign, "owner"), "instructions": campaign.instructions,
             "passages": [{"id": str(item.id), "work_id": str(item.work_id), "work_title": item.work_title,
                           "parts": list(item.parts), "measure_range": item.measure_range, "label": item.label,
-                          "snapshot": item.snapshot} for item in campaign.passages],
+                          "snapshot": item.snapshot, "llm_review": latest.get(str(item.id))} for item in campaign.passages],
             "invitations": [{"email": item.email, "rated": item.rated, "profile_done": item.experience_level is not None}
                             for item in campaign.invitations]}
 
@@ -138,7 +145,7 @@ def get_campaign(campaign_id: str, user: User = Depends(authenticated_user),
                  evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
     owned = evaluations.for_owner(user.id, _id(campaign_id))
     if owned is not None:
-        return _owner_view(owned)
+        return _owner_view(owned, evaluations.llm_reviews(user.id, owned.id))
     invited = evaluations.for_evaluator(user.email, _id(campaign_id))
     if invited is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
@@ -217,3 +224,62 @@ def export(campaign_id: str, user: User = Depends(authenticated_user),
     if exported is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return exported
+
+
+def _reviewing(provider) -> bool:
+    return provider.info.kind == "llm" and hasattr(provider, "review_passage")
+
+
+def _current(review: dict, provider) -> bool:
+    return (review["provider"], review["model"], review["prompt_version"], review["features_version"]) == \
+        (provider.info.name, provider.info.model, REVIEW_PROMPT_VERSION, FEATURES_VERSION)
+
+
+def _review_status(campaign: Campaign, reviews: list, provider) -> dict:
+    available = _reviewing(provider)
+    done = {item["passage_id"] for item in reviews if available and _current(item, provider)}
+    running = llm_review_jobs.job(campaign.id)
+    return {"available": available, "provider": provider.info.name if available else None,
+            "model": provider.info.model if available else None, "prompt_version": REVIEW_PROMPT_VERSION,
+            "features_version": FEATURES_VERSION, "state": running.state if running else "idle",
+            "done": len(done & {str(item.id) for item in campaign.passages}), "total": len(campaign.passages),
+            "failed": running.failed if running else 0, "last_error": running.last_error if running else None}
+
+
+@router.get("/evaluations/{campaign_id}/llm-review")
+def llm_review_status(campaign_id: str, user: User = Depends(authenticated_user),
+                      evaluations: EvaluationRepository = Depends(get_evaluation_repository),
+                      provider=Depends(get_explanation_provider)):
+    """How far the independent review of the LLM (method B, step 22) has gone."""
+    campaign = _owned(evaluations, user, campaign_id)
+    return _review_status(campaign, evaluations.llm_reviews(user.id, campaign.id) or [], provider)
+
+
+@router.post("/evaluations/{campaign_id}/llm-review", status_code=202)
+def start_llm_review(campaign_id: str, user: User = Depends(authenticated_user),
+                     evaluations: EvaluationRepository = Depends(get_evaluation_repository),
+                     library: LibraryRepository = Depends(get_library_repository),
+                     score_store=Depends(get_score_store), provider=Depends(get_explanation_provider)):
+    """Asks the LLM about every passage still without a review with the current versions, in the background."""
+    campaign = _owned(evaluations, user, campaign_id)
+    if not _reviewing(provider):
+        raise HTTPException(status_code=409, detail="La valoración con IA necesita configurar GEMINI_API_KEY en el servidor.")
+    reviews = evaluations.llm_reviews(user.id, campaign.id) or []
+    done = {item["passage_id"] for item in reviews if _current(item, provider)}
+    todo = [item for item in campaign.passages if str(item.id) not in done]
+    scores = {}
+
+    def review(passage):
+        if passage.work_id not in scores:
+            found = stored_score(library, user.id, passage.work_id, score_store)
+            if found is None:
+                raise ValueError("La obra del pasaje ya no está en el repertorio.")
+            scores[passage.work_id] = found[1]
+        features = passage_features(scores[passage.work_id], passage.parts[0], passage.measure_range)
+        return review_passage(features, provider), features
+
+    def save(passage, reviewed, features):
+        evaluations.save_llm_review(user.id, campaign.id, passage.id, reviewed, features)
+
+    llm_review_jobs.start(campaign.id, todo, review, save)
+    return _review_status(campaign, reviews, provider)

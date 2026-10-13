@@ -112,3 +112,23 @@ export function nextToRate(passages, current) {
   }
   return Math.min(current + 1, passages.length - 1);
 }
+
+// Method B (step 22): the LLM rates every passage with the musicians' rubric, never seeing ScoreLint.
+export const getLlmReview = id => apiJson(path(id) + '/llm-review', {}, 'No se pudo consultar la valoración con IA.');
+export const startLlmReview = id => apiJson(path(id) + '/llm-review', { method: 'POST' }, 'No se pudo iniciar la valoración con IA.');
+
+const REVIEW_ERRORS = { timeout: 'la IA no respondió a tiempo', rate_limit: 'la IA alcanzó su límite de uso',
+  invalid: 'la respuesta no seguía la rúbrica', error: 'la IA no estaba disponible' };
+
+export function llmReviewText(status) {
+  if (!status.available) return 'Necesita configurar GEMINI_API_KEY en el servidor: sin IA real no hay método B (un sustituto con reglas sería otra heurística).';
+  const who = status.provider + ' (' + status.model + ')';
+  if (status.state === 'running') return 'Valorando con IA: ' + status.done + ' de ' + status.total + ' pasajes · ' + who;
+  if (status.failed) {
+    return status.done + ' de ' + status.total + ' pasajes valorados. ' + status.failed + ' no se pudieron valorar ('
+      + (REVIEW_ERRORS[status.last_error] || REVIEW_ERRORS.error) + '): vuelve a pulsar para reintentarlos.';
+  }
+  if (status.done >= status.total && status.total) return 'Los ' + status.total + ' pasajes están valorados por ' + who + '.';
+  if (!status.done) return 'Sin valorar todavía · ' + who + '.';
+  return status.done + ' de ' + status.total + ' pasajes valorados por ' + who + '.';
+}
