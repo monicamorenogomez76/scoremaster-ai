@@ -48,8 +48,8 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 20 | Puerto IA y fake/demo | Integrado: PR #77 (explicar la dificultad) y #78 (explicar el ensayo) |
 | 21 | Adaptador LangChain | Integrado: Gemini con salida estructurada y respaldo a la demo (PR #79, #81); verificado en Render con `gemini-3.8-flash` (2026-10-13) |
 | 22 | Revisión independiente | Integrado: método B, Gemini valora cada pasaje de la campaña con medidas y notas, sin la predicción de ScoreLint (PR #84, #86) |
-| 23 | Caché y trazabilidad | En revisión: explicaciones válidas guardadas por evidencias, proveedor, modelo y versiones; valoraciones del método B guardadas con lo enviado |
-| 24 | Comparación experimental | Pendiente |
+| 23 | Caché y trazabilidad | Integrado: explicaciones válidas guardadas por evidencias, proveedor, modelo y versiones; valoraciones del método B guardadas con lo enviado (PR #87) |
+| 24 | Comparación experimental | En revisión: híbrido C preregistrado y comparación sobre los mismos pasajes; resultados cuando respondan los músicos |
 | 25 | Estrategia híbrida experimental | Pendiente |
 
 ## Ampliación aprobada (2026-10-04)
