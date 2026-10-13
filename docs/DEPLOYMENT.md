@@ -54,13 +54,34 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
 
 Para cambiar de plan basta con editar `plan:` en `render.yaml` (o hacerlo desde el panel de Render).
 
-## Copia de seguridad
+## Copia de seguridad y restauración
 
-Desde el panel de la base de datos, **Connections → External Database URL** (habilitar temporalmente
-el acceso externo para tu IP en *Access Control*) y, en tu Mac:
+La base de datos gratuita **caduca a los 30 días de crearse** (creada hacia el 2026-10-07: caduca hacia el
+**6 de noviembre**). Hay que copiarla **tras cerrar la campaña de valoración y, en todo caso, antes del
+5 de noviembre**. Los scripts usan la imagen `postgres:17` de Docker (la versión de Render): no hay que
+instalar PostgreSQL. La URL se lee de `DATABASE_URL_EXTERNAL` o se pide sin mostrarla, para que no quede
+en el historial; las copias van a `backups/`, que no se versiona porque contienen datos personales.
 
-```sh
-pg_dump "<External Database URL>" --format=custom --file=scoremaster-$(date +%F).dump
-```
+**Copiar**
 
-Para restaurar en otra base de datos: `pg_restore --clean --no-owner -d "<URL destino>" archivo.dump`.
+1. Render → base de datos `scoremaster-db` → **Access Control** → añadir tu IP (la página la sugiere).
+2. **Connections → External Database URL** → copiarla.
+3. En la raíz del repositorio: `scripts/backup_db.sh` y pegar la URL cuando la pida. Imprime las filas
+   copiadas (usuarios, obras, análisis, ensayos, conciertos, campañas, valoraciones y valoraciones del LLM).
+4. Quitar tu IP de **Access Control**.
+5. Exportar además cada campaña desde «Valoraciones → Exportar resultados» y guardar el JSON en
+   `evaluation/exports/` (no se versiona): es lo que usa el informe del paso 24.
+
+**Restaurar** (en una base nueva de Render, o en la de Compose para comprobar la copia)
+
+1. Crear la base nueva (Render: *New → PostgreSQL*, o recrear el Blueprint) y permitir tu IP.
+2. `scripts/restore_db.sh backups/<archivo>.dump` con la URL de la base nueva. Imprime las mismas filas,
+   para compararlas con las de la copia.
+3. En el servicio web, cambiar `DATABASE_URL` a la base nueva (Render la enlaza sola si se recrea el
+   Blueprint). Al arrancar, `alembic upgrade head` no tiene nada que hacer: la versión viaja con la copia.
+
+Comprobado en local (2026-10-13): copia de la base de Compose y restauración en una base vacía con las
+mismas filas en todas las tablas y la misma versión de migraciones (`0011`).
+
+**Alternativa de pago**: pasar la base a un plan de pago (~6 $/mes, precios en render.com/pricing) evita la
+caducidad; se cambia `plan:` en `render.yaml` o desde el panel.
