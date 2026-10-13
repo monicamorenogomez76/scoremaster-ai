@@ -75,8 +75,11 @@ def test_failures_become_provider_failures_without_the_key_in_the_logs(failure, 
 
 
 def test_prompts_are_versioned():
-    assert DIFFICULTY_PROMPT.version == "difficulty-explanation-v1"
-    assert REHEARSAL_PROMPT.version == "rehearsal-explanation-v1"
+    # v2 (2026-10-13): Spanish names in the text and ids only in the citation fields.
+    assert DIFFICULTY_PROMPT.version == "difficulty-explanation-v2"
+    assert REHEARSAL_PROMPT.version == "rehearsal-explanation-v2"
+    for prompt in (DIFFICULTY_PROMPT, REHEARSAL_PROMPT):
+        assert "«label»" in prompt.system and "nunca en el texto" in prompt.system
 
 
 def test_without_a_key_the_demo_explains_and_with_one_gemini_does(monkeypatch):
