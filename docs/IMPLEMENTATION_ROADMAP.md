@@ -45,8 +45,8 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 17 | Persistencia de feedback | Integrado: PR #70 (migración 0009) |
 | 18 | Formulario de valoración | Integrado: PR #76 |
 | 19 | Herramienta de evaluación | Pendiente |
-| 20 | Puerto IA y fake/demo | En revisión: puerto, demo identificada y «¿Por qué esta dificultad?» de la obra |
-| 21 | Adaptador LangChain | Pendiente |
+| 20 | Puerto IA y fake/demo | Integrado: PR #77 (explicar la dificultad) y #78 (explicar el ensayo) |
+| 21 | Adaptador LangChain | En revisión: Gemini con salida estructurada y respaldo a la demo |
 | 22 | Revisión independiente | Pendiente |
 | 23 | Caché y trazabilidad | Pendiente |
 | 24 | Comparación experimental | Pendiente |
