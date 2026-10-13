@@ -31,8 +31,8 @@ test('grades are bounded to the visible scale', () => {
 
 test('a grade reads with its rubric, and an old analysis says it used the previous scale', () => {
   assert.deepEqual([1, 2, 3, 4, 5, 6].map(grade => gradeText({ grade }, current)), [
-    'Grado 1 · Iniciación', 'Grado 2 · Elemental', 'Grado 3 · Intermedio bajo',
-    'Grado 4 · Intermedio', 'Grado 5 · Avanzado', 'Grado 6 · Superior']);
+    'Grado 1 · Muy fácil', 'Grado 2 · Fácil', 'Grado 3 · Intermedio',
+    'Grado 4 · Intermedio avanzado', 'Grado 5 · Avanzado', 'Grado 6 · Profesional']);
   assert.equal(gradeText({ grade: 3 }, legacy), 'Grado 3 de 5 (escala anterior)');
 });
 

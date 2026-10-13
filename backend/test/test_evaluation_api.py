@@ -204,7 +204,7 @@ def test_the_llm_reviews_every_passage_once_without_scorelint_prediction(clients
     total = len(body["passages"])
     assert started.status_code == 202
     assert (status["available"], status["state"], status["done"], status["total"], status["failed"]) == (True, "done", total, total, 0)
-    assert (status["provider"], status["model"], status["prompt_version"]) == ("fake", "fake-model", "passage-review-v1")
+    assert (status["provider"], status["model"], status["prompt_version"]) == ("fake", "fake-model", "passage-review-v2")
     sent = reviewer["provider"].seen
     assert len(sent) == total and all("notation" in item for item in sent)
     assert not any(key in str(item).lower() for item in sent for key in ("snapshot", "grade", "finding", "technical_index")), \
@@ -215,7 +215,7 @@ def test_the_llm_reviews_every_passage_once_without_scorelint_prediction(clients
     exported = ana.get("/evaluations/" + body["id"] + "/export").json()
     assert len(exported["llm_reviews"]) == total
     assert {(item["provider"], item["model"], item["prompt_version"], item["features_version"]) for item in exported["llm_reviews"]} \
-        == {("fake", "fake-model", "passage-review-v1", "passage-features-v1")}
+        == {("fake", "fake-model", "passage-review-v2", "passage-features-v1")}
 
     _, again = run_review(ana, body["id"])
     assert len(reviewer["provider"].seen) == total, "a passage already reviewed with these versions is not asked again"

@@ -3,7 +3,7 @@
 ## Decisiones que prevalecen
 
 - PostgreSQL en desarrollo y producción; SQLAlchemy, Alembic y repositorios independientes del dominio.
-- Grados visibles enteros 1–6 y rúbrica propia documentada, sin afirmar certificación oficial. Índice técnico interno 0–10; transformación explícita. Integrado en el paso 13: índice = 2 × puntuación anterior, seis tramos iguales y `scale` en el resultado; el baseline conserva 1–5/0–5.
+- Grados visibles enteros 1–6 y rúbrica documentada, alineada desde 2026-10-13 con la escala Grade 1–6 de las editoriales como equivalencia orientativa, sin afirmar certificación oficial. Índice técnico interno 0–10; transformación explícita. Integrado en el paso 13: índice = 2 × puntuación anterior, seis tramos iguales y `scale` en el resultado; el baseline conserva 1–5/0–5.
 - Nivel objetivo por defecto intermedio, separado del grado editorial estimado.
 - Separar Difficulty, Criticality y RehearsalPriority. Un análisis puede devolver cero críticos.
 - Los ensayos son de conjunto: un pasaje común es el que varias partes tocan igual en estructura —misma línea (mismo ritmo e intervalos, cada una en su tonalidad u octava) o mismo ritmo—, aunque sean de familias distintas. En cada pasaje se ensaya primero cada línea común, después las subsecciones con lo que queda (flautas, dobles cañas, clarinetes, saxofones, metales agudos, graves —con fagot, clarinete bajo y saxo barítono—, percusión, cuerda y rítmica) y al final un tutti para juntar (decisiones de la autora, 2026-10-04).

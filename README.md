@@ -201,7 +201,7 @@ en el propio workflow; no requiere secretos del repositorio.
 
 La interfaz usa un logo SVG propio, la paleta blanco frío, grafito y azul eléctrico, superficies claras,
 controles con iconos y gráficos de grado por familia sobre una escala explícita
-de 1 a 6, con el nivel de la rúbrica (Iniciación … Superior). Los valores también aparecen como texto. Las acciones principales y
+de 1 a 6, con el nivel de la rúbrica (Muy fácil … Profesional, alineada con los grados 1–6 de las editoriales). Los valores también aparecen como texto. Las acciones principales y
 secundarias se distinguen visualmente, el foco del teclado permanece visible y
 los controles del reproductor tienen áreas de 44 × 44 píxeles. Se respeta la
 preferencia de movimiento reducido.

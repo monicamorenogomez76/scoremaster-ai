@@ -12,7 +12,7 @@ from backend.application.ai import ExplanationProvider
 from backend.application.difficulty_explanation import FINDING_LABELS, GRADE_LABELS
 from backend.application.explanations import InvalidExplanation, replace_terms, run_explanation
 
-EVIDENCE_VERSION = "rehearsal-evidence-v1"
+EVIDENCE_VERSION = "rehearsal-evidence-v2"
 PROMPT_VERSION = "rehearsal-explanation-v2"
 PHASES = {"reading": "Lectura y pasajes", "passages": "Pasajes e integración", "integration": "Integración",
           "general": "Ensayo general"}

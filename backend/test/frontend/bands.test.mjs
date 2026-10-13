@@ -28,7 +28,7 @@ test('the full template lists every instrument by family and the percussionists 
 
 test('each section of the band has a level on the grade rubric, or none', () => {
   assert.deepEqual(levelOptions[0], ['', 'Sin indicar']);
-  assert.deepEqual(levelOptions[4], ['4', '4 · Intermedio']);
+  assert.deepEqual(levelOptions[4], ['4', '4 · Intermedio avanzado']);
   assert.deepEqual(sectionLevelRows().map(([key]) => key).slice(0, 3), ['flutes', 'double_reeds', 'clarinets']);
   assert.equal(sectionLevelRows()[2][1], 'Clarinetes');
 });

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from backend.application.explanations import InvalidExplanation
 
-PROMPT_VERSION = "passage-review-v1"
+PROMPT_VERSION = "passage-review-v2"
 FACTORS = ("rhythm", "tempo", "range", "register", "intervals", "endurance", "articulation", "reading", "other")
 
 

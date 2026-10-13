@@ -11,14 +11,20 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.ai import ExplanationProvider
 from backend.application.explanations import InvalidExplanation, replace_terms, run_explanation
 
-EVIDENCE_VERSION = "difficulty-evidence-v1"
-PROMPT_VERSION = "difficulty-explanation-v2"
+EVIDENCE_VERSION = "difficulty-evidence-v2"
+PROMPT_VERSION = "difficulty-explanation-v3"
 DIMENSIONS = ("range", "register", "intervals", "density", "endurance", "tempo")
 MAX_INSTRUMENTS, MAX_PASSAGES = 8, 8
-GRADE_LABELS = {1: "Iniciación", 2: "Elemental", 3: "Intermedio bajo", 4: "Intermedio", 5: "Avanzado", 6: "Superior"}
-GRADE_BANDS = {1: "primer año, escuela de música", 2: "banda infantil, segundo o tercer año", 3: "banda juvenil",
-               4: "banda amateur media", 5: "banda amateur de alto nivel, conservatorio profesional",
-               6: "banda profesional o de concurso, repertorio virtuoso"}
+# Aligned with the Grade 1-6 scale of band publishers (author's decision, 2026-10-13); orientative.
+GRADE_LABELS = {1: "Muy fácil", 2: "Fácil", 3: "Intermedio", 4: "Intermedio avanzado", 5: "Avanzado", 6: "Profesional"}
+GRADE_DESCRIPTIONS = {
+    1: "Primer año de instrumento: negras, blancas y redondas en compases simples, con tesitura reducida.",
+    2: "Unos dos años de práctica: corcheas, puntillos, síncopas y tresillos sencillos, primeros compases compuestos.",
+    3: "Tres o cuatro años de práctica: síncopas frecuentes, cambios de compás y tesitura media o amplia.",
+    4: "Cuatro a seis años de práctica: ritmos exigentes, tonalidades y compases menos habituales, pasajes técnicos.",
+    5: "Siete a nueve años de práctica: ritmos muy exigentes, compases cambiantes o asimétricos, toda la tesitura y escritura virtuosística.",
+    6: "Nivel profesional o superior: extremadamente difícil en todos los aspectos.",
+}
 FINDING_LABELS = {"SL002": "Registro agudo", "SL003": "Alta densidad rítmica", "SL004": "Intervalos amplios",
                   "SL005": "Pasaje prolongado sin descanso"}
 
@@ -51,7 +57,8 @@ def difficulty_evidence(result: dict) -> dict:
     return {
         "version": EVIDENCE_VERSION,
         "title": result.get("title") or "Obra sin título",
-        "grade": grade, "grade_label": GRADE_LABELS.get(grade, ""), "grade_band": GRADE_BANDS.get(grade, ""),
+        "grade": grade, "grade_label": GRADE_LABELS.get(grade, ""), "grade_standard": "Grade {}".format(grade),
+        "grade_description": GRADE_DESCRIPTIONS.get(grade, ""),
         "scale": {"grades": scale.get("grades", 6), "technical_index_max": scale.get("technical_index_max", 10)},
         "families": [{"family": entry.get("label_es") or name, "grade": entry.get("grade")}
                      for name, entry in sorted((difficulty.get("by_family") or {}).items(),

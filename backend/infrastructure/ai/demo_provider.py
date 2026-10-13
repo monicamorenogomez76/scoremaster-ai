@@ -62,8 +62,10 @@ class DemoExplanationProvider:
             factors = [{"dimension": "general", "instruments": [], "passages": [],
                         "text": "Ninguna dimensión destaca: la dificultad está repartida y es moderada."}]
         leading = [item["label"] for item in instruments[:2]]
-        summary = "«{}» tiene grado {} ({}) en la escala de ScoreLint, el nivel de: {}.".format(
-            evidence["title"], evidence["grade"], evidence["grade_label"], evidence["grade_band"])
+        description = evidence["grade_description"]
+        summary = "«{}» tiene grado {} ({}, {} de las editoriales) en la escala de ScoreLint: {}".format(
+            evidence["title"], evidence["grade"], evidence["grade_label"], evidence["grade_standard"],
+            description[0].lower() + description[1:])
         if leading:
             summary += " Lo más exigente está en " + _joined(leading)
             summary += "; hay {} pasajes críticos señalados.".format(len(evidence["passages"])) if evidence["passages"] else "."

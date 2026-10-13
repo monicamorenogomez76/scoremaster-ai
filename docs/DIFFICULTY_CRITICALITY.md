@@ -94,16 +94,22 @@ Mantener score continuo, idealmente 0-10.
 igual). El **grado** 1–6 sale de seis tramos iguales del índice, hasta que la evaluación con
 músicos los calibre:
 
-| Grado | Índice | Rúbrica: agrupación que puede tocarla |
-|---|---|---|
-| 1 Iniciación | 0 – 1,66 | Primer año, escuela de música |
-| 2 Elemental | 1,67 – 3,33 | Banda infantil, segundo o tercer año |
-| 3 Intermedio bajo | 3,34 – 4,99 | Banda juvenil |
-| 4 Intermedio | 5 – 6,66 | Banda amateur media (nivel objetivo por defecto) |
-| 5 Avanzado | 6,67 – 8,33 | Banda amateur de alto nivel, conservatorio profesional |
-| 6 Superior | 8,34 – 10 | Banda profesional o de concurso, repertorio virtuoso |
+| Grado | Índice | Equivale a | Rúbrica (alineada con las editoriales, 2026-10-13) |
+|---|---|---|---|
+| 1 Muy fácil | 0 – 1,66 | Grade 1 | Primer año de instrumento: negras, blancas y redondas en compases simples, con tesitura reducida |
+| 2 Fácil | 1,67 – 3,33 | Grade 2 | Unos dos años de práctica: corcheas, puntillos, síncopas y tresillos sencillos, primeros compases compuestos |
+| 3 Intermedio | 3,34 – 4,99 | Grade 3 | Tres o cuatro años de práctica: síncopas frecuentes, cambios de compás y tesitura media o amplia |
+| 4 Intermedio avanzado | 5 – 6,66 | Grade 4 | Cuatro a seis años de práctica: ritmos exigentes, tonalidades y compases menos habituales, pasajes técnicos |
+| 5 Avanzado | 6,67 – 8,33 | Grade 5 | Siete a nueve años de práctica: ritmos muy exigentes, compases cambiantes o asimétricos, toda la tesitura y escritura virtuosística |
+| 6 Profesional | 8,34 – 10 | Grade 6 | Nivel profesional o superior: extremadamente difícil en todos los aspectos |
 
-Es una rúbrica propia, no una certificación oficial. El grado de familia es el del percentil 80
+Decisión de la autora (2026-10-13): los nombres y descripciones se alinean con la escala **Grade 1–6** que
+usan la mayoría de editoriales de música para banda, para poder comparar con los grados publicados. No hay
+una escala única entre editoriales (J.W. Pepper, por ejemplo, usa letras de Beginning a Advanced), así que
+la equivalencia es **orientativa**; el cálculo del grado no cambia y los tramos se calibrarán con la
+evaluación. Antes la rúbrica describía la agrupación (escuela de música, banda juvenil, banda amateur…).
+
+No es una certificación oficial. El grado de familia es el del percentil 80
 de sus instrumentos y el de la obra, el máximo de las familias. El resultado declara
 `scale = {version: 2, grades: 6, technical_index_max: 10}`; un análisis guardado sin `scale` se
 puntuó 1–5 y la interfaz lo muestra como «escala anterior». El baseline se captura con

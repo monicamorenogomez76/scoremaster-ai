@@ -73,8 +73,8 @@ def test_the_evidence_is_the_rehearsal_its_works_concert_and_last_review(evidenc
     assert second["critical_passages"] == [{"instrument": "Clarinete en Si bemol 1", "measures": "70-115",
                                             "findings": ["Alta densidad rítmica", "Pasaje prolongado sin descanso"]}]
     assert evidence["blocks"][3]["critical_passages"] == [], "Spania has none"
-    assert evidence["works"] == [{"title": "Persis", "grade": 6, "grade_label": "Superior", "critical_passages": 2},
-                                 {"title": "Spania", "grade": 3, "grade_label": "Intermedio bajo", "critical_passages": 0}]
+    assert evidence["works"] == [{"title": "Persis", "grade": 6, "grade_label": "Profesional", "critical_passages": 2},
+                                 {"title": "Spania", "grade": 3, "grade_label": "Intermedio", "critical_passages": 0}]
     assert evidence["pending_from_review"] == [{"work": "Persis", "measures": "100-110", "status": "Pendiente",
                                                 "blocks": ["B3", "B5"]}]
 
