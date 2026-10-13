@@ -11,3 +11,6 @@ backend/app/static/frontend/
 # Partituras comerciales y documentos privados para pruebas manuales
 test-scores/local/
 Documentacion-TFM*.pdf
+
+# Exportaciones de campañas con valoraciones reales (paso 19)
+evaluation/exports/

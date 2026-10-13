@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
+from evaluation.campaign_report import HEURISTIC, build_report
 from backend.test.test_library_api import analyze, clients  # noqa: F401 (pytest fixture)
 
 pytestmark = pytest.mark.real_auth
@@ -136,6 +137,9 @@ def test_results_are_exported_with_anonymous_evaluators(clients):
     assert "berta" not in str(exported).lower(), "no email or name of the musicians"
     assert len(exported["passages"]) == len(body["passages"])
     assert berta.get(path + "/export").status_code == 404
+    # Step 19 reads this very export.
+    report = build_report(exported)
+    assert report["passages"]["evaluated"] == 1 and report["methods"][HEURISTIC]["difficulty"]["n"] == 1
 
 
 def test_a_campaign_uses_the_kept_model_of_each_work_without_reading_it_again(clients, postgres_engine, monkeypatch):

@@ -44,7 +44,7 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 16 | Evidencias en interfaz | Integrado: campañas con la predicción de cada pasaje (PR #70, #74) |
 | 17 | Persistencia de feedback | Integrado: PR #70 (migración 0009) |
 | 18 | Formulario de valoración | Integrado: PR #76 |
-| 19 | Herramienta de evaluación | Pendiente |
+| 19 | Herramienta de evaluación | En revisión: informe de una campaña exportada con MAE, Spearman, precisión, recall, F0.5 y acuerdo entre evaluadores |
 | 20 | Puerto IA y fake/demo | En revisión: puerto, demo identificada y «¿Por qué esta dificultad?» de la obra |
 | 21 | Adaptador LangChain | Pendiente |
 | 22 | Revisión independiente | Pendiente |
