@@ -151,3 +151,14 @@ def test_the_user_changes_the_name_shown_in_the_app(client):
     for name in ("", "   ", "x" * 101):
         assert client.patch("/auth/me", json={"display_name": name}, headers={"X-CSRF-Token": csrf}).status_code == 422
     assert TestClient(app).patch("/auth/me", json={"display_name": "Otra"}).status_code == 401
+
+
+def test_hsts_is_sent_only_in_production(monkeypatch):
+    """Render serves HTTPS: browsers are told to never use plain HTTP for a year. Never on a local
+    server, where HTTPS does not exist and HSTS would lock the browser out of http://localhost."""
+    from backend.app import main
+    client = TestClient(app)
+    monkeypatch.setattr(main, "PRODUCTION", True)
+    assert client.get("/health").headers["strict-transport-security"] == "max-age=31536000; includeSubDomains"
+    monkeypatch.setattr(main, "PRODUCTION", False)
+    assert "strict-transport-security" not in client.get("/health").headers

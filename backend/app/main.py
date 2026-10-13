@@ -100,6 +100,7 @@ SECURITY_HEADERS = {
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "X-Frame-Options": "DENY",
 }
+HSTS = "max-age=31536000; includeSubDomains"
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024
 
@@ -114,6 +115,10 @@ async def security(request, call_next):
         response = await call_next(request)
     for name, value in SECURITY_HEADERS.items():
         response.headers.setdefault(name, value)
+    # Production is served over HTTPS (Render): never plain HTTP again for a year. Not locally, where
+    # it would lock the browser out of http://localhost.
+    if PRODUCTION:
+        response.headers.setdefault("Strict-Transport-Security", HSTS)
     return response
 
 

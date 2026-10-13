@@ -124,7 +124,8 @@ def test_band_updates_are_validated(clients, profile):
     assert ana.patch("/band", json={"profile": profile}).status_code in (400, 422)
 
 
-def test_library_endpoints_need_a_session():
+def test_library_endpoints_need_a_session(clients):
+    """With the real repositories: without them the session check answered 503 instead of 401."""
     client = TestClient(app)
     assert client.get("/works").status_code == 401
     assert client.get("/band").status_code == 401

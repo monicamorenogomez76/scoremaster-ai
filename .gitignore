@@ -14,3 +14,4 @@ Documentacion-TFM*.pdf
 
 # Exportaciones de campañas con valoraciones reales (paso 19)
 evaluation/exports/
+.venv-*/
