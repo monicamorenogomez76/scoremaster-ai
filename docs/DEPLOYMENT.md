@@ -18,7 +18,7 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
      opcionales; vacíos desactivan esas funciones.
    - `GEMINI_API_KEY` (opcional): las explicaciones «¿Por qué esta dificultad?» y «¿Por qué este plan?»
      las redacta Gemini; sin ella responde la demo identificada. Se crea gratis en
-     https://aistudio.google.com/apikey. `GEMINI_MODEL` cambia el modelo (por defecto `gemini-2.5-flash`).
+     https://aistudio.google.com/apikey. `GEMINI_MODEL` cambia el modelo (por defecto `gemini-3.8-flash`).
      En el nivel gratuito Google puede usar lo enviado para mejorar sus productos: solo se envían datos
      derivados del análisis (grados, dimensiones, compases, bloques), nunca la partitura, emails ni nombres.
    - La clave de YouTube la usa **el servidor**, no el navegador. En Google Cloud, en la clave:

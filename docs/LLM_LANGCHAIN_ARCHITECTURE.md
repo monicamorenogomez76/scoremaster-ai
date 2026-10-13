@@ -30,7 +30,7 @@
   Los fallos se clasifican en timeout, rate_limit o error y responde la demo. Prompts versionados en
   `backend/infrastructure/ai/prompts.py`: reglas como mensaje de sistema y evidencias como datos en el
   mensaje humano. Se activa con `GEMINI_API_KEY` (modelo en `GEMINI_MODEL`, por defecto
-  `gemini-2.5-flash`); LangChain se importa solo al usarlo (~70 MB que un servidor sin clave no gasta).
+  `gemini-3.8-flash`); LangChain se importa solo al usarlo (~70 MB que un servidor sin clave no gasta).
   Las pruebas usan un modelo simulado: nunca llaman a Google.
 
 ## 1. Objetivo
