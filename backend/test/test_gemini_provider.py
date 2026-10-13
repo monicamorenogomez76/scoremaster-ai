@@ -118,3 +118,24 @@ def test_a_model_google_does_not_find_is_named_in_the_log(caplog):
             provider(FakeChat(failure=NotFound("404 models/gemini-test is not found"))).explain_difficulty(EVIDENCE)
     assert "gemini-test" in caplog.text and "GEMINI_MODEL" in caplog.text
     assert "secret-gemini-key" not in caplog.text
+
+
+def test_gemini_has_a_minute_and_the_limit_can_be_changed(monkeypatch):
+    """2026-10-13: gemini-3.8-flash always thinks before answering; with Persis it took more than the
+    25 s first allowed and the demo answered «La IA no respondió a tiempo»."""
+    import langchain_google_genai
+    seen = {}
+
+    class Chat:
+        def __init__(self, **options):
+            seen.update(options)
+
+        def with_structured_output(self, schema):
+            return self
+    monkeypatch.setattr(langchain_google_genai, "ChatGoogleGenerativeAI", Chat)
+    monkeypatch.delenv("GEMINI_TIMEOUT_SECONDS", raising=False)
+    GeminiExplanationProvider("k", "m")._chat(dict)
+    assert seen["timeout"] == 60 and seen["temperature"] == 0 and seen["max_retries"] == 1
+    monkeypatch.setenv("GEMINI_TIMEOUT_SECONDS", "90")
+    GeminiExplanationProvider("k", "m")._chat(dict)
+    assert seen["timeout"] == 90

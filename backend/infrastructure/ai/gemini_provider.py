@@ -15,7 +15,16 @@ from backend.infrastructure.ai.prompts import DIFFICULTY_PROMPT, REHEARSAL_PROMP
 # 2026-10-13: gemini-2.5-flash answered NotFound for a new key (Google keeps it only for accounts that
 # used it before); 3.8 Flash is free on the standard tier.
 DEFAULT_MODEL = "gemini-3.8-flash"
-TIMEOUT_SECONDS = 25
+# 2026-10-13: gemini-3.8-flash always thinks first (thinking_level, which this LangChain version cannot
+# lower); with Persis it took more than 25 s. A minute by default; GEMINI_TIMEOUT_SECONDS changes it.
+TIMEOUT_SECONDS = 60
+
+
+def _timeout() -> int:
+    try:
+        return max(5, int(os.environ.get("GEMINI_TIMEOUT_SECONDS", TIMEOUT_SECONDS)))
+    except ValueError:
+        return TIMEOUT_SECONDS
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +32,7 @@ def _langchain_chat(api_key: str, model: str):
     def factory(schema):
         from langchain_google_genai import ChatGoogleGenerativeAI
         chat = ChatGoogleGenerativeAI(model=model, google_api_key=api_key, temperature=0,
-                                      timeout=TIMEOUT_SECONDS, max_retries=1)
+                                      timeout=_timeout(), max_retries=1)
         return chat.with_structured_output(schema)
     return factory
 
