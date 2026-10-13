@@ -14,6 +14,7 @@ Documentacion-TFM*.pdf
 
 # Exportaciones de campañas con valoraciones reales (paso 19)
 evaluation/exports/
+.venv-*/
 
 # Database copies (scripts/backup_db.sh): personal data, never in the repository.
 backups/

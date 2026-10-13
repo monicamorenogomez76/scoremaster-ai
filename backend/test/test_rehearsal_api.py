@@ -134,7 +134,8 @@ def test_deleting_a_work_keeps_the_rehearsal_without_it(clients):
     assert [block["title"] for block in kept["blocks"]] == ["Calentamiento", "Pasajes prioritarios", "Tutti"]
 
 
-def test_rehearsals_need_a_session():
+def test_rehearsals_need_a_session(clients):
+    """With the real repositories: without them the session check answered 503 instead of 401."""
     client = TestClient(app)
     assert client.get("/rehearsals").status_code == 401
 

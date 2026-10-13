@@ -56,7 +56,7 @@ plan de ensayo y un cuadro de mando por familias, instrumentos y pasajes crític
 La interfaz está construida con React y Vite: acceso demo, navegación, carga y
 análisis, resumen, dificultad, plantilla, plan de ensayo, visores, audio y vídeos.
 Ver [arquitectura y arranque del frontend](frontend/README.md). Para ejecutar con
-Python, compilar primero con `npm --prefix frontend ci` y
+Python (3.12, como Docker, la CI y Render), compilar primero con `npm --prefix frontend ci` y
 `npm --prefix frontend run build`; Docker lo hace durante la construcción.
 
 La aplicación exige iniciar sesión (email y contraseña, Google opcional). Cada obra
