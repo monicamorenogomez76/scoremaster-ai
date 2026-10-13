@@ -28,6 +28,15 @@
 - Datos mínimos: email de la cuenta, nivel e instrumento. API: `/evaluations` (ver
   `backend/app/evaluation_routes.py`); tablas de la migración `0009_evaluations`.
 
+## Implementado: informe de una campaña (paso 19)
+
+`python -m evaluation.campaign_report exportacion.json` compara la predicción guardada de cada pasaje
+con las valoraciones exportadas y genera la tabla del apartado 13 para la heurística: MAE, RMSE,
+sesgo, Spearman, acierto exacto y a ±1 grado, y precisión, recall, F1 y F0.5 de la criticidad, con
+desgloses por familia, por grado de los músicos y por obra, y el acuerdo entre evaluadores. El
+protocolo de agregación está en [evaluation/README.md](../evaluation/README.md). Las filas LLM e
+híbrido se añadirán con los pasos 22 y 24; el informe no ajusta pesos ni umbrales.
+
 ## 1. Objetivo
 
 No ajustar ScoreLint únicamente mediante intuición.
