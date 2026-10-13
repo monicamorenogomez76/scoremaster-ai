@@ -1,7 +1,8 @@
 """Running the independent review over a campaign in the background (step 22).
 
 One campaign at a time, a pause between requests to stay within the free quota, one wait and retry
-when the provider says the quota is spent, and failures counted rather than stored: a passage that
+when the provider says the quota is spent (then a pause until the next run), and failures counted rather
+than stored: a passage that
 failed is asked again the next time. Nothing is lost on a restart: the stored reviews say what is done."""
 import logging
 import os
@@ -52,6 +53,8 @@ def _run(current: Job, todo: list, review: Callable, save: Callable) -> None:
     pause = _pause() if PAUSE_SECONDS is None else PAUSE_SECONDS
     with _one_at_a_time:
         for index, passage in enumerate(todo):
+            if current.state == "paused":
+                break
             if index and pause:
                 time.sleep(pause)
             for attempt in (1, 2):
@@ -64,6 +67,10 @@ def _run(current: Job, todo: list, review: Callable, save: Callable) -> None:
                     if str(failure) == "rate_limit" and attempt == 1:
                         time.sleep(RATE_LIMIT_WAIT if pause else 0)
                         continue
+                    if str(failure) == "rate_limit":
+                        # The quota is spent: asking the rest would only fail. The next run continues here.
+                        current.state, current.last_error = "paused", "rate_limit"
+                        break
                     current.failed, current.last_error = current.failed + 1, str(failure)
                 except InvalidReview:
                     current.failed, current.last_error = current.failed + 1, "invalid"
@@ -71,7 +78,8 @@ def _run(current: Job, todo: list, review: Callable, save: Callable) -> None:
                     logger.warning("No se pudo valorar un pasaje con IA (%s).", type(error).__name__)
                     current.failed, current.last_error = current.failed + 1, "error"
                 break
-    current.state = "done"
+    if current.state == "running":
+        current.state = "done"
 
 
 def start(campaign_id, todo: list, review: Callable, save: Callable) -> Job:

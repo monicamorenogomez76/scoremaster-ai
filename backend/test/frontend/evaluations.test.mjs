@@ -122,3 +122,9 @@ test('the review is followed and started through the API', async () => {
   assert.equal((await startLlmReview('c1')).state, 'running');
   assert.equal(calls[1].method, 'POST');
 });
+
+test('a review paused by the quota says it can go on later', () => {
+  const status = { available: true, provider: 'gemini', model: 'gemini-3.8-flash', total: 40, done: 12, failed: 0,
+    state: 'paused', last_error: 'rate_limit' };
+  assert.equal(llmReviewText(status), '12 de 40 pasajes valorados. La IA ha agotado su cupo gratuito: vuelve a pulsar más tarde (el cupo diario se renueva cada día) y seguirá donde se quedó.');
+});
