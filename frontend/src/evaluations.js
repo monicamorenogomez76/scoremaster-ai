@@ -65,13 +65,14 @@ export function shortfallText(requested, proposed) {
 }
 
 // The musician's side: the same rubric as ScoreLint (docs/DIFFICULTY_CRITICALITY.md), never its prediction.
+// Aligned with the Grade 1-6 scale of band publishers (author's decision, 2026-10-13).
 export const GRADE_RUBRIC = [
-  { grade: 1, label: 'Iniciación', band: 'Primer año, escuela de música' },
-  { grade: 2, label: 'Elemental', band: 'Banda infantil, segundo o tercer año' },
-  { grade: 3, label: 'Intermedio bajo', band: 'Banda juvenil' },
-  { grade: 4, label: 'Intermedio', band: 'Banda amateur media' },
-  { grade: 5, label: 'Avanzado', band: 'Banda amateur de alto nivel, conservatorio profesional' },
-  { grade: 6, label: 'Superior', band: 'Banda profesional o de concurso, repertorio virtuoso' },
+  { grade: 1, label: 'Muy fácil', standard: 'Grade 1', description: 'Primer año de instrumento: negras, blancas y redondas en compases simples, con tesitura reducida.' },
+  { grade: 2, label: 'Fácil', standard: 'Grade 2', description: 'Unos dos años de práctica: corcheas, puntillos, síncopas y tresillos sencillos, primeros compases compuestos.' },
+  { grade: 3, label: 'Intermedio', standard: 'Grade 3', description: 'Tres o cuatro años de práctica: síncopas frecuentes, cambios de compás y tesitura media o amplia.' },
+  { grade: 4, label: 'Intermedio avanzado', standard: 'Grade 4', description: 'Cuatro a seis años de práctica: ritmos exigentes, tonalidades y compases menos habituales, pasajes técnicos.' },
+  { grade: 5, label: 'Avanzado', standard: 'Grade 5', description: 'Siete a nueve años de práctica: ritmos muy exigentes, compases cambiantes o asimétricos, toda la tesitura y escritura virtuosística.' },
+  { grade: 6, label: 'Profesional', standard: 'Grade 6', description: 'Nivel profesional o superior: extremadamente difícil en todos los aspectos.' },
 ];
 export const EXPERIENCE_OPTIONS = [['estudiante', 'Estudiante'], ['amateur', 'Músico amateur'], ['profesional', 'Profesional'],
   ['docente', 'Docente o director']];

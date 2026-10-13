@@ -48,7 +48,7 @@ def valid_answer(evidence):
 def test_the_evidence_is_only_what_scorelint_measured_and_stays_small(result):
     evidence = difficulty_evidence(result)
     assert evidence["version"] == EVIDENCE_VERSION
-    assert evidence["grade"] == result["difficulty"]["grade"] and evidence["grade_label"] == "Intermedio"
+    assert evidence["grade"] == result["difficulty"]["grade"] and evidence["grade_label"] == "Intermedio avanzado"
     assert evidence["scale"] == {"grades": 6, "technical_index_max": 10}
     assert {item["name"] for item in evidence["instruments"]} == {"Flute", "Clarinet", "Tuba"}
     first = evidence["instruments"][0]
@@ -68,7 +68,7 @@ def test_the_demo_is_deterministic_valid_and_cites_real_passages(result):
     first, again = demo.explain_difficulty(evidence), demo.explain_difficulty(evidence)
     assert first == again
     explanation = validate_explanation(first, evidence)
-    assert explanation.summary.startswith("«Estudio de evaluación» tiene grado 4 (Intermedio)")
+    assert explanation.summary.startswith("«Estudio de evaluación» tiene grado 4 (Intermedio avanzado, Grade 4 de las editoriales)")
     assert 1 <= len(explanation.factors) <= 4
     assert any(factor.passages for factor in explanation.factors)
 

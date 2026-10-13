@@ -283,10 +283,10 @@ function RatingSession({ id, onClose, onChanged, onOpenPassage }) {
           <button type="button" className="secondary-action" onClick={() => onOpenPassage(campaign.id, passage, true)}>Ver su parte completa</button>
         </div>
         <fieldset disabled={!open}>
-          <legend>Dificultad del pasaje: ¿qué agrupación podría tocarlo?</legend>
+          <legend>Dificultad del pasaje: ¿qué nivel exige?</legend>
           <div className="rating-options rating-grades">{GRADE_RUBRIC.map(item =>
             <Choice key={item.grade} name="difficulty" value={String(item.grade)} current={draft.difficulty} onChange={value => set('difficulty', value)}>
-              <strong>{item.grade} · {item.label}</strong><span>{item.band}</span>
+              <strong>{item.grade} · {item.label}</strong><span>{item.standard} · {item.description}</span>
             </Choice>)}</div>
         </fieldset>
         <fieldset disabled={!open}>

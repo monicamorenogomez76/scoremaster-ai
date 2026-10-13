@@ -109,7 +109,7 @@ try {
   await rater.locator('#notation-close').click();
   await rater.getByRole('button', { name: 'Guardar y seguir' }).click();
   assert.match(await rater.locator('#rating-form [role=alert]').textContent(), /Indica la dificultad/);
-  for (const [grade, critical, priority] of [['4 · Intermedio', 'Sí', '3'], ['2 · Elemental', 'No', '1']]) {
+  for (const [grade, critical, priority] of [['4 · Intermedio avanzado', 'Sí', '3'], ['2 · Fácil', 'No', '1']]) {
     const title = await rater.locator('#rating-passage-title').textContent();
     await rater.locator('#rating-form').getByText(grade).click();
     await rater.locator('#rating-form').getByText(critical, { exact: true }).click();

@@ -58,9 +58,10 @@ def test_failures_are_reported_never_replaced_by_a_demo():
 
 def test_the_prompt_uses_the_musicians_rubric_and_never_scorelint():
     system = PASSAGE_REVIEW_PROMPT.system
-    assert PASSAGE_REVIEW_PROMPT.version == PROMPT_VERSION == "passage-review-v1"
-    for band in ("Primer año, escuela de música", "Banda amateur media", "repertorio virtuoso"):
-        assert band in system
+    # v2 (2026-10-13): the rubric aligned with the Grade 1-6 scale of band publishers.
+    assert PASSAGE_REVIEW_PROMPT.version == PROMPT_VERSION == "passage-review-v2"
+    for level in ("Grade 1", "Primer año de instrumento", "Cuatro a seis años de práctica", "Nivel profesional"):
+        assert level in system
     assert "especialmente problemático, que conviene trabajar aparte" in system, "the musicians' critical question"
     assert "ScoreLint" not in system
 
