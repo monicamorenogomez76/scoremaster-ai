@@ -28,3 +28,9 @@ test('the explanation of a rehearsal is asked to the server', async () => {
   assert.equal((await explainRehearsal('r1')).mode, 'demo');
   assert.deepEqual(calls, ['/rehearsals/r1/explanation']);
 });
+
+test('an answer reused from the cache says it spends no quota', () => {
+  assert.equal(sourceText({ mode: 'llm', provider: 'gemini', model: 'gemini-3.8-flash', cached: true }),
+    'Redactada con IA (gemini · gemini-3.8-flash) solo a partir del análisis de ScoreLint. Puede contener imprecisiones: '
+    + 'contrástala con la partitura. Respuesta guardada: no gasta cupo.');
+});

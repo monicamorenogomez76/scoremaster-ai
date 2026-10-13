@@ -20,6 +20,7 @@ from backend.infrastructure.evaluation_repository import PostgresEvaluationRepos
 from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.infrastructure.ai.gemini_provider import shared_provider
+from backend.infrastructure.explanation_cache import PostgresExplanationCache
 from backend.infrastructure.prepared_store import PostgresPreparedStore
 from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
 from backend.infrastructure.database import database_engine
@@ -77,6 +78,14 @@ def get_score_store() -> Optional[PostgresPreparedStore]:
 def get_explanation_provider():
     """Gemini when GEMINI_API_KEY is set (step 21); otherwise the demo, always identified as such."""
     return shared_provider() or DemoExplanationProvider()
+
+
+def get_explanation_cache() -> Optional[PostgresExplanationCache]:
+    """Valid AI explanations kept for reuse (step 23); without a database nothing is kept."""
+    try:
+        return PostgresExplanationCache(analysis_engine())
+    except ValueError:
+        return None
 
 
 def get_rehearsal_repository() -> RehearsalRepository:
