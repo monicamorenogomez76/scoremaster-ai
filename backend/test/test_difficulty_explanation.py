@@ -123,3 +123,20 @@ def test_an_analysis_without_instruments_is_still_explained(result):
                                                "scale": {"grades": 6, "technical_index_max": 10}}}
     shown = explain_difficulty(empty, DemoExplanationProvider(), DemoExplanationProvider())
     assert shown["explanation"]["factors"] and shown["passages"] == {}
+
+
+def test_the_text_never_shows_internal_ids_or_part_names_in_english(result):
+    """First answer of Gemini (2026-10-13): «como P3, P4 y P5» and «Concert Snare Drum». The ids and
+    the MusicXML names belong in the citation fields; the director reads Spanish names."""
+    evidence = difficulty_evidence(result)
+    passage, instrument = evidence["passages"][0], evidence["instruments"][0]
+
+    def answer(evidence):
+        text = "Lo más difícil está en {} ({}); estudia {} despacio.".format(instrument["name"], passage["id"], passage["id"])
+        return {**valid_answer(evidence), "summary": text, "study_tip": "Empieza por " + passage["id"] + "."}
+
+    shown = explain_difficulty(result, Fake(answer), DemoExplanationProvider())["explanation"]
+    readable = "{} (compases {})".format(passage["label"], passage["measures"])
+    assert shown["summary"] == "Lo más difícil está en {} ({}); estudia {} despacio.".format(instrument["label"], readable, readable)
+    assert shown["study_tip"] == "Empieza por " + readable + "."
+    assert shown["factors"][0]["passages"] == [passage["id"]], "the citation fields keep the ids"

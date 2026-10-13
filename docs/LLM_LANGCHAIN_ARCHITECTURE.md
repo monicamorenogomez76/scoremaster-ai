@@ -32,6 +32,12 @@
   mensaje humano. Se activa con `GEMINI_API_KEY` (modelo en `GEMINI_MODEL`, por defecto
   `gemini-3.8-flash`); LangChain se importa solo al usarlo (~70 MB que un servidor sin clave no gasta).
   Las pruebas usan un modelo simulado: nunca llaman a Google.
+- **Primera respuesta real (2026-10-13, `gemini-3.8-flash`, *Persis Overture*)**: fiel a las evidencias
+  (grado, instrumentos y los pasajes de cada factor coinciden con sus hallazgos), pero escribía nombres de
+  parte en inglés («Concert Snare Drum») e identificadores internos («como P3, P4 y P5»). **Prompts v2**
+  (`difficulty-explanation-v2`, `rehearsal-explanation-v2`): nombres en castellano en el texto e
+  identificadores solo en las citas. Además, una salvaguarda determinista sustituye en el texto cualquier
+  `P…`/`B…` por instrumento y compases o por el bloque, y los nombres MusicXML por su etiqueta.
 
 ## 1. Objetivo
 

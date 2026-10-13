@@ -127,3 +127,13 @@ def test_a_rehearsal_without_concert_review_or_analysis_is_still_explained():
     shown = explain_rehearsal(alone, {}, None, [], DemoExplanationProvider(), DemoExplanationProvider())
     assert shown["explanation"]["summary"].startswith("Ensayo de 90 minutos.")
     assert shown["explanation"]["reasons"]
+
+
+def test_the_text_never_shows_block_ids():
+    answer = lambda evidence: {"summary": "Empieza en B1.", "reasons": [{"blocks": ["B2"], "text": "B2 junta clarinetes y saxos."}],
+                               "advice": "Cuida B3."}
+    shown = explain_rehearsal(REHEARSAL, ANALYSES, CONCERT, PENDING, Fake(answer), DemoExplanationProvider())["explanation"]
+    assert shown["summary"] == "Empieza en «Calentamiento»."
+    assert shown["reasons"][0]["text"] == "«Línea común» (Persis, compases 70-90) junta clarinetes y saxos."
+    assert shown["advice"] == "Cuida «Seccional de clarinetes» (Persis, compases 100-115)."
+    assert shown["reasons"][0]["blocks"] == ["B2"]

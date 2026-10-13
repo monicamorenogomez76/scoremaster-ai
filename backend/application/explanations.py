@@ -1,6 +1,7 @@
 """What every explanation shares (step 20): ask the provider, validate its answer against the
 evidence, fall back to the demo saying why, and record who wrote it."""
 import logging
+import re
 
 from backend.application.ai import ProviderFailure
 
@@ -11,8 +12,9 @@ class InvalidExplanation(ValueError):
     """The answer does not follow the schema or cites what is not in the evidence."""
 
 
-def run_explanation(evidence: dict, ask, validate, provider, demo, prompt_version: str) -> dict:
-    """ask(provider, evidence) → raw answer; validate(answer, evidence) → model or InvalidExplanation."""
+def run_explanation(evidence: dict, ask, validate, provider, demo, prompt_version: str, polish=None) -> dict:
+    """ask(provider, evidence) → raw answer; validate(answer, evidence) → model or InvalidExplanation;
+    polish(model, evidence) → the same model with a text the director can read."""
     used, fallback_reason = provider, None
     try:
         explanation = validate(ask(provider, evidence), evidence)
@@ -30,4 +32,13 @@ def run_explanation(evidence: dict, ask, validate, provider, demo, prompt_versio
     llm = used.info.kind == "llm"
     return {"mode": used.info.kind, "provider": used.info.name, "model": used.info.model,
             "prompt_version": prompt_version if llm else None, "evidence_version": evidence["version"],
-            "fallback_reason": fallback_reason, "explanation": explanation.model_dump()}
+            "fallback_reason": fallback_reason,
+            "explanation": (polish(explanation, evidence) if polish else explanation).model_dump()}
+
+
+def replace_terms(text: str, terms: dict) -> str:
+    """Whole-word replacement, longest terms first (so «Clarinet 1» wins over «Clarinet»)."""
+    for term in sorted(terms, key=len, reverse=True):
+        if term and term != terms[term]:
+            text = re.sub(r"(?<![\w])" + re.escape(term) + r"(?![\w])", lambda _: terms[term], text)
+    return text

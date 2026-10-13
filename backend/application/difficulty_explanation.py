@@ -9,10 +9,10 @@ from typing import Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from backend.application.ai import ExplanationProvider
-from backend.application.explanations import InvalidExplanation, run_explanation
+from backend.application.explanations import InvalidExplanation, replace_terms, run_explanation
 
 EVIDENCE_VERSION = "difficulty-evidence-v1"
-PROMPT_VERSION = "difficulty-explanation-v1"
+PROMPT_VERSION = "difficulty-explanation-v2"
 DIMENSIONS = ("range", "register", "intervals", "density", "endurance", "tempo")
 MAX_INSTRUMENTS, MAX_PASSAGES = 8, 8
 GRADE_LABELS = {1: "Iniciación", 2: "Elemental", 3: "Intermedio bajo", 4: "Intermedio", 5: "Avanzado", 6: "Superior"}
@@ -89,10 +89,20 @@ def validate_explanation(answer, evidence: dict) -> DifficultyExplanation:
     return explanation
 
 
+def readable_difficulty(explanation: DifficultyExplanation, evidence: dict) -> DifficultyExplanation:
+    """Ids and MusicXML names belong in the citations; the text uses Spanish names and measures."""
+    terms = {item["id"]: "{} (compases {})".format(item["label"], item["measures"]) for item in evidence["passages"]}
+    terms.update({item["name"]: item["label"] for item in evidence["instruments"]})
+    fix = lambda text: replace_terms(text, terms)
+    return explanation.model_copy(update={
+        "summary": fix(explanation.summary), "study_tip": fix(explanation.study_tip),
+        "factors": [factor.model_copy(update={"text": fix(factor.text)}) for factor in explanation.factors]})
+
+
 def explain_difficulty(result: dict, provider: ExplanationProvider, demo: ExplanationProvider) -> dict:
     """The explanation shown to the director, with which provider wrote it and why the demo answered."""
     evidence = difficulty_evidence(result)
     shown = run_explanation(evidence, lambda who, data: who.explain_difficulty(data), validate_explanation,
-                            provider, demo, PROMPT_VERSION)
+                            provider, demo, PROMPT_VERSION, readable_difficulty)
     return {**shown, "passages": {item["id"]: {"instrument": item["instrument"], "label": item["label"],
                                                "measures": item["measures"]} for item in evidence["passages"]}}

@@ -10,10 +10,10 @@ from pydantic import BaseModel, Field, ValidationError
 
 from backend.application.ai import ExplanationProvider
 from backend.application.difficulty_explanation import FINDING_LABELS, GRADE_LABELS
-from backend.application.explanations import InvalidExplanation, run_explanation
+from backend.application.explanations import InvalidExplanation, replace_terms, run_explanation
 
 EVIDENCE_VERSION = "rehearsal-evidence-v1"
-PROMPT_VERSION = "rehearsal-explanation-v1"
+PROMPT_VERSION = "rehearsal-explanation-v2"
 PHASES = {"reading": "Lectura y pasajes", "passages": "Pasajes e integración", "integration": "Integración",
           "general": "Ensayo general"}
 KINDS = {"warmup": "Calentamiento", "common": "Línea o ritmo común", "tutti": "Tutti", "other": "Otro",
@@ -106,11 +106,25 @@ def validate_rehearsal_explanation(answer, evidence: dict) -> RehearsalExplanati
     return explanation
 
 
+def _block_text(block: dict) -> str:
+    where = ", ".join(part for part in (block["work"], block["measures"] and "compases " + block["measures"]) if part)
+    return "«{}»".format(block["title"]) + (" ({})".format(where) if where else "")
+
+
+def readable_rehearsal(explanation: RehearsalExplanation, evidence: dict) -> RehearsalExplanation:
+    """Block ids belong in the citations; the text names each block by its title, work and measures."""
+    terms = {block["id"]: _block_text(block) for block in evidence["blocks"]}
+    fix = lambda text: replace_terms(text, terms)
+    return explanation.model_copy(update={
+        "summary": fix(explanation.summary), "advice": fix(explanation.advice),
+        "reasons": [reason.model_copy(update={"text": fix(reason.text)}) for reason in explanation.reasons]})
+
+
 def explain_rehearsal(rehearsal: dict, analyses: dict, concert: Optional[dict], pending, provider: ExplanationProvider,
                       demo: ExplanationProvider) -> dict:
     evidence = rehearsal_evidence(rehearsal, analyses, concert, pending)
     shown = run_explanation(evidence, lambda who, data: who.explain_rehearsal(data), validate_rehearsal_explanation,
-                            provider, demo, PROMPT_VERSION)
+                            provider, demo, PROMPT_VERSION, readable_rehearsal)
     raw = rehearsal.get("blocks") or []
     return {**shown, "blocks": {block["id"]: {"title": item.get("title"), "work_id": item.get("work_id"),
                                               "work_title": item.get("work_title"), "measures": item.get("measures"),
