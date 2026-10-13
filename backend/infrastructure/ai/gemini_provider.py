@@ -12,7 +12,9 @@ from typing import Optional
 from backend.application.ai import ProviderFailure, ProviderInfo
 from backend.infrastructure.ai.prompts import DIFFICULTY_PROMPT, REHEARSAL_PROMPT, human_message
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+# 2026-10-13: gemini-2.5-flash answered NotFound for a new key (Google keeps it only for accounts that
+# used it before); 3.8 Flash is free on the standard tier.
+DEFAULT_MODEL = "gemini-3.8-flash"
 TIMEOUT_SECONDS = 25
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,8 @@ class GeminiExplanationProvider:
             reason = _reason(error)
             # Only the kind of failure: the exception text could carry request details.
             logger.warning("Gemini no respondió (%s, %s) con el prompt %s.", reason, type(error).__name__, prompt.version)
+            if type(error).__name__ == "NotFound" or "not found" in str(error).lower():
+                logger.warning("Google no encuentra el modelo %s: elige otro disponible con GEMINI_MODEL.", self.info.model)
             raise ProviderFailure(reason) from None
         return answer.model_dump() if hasattr(answer, "model_dump") else answer
 

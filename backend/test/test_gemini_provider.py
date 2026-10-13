@@ -99,3 +99,19 @@ def test_langchain_is_only_loaded_when_gemini_is_used(monkeypatch):
     loaded = [name for name in sys.modules if name.startswith("langchain_google_genai")]
     GeminiExplanationProvider("k", "m")
     assert [name for name in sys.modules if name.startswith("langchain_google_genai")] == loaded
+
+
+def test_the_default_model_is_one_new_accounts_can_use():
+    """2026-10-13: Google keeps gemini-2.5-flash only for accounts that used it before; for a new key
+    it answered NotFound and every explanation fell back to the demo."""
+    assert gemini_provider.DEFAULT_MODEL == "gemini-3.8-flash"
+
+
+def test_a_model_google_does_not_find_is_named_in_the_log(caplog):
+    class NotFound(Exception):
+        pass
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(ProviderFailure, match="^error$"):
+            provider(FakeChat(failure=NotFound("404 models/gemini-test is not found"))).explain_difficulty(EVIDENCE)
+    assert "gemini-test" in caplog.text and "GEMINI_MODEL" in caplog.text
+    assert "secret-gemini-key" not in caplog.text
