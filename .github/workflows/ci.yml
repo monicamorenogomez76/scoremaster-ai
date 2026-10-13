@@ -20,6 +20,27 @@ env:
   DATABASE_URL: postgresql+psycopg://scoremaster:ci-only-password@127.0.0.1:5432/scoremaster
 
 jobs:
+  audit:
+    # Known vulnerabilities in the dependencies (2026-10-13: starlette, python-multipart, authlib and
+    # langchain-core had them; all were upgraded). A new advisory turns the check red.
+    name: Dependencias sin vulnerabilidades conocidas
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Python (pip-audit)
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt
+      - name: Frontend (npm audit)
+        run: npm --prefix frontend audit --omit=dev --audit-level=high
+
   tests:
     name: Python, Node y build
     runs-on: ubuntu-latest
