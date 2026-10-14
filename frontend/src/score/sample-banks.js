@@ -68,3 +68,27 @@ export function recordedPreset(sound, notes) {
   }));
   return { samples: { baseUrl: RECORDED_BASE_URL + bank.folder + '/', formats: ['mp3'] }, groups: [{ regions }] };
 }
+
+// Level of each sound (2026-10-14): RMS in dB of the player's real output (smplr 1.1.0, velocity 100,
+// three central notes), measured in the browser. In a block of several voices the piccolo and the oboe
+// sat 4-6 dB under the rest and a single flute was covered by the five clarinet parts of the band.
+export const LEVEL_TARGET_DB = -24;
+const MAX_BOOST_DB = 12;
+const SOUNDFONT_DEFAULT_DB = -28;
+const RECORDED_LEVELS = {
+  flute: -22.7, clarinet: -20.6, alto_sax: -25.8, tenor_sax: -25.0, trumpet: -26.0, french_horn: -22.7,
+  trombone: -24.7, tuba: -23.9, bassoon: -26.3, xylophone: -31.7, contrabass: -24.4, electric_bass_finger: -26.7,
+  acoustic_guitar_nylon: -28.6, electric_guitar_clean: -30.9, orchestral_harp: -26.8, acoustic_grand_piano: -26.9,
+};
+const SOUNDFONT_LEVELS = {
+  piccolo: -27.6, oboe: -30.1, english_horn: -23.7, soprano_sax: -29.8, baritone_sax: -27.6, cello: -28.3,
+  glockenspiel: -39.5, timpani: -27.9, tubular_bells: -30.7, marimba: -24.9, vibraphone: -30.4,
+  clarinet: -25.3, trumpet: -31.1, tuba: -22.8,
+};
+
+// Gain that brings a sound to the common level; parts sharing it (three clarinets play through one
+// player) weigh 1/sqrt(parts) each, so a section does not cover a single voice such as the flute.
+export function voiceGain(sound, recorded, parts = 1) {
+  const level = (recorded ? RECORDED_LEVELS : SOUNDFONT_LEVELS)[sound] ?? (recorded ? LEVEL_TARGET_DB : SOUNDFONT_DEFAULT_DB);
+  return 10 ** (Math.min(MAX_BOOST_DB, LEVEL_TARGET_DB - level) / 20) / Math.sqrt(Math.max(1, parts));
+}
