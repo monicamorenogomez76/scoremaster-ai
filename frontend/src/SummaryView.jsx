@@ -13,13 +13,14 @@ const VISIBLE_ROWS = 4;
 
 function Card({ id, title, action, children }) {
   return <section id={id} className="summary-card surface" aria-labelledby={id + '-title'}>
-    <div className="summary-card-heading"><h2 id={id + '-title'}>{title}</h2>{action}</div>
+    <header className="summary-card-heading"><h2 id={id + '-title'}>{title}</h2>{action}</header>
     {children}
   </section>;
 }
 
 // Home of the director, after the author's mock-up: the next rehearsal (with the next step of the
-// concert) and the priorities on the left, the works in preparation on the right.
+// concert) and the priorities on the left, the works in preparation on the right, as cells of one
+// grid (2026-10-14) so the works column runs the whole height.
 export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOpenBlock, onPlanRehearsal, onEditRehearsal,
   onReviewRehearsal, busy }) {
   const [works, setWorks] = useState(null);
@@ -60,7 +61,6 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
     description={description} action={action}>
     {error && <p className="result-supporting" role="alert">{error}</p>}
     <div className="summary-layout">
-    <div className="summary-main">
       <Card id="summary-rehearsal" title={next?.date === todayIso() ? 'Ensayo de hoy' : 'Próximo ensayo'}
         action={next ? <span className="card-actions">
             {next.blocks.length > 0 && <button type="button" className="link-action detail-toggle" aria-expanded={detail}
@@ -110,8 +110,6 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
         </table>}
         {priorityRows && priorityRows.length > VISIBLE_ROWS && <p className="table-supporting">Y {priorityRows.length - VISIBLE_ROWS} más.</p>}
       </Card>
-    </div>
-    <div className="summary-side">
       <Card id="summary-works" title="Obras en preparación" action={link('Ver repertorio', 'repertoire')}>
         {works && preparing.length === 0 && <div className="empty-workspace"><h3>Ninguna obra en preparación</h3>
           <p>Marca en Repertorio las obras que estáis preparando para seguirlas desde aquí.</p></div>}
@@ -127,7 +125,6 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
         </table>}
         {preparing.length > VISIBLE_ROWS && <p className="table-supporting">Y {preparing.length - VISIBLE_ROWS} más en Repertorio.</p>}
       </Card>
-    </div>
     </div>
   </View>;
 }

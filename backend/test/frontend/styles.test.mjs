@@ -95,6 +95,38 @@ test('the dark theme redefines every colour token of the light one', () => {
   const darkBlock = css.match(/:root\[data-theme="dark"\]\s*\{([^}]*)\}/);
   assert.ok(darkBlock, 'a :root[data-theme="dark"] block');
   const dark = tokens(darkBlock[1]);
-  assert.deepEqual([...light].filter(token => !dark.has(token) && !token.startsWith('radius') && !token.startsWith('ease')), []);
+  assert.deepEqual([...light].filter(token => !dark.has(token) && !token.startsWith('radius') && !token.startsWith('ease') && !token.startsWith('duration')), []);
   assert.match(darkBlock[1], /color-scheme:\s*dark/);
+});
+
+// Visual language of 2026-10-14: one easing curve for every movement, layered shadows from the tokens
+// (one set per theme) and a pressed state on the actions.
+function declarations(property) {
+  const body = css.replace(/:root(\[[^\]]*\])?\s*\{[^}]*\}/g, '');
+  return [...body.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap(([, selector, block]) => block.split(';')
+    .map(declaration => declaration.split(/:(.*)/s).map(part => part.trim()))
+    .filter(([name]) => name === property).map(([, value]) => [selector.trim(), value]));
+}
+
+test('every movement uses the shared easing curve, never transition: all', () => {
+  assert.match(css.match(/:root\s*\{([^}]*)\}/)[1], /--ease-out:\s*cubic-bezier\(0\.16, 1, 0\.3, 1\)/);
+  const transitions = declarations('transition');
+  assert.ok(transitions.length > 0);
+  // «none» is the reduced-motion preference, which removes them all.
+  assert.deepEqual(transitions.filter(([, value]) => !value.startsWith('none') && (/\ball\b/.test(value) || !value.includes('var(--ease-out)'))), []);
+});
+
+test('shadows come from the tokens, so each theme has its own', () => {
+  const literal = declarations('box-shadow').filter(([, value]) => /#[0-9a-f]{3,8}\b|rgba?\(/i.test(value));
+  assert.deepEqual(literal, []);
+  for (const token of ['--shadow-1', '--shadow-2', '--shadow-3']) {
+    assert.match(css.match(/:root\s*\{([^}]*)\}/)[1], new RegExp(token + ':'));
+    assert.match(css.match(/:root\[data-theme="dark"\]\s*\{([^}]*)\}/)[1], new RegExp(token + ':'));
+  }
+});
+
+test('actions answer to the pointer: hover, keyboard focus and a pressed state', () => {
+  for (const action of ['.primary-action', '.secondary-action', '.danger-action', '.link-action', '.nav-item']) {
+    assert.ok(new RegExp('\\' + action + '[^{,]*:active').test(css), action + ':active');
+  }
 });
