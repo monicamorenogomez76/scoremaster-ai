@@ -12,7 +12,8 @@ Recorrido de unos cinco minutos por ScoreMasterAI y qué mirar en cada paso.
   http://127.0.0.1:8000 con la contraseña `scoremaster-demo` (ver el [README](../README.md)).
 
 La cuenta demo arranca con tres obras originales (CC0) ya analizadas, una banda, un concierto con su
-serie de ensayos y una campaña de valoración en borrador.
+serie de ensayos y una campaña de valoración abierta a la que está invitada. La demo no es una cuenta
+administradora (su contraseña es pública): valora como un músico y no ve emails ni resultados ajenos.
 
 ## Recorrido
 
@@ -25,7 +26,7 @@ serie de ensayos y una campaña de valoración en borrador.
 | 5 | **Mi banda** | Ver la plantilla de la banda activa | Adecuación de la obra abierta: instrumentos que faltan o partes sin intérprete |
 | 6 | **Conciertos → Planificación** | Abrir el concierto de demostración | Serie de ensayos por fases hasta el ensayo general, con bloques por línea común, sección y tutti |
 | 7 | **Ensayos → «¿Por qué este plan?»** | Pedir la explicación de un ensayo | Razones citando bloques concretos, comprobados contra la agenda guardada |
-| 8 | **Valoraciones** | Abrir la campaña | Pasajes con la predicción de ScoreLint (solo la ve la directora), invitaciones a músicos y valoración independiente con IA, que no ve la predicción |
+| 8 | **Valoraciones** | Pulsar «Empezar» en la campaña de demostración | La vista del músico: su perfil, cada pasaje con partitura y audio, y su valoración, sin la predicción de ScoreLint ni lo que han valorado otros. La vista de la directora (predicción, invitaciones, valoración con IA y exportación) es solo de las cuentas de `ADMIN_EMAILS`; la muestra la captura del README |
 | 9 | **Repertorio → Añadir obra** | Subir [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](../demo/para-subir/pasodoble-de-las-fiestas.mxl) | El recorrido completo con una obra nueva. En el plan gratuito, leerla puede tardar uno o dos minutos la primera vez |
 | 10 | **Configuración → Tema** | Elegir «Oscuro» | Paleta propia en los dos temas; la partitura conserva el papel blanco |
 

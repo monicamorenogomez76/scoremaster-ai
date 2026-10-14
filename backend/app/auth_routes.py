@@ -5,6 +5,7 @@ import base64
 import hashlib
 import os
 import secrets
+from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
@@ -18,7 +19,7 @@ from backend.application.accounts import AccountRepository, User
 from backend.application.auth import (
     SESSION_DAYS, AuthService, InvalidCredentials, InvalidRegistration, LoginLimiter, SignedIn, TooManyAttempts,
 )
-from backend.app.dependencies import SESSION_COOKIE, authenticated_user, get_account_repository
+from backend.app.dependencies import SESSION_COOKIE, authenticated_user, get_account_repository, is_admin
 
 router = APIRouter(prefix="/auth")
 LIMITER = LoginLimiter()
@@ -72,9 +73,13 @@ def _ip(request: Request) -> str:
     return request.client.host if request.client else ""
 
 
+def _user(user: User, display_name: Optional[str] = None) -> dict:
+    return {"email": user.email, "display_name": user.display_name if display_name is None else display_name,
+            "is_admin": is_admin(user)}
+
+
 def _public(signed_in: SignedIn) -> dict:
-    return {"user": {"email": signed_in.user.email, "display_name": signed_in.user.display_name},
-            "csrf_token": signed_in.csrf_token}
+    return {"user": _user(signed_in.user), "csrf_token": signed_in.csrf_token}
 
 
 def _with_session(response: Response, signed_in: SignedIn) -> Response:
@@ -117,7 +122,7 @@ def me(request: Request, service: AuthService = Depends(_service)):
     if current is None:
         raise HTTPException(status_code=401, detail="Inicia sesión para continuar.")
     user, session = current
-    return {"user": {"email": user.email, "display_name": user.display_name}, "csrf_token": session.csrf_token}
+    return {"user": _user(user), "csrf_token": session.csrf_token}
 
 
 @router.patch("/me")
@@ -125,7 +130,7 @@ def update_me(body: ProfileBody, user: User = Depends(authenticated_user),
               accounts: AccountRepository = Depends(get_account_repository)):
     """The name shown in the app (Configuración); the email cannot be changed here."""
     accounts.rename_user(user.id, body.display_name)
-    return {"user": {"email": user.email, "display_name": body.display_name}}
+    return {"user": _user(user, body.display_name)}
 
 
 @router.get("/config")

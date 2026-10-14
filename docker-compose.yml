@@ -27,6 +27,8 @@ services:
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-scoremaster-demo}
       # The demo account starts with three works, a band, a concert with its rehearsals and a campaign.
       DEMO_SEED_CONTENT: ${DEMO_SEED_CONTENT:-1}
+      # Accounts that manage evaluation campaigns and see the musicians' emails and results (comma-separated).
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       # Google sign-in stays disabled unless both values are set.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}

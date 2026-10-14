@@ -64,6 +64,9 @@ only source of musical facts; the LLM only explains or gives an independent opin
 
 Cross-cutting rules that span many files:
 
+- **Admin role**: only accounts in `ADMIN_EMAILS` (`is_admin` in `dependencies.py`) create and manage evaluation
+  campaigns and see the musicians' emails and results; any other account, the demo included, only rates the
+  campaigns it is invited to.
 - **Ownership**: every query is filtered by the signed-in user; another user's object answers 404, the same as
   a missing one. State-changing requests need the session cookie plus the `X-CSRF-Token` header.
 - **music21 is slow** (minutes per band score on Render's free plan): each uploaded file is parsed once, keyed

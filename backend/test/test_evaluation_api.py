@@ -12,6 +12,13 @@ from backend.test.test_library_api import analyze, clients  # noqa: F401 (pytest
 pytestmark = pytest.mark.real_auth
 
 
+@pytest.fixture(autouse=True)
+def ana_is_the_administrator(monkeypatch):
+    """Only an administrator (ADMIN_EMAILS) manages campaigns and sees the musicians' emails and results
+    (author's decision, 2026-10-14). Ana is the director of these tests."""
+    monkeypatch.setenv("ADMIN_EMAILS", "Otra@banda.org, ANA@banda.org")
+
+
 def register(name):
     client = TestClient(app)
     csrf = client.post("/auth/register", json={"email": name + "@banda.org", "password": "una contraseña larga",
@@ -263,3 +270,37 @@ def test_the_export_carries_each_work_with_its_scorelint_and_published_grades(cl
     assert [(grade["grade"], grade["label"], grade["source"]) for grade in first["external_grades"]] == [
         (2.5, "Grade 2.5", "Editorial A"), (2.0, "Pepper E", "J.W. Pepper")]
     assert all(works[work_id]["external_grades"] == [] for work_id in work_ids[1:])
+
+
+def test_only_an_administrator_manages_campaigns_and_sees_emails_and_results(clients):
+    """Author's decision (2026-10-14): any other account only rates the campaigns it is invited to."""
+    ana, berta = clients
+    assert ana.get("/auth/me").json()["user"]["is_admin"] is True
+    assert berta.get("/auth/me").json()["user"]["is_admin"] is False
+    work = analyze(berta, "evaluation_study.musicxml").json()["work_id"]
+    refused = berta.post("/evaluations", json={"title": "Mía", "work_ids": [work], "size": 10})
+    assert refused.status_code == 403 and "administradora" in refused.json()["detail"]
+    assert berta.get("/evaluations").json() == {"owned": [], "invited": [], "can_manage": False}
+    assert ana.get("/evaluations").json()["can_manage"] is True
+
+
+def test_an_account_that_stops_being_administrator_keeps_only_the_musicians_view(clients, monkeypatch):
+    ana, berta = clients
+    body = campaign(ana).json()
+    path = "/evaluations/" + body["id"]
+    passage = body["passages"][0]["id"]
+    ana.put(path + "/invitations", json={"emails": ["berta@banda.org", "ana@banda.org"]})
+    ana.post(path + "/status", json={"status": "open"})
+    berta.put(path + "/passages/" + passage + "/rating", json=rating())
+
+    monkeypatch.setenv("ADMIN_EMAILS", "")
+    assert ana.get("/evaluations").json()["owned"] == []
+    view = ana.get(path).json()
+    assert view["role"] == "evaluator" and "invitations" not in view, "no emails of the others"
+    assert all("snapshot" not in item for item in view["passages"])
+    assert view["passages"][0]["rating"] is None, "only her own ratings, not Berta's"
+    for request in (lambda: ana.get(path + "/export"), lambda: ana.put(path + "/invitations", json={"emails": []}),
+                    lambda: ana.post(path + "/status", json={"status": "closed"}),
+                    lambda: ana.delete(path + "/passages/" + passage), lambda: ana.get(path + "/llm-review"),
+                    lambda: ana.post(path + "/llm-review")):
+        assert request().status_code == 404

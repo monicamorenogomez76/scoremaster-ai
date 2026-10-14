@@ -13,9 +13,13 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
 3. Render lee `render.yaml` y propone la base de datos `scoremaster-db` y el servicio web
    `scoremaster` en Frankfurt. Pide los valores marcados como secretos:
    - `DEMO_SEED_CONTENT=1` (ya en `render.yaml`): si la cuenta demo no tiene obras, al arrancar se crean las
-     tres obras de `demo/`, una banda, un concierto con sus ensayos y una campaña en borrador. Una cuenta demo
+     tres obras de `demo/`, una banda, un concierto con sus ensayos y una campaña abierta a la que la demo está
+     invitada. Una cuenta demo
      que ya tiene obras no se toca, con una excepción: si todas sus obras son versiones anteriores de las de
      `demo/` y nadie ha valorado aún su campaña, se vacía y se crea de nuevo con las actuales.
+   - `ADMIN_EMAILS`: email de las cuentas administradoras, separados por comas (la de la autora). Solo ellas
+     crean campañas de valoración y ven los emails y resultados de los músicos. Registrar antes la cuenta: el
+     registro no verifica el email. Nunca la cuenta demo.
    - `DEMO_USER_PASSWORD`: contraseña del usuario demo. En cada arranque la cuenta demo toma esta contraseña
      (si cambió, se actualiza y se cierran sus sesiones abiertas): para cambiarla basta con editar la variable. Mínimo 10 caracteres. **No** reutilizar
      la de desarrollo; compartirla solo con el tribunal o los evaluadores.

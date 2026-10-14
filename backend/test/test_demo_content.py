@@ -36,8 +36,14 @@ def test_the_demo_account_gets_works_band_concert_and_campaign_once(clients, mon
     series = [item for item in signed.get("/rehearsals").json()["rehearsals"] if item["concert_id"] == concert["id"]]
     assert len(series) >= 4 and series[-1]["phase"] == "general"
     assert all(block["title"] and block["minutes"] > 0 for item in series for block in item["blocks"])
-    [campaign] = signed.get("/evaluations").json()["owned"]
-    assert campaign["status"] == "draft" and campaign["passages"] >= 5
+    # 2026-10-14: the demo is not an administrator (its password is in the README), so it never sees the
+    # results of a campaign; its example campaign is open and it is invited, to show the musician's side.
+    listing = signed.get("/evaluations").json()
+    assert listing["owned"] == [] and listing["can_manage"] is False
+    [campaign] = listing["invited"]
+    assert campaign["status"] == "open" and campaign["passages"] >= 5
+    view = signed.get("/evaluations/" + campaign["id"]).json()
+    assert view["role"] == "evaluator" and all("snapshot" not in item for item in view["passages"])
 
     assert seed_demo_content(TestClient(app), "demo@banda.org", "una contraseña larga", TODAY) == "exists"
     assert len(signed.get("/works").json()["works"]) == 3 and len(signed.get("/concerts").json()["concerts"]) == 1
@@ -135,9 +141,9 @@ def test_a_demo_made_with_earlier_works_is_made_again_with_the_current_ones(clie
     assert demo_content.reset_outdated_demo(postgres_engine, "demo@banda.org") is True
     signed = _signed()
     assert signed.get("/works").json()["works"] == [] and signed.get("/concerts").json()["concerts"] == []
-    assert signed.get("/evaluations").json()["owned"] == [] and signed.get("/bands").json()["bands"] == []
+    assert signed.get("/evaluations").json()["invited"] == [] and signed.get("/bands").json()["bands"] == []
     assert seed_demo_content(TestClient(app), "demo@banda.org", "una contraseña larga", TODAY) == "created"
-    assert len(signed.get("/works").json()["works"]) == 3 and len(signed.get("/evaluations").json()["owned"]) == 1
+    assert len(signed.get("/works").json()["works"]) == 3 and len(signed.get("/evaluations").json()["invited"]) == 1
 
 
 def test_a_demo_account_with_other_works_is_left_alone(clients, postgres_engine, monkeypatch):
@@ -155,3 +161,23 @@ def test_a_demo_account_with_other_works_is_left_alone(clients, postgres_engine,
 def test_the_published_earlier_works_count_as_outdated():
     from backend.app.demo_content import OUTDATED_SOURCES
     assert len(OUTDATED_SOURCES) == 6 and not (_current_sources() & OUTDATED_SOURCES)
+
+
+def test_the_draft_campaign_of_an_existing_demo_is_opened_to_the_demo(clients, monkeypatch):
+    """Render's demo account was seeded with a draft campaign it owns; once it is no longer an administrator,
+    the next start opens it and invites the demo, so the demo still has something to rate."""
+    from backend.app.demo_content import DEMO_CAMPAIGN
+    monkeypatch.setenv("PLAYBACK_WARMUP", "0")
+    _seeded_demo()
+    signed = _signed()
+    monkeypatch.setenv("ADMIN_EMAILS", "demo@banda.org")
+    work = signed.get("/works").json()["works"][0]["id"]
+    draft = signed.post("/evaluations", json={"title": DEMO_CAMPAIGN, "work_ids": [work], "size": 10}).json()
+    assert draft["status"] == "draft"
+    monkeypatch.delenv("ADMIN_EMAILS")
+
+    assert seed_demo_content(TestClient(app), "demo@banda.org", "una contraseña larga", TODAY) == "exists"
+    invited = {item["id"]: item["status"] for item in signed.get("/evaluations").json()["invited"]}
+    assert invited[draft["id"]] == "open" and len(invited) == 2
+    import os
+    assert "ADMIN_EMAILS" not in os.environ, "the seed gives the demo no lasting rights"
