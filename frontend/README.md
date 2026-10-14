@@ -3,7 +3,7 @@
 React 19.3.0 y Vite 8.3.2, con versiones exactas y `package-lock.json`. Node
 20.19+ o 22.12+; Docker construye con Node 24. React, ReactDOM y el motor de
 reproducción se empaquetan localmente. El motor de notación OpenSheetMusicDisplay
-1.9.2 y las muestras smplr/FluidR3_GM se descargan de sus CDN públicos; la partitura
+1.9.2 y las muestras de sonido (grabaciones de tonejs-instruments y General MIDI MusyngKite) se descargan de sus CDN públicos; la partitura
 nunca se envía a esos proveedores.
 
 ## Arranque

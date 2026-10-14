@@ -35,6 +35,10 @@ services:
       # Explanations by Gemini (step 21); without a key the identified demo answers.
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-}
+      # «Valorar con IA» (method B) may use a model with more free quota; pause between requests and time limit.
+      GEMINI_REVIEW_MODEL: ${GEMINI_REVIEW_MODEL:-}
+      GEMINI_REQUESTS_PER_MINUTE: ${GEMINI_REQUESTS_PER_MINUTE:-}
+      GEMINI_TIMEOUT_SECONDS: ${GEMINI_TIMEOUT_SECONDS:-}
     depends_on:
       db:
         condition: service_healthy
