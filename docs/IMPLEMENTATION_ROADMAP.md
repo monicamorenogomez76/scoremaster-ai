@@ -36,8 +36,8 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 08 | Resolver determinista | Integrado: resolver (PR #30), dificultad (PR #31), sección rítmica (PR #32) y timbre (PR #33); BandFit con el paso 09 |
 | 09 | Confirmación humana | Integrado: PR #42; confirmación en «Mi banda» y BandFit por instrumento |
 | 10 | Tiempos y ataques musicales | Integrado: PR #48; acordes, ligaduras, voces y adornos |
-| 11 | Características locales | Pendiente |
-| 12 | Políticas de dificultad | Pendiente |
+| 11 | Características locales | Fuera de la entrega: las dimensiones actuales bastan para la evaluación |
+| 12 | Políticas de dificultad | Fuera de la entrega: los tramos se calibrarán con las valoraciones de los músicos |
 | 13 | Grados 1–6 | Integrado: PR #49 |
 | 14 | Detector de criticidad | Integrado: frases (PR #40), detector con señal de velocidad (PR #41) y cadencias armónicas (PR #43) |
 | 15 | Prioridad, pasajes comunes y presupuesto de ensayo de conjunto | Integrado: PR #37, calendario (PR #38) y similitud de estructura (PR #39) |
@@ -49,8 +49,8 @@ Los números 01–25 identifican pasos del plan, no números de GitHub. Los paso
 | 21 | Adaptador LangChain | Integrado: Gemini con salida estructurada y respaldo a la demo (PR #79, #81); verificado en Render con `gemini-3.8-flash` (2026-10-13) |
 | 22 | Revisión independiente | Integrado: método B, Gemini valora cada pasaje de la campaña con medidas y notas, sin la predicción de ScoreLint (PR #84, #86) |
 | 23 | Caché y trazabilidad | Integrado: explicaciones válidas guardadas por evidencias, proveedor, modelo y versiones; valoraciones del método B guardadas con lo enviado (PR #87) |
-| 24 | Comparación experimental | En revisión: híbrido C preregistrado y comparación sobre los mismos pasajes; resultados cuando respondan los músicos |
-| 25 | Estrategia híbrida experimental | Pendiente |
+| 24 | Comparación experimental | Integrado: híbrido C preregistrado el 2026-10-13 y comparación de los métodos sobre los mismos pasajes (PR #90); grado de cada obra frente al de las editoriales (PR #105). Resultados cuando respondan los músicos |
+| 25 | Estrategia híbrida experimental | Fuera de la entrega: el híbrido preregistrado (paso 24) no se ajusta a los datos |
 
 ## Ampliación aprobada (2026-10-04)
 
@@ -61,12 +61,12 @@ nivel por sección y coordinación del conjunto. Una PR por fase, con TDD.
 |---|---|---|
 | A1 | Cuentas y sesión (email/contraseña, Google opcional, CSRF, cabeceras, límites de subida) | Integrado: PR #45 |
 | A2 | Biblioteca de obras y banda por usuario (MusicXML privado y borrable) | Integrado: PR #46 |
-| A3 | Sustitutos de instrumento (tabla revisable, tesitura y músicos libres) | Pendiente |
+| A3 | Sustitutos de instrumento (tabla revisable, tesitura y músicos libres) | Futuro |
 | A4 | Conciertos y calendario de ensayos con varias obras | Integrado: PR #58–#61 y #65 |
 | A5 | Diario de ensayos (pendiente/resuelto, notas y propuestas confirmadas) | Integrado: revisión por bloque y replanificación (PR #58–#61) |
-| A6 | Asistente conversacional con evidencias (demo y proveedor real) | Pendiente |
+| A6 | Asistente conversacional con evidencias (demo y proveedor real) | En parte: explicaciones de la dificultad y del plan (pasos 20–21); la pregunta libre queda opcional |
 | A7 | Nivel por sección en la banda | Integrado: PR #63–#64 (varias bandas con plantilla fija); aún no lo usa el planificador |
-| A8 | Dificultad de coordinación del conjunto | Pendiente |
+| A8 | Dificultad de coordinación del conjunto | Futuro |
 
 ## Orden de trabajo acordado (2026-10-05)
 
@@ -89,9 +89,9 @@ su agenda indica la obra que se trabaja (decisiones de la autora).
 | Fase | Objetivo | Estado |
 |---|---|---|
 | F1 | Estado de preparación, prioridades, Resumen, Repertorio y detalle de obra | Integrado: PR #51 y #52 |
-| F2a | Ensayos guardados: varias obras, agenda por bloques editable y «Ensayo de hoy»; Configuración básica | Integrado: PR #53–#57; Configuración en revisión |
-| F2b | Asistente IA (paso 20): conversación sobre el ensayo y explicación del plan, con modo demo identificado; el panel solo vuelve con lo que aporte la IA | Pendiente |
-| — | Evaluación (pasos 16–18) | Pendiente, antes de F3 |
+| F2a | Ensayos guardados: varias obras, agenda por bloques editable y «Ensayo de hoy»; Configuración básica | Integrado: PR #53–#57; Configuración con tamaño del texto y tema (PR #100) |
+| F2b | Asistente IA (paso 20): conversación sobre el ensayo y explicación del plan, con modo demo identificado; el panel solo vuelve con lo que aporte la IA | Explicación del plan integrada («¿Por qué este plan?», PR #78); la conversación queda opcional |
+| — | Evaluación (pasos 16–18) | Integrado: PR #70, #74 y #76 |
 | C1–C4 | Calendario de conciertos (2026-10-06): programa, patrón semanal, serie por fases hasta el ensayo general, revisión por bloque y replanificación | Integrado: PR #58–#62 y #65 (navegación a los pasajes y siguiente paso en el Resumen) |
 | F3 | Observaciones de ensayo y cierre: «Prioridades por sección» con las notas del último ensayo | Adelantado en C4: lo pendiente de la última revisión |
 
@@ -99,6 +99,25 @@ su agenda indica la obra que se trabaja (decisiones de la autora).
 
 Para que los músicos valoren con cuenta propia, la aplicación se publica en Render antes de la
 evaluación (plan gratuito, decisión de la autora): ver [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Plan de cierre (2026-10-13 – 2026-11-07)
+
+Entrega el 7 de noviembre. Decisiones de la autora: híbrido C preregistrado y obras de demostración propias.
+
+| # | PR del plan | Prioridad | Estado |
+|---|---|---|---|
+| 1 | Copia y restauración de la base de Render | Imprescindible | Integrado: PR #88 y #91; copia real verificada el 2026-10-14 |
+| 2 | Seguridad rápida (HSTS, auditoría de dependencias) | Imprescindible | Integrado: PR #89 |
+| 3 | Paso 24: híbrido C y comparación | Imprescindible | Integrado: PR #90 |
+| 4 | Demo lista para el tribunal | Recomendable | Integrado: PR #93 y #95; obras reescritas con reglas de armonía (PR #97, #104) y pasodoble para subir en directo (PR #106) |
+| 5 | Grados de editoriales por obra | Recomendable | Integrado: PR #105 |
+| 6 | Pregunta libre a la IA | Opcional | Pendiente, solo si queda tiempo |
+| 7 | Interfaz en inglés | Opcional | Pendiente, solo si queda tiempo |
+| 8 | Documentación de entrega | Imprescindible | Esta PR: README, guía para el tribunal, seguridad, estados y licencia MIT |
+
+Mejoras integradas durante el cierre, a petición de la autora: lectura del título de `<movement-title>` (PR #92), base de estilos única (PR #98), tipografía Inter (PR #99), modo oscuro (PR #100), sombras, transiciones y Resumen en cuadrícula (PR #101), equilibrio de volumen entre instrumentos (PR #102) y pentagramas del pasaje en partes de varios pentagramas (PR #103).
+
+Opcional después de la entrega: búsqueda automática del grado publicado de una obra, como sugerencia que confirma la directora y solo cuando la página encontrada contiene título, compositor y grado (decisión de la autora, 2026-10-14).
 
 ## Criterios de aceptación
 

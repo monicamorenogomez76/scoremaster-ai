@@ -1,231 +1,244 @@
-
 # ScoreMasterAI
 
-Asistente para directores de banda que analiza partituras,
-comprueba su adecuación a la plantilla y ayuda a planificar ensayos.
+Asistente para **directores de banda**. Analiza la dificultad de una partitura, comprueba si encaja con
+la plantilla real de la banda y ayuda a planificar los ensayos hasta el concierto. La dificultad la
+calcula un motor **determinista y reproducible** (ScoreLint); la IA generativa solo **explica** esos
+resultados y nunca sustituye los datos musicales.
 
-Proyecto de TFM del Máster de Desarrollo con IA de BigSchool.
+Trabajo Fin de Máster del Máster de Desarrollo con IA de BigSchool · Licencia [MIT](LICENSE).
 
-## Funcionalidades previstas
+**Demo publicada:** https://scoremaster-iz4j.onrender.com (plan gratuito de Render: el primer acceso puede
+tardar alrededor de un minuto). La contraseña de la cuenta demo se entrega aparte; la
+[guía para el tribunal](docs/TRIBUNAL.md) propone un recorrido de cinco minutos.
 
-- Análisis de partituras en formato MusicXML.
-- Estimación reproducible de dificultad mediante ScoreLint.
-- Comprobación de la plantilla de la banda mediante BandFit.
-- Planificación de ensayos y explicaciones asistidas por IA.
+![Resumen: próximo ensayo con su agenda por bloques, prioridades por sección y obras en preparación](docs/img/resumen.png)
 
-## Principios de desarrollo
+## Qué responde
 
-- Clean Architecture y principios SOLID, evitando sobreingeniería.
-- Seguridad basada en OWASP desde el diseño.
-- Separación entre datos musicales, algoritmos, reglas e IA generativa.
-- Pruebas automáticas y ejecución reproducible.
-- Documentación actualizada con cada cambio.
-- Ejecución sin API key mediante un modo demo identificado claramente.
+La pantalla de cada obra responde a las tres preguntas del director:
 
-El flujo de trabajo y las pautas de cambios están en [CONTRIBUTING.md](CONTRIBUTING.md).
-[AGENTS.md](AGENTS.md) asigna cada tipo de tarea a una skill del asistente de
-`skills/`. Las partituras comerciales para pruebas manuales van en
-`test-scores/local/`, que no se versiona.
+1. **¿Qué dificultad tiene esta obra?** Grado 1–6 (alineado con la escala Grade 1–6 de las editoriales),
+   por obra, familia e instrumento, con sus pasajes críticos y el motivo de cada uno.
+2. **¿Encaja con mi banda?** Instrumentos que faltan, partes sin intérprete y necesidades de percusión,
+   comparadas con la plantilla de la banda activa.
+3. **¿Cómo debería ensayarla?** Una serie de ensayos hasta el concierto, con bloques por línea común,
+   sección y tutti, que se replanifica tras revisar cada ensayo.
 
-## Despliegue
+## Funcionalidades
 
-La aplicación se publica en Render con la misma imagen Docker y un PostgreSQL gestionado:
-[guía de despliegue](docs/DEPLOYMENT.md) y [`render.yaml`](render.yaml).
+| Área | Qué hace |
+|---|---|
+| **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio, búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
+| **Dificultad (ScoreLint)** | Seis dimensiones (densidad rítmica, tempo, tesitura, registro, intervalos y resistencia), reglas SL002 registro agudo, SL003 alta densidad rítmica, SL004 intervalos amplios y SL005 pasaje prolongado sin descanso, y detector de **pasajes críticos** (puede no haber ninguno). Árbol de familia a instrumento y «Ver pasaje» con la notación y el audio de esa parte |
+| **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos |
+| **Conciertos** | Programa, patrón semanal y propuesta de la serie de ensayos por fases (lectura y pasajes, integración y ensayo general); calendario mensual |
+| **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen |
+| **IA explicativa** | «¿Por qué esta dificultad?» y «¿Por qué este plan?» redactadas por **Gemini** a partir de las evidencias del análisis, con citas comprobadas; sin clave responde un **modo demo identificado** como tal |
+| **Valoraciones** | Campañas en las que músicos invitados valoran pasajes (grado, criticidad y prioridad) sin ver la predicción; valoración independiente con IA (método B); exportación anónima e informe reproducible |
+| **Configuración** | Nombre visible, tamaño del texto y **tema claro, oscuro o automático** |
 
-## Arranque rápido y credenciales de prueba
+<table>
+<tr><td><img src="docs/img/dificultad.png" alt="Pestaña Dificultad con la explicación en modo demo identificado y los pasajes citados"></td>
+<td><img src="docs/img/pasaje.png" alt="Diálogo de un pasaje: notación de la flauta con los controles de reproducción"></td></tr>
+<tr><td><img src="docs/img/conciertos.png" alt="Planificación de un concierto: serie de ensayos con bloques coloreados por sección"></td>
+<td><img src="docs/img/valoraciones.png" alt="Campaña de valoración con sus pasajes y la valoración independiente con IA"></td></tr>
+</table>
 
-```sh
-cp .env.example .env        # credenciales locales de ejemplo
-docker compose up --build   # migra la base, crea el usuario demo y sirve en http://127.0.0.1:8000
+## Arquitectura
+
+El principio del proyecto es **datos → algoritmos → reglas → IA generativa**:
+
+```mermaid
+flowchart LR
+    A[MusicXML] --> B[Parser music21<br/>modelo de dominio]
+    B --> C[Analizadores<br/>densidad · tempo · tesitura<br/>intervalos · resistencia]
+    C --> D[Reglas y detector<br/>grado 1–6 · pasajes críticos]
+    D --> E[BandFit<br/>plantilla real]
+    D --> F[Planificador<br/>ensayos y conciertos]
+    D --> G[IA generativa<br/>solo explica, con citas]
+    E --> H[Interfaz React]
+    F --> H
+    G --> H
 ```
 
-| Usuario de prueba | Contraseña |
+- **Dominio y motores sin dependencias externas** (`backend/domain`, `backend/analyzers`, `backend/rules`):
+  el mismo archivo produce siempre el mismo análisis.
+- **Aplicación con puertos** (`backend/application`): repositorios y proveedor de IA son interfaces; la
+  infraestructura (`backend/infrastructure`) los implementa con PostgreSQL y con Gemini o la demo.
+- **La IA nunca es fuente de verdad**: recibe evidencias acotadas (grados, dimensiones, compases, bloques),
+  responde con un esquema validado por Pydantic y cada pasaje o bloque que cita se comprueba contra las
+  evidencias. Ante cualquier fallo responde la demo y la interfaz dice por qué.
+- **Cada obra se lee una sola vez**: music21 es lento con una partitura de banda (minutos en el plan
+  gratuito), así que el modelo leído y la línea de tiempo del audio se guardan por el hash del archivo.
+
+Detalles: [dificultad y criticidad](docs/DIFFICULTY_CRITICALITY.md), [identidad de instrumentos](docs/INSTRUMENT_RESOLUTION.md),
+[capa de IA](docs/LLM_LANGCHAIN_ARCHITECTURE.md), [visor de partituras](docs/SCORE_VIEWER.md),
+[audio](docs/REALISTIC_AUDIO.md) y [plan aprobado con su estado](docs/IMPLEMENTATION_ROADMAP.md).
+
+## Stack
+
+| Capa | Tecnología |
+|---|---|
+| Backend | Python 3.12, FastAPI 0.143, Pydantic, music21 8.3, SQLAlchemy 2 y Alembic |
+| Base de datos | PostgreSQL 17 |
+| IA | Google Gemini mediante LangChain (`langchain-google-genai` 4.4), opcional; modo demo determinista |
+| Frontend | React 19 y Vite 8, CSS propio con tokens (tema claro y oscuro), OpenSheetMusicDisplay 1.9 para la notación y smplr 1.1 para el audio |
+| Calidad | pytest (con PostgreSQL real), pruebas de Node, recorridos Playwright y auditoría de dependencias en GitHub Actions |
+| Despliegue | Docker y Docker Compose; Render (Blueprint `render.yaml`) |
+
+## Arranque en un paso
+
+Con Docker:
+
+```sh
+git clone https://github.com/monicamorenogomez76/scoremaster-ai.git
+cd scoremaster-ai
+cp .env.example .env
+docker compose up --build
+```
+
+Abre http://127.0.0.1:8000. El contenedor aplica las migraciones y crea la cuenta demo **con contenido**:
+tres obras originales ya analizadas, una banda, un concierto con su serie de ensayos y una campaña de
+valoración en borrador.
+
+| Usuario de prueba (solo en local) | Contraseña |
 |---|---|
 | `demo@scoremaster.local` | `scoremaster-demo` |
 
-La cuenta demo arranca con contenido (`DEMO_SEED_CONTENT=1`): tres obras de banda originales y libres
-(`demo/`, CC0) ya analizadas, una banda, un concierto con su serie de ensayos y una campaña de valoración
-en borrador, para recorrer la aplicación sin subir nada.
+También se puede crear una cuenta desde la pantalla de acceso. «Entrar con Google» solo aparece si
+`GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` están configurados.
 
-También se puede crear una cuenta desde la pantalla de acceso. «Entrar con Google»
-solo aparece si `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` están configurados; sin
-ellos la aplicación funciona igual con email y contraseña. Las medidas de seguridad
-aplicadas y pendientes están en [docs/SECURITY.md](docs/SECURITY.md).
+Para enseñar el recorrido completo, [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](demo/para-subir/pasodoble-de-las-fiestas.mxl)
+no está precargada: se sube desde Repertorio → «Añadir obra».
 
-## Estado
+### Desarrollo sin Docker
 
-El MVP incluye análisis determinista de dificultad, compatibilidad de plantilla,
-plan de ensayo y un cuadro de mando por familias, instrumentos y pasajes críticos.
-
-La interfaz está construida con React y Vite: acceso demo, navegación, carga y
-análisis, resumen, dificultad, plantilla, plan de ensayo, visores, audio y vídeos.
-Ver [arquitectura y arranque del frontend](frontend/README.md). Para ejecutar con
-Python (3.12, como Docker, la CI y Render), compilar primero con `npm --prefix frontend ci` y
-`npm --prefix frontend run build`; Docker lo hace durante la construcción.
-
-La aplicación exige iniciar sesión (email y contraseña, Google opcional). Cada obra
-analizada se guarda en «Mis obras» con su último análisis, y la plantilla de la banda
-se conserva por usuario.
-
-La navegación sigue la propuesta de interfaz de la autora (2026-10-05):
-
-- **Resumen**: próximo ensayo, obras en preparación y prioridades por sección (de momento, los
-  pasajes críticos de las obras en preparación, marcados con origen «Análisis»).
-- **Repertorio**: buscador, «Añadir obra» y, por obra, estado de preparación (independiente de la
-  dificultad) y estado del análisis. El detalle de una obra tiene las pestañas **Partitura**,
-  **Dificultad** y **Grabaciones**.
-- **Mi banda**: varias bandas por director (por ejemplo, «Unió Musical d'Albalat dels Sorells»),
-  cada una con localidad, lugar y días de ensayo, plantilla completa por familias (la percusión
-  como total de percusionistas) y nivel orientativo por sección. La banda activa es la plantilla
-  del análisis y de BandFit; debajo se ve la adecuación de la obra abierta. Cada concierto indica
-  qué banda lo toca y toma sus días de ensayo.
-- **Conciertos**: cada concierto con su fecha, su programa en orden de concierto y un patrón
-  semanal de ensayos. La aplicación propone la serie de ensayos por fases (lectura y pasajes,
-  integración y ensayo general con la pasada del programa). Tras cada ensayo el director lo revisa
-  bloque a bloque (resuelto, mejorable, pendiente) y se replanifican los ensayos siguientes. Incluye
-  un calendario mensual; el Resumen muestra el próximo concierto y lo pendiente de la última revisión.
-- **Ensayos**: ensayos guardados (fecha, hora, duración, lugar, objetivos y varias obras) con una
-  agenda de bloques editable; cada bloque indica la obra que se trabaja. El Resumen muestra el
-  ensayo de hoy o el próximo. Debajo sigue el plan calculado de la obra abierta.
-- El asistente IA se incorporará como panel contextual.
-
-Estilo: blanco frío, grafito y azul eléctrico (`#365CFF`) con la fuente Inter incluida en el build,
-sin peticiones a servicios de fuentes externos.
-
-El aviso de registro agudo utiliza SL002 (antes SL005), según el catálogo
-de reglas del proyecto. Mantiene su peso de dos puntos en el análisis.
-
-ScoreLint incluye SL005 para ocho o más compases activos sin silencios. Es una
-aproximación de continuidad por compases, no una estimación fisiológica de fatiga.
-Cualquier silencio explícito o compás vacío interrumpe el bloque.
-
-## Partitura y vídeos
-
-Cada pasaje crítico ofrece una única acción «Ver pasaje». Su visor incluye
-«Reproducir» y «Detener» para escuchar únicamente esa parte con
-muestras General MIDI mediante [smplr](https://github.com/danigb/smplr), versión
-1.1.0. «Detener» y cerrar la partitura interrumpen el audio. La reproducción usa
-altura de concierto, acordes, silencios, ligaduras y cambios de tempo del
-MusicXML; sin tempo se indica el valor por defecto de negra = 120. Se reproduce
-el rango escrito una vez, sin desarrollar repeticiones ni aplicar expresividad.
-Los timbres son aproximados; bombardino usa tuba y clarinetes graves usan
-clarinete. Si no se reconoce el timbre se usa piano y se indica en pantalla.
-La percusión reconocida usa sonidos sintetizados aproximados; se avisa cuando
-una parte sin altura no se puede interpretar.
-
-El navegador necesita Internet para descargar el módulo y las muestras; la
-partitura no se envía al proveedor de sonidos. El endpoint `/playback` procesa
-temporalmente el archivo y limita la subida a 8 MB, el contenido descomprimido a
-20 MB, el pasaje a 10 000 eventos y el conjunto a 150 000 eventos.
-
-Los pasajes críticos se pueden abrir como notación MusicXML renderizada en el
-navegador mediante [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/).
-El archivo original se guarda en «Mis obras», visible solo para su propietario, y
-se puede reabrir o eliminar (con sus análisis) en cualquier momento.
-
-En «Repertorio», después de completar el análisis, la partitura aparece en un visor
-grande incrustado, con todas las voces, páginas de cuatro compases, zoom y pantalla
-completa. Incluye reproducción del conjunto, pausa, detener, posición, velocidad
-y volumen. La página se ajusta al ancho y al alto disponibles, con controles
-mediante iconos y una opción para volver al ajuste automático. «Nueva partitura»
-limpia el análisis, el visor y el audio; elegir otro archivo también reinicia la sesión.
-Si el MusicXML contiene partes genéricas como «Voice», se permite asignar sus
-instrumentos antes del análisis. Esta asignación modifica una copia temporal de
-la sesión, conservando el archivo original. No se deducen instrumentos cuando
-el archivo no los identifica. El visor y los sonidos muestran «Cargando…» durante su preparación;
-la carga del audio se puede cancelar con Detener. El audio se programa por pequeñas
-ventanas de tiempo para evitar preparar todos los sonidos simultáneamente.
-
-La búsqueda integrada de vídeos usa YouTube Data API v3. Para activar resultados
-reproducibles dentro de la aplicación, configura `YOUTUBE_API_KEY` como variable
-de entorno del servidor. La clave nunca debe incluirse en el HTML, enviarse al
-navegador ni versionarse. Sin ella, se muestra una búsqueda directa en YouTube y
-se permite pegar un enlace para reproducirlo en la aplicación.
-
-La plantilla de banda tiene una fila por instrumento y empieza con los músicos que
-pide la obra (uno por voz; la percusión, en percusionistas). «Actualizar análisis»
-guarda la plantilla del usuario, que se aplica a las siguientes obras.
-
-### Pruebas de interfaz
-
-Las pruebas unitarias del reproductor y el visor se ejecutan con
-`node --test backend/test/frontend/*.test.mjs`. El recorrido real de carga,
-análisis, ajuste de página, reinicio y asignación de instrumentos usa Playwright
-con Chromium y partituras sintéticas. Con el servidor local activo:
+Python 3.12 y Node 20.19 o superior, con la base de Compose:
 
 ```sh
-npm install --prefix /tmp/scoremaster-browser-tests @playwright/test
-/tmp/scoremaster-browser-tests/node_modules/.bin/playwright install chromium
-PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/workflow.e2e.mjs
-PLAYWRIGHT_MODULE=/tmp/scoremaster-browser-tests/node_modules/playwright node backend/test/frontend/dashboard.e2e.mjs
+docker compose up -d db
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
+npm --prefix frontend ci && npm --prefix frontend run build
+set -a; . ./.env; set +a
+.venv/bin/python -m alembic upgrade head
+.venv/bin/python -m backend.app.seed_demo
+.venv/bin/python -m uvicorn backend.app.main:app --reload
 ```
 
-Por defecto usa `http://127.0.0.1:8005`; puede cambiarse con `SCOREMASTER_URL`. Los recorridos
-entran con el usuario demo (`python -m backend.app.seed_demo` con `DEMO_USER_EMAIL` y
-`DEMO_USER_PASSWORD`); `SCOREMASTER_USER` y `SCOREMASTER_PASSWORD` permiten usar otro.
-La descarga del visor necesita conexión a Internet.
+`npm --prefix frontend run watch` recompila el frontend al guardar.
 
-### Créditos de sonido
+## Configuración
 
-La reproducción usa [smplr](https://github.com/danigb/smplr) (MIT) con dos fuentes de
-muestras, que se descargan de sus CDN durante la reproducción y no se incluyen ni se
-modifican en este repositorio:
+Todas las claves son **opcionales**: sin ellas la aplicación funciona y desactiva limpiamente lo que
+dependa de ellas.
 
-- **Grabaciones reales** de [tonejs-instruments](https://github.com/nbrosowsky/tonejs-instruments)
-  (Nicholaus Brosowsky; commit fijado `622c2f1`), para fagot, clarinete, flauta, trompa,
-  saxofón alto y tenor, trombón, trompeta, tuba, contrabajo, bajo y guitarras, arpa,
-  xilófono y piano. Según su `sample-source-info.txt` proceden de
-  [VSCO 2 Community Edition](https://versilian-studios.com/vsco-community/) (CC0),
-  [Karoryfer Samples](https://shop.karoryfer.com/pages/free-samples) (CC0) y las muestras de la
-  University of Iowa (uso sin restricciones). El clarinete no tiene fuente declarada; sus notas
-  coinciden con el clarinete de VSCO 2 CE.
-- **General MIDI MusyngKite** del paquete
-  [midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) de Benjamin Gleitzman
-  ([CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)) para el resto de
-  instrumentos y como respaldo si las grabaciones no se pueden descargar.
+| Variable | Para qué | Sin ella |
+|---|---|---|
+| `GEMINI_API_KEY` | Explicaciones y valoración independiente con Gemini ([crear clave](https://aistudio.google.com/apikey)) | Responde el modo demo, siempre identificado como «Modo demo · sin IA» |
+| `GEMINI_MODEL`, `GEMINI_REVIEW_MODEL` | Modelo de las explicaciones (por defecto `gemini-3.8-flash`) y, si se quiere, otro con más cupo para «Valorar con IA» | Se usa el modelo por defecto |
+| `GEMINI_REQUESTS_PER_MINUTE`, `GEMINI_TIMEOUT_SECONDS` | Pausa entre peticiones (5 por minuto) y tiempo máximo de respuesta (60 s) | Valores por defecto |
+| `YOUTUBE_API_KEY` | Búsqueda de grabaciones dentro de la aplicación (la usa el servidor, nunca el navegador) | Enlace a la búsqueda en YouTube y opción de pegar un enlace |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | «Entrar con Google» | Solo email y contraseña |
+| `DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`, `DEMO_SEED_CONTENT` | Cuenta demo y su contenido de ejemplo (`1`) | Sin cuenta demo |
+| `APP_ENV=production` | Cookies `Secure`, HSTS y sin documentación interactiva de la API | Modo desarrollo |
 
-La percusión sin altura se sintetiza en el navegador.
+A la IA solo llegan datos derivados del análisis (grados, dimensiones, compases, bloques), nunca la
+partitura, emails ni nombres. Las respuestas válidas se guardan para no gastar cupo dos veces.
 
-### Integración continua
+## Evaluación experimental
 
-GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) se ejecuta en
-cada pull request y en cada push a `main`, con permisos de solo lectura:
+La pregunta del TFM: ¿puede un sistema híbrido de análisis determinista e IA generativa asistir a un
+director en la evaluación de la dificultad, la adecuación del repertorio y la planificación del ensayo?
 
-- **tests**: build del frontend, pruebas unitarias de Node y pytest con PostgreSQL 17
-  real (`TEST_DATABASE_URL`), de modo que las pruebas de persistencia no se omiten.
-- **e2e**: migra la base, arranca Uvicorn y ejecuta los recorridos Playwright de carga,
-  visores y panel con Chromium. Las muestras de sonido se sustituyen; el visor
-  OpenSheetMusicDisplay se descarga de su CDN.
-- **docker**: valida `docker-compose.yml` y construye la imagen de producción.
+| Método | Qué es |
+|---|---|
+| **A · ScoreLint** | La predicción guardada al crear la campaña |
+| **B · LLM** | Gemini valora cada pasaje con la misma rúbrica, a partir de sus medidas, **sin ver la predicción de ScoreLint** |
+| **C · Híbrido** | Regla **preregistrada el 2026-10-13**, antes de recibir valoraciones: media de A y B; crítico solo si los dos coinciden |
+| **D · Músicos** | La referencia: mediana de sus grados y criticidad por mayoría |
 
-La base de PostgreSQL del CI es temporal y usa credenciales desechables definidas
-en el propio workflow; no requiere secretos del repositorio.
+Los músicos invitados valoran desde su propia cuenta. La exportación es anónima y el informe se genera
+siempre igual desde ella, con MAE, Spearman, precisión, recall, F0.5, acuerdo entre evaluadores, la
+comparación de los métodos sobre los mismos pasajes y el grado de cada obra frente al de las editoriales:
 
-### Diseño de la interfaz
+```sh
+python -m evaluation.campaign_report exportacion.json --markdown informe.md
+```
 
-La interfaz usa un logo SVG propio, la paleta blanco frío, grafito y azul eléctrico, superficies claras,
-controles con iconos y gráficos de grado por familia sobre una escala explícita
-de 1 a 6, con el nivel de la rúbrica (Muy fácil … Profesional, alineada con los grados 1–6 de las editoriales). Los valores también aparecen como texto. Las acciones principales y
-secundarias se distinguen visualmente, el foco del teclado permanece visible y
-los controles del reproductor tienen áreas de 44 × 44 píxeles. Se respeta la
-preferencia de movimiento reducido.
+Protocolo y métricas en [evaluation/README.md](evaluation/README.md) y
+[docs/EVALUATION_AND_FEEDBACK.md](docs/EVALUATION_AND_FEEDBACK.md). `python -m evaluation.baseline`
+comprueba que el comportamiento heredado sigue siendo el capturado.
 
-El diseño se orienta por [WCAG 2.2](https://www.w3.org/TR/WCAG22/) y
-[Material Design 3](https://m3.material.io/). Playwright comprueba escritorio y
-móvil, ausencia de desbordamiento horizontal, el tamaño del botón de reproducción
-y el foco al navegar con Tab. Esto no constituye una auditoría completa de
-conformidad WCAG.
+## Pruebas e integración continua
 
-## Evolución aprobada
+```sh
+export TEST_DATABASE_URL=$(grep ^DATABASE_URL .env | cut -d= -f2-)
+.venv/bin/python -m pytest -q backend/test        # unas 720 pruebas, con PostgreSQL real
+node --test backend/test/frontend/*.test.mjs       # módulos del frontend
+```
 
-El [plan de PR pequeñas](docs/IMPLEMENTATION_ROADMAP.md) y las
-[especificaciones](docs/README.md) describen lo previsto. PostgreSQL y el guardado de análisis ya están implementados. Grados 1–6,
-feedback y revisión LLM siguen previstos.
+Los recorridos de navegador (`backend/test/frontend/*.e2e.mjs`) se ejecutan con Playwright contra un
+servidor real. GitHub Actions ([ci.yml](.github/workflows/ci.yml)) los lanza en cada pull request junto con
+pytest, las pruebas de Node, la construcción de la imagen Docker y la auditoría de dependencias
+(`pip-audit`, `npm audit`). El desarrollo sigue TDD: cada cambio empieza con una prueba que falla.
 
-El [baseline reproducible](evaluation/README.md) captura el comportamiento legacy
-antes de cambiar sus reglas: `python -m evaluation.baseline`.
+## Despliegue
 
-El [arranque de PostgreSQL](docs/POSTGRESQL.md) requiere `.env` y conserva los
-datos en un volumen. Aplicar las migraciones antes de analizar: cada análisis
-correcto se guarda en la biblioteca del usuario y devuelve `analysis_id` y `work_id`.
-El audio no se guarda y no hay historiales públicos: cada obra es privada.
+Render con la misma imagen Docker y PostgreSQL gestionado: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), con
+los pasos, las limitaciones del plan gratuito y los scripts probados de copia y restauración de la base.
+
+## Seguridad
+
+Diseñada con OWASP desde el principio: contraseñas Argon2id, sesiones en servidor con CSRF, autorización
+por objeto (una obra ajena responde 404), límites de subida, CSP y cabeceras, HSTS en producción,
+auditoría de dependencias y medidas del OWASP LLM Top 10 para la capa de IA. Detalle de lo aplicado y lo
+pendiente en [docs/SECURITY.md](docs/SECURITY.md).
+
+## Estructura del repositorio
+
+```text
+backend/
+  domain/          modelo musical, catálogo de instrumentos y escala de grados
+  parsers/         MusicXML → modelo (music21), audio y caché de obras leídas
+  analyzers/       dificultad, pasajes críticos, BandFit, ensayos y conciertos
+  rules/           reglas de ScoreLint
+  application/     casos de uso y puertos (repositorios, IA)
+  infrastructure/  PostgreSQL y proveedores de IA (Gemini y demo)
+  app/             API FastAPI, seguridad y semilla de la demo
+  test/            pruebas Python, de Node y recorridos Playwright
+frontend/          React + Vite (se compila en backend/app/static/frontend)
+migrations/        migraciones Alembic
+evaluation/        baseline e informe de las campañas
+demo/              obras originales CC0 de la demo y la obra para subir en directo
+scripts/           generador de las obras de la demo y copia de la base
+docs/              especificaciones, guías y decisiones
+```
+
+Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](AGENTS.md) y
+[CLAUDE.md](CLAUDE.md) orientan al asistente de IA usado durante el desarrollo.
+
+## Limitaciones conocidas
+
+- **ScoreLint no está calibrado todavía con músicos**: los tramos del grado son provisionales. Tiende a
+  puntuar alto la percusión y el acompañamiento continuo (por ejemplo, *Persis* sale con grado 6 frente al
+  Grade 4 de su editorial); la evaluación con músicos debe confirmarlo y ajustar la escala.
+- **Sin articulación todavía**: el analizador de articulación no está implementado.
+- **Audio aproximado**: muestras reales para los instrumentos principales y General MIDI para el resto,
+  sin expresión ni repeticiones. Si en Safari avanza el tiempo pero no se oye nada, cerrar Safari con ⌘Q y
+  volver a abrirlo suele resolverlo.
+- **Plan gratuito de Render**: el servicio se duerme sin uso, la CPU es lenta (una obra grande tarda unos
+  minutos en leerse la primera vez) y la base gratuita caduca a los 30 días.
+- **Solo MusicXML**: sin PDF ni reconocimiento óptico; la interfaz está en castellano.
+- **Pendiente u opcional**: pregunta libre a la IA, interfaz en inglés, sustitutos de instrumento,
+  búsqueda automática del grado publicado de una obra e importación de PDF con Audiveris.
+
+## Créditos
+
+- **Notación**: [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/) (BSD-3-Clause).
+- **Audio**: [smplr](https://github.com/danigb/smplr) (MIT) con grabaciones de
+  [tonejs-instruments](https://github.com/nbrosowsky/tonejs-instruments) (VSCO 2 Community Edition y
+  Karoryfer Samples, CC0; University of Iowa, sin restricciones) y la fuente General MIDI MusyngKite de
+  [midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) (CC BY-SA 3.0). Se descargan de sus
+  CDN durante la reproducción; no se incluyen en el repositorio.
+- **Tipografía**: Inter (SIL Open Font License), incluida en el build.
+- **Obras de la demo**: composiciones originales de este repositorio, CC0 ([demo/LICENSES.md](demo/LICENSES.md)).
