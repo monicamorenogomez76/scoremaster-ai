@@ -112,7 +112,7 @@ evaluación. Antes la rúbrica describía la agrupación (escuela de música, ba
 ### difficulty-v2: sin sobrevalorar (revisión de la autora, 2026-10-14)
 
 Con obras reales, ScoreLint daba uno o dos grados de más: *Persis* (Hosay), 6 frente al Grade 4 de su
-editorial; *Oregon Trail II*, 5 frente al grado 2 que le da la autora. Las causas eran de cálculo, no de las
+editorial, y la autora veía sobrevaloradas las demás obras probadas. Las causas eran de cálculo, no de las
 obras, y se corrigen solo en la escala actual (la escala heredada del baseline no cambia):
 
 | Antes | difficulty-v2 | Motivo |
@@ -128,20 +128,38 @@ predicción de cada pasaje de campaña (`versions.difficulty`). Al arrancar, el 
 obras cuyo último análisis es de una versión anterior, con su misma banda, minutos e instrumentos
 confirmados; el análisis anterior queda como historial.
 
-| Obra | Antes | difficulty-v2 | Referencia |
+| Obra | Antes | difficulty-v2 | Grado publicado de este archivo |
 |---|---|---|---|
-| Persis | 6 | 4 | Grade 4 (Curnow Music) |
-| March of the Toys (arr. Cao Ziyi) | 4 | 4 | 2–3 según la autora |
-| In a Persian Market | 4 | 3 | 4 según la autora |
-| Oregon Trail II | 5 | 3 | 2 según la autora |
-| Coral para principiantes (demo) | 2 | 1 | escrito para principiantes |
+| Persis | 6 | 4 | Grade 4 (Curnow Music): **única referencia válida** |
+| March of the Toys (arr. Cao Ziyi) | 4 | 4 | Ninguno (ver abajo) |
+| In a Persian Market (reducción para conjunto) | 4 | 3 | Ninguno (ver abajo) |
+| Oregon Trail II (Eric Speier) | 5 | 3 | Ninguno (ver abajo) |
+| Coral para principiantes (demo) | 2 | 1 | Escrito para principiantes |
 
-Queda pendiente: **los tramos índice → grado siguen siendo seis tramos iguales provisionales.** Calibrarlos
-con más obras de grado conocido es el paso siguiente, documentado como calibración con criterio de la
-autora y separado de la evaluación con músicos. Hay además una **limitación de fondo**: *In a Persian Market*
-y *Oregon Trail II* tienen casi el mismo índice (≈ 4,7) y grados distintos (4 y 2), así que a ScoreLint le
-faltan dimensiones que los distingan (por ejemplo tonalidad y alteraciones, cromatismo, articulación o
-independencia de las voces). Ningún ajuste de tramos resuelve eso.
+**Referencias descartadas (2026-10-14).** Los grados encontrados en internet para tres de estas obras son
+de *otras ediciones*, y no sirven para calibrar, igual que *Spania* y *Above and Beyond* (partes «Voice»
+sin instrumento):
+
+- el Grade 2 de «Oregon Trail» es de *The Oregon Trail* de Michael Story (Alfred, Belwin Young Band), otra
+  obra;
+- el Grade 2 / ≈3 de la marcha del *Cascanueces* es de los arreglos de Michael Story (Alfred) y Paul Hanna;
+  el de Cao Ziyi, para banda completa con requinto y cuatro trompas, no publica grado;
+- el Grade 4 de *In a Persian Market* es de los arreglos para banda completa de Takahashi y de
+  Saurer/Tailor (Marc Reift); el archivo es una reducción para conjunto pequeño, todo doblado y con un único
+  tempo («maestoso» 90).
+
+Antes de descartarlas se midió si alguna dimensión nueva acercaba esos archivos a esos grados. Ninguna lo
+hacía: con los datos del archivo, *Oregon Trail II* es más exigente que la reducción de *In a Persian
+Market* en notas por segundo de los pasajes rápidos (14,9 frente a 12,0), notas fuera de la tonalidad (47 %,
+con modulación a cinco sostenidos, frente a 23 %), síncopas (10 % frente a 0 %) y compases sin otra parte que
+la doble (28 % frente a 0 %). Ajustar ScoreLint a esos grados sería ajustarlo a otras partituras.
+
+Queda pendiente: **los tramos índice → grado siguen siendo seis tramos iguales provisionales**, y no se
+tocan con una sola referencia válida. Calibrarlos exige obras cuyo archivo sea la edición que publica el
+grado (o con el grado de un experto sobre ese archivo); hasta entonces, la evaluación con músicos y los
+grados publicados que registre la directora (con su fuente) son los que miden cuánto se desvía ScoreLint.
+Tonalidad, cromatismo, ritmo (tresillos, síncopas) y exposición de las partes son candidatos razonables a
+nuevas dimensiones, pero se añadirán solo cuando haya referencias con las que comprobar que mejoran.
 
 ### Grados publicados de una obra (PR 5 del plan de cierre, 2026-10-14)
 
