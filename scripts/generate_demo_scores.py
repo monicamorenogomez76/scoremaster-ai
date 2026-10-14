@@ -74,7 +74,8 @@ class Builder:
             if self.number == 1:
                 if name in ("Tuba", "Trombone", "Euphonium"):
                     bar.append(clef.BassClef())
-                bar.append(self.key)
+                # A copy per part: transposing to written pitch changes the key in place.
+                bar.append(key.KeySignature(self.key.sharps))
                 bar.append(meter.TimeSignature("{}/4".format(self.beats)))
             events = plan.get(name) or [(None, self.beats)]
             for event in events:
