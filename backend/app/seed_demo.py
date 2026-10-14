@@ -12,8 +12,18 @@ from backend.application.auth import AuthService, InvalidRegistration
 def seed_demo_user(accounts: AccountRepository, email: str, password: str) -> str:
     if not email or not password:
         return "skipped"
-    if accounts.user_by_email(email.strip().lower()) is not None:
-        return "exists"
+    existing = accounts.user_by_email(email.strip().lower())
+    if existing is not None:
+        # The password follows DEMO_USER_PASSWORD on every start (2026-10-14: on Render the account kept an
+        # earlier one and the variable's did not work).
+        service = AuthService(accounts)
+        if service.matches(existing, password):
+            return "exists"
+        try:
+            service.set_password(existing, password, ip="seed")
+        except InvalidRegistration as exc:
+            raise ValueError("DEMO_USER_PASSWORD debe tener al menos 10 caracteres.") from exc
+        return "updated"
     try:
         AuthService(accounts).register(email, password, "Usuario demo", ip="seed")
     except InvalidRegistration as exc:
@@ -28,7 +38,8 @@ def main():
     try:
         result = seed_demo_user(PostgresAccountRepository(engine), os.environ.get("DEMO_USER_EMAIL", ""),
                                 os.environ.get("DEMO_USER_PASSWORD", ""))
-        print("Usuario demo: " + {"created": "creado", "exists": "ya existe", "skipped": "no configurado"}[result])
+        print("Usuario demo: " + {"created": "creado", "exists": "ya existe", "updated": "contraseña actualizada",
+                                "skipped": "no configurado"}[result])
         if result != "skipped" and os.environ.get("DEMO_SEED_CONTENT") == "1":
             print("Contenido de la demo: " + seed_content(os.environ["DEMO_USER_EMAIL"], os.environ["DEMO_USER_PASSWORD"]))
     finally:

@@ -28,6 +28,12 @@ class InMemoryAccounts:
     def rename_user(self, user_id, display_name):
         self.users[user_id] = replace(self.users[user_id], display_name=display_name)
 
+    def set_password_hash(self, user_id, password_hash):
+        self.users[user_id] = replace(self.users[user_id], password_hash=password_hash)
+
+    def delete_user_sessions(self, user_id):
+        self.sessions = {key: item for key, item in self.sessions.items() if item.user_id != user_id}
+
     def add_session(self, session):
         self.sessions[session.token_hash] = session
 

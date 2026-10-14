@@ -109,6 +109,20 @@ class AuthService:
             raise InvalidRegistration("No se pudo crear la cuenta con ese email.") from exc
         return self._open_session(user, "registered", ip)
 
+    def matches(self, user: User, password: str) -> bool:
+        try:
+            return user.password_hash is not None and self.hasher.verify(user.password_hash, password)
+        except (VerificationError, InvalidHashError):
+            return False
+
+    def set_password(self, user: User, password: str, ip: str) -> None:
+        """A new password closes every session opened with the previous one."""
+        if not MIN_PASSWORD <= len(password) <= MAX_PASSWORD:
+            raise InvalidRegistration("Usa una contraseña de al menos 10 caracteres.")
+        self.accounts.set_password_hash(user.id, self.hasher.hash(password))
+        self.accounts.delete_user_sessions(user.id)
+        self.accounts.record_event(user.id, "password_changed", ip)
+
     def login(self, email: str, password: str, ip: str) -> SignedIn:
         email = (email or "").strip().lower()
         if self.limiter.blocked(email, ip):

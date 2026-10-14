@@ -81,6 +81,14 @@ class PostgresAccountRepository:
         with Session(self.engine) as session, session.begin():
             session.execute(update(StoredUser).where(StoredUser.id == user_id).values(display_name=display_name))
 
+    def set_password_hash(self, user_id: UUID, password_hash: str) -> None:
+        with Session(self.engine) as session, session.begin():
+            session.execute(update(StoredUser).where(StoredUser.id == user_id).values(password_hash=password_hash))
+
+    def delete_user_sessions(self, user_id: UUID) -> None:
+        with Session(self.engine) as session, session.begin():
+            session.execute(delete(StoredSessionRow).where(StoredSessionRow.user_id == user_id))
+
     def add_session(self, stored: StoredSession) -> None:
         with Session(self.engine) as session, session.begin():
             session.add(StoredSessionRow(token_hash=stored.token_hash, user_id=stored.user_id,
