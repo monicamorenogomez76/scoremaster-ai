@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 
@@ -8,7 +9,8 @@ from music21 import pitch
 from backend.domain.difficulty_scale import grade_from_index, technical_index
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import ScorePart
-from backend.domain.timing import attack_count, measure_length, melodic_lines, sounding_pitches
+from backend.domain.timing import (DEFAULT_QUARTER_BPM, attack_count, measure_length, melodic_lines, notes_per_second,
+                                   quarter_bpm_at, sounding_pitches)
 from backend.analyzers.endurance import longest_active_run
 
 
@@ -65,6 +67,11 @@ INSTRUMENT_ALIASES = {
     "suspended cymbal": "cymbal",
     "tambourine": "tambourine",
     "bell lyra": "glockenspiel",
+    # Valved brass in B flat with the trumpet's range and technique (2026-10-14: they fell to a generic profile).
+    "cornet": "trumpet",
+    "bb cornet": "trumpet",
+    "b flat cornet": "trumpet",
+    "flugelhorn": "trumpet",
 }
 
 # Resolved identities reuse the profiles above; this map adds no new musical judgement,
@@ -81,6 +88,8 @@ PROFILE_BY_CANONICAL_ID = {
     "saxophone.tenor": "tenor saxophone",
     "saxophone.baritone": "baritone saxophone",
     "trumpet.bb": "trumpet",
+    "cornet.bb": "trumpet",
+    "flugelhorn.bb": "trumpet",
     "horn.f": "horn",
     "trombone.tenor": "trombone",
     "euphonium": "euphonium",
@@ -232,8 +241,28 @@ def _family_and_profile(part: ScorePart) -> tuple[str, InstrumentProfile | None]
     return identity.section, INSTRUMENT_PROFILES.get(PROFILE_BY_CANONICAL_ID.get(identity.canonical_id, ""))
 
 
-def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = None, scale: str = "current") -> dict:
-    """scale: "current" (grades 1-6, index and dimensions 0-10) or "legacy" (1-5 and 0-5, baseline-v1 only)."""
+# Current scale (author's review, 2026-10-14): density is notes per second at the tempo of each measure,
+# taken at the 75th percentile of the measures (the peaks are the critical passages' job), against a reference
+# 2.5 times the old per-beat one; endurance reaches its top after three times the old run (about 24 bars);
+# no separate tempo dimension, since speed is already inside notes per second.
+DENSITY_PERCENTILE = 0.75
+DENSITY_REFERENCE_FACTOR = 2.5
+ENDURANCE_FACTOR = 3
+
+
+def _typical_notes_per_second(part: ScorePart, tempo_marks) -> float:
+    rates = sorted(rate for rate in (notes_per_second(measure, quarter_bpm_at(tempo_marks, measure.number) or DEFAULT_QUARTER_BPM)
+                                     for measure in part.measures) if rate > 0)
+    if not rates:
+        return 0.0
+    return rates[max(0, math.ceil(DENSITY_PERCENTILE * len(rates)) - 1)]
+
+
+def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = None, scale: str = "current",
+                                  tempo_marks=()) -> dict:
+    """scale: "current" (grades 1-6, index and dimensions 0-10; uses tempo_marks) or "legacy" (1-5 and 0-5,
+    baseline-v1 only, with the single tempo_bpm and the formulas captured in the baseline)."""
+    legacy = scale == "legacy"
     family, profile = _family_and_profile(part)
     if profile is None:
         profile = InstrumentProfile(family, 48, 84, 36, 9, 8, 2.2, 135)
@@ -264,19 +293,25 @@ def compute_instrument_difficulty(part: ScorePart, tempo_bpm: float | None = Non
         large_leaps = sum(1 for value in intervals if value >= profile.leap_threshold)
         dimensions["intervals"] = _clamp(large_leaps / max(1, len(intervals)) * 5)
 
-    densities = [_measure_attack_density(measure) for measure in part.measures]
-    if any(densities):
-        dimensions["density"] = _clamp(max(densities) / profile.attack_density_reference * 5)
+    if legacy:
+        densities = [_measure_attack_density(measure) for measure in part.measures]
+        if any(densities):
+            dimensions["density"] = _clamp(max(densities) / profile.attack_density_reference * 5)
+    else:
+        rate = _typical_notes_per_second(part, tempo_marks)
+        if rate:
+            dimensions["density"] = _clamp(rate / (profile.attack_density_reference * DENSITY_REFERENCE_FACTOR) * 5)
 
     if part.measures:
-        dimensions["endurance"] = _clamp(
-            longest_active_run(part) / profile.endurance_measures * 5
-        )
+        run_reference = profile.endurance_measures * (1 if legacy else ENDURANCE_FACTOR)
+        dimensions["endurance"] = _clamp(longest_active_run(part) / run_reference * 5)
 
-    if tempo_bpm is not None and tempo_bpm > 0:
+    if legacy and tempo_bpm is not None and tempo_bpm > 0:
         dimensions["tempo"] = _clamp(tempo_bpm / profile.tempo_reference * 5)
 
     weights = FAMILY_WEIGHTS.get(family, FAMILY_WEIGHTS["other"])
+    if not legacy:   # the tempo weight goes to density, which now carries the speed
+        weights = {**weights, "density": weights["density"] + weights.get("tempo", 0.0)}
     available_weight = sum(weights[key] for key in dimensions)
     score = (
         sum(dimensions[key] * weights[key] for key in dimensions) / available_weight

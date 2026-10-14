@@ -19,6 +19,15 @@ class AnalysisRecord:
     work_id: Optional[UUID] = None
 
 
+@dataclass(frozen=True)
+class OutdatedAnalysis:
+    """The latest analysis of a work, made with an earlier algorithm: what is needed to make it again."""
+    user_id: UUID
+    work_id: UUID
+    configuration: dict
+
+
 class AnalysisRepository(Protocol):
     def save(self, record: AnalysisRecord) -> UUID: ...
     def get(self, analysis_id: UUID) -> Optional[AnalysisRecord]: ...
+    def outdated_latest(self, algorithm_version: str) -> list[OutdatedAnalysis]: ...

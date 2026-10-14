@@ -150,3 +150,11 @@ export function readBandProfile(requirements, draft) {
   return Object.fromEntries((requirements || []).map(item =>
     [item.key, Math.max(0, Number.parseInt(draft[item.key] || '0', 10) || 0)]));
 }
+
+// difficulty-v2 (2026-10-14): the work's grade comes from its winds and strings; percussion, the rhythm
+// section, keyboards and unidentified parts keep their own grade, shown apart.
+export const familyCountsForWork = details => details?.counts_for_work !== false;
+
+export const workGradeDetail = difficulty => difficulty?.algorithm_version
+  ? 'Estimación provisional · viento y cuerda; la percusión y la sección rítmica se muestran aparte'
+  : 'Estimación provisional · percentil 80 por familia';

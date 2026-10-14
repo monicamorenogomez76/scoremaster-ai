@@ -109,6 +109,40 @@ una escala única entre editoriales (J.W. Pepper, por ejemplo, usa letras de Beg
 la equivalencia es **orientativa**; el cálculo del grado no cambia y los tramos se calibrarán con la
 evaluación. Antes la rúbrica describía la agrupación (escuela de música, banda juvenil, banda amateur…).
 
+### difficulty-v2: sin sobrevalorar (revisión de la autora, 2026-10-14)
+
+Con obras reales, ScoreLint daba uno o dos grados de más: *Persis* (Hosay), 6 frente al Grade 4 de su
+editorial; *Oregon Trail II*, 5 frente al grado 2 que le da la autora. Las causas eran de cálculo, no de las
+obras, y se corrigen solo en la escala actual (la escala heredada del baseline no cambia):
+
+| Antes | difficulty-v2 | Motivo |
+|---|---|---|
+| Densidad en ataques por pulso escrito y un único tempo, el más rápido de la obra | **Notas por segundo con el tempo de cada compás**; desaparece la dimensión de tempo aparte | «Los pasajes con muchas notas a velocidad lenta son fáciles o menos difíciles» (la autora). La velocidad ya no se cuenta dos veces |
+| El compás más denso de la parte | **Percentil 75** de los compases, frente a una referencia 2,5 veces la anterior | Un compás rápido no hace difícil una parte entera; los picos son tarea de los pasajes críticos |
+| La resistencia llegaba al máximo con 7–8 compases sin descanso | Referencia tres veces mayor (unos 24 compases) | Tocar 16 compases seguidos es lo normal en banda, también en grado 2 |
+| Corneta y fliscorno sin perfil (caían en uno genérico) | Perfil de trompeta | Metal en Si♭ con la tesitura y la técnica de la trompeta |
+| Grado de la obra = máximo de todas las familias | **Máximo de viento madera, viento metal y cuerda**; percusión, sección rítmica, teclado y partes sin identificar conservan su grado, mostrado aparte con «no cuenta para el grado de la obra» | Una caja en corcheas convertía *Persis* en un 6. Si una obra es solo percusión, la percusión sigue dando su grado |
+
+El resultado declara `algorithm_version: difficulty-v2`, que también guarda la tabla `analyses` y la
+predicción de cada pasaje de campaña (`versions.difficulty`). Al arrancar, el servidor analiza de nuevo las
+obras cuyo último análisis es de una versión anterior, con su misma banda, minutos e instrumentos
+confirmados; el análisis anterior queda como historial.
+
+| Obra | Antes | difficulty-v2 | Referencia |
+|---|---|---|---|
+| Persis | 6 | 4 | Grade 4 (Curnow Music) |
+| March of the Toys (arr. Cao Ziyi) | 4 | 4 | 2–3 según la autora |
+| In a Persian Market | 4 | 3 | 4 según la autora |
+| Oregon Trail II | 5 | 3 | 2 según la autora |
+| Coral para principiantes (demo) | 2 | 1 | escrito para principiantes |
+
+Queda pendiente: **los tramos índice → grado siguen siendo seis tramos iguales provisionales.** Calibrarlos
+con más obras de grado conocido es el paso siguiente, documentado como calibración con criterio de la
+autora y separado de la evaluación con músicos. Hay además una **limitación de fondo**: *In a Persian Market*
+y *Oregon Trail II* tienen casi el mismo índice (≈ 4,7) y grados distintos (4 y 2), así que a ScoreLint le
+faltan dimensiones que los distingan (por ejemplo tonalidad y alteraciones, cromatismo, articulación o
+independencia de las voces). Ningún ajuste de tramos resuelve eso.
+
 ### Grados publicados de una obra (PR 5 del plan de cierre, 2026-10-14)
 
 En la pestaña Dificultad, la directora puede **registrar a mano** el grado que publica una editorial o un
@@ -126,7 +160,8 @@ MAE, sesgo y Spearman (este último, con tres obras o más). Con pocas obras es 
 valida la escala.
 
 No es una certificación oficial. El grado de familia es el del percentil 80
-de sus instrumentos y el de la obra, el máximo de las familias. El resultado declara
+de sus instrumentos y el de la obra, el máximo de viento madera, viento metal y cuerda
+(difficulty-v2; antes, de todas las familias). El resultado declara
 `scale = {version: 2, grades: 6, technical_index_max: 10}`; un análisis guardado sin `scale` se
 puntuó 1–5 y la interfaz lo muestra como «escala anterior». El baseline se captura con
 `scale="legacy"`. En las obras locales la mediana de las partes es 5,2 (grado 4).

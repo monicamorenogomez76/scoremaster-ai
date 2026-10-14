@@ -489,6 +489,7 @@ button:disabled { opacity: 0.65; cursor: default; }
 .chart-track { height: 14px; background: repeating-linear-gradient(90deg, var(--track) 0%, var(--track) calc(20% - 2px), var(--panel) calc(20% - 2px), var(--panel) 20%); border-radius: 5px; overflow: hidden; }
 .chart-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary)); border-radius: 5px; }
 .chart-value { font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; }
+.chart-note { display: block; color: var(--muted); font-size: .75rem; }
 @media (max-width: 600px) { .chart-row { grid-template-columns: 95px minmax(0,1fr) 65px; gap: 8px; font-size: .8rem; } .login-card { padding: 20px; } .ensemble-toolbar { gap: 10px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 

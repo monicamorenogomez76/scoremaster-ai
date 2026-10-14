@@ -146,6 +146,8 @@ def test_work_grade_uses_family_percentile_without_hiding_instrument_outlier():
     result = compute_difficulty_score(score)
 
     assert result["by_instrument"]["Concert Snare Drum"]["grade"] == 6
-    assert result["by_family"]["percussion"]["grade"] == 5
-    assert result["grade"] == 5
-    assert result["grade_method"] == "family_percentile_80"
+    # difficulty-v2: the typical density of the mallets is lower than their busiest measure; with only
+    # percussion in the work, the percussion still gives the work its grade.
+    assert result["by_family"]["percussion"]["grade"] == 4
+    assert result["grade"] == 4
+    assert result["grade_method"] == "winds_strings_percentile_80"   # difficulty-v2

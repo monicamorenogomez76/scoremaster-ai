@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from itertools import zip_longest
 
+from backend.analyzers.difficulty import DIFFICULTY_VERSION
 from backend.analyzers.instrument_difficulty import compute_instrument_difficulty
 from backend.domain.difficulty_scale import SCALE
 from backend.domain.models import Score, ScorePart
@@ -49,19 +50,17 @@ def _plays(part: ScorePart, first: int, last: int) -> bool:
     return bool(bars) and sum(any(not note.is_rest for note in m.notes) for m in bars) * 2 >= len(bars)
 
 
-def _tempo(score: Score):
-    return max((mark.beats_per_minute * mark.beat_unit_quarters for mark in score.tempo_marks), default=None)
-
-
 def _passage(sample: WorkSample, part: ScorePart, first: int, last: int, critical: bool, findings) -> dict:
-    prediction = compute_instrument_difficulty(_slice(part, first, last), _tempo(sample.score))
+    # The fragment keeps its measure numbers, so each one is measured at the tempo written for it.
+    prediction = compute_instrument_difficulty(_slice(part, first, last), tempo_marks=sample.score.tempo_marks)
     measures = str(first) if first == last else f"{first}-{last}"
     return {
         "work_id": sample.work_id, "work_title": sample.title, "parts": [part.name], "measure_range": measures,
         "label": f"{part.name} · cc. {measures.replace('-', '–')}",
         "snapshot": {"grade": prediction["grade"], "technical_index": prediction["difficulty_score"],
                      "family": prediction["family"], "critical": critical, "findings": sorted(findings),
-                     "versions": {"scale": SCALE["version"], "critical_detector": "phrases", "sample": SAMPLE_VERSION}},
+                     "versions": {"scale": SCALE["version"], "critical_detector": "phrases", "sample": SAMPLE_VERSION,
+                                  "difficulty": DIFFICULTY_VERSION}},
         "_key": _key(sample.work_id, part.name, first),
     }
 

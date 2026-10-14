@@ -2,12 +2,12 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
-from backend.application.analysis_repository import AnalysisRecord
+from backend.application.analysis_repository import AnalysisRecord, OutdatedAnalysis
 
 
 class Base(DeclarativeBase):
@@ -53,6 +53,16 @@ class PostgresAnalysisRepository:
         with Session(self.engine) as session:
             row = session.get(StoredAnalysis, analysis_id)
             return None if row is None else record_of(row)
+
+    def outdated_latest(self, algorithm_version: str) -> list[OutdatedAnalysis]:
+        """Works whose latest analysis was made by another version of the algorithm."""
+        statement = text("""
+            select distinct on (work_id) work_id, user_id, configuration, algorithm_version
+            from analyses where work_id is not null and user_id is not null
+            order by work_id, created_at desc""")
+        with Session(self.engine) as session:
+            return [OutdatedAnalysis(row.user_id, row.work_id, row.configuration or {})
+                    for row in session.execute(statement) if row.algorithm_version != algorithm_version]
 
 
 # Analyses reference users and works: register those tables on the shared metadata.

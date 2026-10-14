@@ -3,7 +3,7 @@ from backend.analyzers.instrument_difficulty import (
     compute_instrument_difficulty,
     instrument_label_es,
 )
-from backend.domain.models import ScoreMeasure, ScoreNote, ScorePart
+from backend.domain.models import ScoreMeasure, ScoreNote, ScorePart, TempoMark
 
 
 def _part(name: str, pitches: tuple[str, ...]) -> ScorePart:
@@ -62,7 +62,8 @@ def test_the_top_grade_is_reserved_for_extreme_technical_demand():
     )
     extreme_part = ScorePart(name="Flute", measures=measures)
 
-    result = compute_instrument_difficulty(extreme_part, tempo_bpm=300)
+    result = compute_instrument_difficulty(extreme_part, tempo_marks=(TempoMark(1, 0.0, 300.0, 1.0),))
 
     assert result["grade"] == 6
-    assert result["difficulty_score"] == 10.0
+    # difficulty-v2: ten bars without a rest are no longer the top of endurance.
+    assert 9 <= result["difficulty_score"] < 10

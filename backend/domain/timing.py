@@ -49,3 +49,26 @@ def sounding_pitches(event) -> tuple[str, ...]:
     if event.is_rest or event.pitch is None:
         return ()
     return event.chord_pitches or (event.pitch,)
+
+
+# Default when a score writes no tempo: the crotchet = 120 the audio and the reports also assume.
+DEFAULT_QUARTER_BPM = 120.0
+
+
+def quarter_bpm_at(marks, number: int):
+    """Tempo in force at the start of a measure, in quarter notes per minute (None without marks)."""
+    current = None
+    for mark in sorted(marks, key=lambda mark: (mark.measure_number, mark.offset_quarters)):
+        if mark.measure_number > number:
+            break
+        current = mark.beats_per_minute * mark.beat_unit_quarters
+    return current
+
+
+def notes_per_second(measure, bpm) -> float:
+    """Attacks of the busiest voice per second at the given tempo."""
+    attacks = attack_count(measure)
+    quarters = measure_length(measure)
+    if not bpm or not quarters:
+        return 0.0
+    return attacks / (quarters * 60.0 / bpm)

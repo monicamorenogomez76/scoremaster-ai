@@ -102,3 +102,13 @@ test('rehearsal groups have names for titles, the score viewer and narrow calend
   assert.equal(blockScoreLabel({ type: 'sectional', group: 'saxophones' }), 'Saxofones');
   assert.equal(blockScoreLabel({ type: 'tutti' }), 'Toda la banda');
 });
+
+test('the work grade says which families make it; the rest are shown apart (difficulty-v2, 2026-10-14)', async () => {
+  const { familyCountsForWork, workGradeDetail } = await import('../../../frontend/src/labels.js');
+  assert.equal(workGradeDetail({ algorithm_version: 'difficulty-v2' }),
+    'Estimación provisional · viento y cuerda; la percusión y la sección rítmica se muestran aparte');
+  assert.equal(workGradeDetail({}), 'Estimación provisional · percentil 80 por familia', 'an analysis made before');
+  assert.equal(familyCountsForWork({ counts_for_work: false }), false);
+  assert.equal(familyCountsForWork({ counts_for_work: true }), true);
+  assert.equal(familyCountsForWork({}), true, 'an earlier analysis counted every family');
+});

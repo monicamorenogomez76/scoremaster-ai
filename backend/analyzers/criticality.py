@@ -21,6 +21,7 @@ from backend.analyzers.harmony import find_cadences
 from backend.analyzers.phrases import find_phrases
 from backend.domain.models import Finding, Score, ScorePart, TempoMark
 from backend.domain.timing import attack_count, measure_length
+from backend.domain.timing import notes_per_second as _notes_per_second, quarter_bpm_at as _quarter_bpm
 from backend.rules.weights import RULE_WEIGHTS
 
 PERSISTENCE_RULES = {"SL005"}
@@ -52,22 +53,6 @@ def _percentile(values: list[float], share: float) -> float:
     return ordered[min(len(ordered) - 1, int(share * (len(ordered) - 1) + 0.5))]
 
 
-def _quarter_bpm(marks: tuple[TempoMark, ...], number: int) -> float | None:
-    """Tempo in force at the start of a measure, in quarter notes per minute."""
-    current = None
-    for mark in sorted(marks, key=lambda mark: (mark.measure_number, mark.offset_quarters)):
-        if mark.measure_number > number:
-            break
-        current = mark.beats_per_minute * mark.beat_unit_quarters
-    return current
-
-
-def _notes_per_second(measure, bpm: float | None) -> float:
-    attacks = attack_count(measure)
-    quarters = measure_length(measure)
-    if not bpm or not quarters:
-        return 0.0
-    return attacks / (quarters * 60.0 / bpm)
 
 
 def _part_passages(part: ScorePart, findings: list[Finding], policy: CriticalityPolicy,
