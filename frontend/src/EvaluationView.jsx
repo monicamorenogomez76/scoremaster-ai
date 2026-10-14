@@ -4,6 +4,7 @@ import {
   campaignSummary, createCampaign, exportCampaign, getCampaign, invitationProgress, listCampaigns, parseEmails,
   predictionText, removePassage, setCampaignStatus, setInvitations, shortfallText, statusLabel,
   EXPERIENCE_OPTIONS, GRADE_RUBRIC, PRIORITY_LABELS, getLlmReview, llmReviewText, startLlmReview, nextToRate, ratedCount, ratingDraft, ratingToSend, saveProfile, saveRating,
+  evaluationIntro,
 } from './evaluations.js';
 import { listWorks } from './library.js';
 import { displayInstrumentName } from './labels.js';
@@ -316,7 +317,7 @@ function RatingSession({ id, onClose, onChanged, onOpenPassage }) {
 }
 
 export function EvaluationView({ active, hidden, onOpenBlock, onOpenEvaluationPassage }) {
-  const [campaigns, setCampaigns] = useState({ owned: [], invited: [] });
+  const [campaigns, setCampaigns] = useState({ owned: [], invited: [], can_manage: false });
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [shown, setShown] = useState(null);
@@ -325,10 +326,11 @@ export function EvaluationView({ active, hidden, onOpenBlock, onOpenEvaluationPa
   const visible = !hidden && active === 'evaluation';
   const refresh = () => listCampaigns().then(found => { setCampaigns(found); setError(''); }).catch(failure => setError(failure.message));
   useEffect(() => { if (visible) refresh(); }, [visible]);
-  const action = <button id="create-campaign" type="button" className="primary-action"
-    onClick={() => { setShown(null); setRating(null); setNotice(''); setCreating(true); }}>Crear campaña</button>;
+  const manages = campaigns.can_manage === true;
+  const action = manages ? <button id="create-campaign" type="button" className="primary-action"
+    onClick={() => { setShown(null); setRating(null); setNotice(''); setCreating(true); }}>Crear campaña</button> : null;
   return <View name="evaluation" active={active} eyebrow="Evaluación" title="Valoraciones"
-    description="Músicos de confianza valoran pasajes de tus obras para comparar su criterio con el de ScoreLint." action={action}>
+    description={evaluationIntro(manages)} action={action}>
     {error && <p className="result-supporting" role="alert">{error}</p>}
     {creating && <CampaignEditor onCreated={(created, shortfall) => { setCreating(false); setNotice(shortfall); setShown(created.id); refresh(); }}
       onCancel={() => setCreating(false)} />}
@@ -348,7 +350,9 @@ export function EvaluationView({ active, hidden, onOpenBlock, onOpenEvaluationPa
       </li>)}</ul>
     </section>}
     {shown && <CampaignDetail key={shown} id={shown} notice={notice} onClose={() => setShown(null)} onChanged={refresh} onOpenBlock={onOpenBlock} />}
-    <section className="rehearsal-list" aria-labelledby="campaigns-owned-title">
+    {!manages && campaigns.invited.length === 0 && !error &&
+      <p id="campaigns-none" className="result-supporting">Todavía no te han invitado a ninguna campaña.</p>}
+    {manages && <section className="rehearsal-list" aria-labelledby="campaigns-owned-title">
       <h2 id="campaigns-owned-title" className="panel-title">Mis campañas</h2>
       {campaigns.owned.length === 0 ? <p className="result-supporting">Aún no has creado ninguna campaña.</p>
         : <ul className="works-list">{campaigns.owned.map(item => <li key={item.id} className="works-item campaign-item">
@@ -360,6 +364,6 @@ export function EvaluationView({ active, hidden, onOpenBlock, onOpenEvaluationPa
               <button type="button" className="primary-action" onClick={() => { setCreating(false); setRating(null); setNotice(''); setShown(item.id); }}>Abrir</button>
             </div>
           </li>)}</ul>}
-    </section>
+    </section>}
   </View>;
 }

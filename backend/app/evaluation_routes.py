@@ -1,6 +1,10 @@
 """Evaluation campaigns (steps 16-18). The owner manages passages, invitations and status and exports
 the results; an invited musician (by the email of their account) rates the passages without seeing
-ScoreLint's prediction. Anyone else gets 404, the same as a campaign that does not exist."""
+ScoreLint's prediction. Anyone else gets 404, the same as a campaign that does not exist.
+
+Only an administrator (ADMIN_EMAILS) creates and manages campaigns and so sees the musicians' emails and
+results (author's decision, 2026-10-14). Any other account, even the owner of an earlier campaign, keeps
+only the musician's view of the campaigns it is invited to."""
 from typing import Optional
 from uuid import UUID
 
@@ -13,7 +17,7 @@ from backend.application.evaluations import (EXPERIENCE_LEVELS, Campaign, Campai
                                              Rating)
 from backend.application.library import LibraryRepository
 from backend.app.dependencies import (authenticated_user, get_evaluation_repository, get_review_provider,
-                                      get_library_repository, get_score_store)
+                                      get_library_repository, get_score_store, is_admin)
 from backend.analyzers.passage_features import FEATURES_VERSION, passage_features
 from backend.application import llm_review_jobs
 from backend.application.llm_review import PROMPT_VERSION as REVIEW_PROMPT_VERSION, review_passage
@@ -21,6 +25,7 @@ from backend.app.stored_scores import stored_score
 
 router = APIRouter()
 NOT_FOUND = "La campaña no existe."
+ADMIN_ONLY = "Solo una cuenta administradora puede crear y gestionar campañas."
 
 
 class CampaignIn(BaseModel):
@@ -79,9 +84,13 @@ def _id(value: str) -> UUID:
 
 
 def _summary(campaign: Campaign, role: str) -> dict:
-    done = len(campaign.ratings) if role == "evaluator" else sum(item.rated for item in campaign.invitations)
+    """A musician sees only their own progress, not how many others were invited."""
+    if role == "evaluator":
+        return {"id": str(campaign.id), "title": campaign.title, "status": campaign.status, "role": role,
+                "passages": len(campaign.passages), "rated": len(campaign.ratings)}
     return {"id": str(campaign.id), "title": campaign.title, "status": campaign.status, "role": role,
-            "passages": len(campaign.passages), "rated": done, "invitations": len(campaign.invitations)}
+            "passages": len(campaign.passages), "rated": sum(item.rated for item in campaign.invitations),
+            "invitations": len(campaign.invitations)}
 
 
 def _owner_view(campaign: Campaign, reviews: Optional[list] = None) -> dict:
@@ -110,7 +119,7 @@ def _evaluator_view(campaign: Campaign) -> dict:
 
 
 def _owned(evaluations: EvaluationRepository, user: User, campaign_id: str) -> Campaign:
-    found = evaluations.for_owner(user.id, _id(campaign_id))
+    found = evaluations.for_owner(user.id, _id(campaign_id)) if is_admin(user) else None
     if found is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return found
@@ -122,6 +131,8 @@ def create_campaign(body: CampaignIn, user: User = Depends(authenticated_user),
                     library: LibraryRepository = Depends(get_library_repository),
                     score_store=Depends(get_score_store)):
     """Proposes the passages of the chosen works from their stored analysis; the director reviews them."""
+    if not is_admin(user):
+        raise HTTPException(status_code=403, detail=ADMIN_ONLY)
     samples = []
     for work_id in dict.fromkeys(body.work_ids):
         found, latest = stored_score(library, user.id, work_id, score_store), library.latest_analysis(user.id, work_id)
@@ -136,14 +147,16 @@ def create_campaign(body: CampaignIn, user: User = Depends(authenticated_user),
 @router.get("/evaluations")
 def list_campaigns(user: User = Depends(authenticated_user),
                    evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
-    return {"owned": [_summary(item, "owner") for item in evaluations.owned(user.id)],
-            "invited": [_summary(item, "evaluator") for item in evaluations.invited(user.email)]}
+    admin = is_admin(user)
+    return {"owned": [_summary(item, "owner") for item in evaluations.owned(user.id)] if admin else [],
+            "invited": [_summary(item, "evaluator") for item in evaluations.invited(user.email)],
+            "can_manage": admin}
 
 
 @router.get("/evaluations/{campaign_id}")
 def get_campaign(campaign_id: str, user: User = Depends(authenticated_user),
                  evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
-    owned = evaluations.for_owner(user.id, _id(campaign_id))
+    owned = evaluations.for_owner(user.id, _id(campaign_id)) if is_admin(user) else None
     if owned is not None:
         return _owner_view(owned, evaluations.llm_reviews(user.id, owned.id))
     invited = evaluations.for_evaluator(user.email, _id(campaign_id))
@@ -155,6 +168,7 @@ def get_campaign(campaign_id: str, user: User = Depends(authenticated_user),
 @router.delete("/evaluations/{campaign_id}/passages/{passage_id}", status_code=204)
 def delete_passage(campaign_id: str, passage_id: str, user: User = Depends(authenticated_user),
                    evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
+    _owned(evaluations, user, campaign_id)
     try:
         deleted = evaluations.delete_passage(user.id, _id(campaign_id), _id(passage_id))
     except CampaignLocked as exc:
@@ -167,6 +181,7 @@ def delete_passage(campaign_id: str, passage_id: str, user: User = Depends(authe
 @router.put("/evaluations/{campaign_id}/invitations")
 def set_invitations(campaign_id: str, body: InvitationsIn, user: User = Depends(authenticated_user),
                     evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
+    _owned(evaluations, user, campaign_id)
     updated = evaluations.set_invitations(user.id, _id(campaign_id), body.emails)
     if updated is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
@@ -176,6 +191,7 @@ def set_invitations(campaign_id: str, body: InvitationsIn, user: User = Depends(
 @router.post("/evaluations/{campaign_id}/status")
 def set_status(campaign_id: str, body: StatusIn, user: User = Depends(authenticated_user),
                evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
+    _owned(evaluations, user, campaign_id)
     updated = evaluations.set_status(user.id, _id(campaign_id), body.status)
     if updated is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
@@ -220,6 +236,7 @@ def work_file(campaign_id: str, work_id: str, user: User = Depends(authenticated
 @router.get("/evaluations/{campaign_id}/export")
 def export(campaign_id: str, user: User = Depends(authenticated_user),
            evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
+    _owned(evaluations, user, campaign_id)
     exported = evaluations.export(user.id, _id(campaign_id))
     if exported is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)

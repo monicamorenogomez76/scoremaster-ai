@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   createCampaign, exportFileName, invitationProgress, listCampaigns, parseEmails, predictionText, removePassage,
   setCampaignStatus, setInvitations, shortfallText, statusLabel, campaignSummary,
-  getLlmReview, llmReviewText, startLlmReview,
+  getLlmReview, llmReviewText, startLlmReview, evaluationIntro,
   GRADE_RUBRIC, EXPERIENCE_OPTIONS, PRIORITY_LABELS, nextToRate, ratedCount, ratingDraft, ratingToSend, saveProfile, saveRating,
 } from '../../../frontend/src/evaluations.js';
 
@@ -130,4 +130,10 @@ test('a review paused by the quota says it can go on later', () => {
   const status = { available: true, provider: 'gemini', model: 'gemini-3.8-flash', total: 40, done: 12, failed: 0,
     state: 'paused', last_error: 'rate_limit' };
   assert.equal(llmReviewText(status), '12 de 40 pasajes valorados. La IA ha agotado su cupo gratuito: vuelve a pulsar más tarde (el cupo diario se renueva cada día) y seguirá donde se quedó.');
+});
+
+test('only an administrator is offered to manage campaigns; the others see their invitations', () => {
+  assert.match(evaluationIntro(true), /^Músicos de confianza valoran pasajes de tus obras/);
+  assert.equal(evaluationIntro(false), 'Aquí aparecen las campañas a las que te invitan. Solo ves tus propias valoraciones.');
+  assert.equal(evaluationIntro(undefined), evaluationIntro(false), 'an old server without the flag manages nothing');
 });

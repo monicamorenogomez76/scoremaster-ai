@@ -2,6 +2,8 @@
 // from her works with ScoreLint's prediction, trimmed in draft, musicians invited by email, the campaign
 // opened, exported and closed. An invited musician: profile, then each passage rated (difficulty 1-6,
 // critical, priority, comment) after seeing and hearing it, never with the prediction.
+// Only an administrator manages campaigns (2026-10-14): the director is the server's ADMIN_EMAILS account
+// (E2E_ADMIN_EMAIL), created on the first run and signed in on the next ones.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -14,16 +16,24 @@ const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const score = name => readFileSync(new URL('../../../test-scores/' + name, import.meta.url));
 const stamp = Date.now();
+const director = process.env.E2E_ADMIN_EMAIL || 'directora-e2e@banda.test';
 const musician = 'musico1-' + stamp + '@banda.test', other = 'musico2-' + stamp + '@banda.test';
 const waitIdle = () => page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
 try {
   await page.goto(url);
   await page.locator('#login-mode').click();
   await page.locator('#login-name').fill('Directora evaluadora');
-  await page.locator('#login-email').fill('evaluacion-' + Date.now() + '@banda.test');
+  await page.locator('#login-email').fill(director);
   await page.locator('#login-password').fill('una contraseña larga');
   await page.locator('#login-submit').click();
-  await page.locator('#app-shell').waitFor({ state: 'visible' });
+  await Promise.race([page.locator('#app-shell').waitFor({ state: 'visible' }), page.locator('#login-error').waitFor()]);
+  if (!(await page.locator('#app-shell').isVisible())) {   // the account exists: sign in
+    await page.locator('#login-mode').click();
+    await page.locator('#login-email').fill(director);
+    await page.locator('#login-password').fill('una contraseña larga');
+    await page.locator('#login-submit').click();
+    await page.locator('#app-shell').waitFor({ state: 'visible' });
+  }
   for (const name of ['evaluation_study.musicxml', 'high_density.musicxml']) {
     await page.locator('[data-view-target=repertoire]').click();
     await page.locator('#add-work').click();
@@ -91,6 +101,9 @@ try {
   await rater.locator('#login-submit').click();
   await rater.locator('#app-shell').waitFor({ state: 'visible' });
   await rater.locator('[data-view-target=evaluation]').click();
+  await rater.getByRole('button', { name: 'Empezar' }).waitFor();
+  assert.equal(await rater.locator('#create-campaign').count(), 0, 'a musician cannot create campaigns');
+  assert.equal(await rater.locator('#campaigns-owned-title').count(), 0, 'nor sees anyone\'s results');
   await rater.getByRole('button', { name: 'Empezar' }).click();
   const session = rater.locator('#rating-session');
   await session.waitFor();

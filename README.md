@@ -34,7 +34,7 @@ La pantalla de cada obra responde a las tres preguntas del director:
 | **Conciertos** | Programa, patrón semanal y propuesta de la serie de ensayos por fases (lectura y pasajes, integración y ensayo general); calendario mensual |
 | **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen |
 | **IA explicativa** | «¿Por qué esta dificultad?» y «¿Por qué este plan?» redactadas por **Gemini** a partir de las evidencias del análisis, con citas comprobadas; sin clave responde un **modo demo identificado** como tal |
-| **Valoraciones** | Campañas en las que músicos invitados valoran pasajes (grado, criticidad y prioridad) sin ver la predicción; valoración independiente con IA (método B); exportación anónima e informe reproducible |
+| **Valoraciones** | Campañas en las que músicos invitados valoran pasajes (grado, criticidad y prioridad) sin ver la predicción ni las valoraciones de los demás; solo una cuenta administradora las crea y ve los resultados; valoración independiente con IA (método B); exportación anónima e informe reproducible |
 | **Configuración** | Nombre visible, tamaño del texto y **tema claro, oscuro o automático** |
 
 <table>
@@ -99,7 +99,7 @@ docker compose up --build
 
 Abre http://127.0.0.1:8000. El contenedor aplica las migraciones y crea la cuenta demo **con contenido**:
 tres obras originales ya analizadas, una banda, un concierto con su serie de ensayos y una campaña de
-valoración en borrador.
+valoración abierta a la que está invitada (la demo no es administradora: valora como un músico).
 
 | Usuario de prueba (solo en local) | Contraseña |
 |---|---|
@@ -140,6 +140,7 @@ dependa de ellas.
 | `YOUTUBE_API_KEY` | Búsqueda de grabaciones dentro de la aplicación (la usa el servidor, nunca el navegador) | Enlace a la búsqueda en YouTube y opción de pegar un enlace |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | «Entrar con Google» | Solo email y contraseña |
 | `DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`, `DEMO_SEED_CONTENT` | Cuenta demo y su contenido de ejemplo (`1`) | Sin cuenta demo |
+| `ADMIN_EMAILS` | Cuentas administradoras, separadas por comas: crean y gestionan campañas de valoración y ven los emails y resultados de los músicos. Registrar antes la cuenta (el registro no verifica el email) | Nadie puede crear campañas; cada cuenta solo valora las campañas a las que la invitan |
 | `APP_ENV=production` | Cookies `Secure`, HSTS y sin documentación interactiva de la API | Modo desarrollo |
 
 A la IA solo llegan datos derivados del análisis (grados, dimensiones, compases, bloques), nunca la

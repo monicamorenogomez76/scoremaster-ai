@@ -137,3 +137,9 @@ export function llmReviewText(status) {
   if (!status.done) return 'Sin valorar todavía · ' + who + '.';
   return status.done + ' de ' + status.total + ' pasajes valorados por ' + who + '.';
 }
+
+// Only an administrator creates and manages campaigns (author's decision, 2026-10-14); any other account
+// only rates the campaigns it is invited to and sees only its own ratings.
+export const evaluationIntro = canManage => canManage
+  ? 'Músicos de confianza valoran pasajes de tus obras para comparar su criterio con el de ScoreLint.'
+  : 'Aquí aparecen las campañas a las que te invitan. Solo ves tus propias valoraciones.';

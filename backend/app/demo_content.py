@@ -1,11 +1,17 @@
 """Content of the demo account, so the examiners and the video never start from an empty app (PR 4 of the
 closing plan, 2026-10-14): the three generated works of demo/, a band, a concert with its series of
-rehearsals up to the general rehearsal, and a draft evaluation campaign.
+rehearsals up to the general rehearsal, and an evaluation campaign.
+
+The demo is not an administrator (its password is in the README; 2026-10-14): it never sees the musicians'
+emails or results. The seed acts as the server's operator only while it runs, to create the example
+campaign, open it and invite the demo itself, which then shows the musician's side.
 
 Everything goes through the real API with the demo account's session, so it passes the same validation as
 a director's own data. Only the shape of the saved blocks is built here, as the editor does in the browser
 (frontend/src/rehearsals.js proposalBlocks). Idempotent: an account that already has works is left alone.
 """
+import os
+from contextlib import contextmanager
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -23,6 +29,7 @@ OUTDATED_SOURCES = frozenset({
     "734a22c20abde8e892d558987a4a598c479dfe2027d3a4fce39abe25d7ec58fe",
 })
 PROGRAMME = ("Marcha de la plaza", "Andante y danza")
+DEMO_CAMPAIGN = "Valoración de pasajes (demostración)"
 BAND = {
     "name": "Banda de demostración", "locality": "Valencia", "place": "Sala de ensayo",
     "rehearsal_weekdays": [1, 3], "rehearsal_time": "20:00", "rehearsal_minutes": 90,
@@ -72,14 +79,45 @@ def _ok(response, what: str) -> dict:
     return response.json() if response.content else {}
 
 
+@contextmanager
+def _as_administrator(email: str):
+    """ADMIN_EMAILS with the demo only inside the seed's own process, restored afterwards."""
+    saved = os.environ.get("ADMIN_EMAILS")
+    os.environ["ADMIN_EMAILS"] = ",".join(item for item in (saved, email) if item)
+    try:
+        yield
+    finally:
+        if saved is None:
+            os.environ.pop("ADMIN_EMAILS", None)
+        else:
+            os.environ["ADMIN_EMAILS"] = saved
+
+
+def _open_to_the_demo(client, email: str):
+    """Each draft example campaign is opened with the demo invited (also the one an earlier seed left)."""
+    for item in _ok(client.get("/evaluations"), "la lista de campañas")["owned"]:
+        if item["title"] == DEMO_CAMPAIGN and item["status"] == "draft":
+            path = "/evaluations/" + item["id"]
+            _ok(client.put(path + "/invitations", json={"emails": [email]}), "la invitación de la demo")
+            _ok(client.post(path + "/status", json={"status": "open"}), "la apertura de la campaña")
+
+
 def seed_demo_content(client, email: str, password: str, today: date) -> str:
     """client: an HTTP client of this app (TestClient). Returns created, exists or skipped."""
     login = client.post("/auth/login", json={"email": email, "password": password})
     if login.status_code != 200:
         return "skipped"
     client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
-    if _ok(client.get("/works"), "la lista de obras")["works"]:
-        return "exists"
+    with _as_administrator(email):
+        if _ok(client.get("/works"), "la lista de obras")["works"]:
+            _open_to_the_demo(client, email)
+            return "exists"
+        _seed(client, today)
+        _open_to_the_demo(client, email)
+    return "created"
+
+
+def _seed(client, today: date):
     _ok(client.post("/bands", json=BAND), "la banda")
     titles = {}
     for path in sorted(DEMO_DIR.glob("*.musicxml")):
@@ -101,11 +139,10 @@ def seed_demo_content(client, email: str, password: str, today: date) -> str:
          "phase": item["phase"], "work_ids": item["work_ids"], "blocks": [_block(block) for block in item["blocks"]]}
         for item in plan["rehearsals"]]}), "los ensayos")
     _ok(client.post("/evaluations", json={
-        "title": "Valoración de pasajes (demostración)",
+        "title": DEMO_CAMPAIGN,
         "instructions": "Valora cada pasaje pensando en una banda amateur de nivel medio.",
         "work_ids": [titles[title] for title in PROGRAMME], "size": 20,
     }), "la campaña")
-    return "created"
 
 
 def reset_outdated_demo(engine, email: str) -> bool:
