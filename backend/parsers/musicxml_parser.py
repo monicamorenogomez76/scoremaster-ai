@@ -92,7 +92,9 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
     declared_metadata = read_part_metadata(score_xml)
     # music21 receives the extracted document, so the file extension does not matter.
     parsed_score = converter.parse(score_xml, format="musicxml")
-    title = parsed_score.metadata.title if parsed_score.metadata else ""
+    # bestTitle: <movement-title> is kept by music21 as movementName with an empty title (2026-10-14: those
+    # scores were shown as «Untitled score»).
+    title = parsed_score.metadata.bestTitle if parsed_score.metadata else ""
     composer = parsed_score.metadata.composer if parsed_score.metadata else None
 
     parts = []

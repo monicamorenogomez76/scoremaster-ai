@@ -126,3 +126,12 @@ def test_numbers_repeated_instrument_staves_instead_of_merging_them(tmp_path):
         "B♭ Clarinet 2",
         "B♭ Clarinet 3",
     ]
+
+def test_the_title_is_read_from_the_movement_title_too():
+    """2026-10-14: a score with <movement-title> (as MuseScore and music21 write them) was shown as «Untitled
+    score»: music21 keeps it as movementName and leaves title empty. Its best title is used."""
+    from pathlib import Path
+    scores = Path(__file__).resolve().parents[2] / "test-scores"
+    assert parse_musicxml(scores / "evaluation_study.musicxml").title == "Evaluation Study"
+    assert parse_musicxml(scores / "high_density.musicxml").title == "High Density Study", "work-title still works"
+    assert parse_musicxml(scores / "high_register.musicxml").title == "Untitled score", "no title at all"
