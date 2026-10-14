@@ -50,7 +50,7 @@ def test_the_demo_works_are_the_generated_ones_with_their_licence():
 
 
 @pytest.mark.parametrize("filename, concert_fifths", [
-    ("marcha-de-la-plaza.musicxml", -2), ("andante-y-danza.musicxml", -3), ("coral-para-principiantes.musicxml", -1)])
+    ("marcha-de-la-plaza.musicxml", -2), ("andante-y-danza.musicxml", -3), ("coral-para-principiantes.musicxml", -3)])
 def test_each_part_has_the_written_key_of_its_transposition(filename, concert_fifths):
     """2026-10-14: one KeySignature object shared by every part was transposed once per transposing
     instrument (fifths 11-13); the notation engine refused it («bad key signature») in Render."""
@@ -59,6 +59,8 @@ def test_each_part_has_the_written_key_of_its_transposition(filename, concert_fi
     names = {part.get("id"): part.findtext("part-name") for part in root.iter("score-part")}
     written = {}
     for part in root.iter("part"):
+        if names[part.get("id")].endswith("Drum"):
+            continue   # percussion is written without a key signature
         fifths = int(part.find("measure/attributes/key/fifths").text)
         chromatic = part.findtext("measure/attributes/transpose/chromatic")
         # Written key = concert key raised by the interval the instrument sounds below (7 fifths per semitone, mod 12).
@@ -98,3 +100,53 @@ def test_the_demo_works_are_exactly_what_the_generator_writes(tmp_path):
     without_date = lambda text: re.sub(r"<encoding-date>[^<]*</encoding-date>", "", text)
     for kept in DEMO_DIR.glob("*.musicxml"):
         assert without_date((tmp_path / kept.name).read_text()) == without_date(kept.read_text()), kept.name
+
+
+def _signed(email="demo@banda.org"):
+    signed = TestClient(app)
+    signed.headers["X-CSRF-Token"] = signed.post("/auth/login", json={"email": email, "password": "una contraseña larga"}).json()["csrf_token"]
+    return signed
+
+
+def _seeded_demo():
+    TestClient(app).post("/auth/register", json={"email": "demo@banda.org", "password": "una contraseña larga",
+                                                 "display_name": "Usuario demo"})
+    assert seed_demo_content(TestClient(app), "demo@banda.org", "una contraseña larga", TODAY) == "created"
+
+
+def _current_sources():
+    import hashlib
+    return frozenset(hashlib.sha256(path.read_bytes()).hexdigest() for path in DEMO_DIR.glob("*.musicxml"))
+
+
+def test_a_demo_made_with_earlier_works_is_made_again_with_the_current_ones(clients, postgres_engine, monkeypatch):
+    """2026-10-14: the works were rewritten with real harmony; Render's demo account kept the old ones,
+    whose analyses, concert and campaign no longer match. Only the demo's own earlier works trigger it."""
+    from backend.app import demo_content
+    monkeypatch.setenv("PLAYBACK_WARMUP", "0")
+    _seeded_demo()
+    assert demo_content.reset_outdated_demo(postgres_engine, "demo@banda.org") is False, "the current works stay"
+    monkeypatch.setattr(demo_content, "OUTDATED_SOURCES", _current_sources())
+    assert demo_content.reset_outdated_demo(postgres_engine, "demo@banda.org") is True
+    signed = _signed()
+    assert signed.get("/works").json()["works"] == [] and signed.get("/concerts").json()["concerts"] == []
+    assert signed.get("/evaluations").json()["owned"] == [] and signed.get("/bands").json()["bands"] == []
+    assert seed_demo_content(TestClient(app), "demo@banda.org", "una contraseña larga", TODAY) == "created"
+    assert len(signed.get("/works").json()["works"]) == 3 and len(signed.get("/evaluations").json()["owned"]) == 1
+
+
+def test_a_demo_account_with_other_works_is_left_alone(clients, postgres_engine, monkeypatch):
+    from backend.app import demo_content
+    from backend.test.test_library_api import analyze
+    monkeypatch.setenv("PLAYBACK_WARMUP", "0")
+    _seeded_demo()
+    signed = _signed()
+    analyze(signed)
+    monkeypatch.setattr(demo_content, "OUTDATED_SOURCES", _current_sources())
+    assert demo_content.reset_outdated_demo(postgres_engine, "demo@banda.org") is False
+    assert len(signed.get("/works").json()["works"]) == 4
+
+
+def test_the_published_earlier_works_count_as_outdated():
+    from backend.app.demo_content import OUTDATED_SOURCES
+    assert len(OUTDATED_SOURCES) == 6 and not (_current_sources() & OUTDATED_SOURCES)

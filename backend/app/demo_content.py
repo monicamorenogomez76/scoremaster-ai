@@ -9,7 +9,19 @@ a director's own data. Only the shape of the saved blocks is built here, as the 
 from datetime import date, timedelta
 from pathlib import Path
 
+from sqlalchemy import text
+
 DEMO_DIR = Path(__file__).resolve().parents[2] / "demo"
+# sha256 of the demo works published before they followed the rules of harmony (#93, and #97 with the
+# key signatures fixed): an account holding only these gets the current works and everything made of them.
+OUTDATED_SOURCES = frozenset({
+    "f0e98abb551193ec6de9a365d7b0d48da1b49a9a72de88d24a1437c2384908f1",
+    "5254375ebcefcc59e861bc33055202e423607f5474c92422575ca2268eb78c4c",
+    "b03866f277447ecf0cf4ce92e484ca5d0e3aff5c1bee0362569a157698d0d852",
+    "d6e53457e0c2f39c940032a3e2c9af3b16bb19a3ffcf59d84658e7f44890c3a0",
+    "2dd55fa9a21cc90e2cd6ab5e05f533ab04e125aea570bc05fb2b58972928ef76",
+    "734a22c20abde8e892d558987a4a598c479dfe2027d3a4fce39abe25d7ec58fe",
+})
 PROGRAMME = ("Marcha de la plaza", "Andante y danza")
 BAND = {
     "name": "Banda de demostración", "locality": "Valencia", "place": "Sala de ensayo",
@@ -94,3 +106,26 @@ def seed_demo_content(client, email: str, password: str, today: date) -> str:
         "work_ids": [titles[title] for title in PROGRAMME], "size": 20,
     }), "la campaña")
     return "created"
+
+
+def reset_outdated_demo(engine, email: str) -> bool:
+    """Empties the demo account when all its works are earlier versions of the demo works, so the seed
+    creates them again: analyses, concert, rehearsals and campaign were made of the old notes. An account
+    with any other work, or with ratings already given, is left alone. Returns whether it was emptied."""
+    with engine.begin() as connection:
+        user = connection.execute(text("SELECT id FROM users WHERE email = :email"), {"email": email.strip().lower()}).scalar()
+        if user is None:
+            return False
+        sources = set(connection.execute(text("SELECT source_sha256 FROM works WHERE user_id = :user"), {"user": user}).scalars())
+        if not sources or not sources <= OUTDATED_SOURCES:
+            return False
+        rated = connection.execute(text(
+            "SELECT 1 FROM evaluation_ratings r JOIN evaluation_passages p ON p.id = r.passage_id "
+            "JOIN evaluation_campaigns c ON c.id = p.campaign_id WHERE c.owner_id = :user LIMIT 1"), {"user": user}).first()
+        if rated:
+            return False
+        # Campaigns take their passages and invitations; works take their analyses.
+        for table, owner in (("evaluation_campaigns", "owner_id"), ("rehearsals", "user_id"), ("concerts", "user_id"),
+                             ("ensembles", "user_id"), ("analyses", "user_id"), ("works", "user_id")):
+            connection.execute(text("DELETE FROM {} WHERE {} = :user".format(table, owner)), {"user": user})
+    return True
