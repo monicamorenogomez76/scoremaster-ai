@@ -106,6 +106,7 @@ Cross-cutting rules that span many files:
 
 ## React Code Quality & Architecture
 - **Functional Components:** Use functional components with hooks. Prefer semantic HTML tags (`<nav>`, `<main>`, `<aside>`, `<header>`, `<footer>`) over generic `<div>` soup.
+- **Styles:** plain CSS in `frontend/src/styles.css` (no Tailwind, Sass or CSS modules); tokens live in its single `:root`. `backend/test/frontend/styles.test.mjs` keeps each top-level selector declared once and every class used by a component.
 - **Component Isolation:** Keep components modular and reusable. Pass layout/spacing responsibilities via props or controlled class wrappers rather than hardcoding strict outer margins.
 
 ## Build and Commands
