@@ -38,8 +38,12 @@
   informe añade una fila «LLM (proveedor · modelo · prompt)» por versión.
 - **Método C, híbrido (paso 24)**, preregistrado por la autora el 2026-10-13, antes de recibir valoraciones:
   grado = media de ScoreLint y del LLM redondeando hacia arriba los medios puntos; crítico solo si los dos
-  coinciden (prima la precisión, como F0.5). El informe (`campaign-report-v2`) añade una fila por versión
-  del LLM y una tabla con todos los métodos sobre los mismos pasajes.
+  coinciden (prima la precisión, como F0.5). El informe añade una fila por versión del LLM y una tabla con
+  todos los métodos sobre los mismos pasajes.
+- **Grados de editoriales (PR 5, 2026-10-14)**: la exportación incluye cada obra con el grado de ScoreLint
+  de su último análisis y los grados publicados que registró la directora. El informe (`campaign-report-v3`)
+  los compara obra a obra (ver `docs/DIFFICULTY_CRITICALITY.md`). Es un criterio externo e independiente de
+  los músicos, pero con pocas obras.
 - Datos mínimos: email de la cuenta, nivel e instrumento. API: `/evaluations` (ver
   `backend/app/evaluation_routes.py`); tablas de la migración `0009_evaluations`.
 

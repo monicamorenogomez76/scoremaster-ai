@@ -803,3 +803,13 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
   .campaign-passages .link-action { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
   .video-search-link { display: inline-flex; align-items: center; min-height: 44px; }
 }
+
+/* Publisher grades of a work (PR 5): list with sources and a compact form. */
+.published-grades { display: grid; gap: 10px; margin-bottom: 18px; }
+.published-grade-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.published-grade-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.published-grade-list .table-supporting { display: inline; margin-left: 8px; }
+.published-grade-list a { color: var(--primary); }
+.published-grade-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: end; gap: 12px; }
+.published-grade-form label { display: grid; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
+.published-grade-form input, .published-grade-form select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-weight: 400; }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { DifficultyPanel, WorkExplanation } from './DifficultyView.jsx';
+import { DifficultyPanel, PublishedGrades, WorkExplanation } from './DifficultyView.jsx';
 import { OverviewPanel } from './OverviewView.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
@@ -47,6 +47,7 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
         {data && <WorkExplanation key={data.work_id} workId={data.work_id} onOpenPassage={onOpenPassage} />}
         <OverviewPanel data={data} onStart={() => onModeChange('add')}
           onOpenDifficulty={() => document.getElementById('difficulty-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
+        {data?.work_id && data.difficulty?.grade != null && <PublishedGrades key={data.work_id} workId={data.work_id} grade={data.difficulty.grade} />}
         {data && <DifficultyPanel key={analysis.revision} data={data} onOpenPassage={onOpenPassage} />}
       </div>
       <div id="work-panel-recordings" role="tabpanel" aria-labelledby="work-tab-recordings" hidden={tab !== 'recordings'}>

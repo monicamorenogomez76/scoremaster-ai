@@ -7,7 +7,7 @@ from backend.application.library import Work
 
 class InMemoryLibrary:
     def __init__(self):
-        self.works, self.files, self.bands = {}, {}, {}
+        self.works, self.files, self.bands, self.grades = {}, {}, {}, {}
 
     def store_work(self, user_id, upload):
         existing = next((work_id for work_id, (owner, sha) in self.files.items()
@@ -52,3 +52,19 @@ class InMemoryLibrary:
     def update_band_profile(self, user_id, changes):
         self.bands[user_id] = {**self.bands.get(user_id, {}), **changes}
         return dict(self.bands[user_id])
+
+    def external_grades(self, user_id, work_id):
+        return list(self.grades.get(work_id, [])) if self.get_work(user_id, work_id) else None
+
+    def add_external_grade(self, user_id, work_id, grade):
+        if self.get_work(user_id, work_id) is None:
+            return None
+        self.grades.setdefault(work_id, []).append(grade)
+        return grade
+
+    def delete_external_grade(self, user_id, work_id, grade_id):
+        if self.get_work(user_id, work_id) is None:
+            return False
+        before = len(self.grades.get(work_id, []))
+        self.grades[work_id] = [grade for grade in self.grades.get(work_id, []) if grade.id != grade_id]
+        return len(self.grades[work_id]) < before

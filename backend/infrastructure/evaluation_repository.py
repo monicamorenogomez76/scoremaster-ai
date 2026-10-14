@@ -9,8 +9,8 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from backend.application.evaluations import Campaign, CampaignLocked, Invitation, Passage, Rating
-from backend.infrastructure.analysis_repository import Base
-from backend.infrastructure.library_repository import StoredWork
+from backend.infrastructure.analysis_repository import Base, StoredAnalysis
+from backend.infrastructure.library_repository import StoredExternalGrade, StoredWork
 
 ID = PGUUID(as_uuid=True)
 
@@ -271,6 +271,24 @@ class PostgresEvaluationRepository:
                       "features": features, "created_at": func.now()}))
             return True
 
+    def _works(self, session: Session, owner_id: UUID, passages) -> list[dict]:
+        titles = {}
+        for item in passages:
+            titles.setdefault(item.work_id, item.work_title)
+        works = []
+        for work_id, title in titles.items():
+            latest = session.scalars(select(StoredAnalysis).where(StoredAnalysis.work_id == work_id,
+                                                                   StoredAnalysis.user_id == owner_id)
+                                     .order_by(StoredAnalysis.created_at.desc()).limit(1)).first()
+            grades = session.scalars(select(StoredExternalGrade).where(StoredExternalGrade.work_id == work_id,
+                                                                      StoredExternalGrade.user_id == owner_id)
+                                     .order_by(StoredExternalGrade.created_at, StoredExternalGrade.id)).all()
+            works.append({"work_id": str(work_id), "title": title,
+                          "scorelint_grade": ((latest.result or {}).get("difficulty") or {}).get("grade") if latest else None,
+                          "external_grades": [{"grade": item.grade, "label": item.label, "source": item.source}
+                                              for item in grades]})
+        return works
+
     def export(self, owner_id: UUID, campaign_id: UUID) -> Optional[dict]:
         """Passages with ScoreLint's prediction and every rating; evaluators are «Evaluador n», no email."""
         with Session(self.engine) as session:
@@ -296,6 +314,8 @@ class PostgresEvaluationRepository:
                              "main_instrument": profiles[item.invitation_id].main_instrument,
                              "difficulty": item.difficulty, "critical": item.critical, "priority": item.priority,
                              "comment": item.comment} for item in ratings],
+                # PR 5: each work with ScoreLint's grade of its latest analysis and the publishers' grades.
+                "works": self._works(session, owner_id, campaign.passages),
                 # Method B (step 22): the LLM's independent reviews with their versions.
                 "llm_reviews": [_review(item) for item in session.scalars(
                     select(StoredLlmReview).join(StoredPassage).where(StoredPassage.campaign_id == campaign_id)
