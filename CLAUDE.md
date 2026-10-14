@@ -94,3 +94,21 @@ Cross-cutting rules that span many files:
 - Deployment is the Render Blueprint `render.yaml` (free plan: 512 MB, slow CPU, database expiring 30 days
   after creation); the procedure and the backup scripts (`scripts/backup_db.sh`, `scripts/restore_db.sh`) are
   in `docs/DEPLOYMENT.md`.
+
+# React Development & UI/UX Guidelines
+
+## UX & Usability Principles
+- **Accessibility (a11y):** Strictly adhere to WCAG 2.1 AA standards. Always include semantic HTML, proper `aria-*` attributes when building custom elements, and explicit `htmlFor` on labels.
+- **State-Driven UX:** Always implement explicit loading, empty, and error states for asynchronous components to prevent Layout Shifts (CLS).
+- **Visual Hierarchy:** Maintain a clear layout distinction using a strict 4px/8px spacing system. Ensure text elements have correct line-heights (minimum 1.5 for body text) for scannability.
+- **Interactive States:** Every interactive component (`<button>`, `<a>`, custom clickable elements) must have polished `:hover`, `:focus-visible`, and `:active` styles.
+- **Touch Targets:** Ensure interactive elements on mobile views have a minimum touch target size of 44x44px with adequate spacing.
+
+## React Code Quality & Architecture
+- **Functional Components:** Use functional components with hooks. Prefer semantic HTML tags (`<nav>`, `<main>`, `<aside>`, `<header>`, `<footer>`) over generic `<div>` soup.
+- **Component Isolation:** Keep components modular and reusable. Pass layout/spacing responsibilities via props or controlled class wrappers rather than hardcoding strict outer margins.
+
+## Build and Commands
+- Frontend while developing: `npm --prefix frontend run watch` (rebuilds into `backend/app/static/frontend`)
+  next to `.venv/bin/python -m uvicorn backend.app.main:app --reload`; there is no separate Vite dev server.
+- There is no linter or formatter configured in the frontend.
