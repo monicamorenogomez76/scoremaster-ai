@@ -29,8 +29,14 @@ def compositions():
     return _generator().compose()
 
 
-def test_the_three_works_are_composed(compositions):
-    assert sorted(compositions) == ["andante-y-danza.musicxml", "coral-para-principiantes.musicxml", "marcha-de-la-plaza.musicxml"]
+UPLOAD = "para-subir/pasodoble-de-las-fiestas.mxl"
+
+
+def test_the_demo_works_are_composed(compositions):
+    """Three works seeded in the demo account and a pasodoble kept apart, compressed, to upload live and show
+    the whole process (author's request, 2026-10-14)."""
+    assert sorted(compositions) == ["andante-y-danza.musicxml", "coral-para-principiantes.musicxml", "marcha-de-la-plaza.musicxml",
+                                    UPLOAD]
 
 
 def test_four_voices_without_parallel_fifths_or_octaves(compositions):
@@ -103,7 +109,8 @@ def _sounding_ranges(path):
     return ranges
 
 
-@pytest.mark.parametrize("filename", ["coral-para-principiantes.musicxml", "marcha-de-la-plaza.musicxml", "andante-y-danza.musicxml"])
+@pytest.mark.parametrize("filename", ["coral-para-principiantes.musicxml", "marcha-de-la-plaza.musicxml", "andante-y-danza.musicxml",
+                                      UPLOAD])
 def test_every_part_stays_in_a_playable_range(filename):
     limits = {**RANGES, **(BEGINNERS if filename.startswith("coral") else {})}
     for part, (low, high) in _sounding_ranges(DEMO_DIR / filename).items():
@@ -112,7 +119,7 @@ def test_every_part_stays_in_a_playable_range(filename):
 
 
 @pytest.mark.parametrize("filename, tonic", [("coral-para-principiantes.musicxml", 3), ("marcha-de-la-plaza.musicxml", 3),
-                                             ("andante-y-danza.musicxml", 0)])
+                                             ("andante-y-danza.musicxml", 0), (UPLOAD, 1)])
 def test_each_work_ends_on_its_tonic(filename, tonic):
     score = converter.parse(str(DEMO_DIR / filename)).toSoundingPitch()
     final = set()
@@ -136,8 +143,20 @@ def test_each_work_ends_on_its_tonic(filename, tonic):
     ("coral-para-principiantes.musicxml", (1, 2), False),
     ("marcha-de-la-plaza.musicxml", (3, 4), True),
     ("andante-y-danza.musicxml", (4, 6), True),
+    (UPLOAD, (3, 4), None),   # a continuous oom-pah weighs as density and endurance (2026-10-14)
 ])
 def test_scorelint_shows_three_levels(filename, grades, critical):
     difficulty = compute_difficulty_score(parse_musicxml(DEMO_DIR / filename))
     assert grades[0] <= difficulty["grade"] <= grades[1], (filename, difficulty["grade"])
-    assert bool(difficulty["critical_passages"]) == critical, filename
+    if critical is not None:
+        assert bool(difficulty["critical_passages"]) == critical, filename
+
+
+
+def test_the_pasodoble_to_upload_is_compressed_musicxml_and_left_out_of_the_seed():
+    import zipfile
+    from backend.app.demo_content import DEMO_DIR as seeded
+    path = DEMO_DIR / UPLOAD
+    assert zipfile.is_zipfile(path), "a .mxl is a zip with the MusicXML inside"
+    assert path.name not in [item.name for item in seeded.glob("*.musicxml")]
+    assert parse_musicxml(path).title == "Pasodoble de las fiestas"

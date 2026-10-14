@@ -100,6 +100,11 @@ def test_the_demo_works_are_exactly_what_the_generator_writes(tmp_path):
     without_date = lambda text: re.sub(r"<encoding-date>[^<]*</encoding-date>", "", text)
     for kept in DEMO_DIR.glob("*.musicxml"):
         assert without_date((tmp_path / kept.name).read_text()) == without_date(kept.read_text()), kept.name
+    # The compressed work to upload: its MusicXML inside the zip (the zip's own dates vary).
+    from backend.parsers.musicxml_parser import extract_musicxml
+    upload = "para-subir/pasodoble-de-las-fiestas.mxl"
+    inside = lambda path: without_date(extract_musicxml(path.read_bytes()).decode())
+    assert inside(tmp_path / upload) == inside(DEMO_DIR / upload)
 
 
 def _signed(email="demo@banda.org"):

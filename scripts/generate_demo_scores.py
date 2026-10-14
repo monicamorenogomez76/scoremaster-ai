@@ -16,6 +16,8 @@ written pitch, with each instrument's transposition, as a publisher's MusicXML w
   arpeggios, leaps and a tenor-saxophone line that never rests.
 - «Coral para principiantes» (E flat, 4/4): an eight-bar four-part chorale played by the woodwinds, the
   brass and the whole band, with a breath at the end of every phrase.
+- «Pasodoble de las fiestas» (F minor, A flat, D flat; 2/4), kept apart in para-subir/ as a compressed .mxl:
+  it is not seeded, so it can be uploaded live to show the whole process (author's request, 2026-10-14).
 """
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -469,9 +471,11 @@ class Builder:
         score.insert(0, layout.StaffGroup(list(self.parts.values())))
         score.atSoundingPitch = True
         score.toWrittenPitch(inPlace=True)
-        OUT.mkdir(exist_ok=True)
-        score.write("musicxml", fp=OUT / filename)
-        return OUT / filename
+        target = OUT / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # «.mxl» is the compressed MusicXML most notation programs export.
+        score.write("mxl" if target.suffix == ".mxl" else "musicxml", fp=target)
+        return target
 
 
 def _spelling(tonality, figures):
@@ -753,14 +757,117 @@ def chorale():
     return composition
 
 
+# --- «Pasodoble de las fiestas» (to upload live) ----------------------------------------------------------
+
+PASODOBLE_RANGES = {"bass": (34, 54), "tenor": (48, 72), "alto": (55, 80)}
+TRIO_RANGES = {"bass": (34, 54), "tenor": (46, 66), "alto": (52, 72)}
+PASODOBLE_FILE = "para-subir/pasodoble-de-las-fiestas.mxl"
+
+
+def pasodoble_sections():
+    intro = bars("F4:.75^ F4:.25 Ab4:.5 C5:.5 | Db5:.75^ C5:.25 Bb4:.5 Db5:.5 | C5:.75^ C5:.25 E5:.5 G5:.5 | C5:1^ -:1")
+    # The pasodoble rhythm: dotted quaver and semiquaver on the beat.
+    first = bars(
+        "C5:.75 Db5:.25 C5:.5 Ab4:.5 | F5:1 C5:1 | E5:.75 F5:.25 E5:.5 C5:.5 | G5:1.5 -:.5 | "
+        "Bb4:.75 C5:.25 Bb4:.5 G4:.5 | E5:1 C5:1 | Ab4:.75 G4:.25 F4:.5 Ab4:.5 | F4:1.5 -:.5 | "
+        "F5:.75 Eb5:.25 Db5:.5 F5:.5 | Bb5:1 F5:1 | Ab5:.75 G5:.25 F5:.5 C5:.5 | C5:1 F5:1 | "
+        "E5:.5 G5:.5 Bb5:.5 G5:.5 | C6:1 Bb5:.5 G5:.5 | Ab5:.5 G5:.5 F5:.5 E5:.5 | F5:1 -:1")
+    second = bars(
+        "C5:1 Eb5:1 | Ab5:1.5 G5:.5 | F5:1 Db5:1 | Ab4:2 | Bb4:.5 C5:.5 Db5:.5 Eb5:.5 | G5:1 Eb5:1 | "
+        "Ab5:.75 G5:.25 Eb5:.5 C5:.5 | Ab4:1.5 -:.5 | Eb5:1 C5:1 | F5:1 C5:1 | Db5:.75 C5:.25 Bb4:.5 F5:.5 | "
+        "Eb5:1 G4:1 | Ab4:.5 C5:.5 Eb5:.5 Ab5:.5 | G5:1 Bb4:1 | Ab5:1 Eb5:1 | Ab4:1.5 -:.5")
+    trio = bars(
+        "F4:1 Ab4:1 | Db5:2 | C5:1 Eb5:1 | Gb4:2 | Ab4:1 C5:1 | Eb5:1.5 Db5:.5 | F5:1 Db5:1 | Ab4:2 | "
+        "F4:1 Ab4:1 | Db5:1 Cb5:1 | Bb4:2 | Gb4:1 Bb4:1 | Ab4:1 F4:1 | Eb4:1 C5:.5 Bb4:.5 | Ab4:1 F4:1 | Db5:2")
+    one = lambda figures: [[(figure, 2)] for figure in figures]
+    trio_chords = ["I", "I", "V7", "V7", "V7", "V7", "I", "I", "I", "V7/IV", "IV", "IV", "I64", "V7", "I", "I"]
+    return [
+        Section("intro", "f", 2, one(["i", "iv", "V7", "V7"]), intro, PASODOBLE_RANGES),
+        Section("first", "f", 2, one(["i", "i", "V7", "V7", "V7", "V7", "i", "i", "iv", "iv", "i", "i", "V7", "V7", "i", "i"]),
+                first, PASODOBLE_RANGES),
+        Section("second", "A-", 2, one(["I", "I", "IV", "IV", "V7", "V7", "I", "I", "I", "vi", "ii", "V7", "I64", "V7", "I", "I"]),
+                second, PASODOBLE_RANGES),
+        Section("trio", "D-", 2, one(trio_chords), trio, TRIO_RANGES),
+        Section("final", "D-", 2, one(trio_chords[8:]), trio[8:], TRIO_RANGES),
+    ]
+
+
+def pasodoble():
+    composition, by_bar = compose_sections(pasodoble_sections())
+    b = Builder("Pasodoble de las fiestas")
+
+    def intro(index, events, slots, section):
+        plan = {"Trumpet in Bb 1": line("Trumpet in Bb 1", events), "Trumpet in Bb 2": line("Trumpet in Bb 2", events),
+                "Horn in F": line("Horn in F", events, -12), "Trombone": line("Trombone", events, -12),
+                "Euphonium": line("Euphonium", events, -12), "Tuba": sustain("Tuba", slots, BASS),
+                "Clarinet in Bb 1": sustain("Clarinet in Bb 1", slots, ALTO), "Clarinet in Bb 2": sustain("Clarinet in Bb 2", slots, TENOR, 12),
+                "Alto Saxophone": sustain("Alto Saxophone", slots, ALTO), "Tenor Saxophone": sustain("Tenor Saxophone", slots, TENOR),
+                "Flute": sustain("Flute", slots, ALTO, 12), "Oboe": sustain("Oboe", slots, ALTO), **percussion(2, "fanfare")}
+        if index == 3:   # the band stops on the dominant before the first part
+            for name in plan:
+                if name not in DRUMS:
+                    plan[name] = [(plan[name][0][0], 1), (None, 1)]
+        return plan
+
+    def first(index, events, slots, section):
+        # The voices take turns: low brass and trumpets join in the second half, as a band part breathes.
+        plan = {"Flute": line("Flute", events), "Oboe": line("Oboe", events), "Clarinet in Bb 1": line("Clarinet in Bb 1", events),
+                "Alto Saxophone": line("Alto Saxophone", events, -12),
+                "Clarinet in Bb 2": afterbeats("Clarinet in Bb 2", slots, ALTO, 2), "Horn in F": afterbeats("Horn in F", slots, TENOR, 2),
+                "Tenor Saxophone": afterbeats("Tenor Saxophone", slots, TENOR, 2), "Tuba": oom_pah("Tuba", slots, 2),
+                **percussion(2, "march")}
+        if index >= 8:
+            plan.update({"Trumpet in Bb 1": sustain("Trumpet in Bb 1", slots, ALTO), "Trumpet in Bb 2": afterbeats("Trumpet in Bb 2", slots, ALTO, 2),
+                         "Trombone": oom("Trombone", slots, 2, 12), "Euphonium": oom_pah("Euphonium", slots, 2, 12)})
+        return plan
+
+    def second(index, events, slots, section):
+        # The tenor saxophone and the oboe rest before the trio; the euphonium joins in the second half.
+        plan = {"Trumpet in Bb 1": line("Trumpet in Bb 1", events), "Clarinet in Bb 1": line("Clarinet in Bb 1", events),
+                "Alto Saxophone": line("Alto Saxophone", events, -12), "Flute": sustain("Flute", slots, ALTO, 12),
+                "Clarinet in Bb 2": afterbeats("Clarinet in Bb 2", slots, ALTO, 2), "Horn in F": afterbeats("Horn in F", slots, TENOR, 2),
+                "Trumpet in Bb 2": sustain("Trumpet in Bb 2", slots, ALTO), "Trombone": oom("Trombone", slots, 2, 12),
+                "Tuba": oom_pah("Tuba", slots, 2), **percussion(2, "march")}
+        if index >= 8:
+            plan["Euphonium"] = oom_pah("Euphonium", slots, 2, 12)
+        return plan
+
+    def trio(index, events, slots, section):
+        # The «canción» in the euphonium and the saxophones, a countermelody above in flute and clarinet.
+        return {"Euphonium": line("Euphonium", events, -12), "Tenor Saxophone": line("Tenor Saxophone", events, -12),
+                "Alto Saxophone": line("Alto Saxophone", events), "Flute": sustain("Flute", slots, ALTO, 12),
+                "Clarinet in Bb 1": sustain("Clarinet in Bb 1", slots, ALTO, 12), "Clarinet in Bb 2": sustain("Clarinet in Bb 2", slots, ALTO),
+                "Horn in F": sustain("Horn in F", slots, TENOR), "Trombone": oom("Trombone", slots, 2, 12),
+                "Tuba": oom_pah("Tuba", slots, 2), **percussion(2, "trio")}
+
+    def final(index, events, slots, section):
+        last = index == len(section.melody) - 1
+        plan = {"Trumpet in Bb 1": line("Trumpet in Bb 1", events), "Trumpet in Bb 2": sustain("Trumpet in Bb 2", slots, ALTO),
+                "Flute": line("Flute", events, 12), "Oboe": line("Oboe", events), "Clarinet in Bb 1": line("Clarinet in Bb 1", events),
+                "Clarinet in Bb 2": sustain("Clarinet in Bb 2", slots, ALTO), "Alto Saxophone": line("Alto Saxophone", events),
+                "Tenor Saxophone": line("Tenor Saxophone", events, -12), "Euphonium": line("Euphonium", events, -12),
+                "Horn in F": sustain("Horn in F", slots, TENOR), "Trombone": sustain("Trombone", slots, TENOR, marks=(articulations.Tenuto,)),
+                "Tuba": sustain("Tuba", slots, BASS) if last else oom_pah("Tuba", slots, 2), **percussion(2, "march-full")}
+        if last:
+            plan["Snare Drum"], plan["Bass Drum"] = [(60, 1, articulations.Accent), (None, 1)], [(60, 1), (None, 1)]
+        return plan
+
+    score_sections(b, composition, by_bar, {"intro": intro, "first": first, "second": second, "trio": trio, "final": final},
+                   {1: (-4, True), 37: (-5, False)})
+    b.write(PASODOBLE_FILE, AUTHOR, [(1, 100, "Tempo de pasodoble")],
+            [(1, "f"), (5, "mf"), (21, "f"), (37, "p"), (53, "ff")])
+    return composition
+
+
 def compose():
     """The three works by file name, without writing them: what the tests check."""
     return {"marcha-de-la-plaza.musicxml": compose_sections(march_sections())[0],
             "andante-y-danza.musicxml": compose_sections(andante_and_dance_sections())[0],
-            "coral-para-principiantes.musicxml": compose_sections(chorale_sections())[0]}
+            "coral-para-principiantes.musicxml": compose_sections(chorale_sections())[0],
+            PASODOBLE_FILE: compose_sections(pasodoble_sections())[0]}
 
 
 if __name__ == "__main__":
-    for work in (march, andante_and_dance, chorale):
+    for work in (march, andante_and_dance, chorale, pasodoble):
         work()
         print(work.__name__)
