@@ -15,6 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend ./backend
 COPY --from=frontend /app/backend/app/static/frontend ./backend/app/static/frontend
 COPY migrations ./migrations
+# The works the demo account starts with (backend/app/demo_content.py).
+COPY demo ./demo
 COPY alembic.ini ./alembic.ini
 
 # The server runs without root privileges.

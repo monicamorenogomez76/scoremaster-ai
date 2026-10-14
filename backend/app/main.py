@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import io
 import json
 import logging
@@ -16,17 +15,15 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.analyzers.band_fit import PERCUSSION, compute_band_fit
-from backend.analyzers.difficulty import compute_difficulty_score
-from backend.analyzers.rehearsal_plan import build_rehearsal_plan
-from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
+from backend.analyzers.band_fit import PERCUSSION
 from backend.app.auth_routes import router as auth_router
 from backend.app.library_routes import router as library_router, valid_band_profile
 from backend.app.band_routes import router as band_router
 from backend.app.concert_routes import router as concert_router
 from backend.app.evaluation_routes import router as evaluation_router
 from backend.app.rehearsal_routes import router as rehearsal_router
-from backend.app.stored_scores import confirm_instruments, parsed_work, prepare_missing_works
+from backend.app.stored_scores import prepare_missing_works
+from backend.app.work_analysis import analyze_and_store
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
     SAFE_METHODS, STORAGE_UNAVAILABLE, authenticated_user, close_analysis_engine, get_analysis_repository,
@@ -34,10 +31,8 @@ from backend.app.dependencies import (
 )
 from backend.application.accounts import User
 from backend.application.analysis_repository import AnalysisRepository
-from backend.application.library import LibraryRepository, WorkUpload
-from backend.application.save_analysis import save_analysis
+from backend.application.library import LibraryRepository
 from backend.domain.instrument_catalog import catalog_entries, identity_by_id
-from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.parsers.playback import (NotMusicXML, StillPreparing, build_playback, prepare_playback, preparation_enabled,
@@ -267,40 +262,12 @@ def analyze_score(
     if not musicxml_suffix:
         raise HTTPException(status_code=400, detail="Uploaded file is not valid MusicXML.")
 
-    # Parsed once per file: updating the band or the rehearsal minutes reuses the kept model.
-    score = confirm_instruments(parsed_work(content, score_store), overrides)
-    # Template: what the work needs for instruments never configured, then the saved band,
-    # then the musicians sent with this request.
-    needed = {item["key"]: item["required"] for item in compute_band_fit(score, {})["requirements"]}
     try:
-        profile = {**needed, **library.band_profile(user.id), **profile}
+        saved = analyze_and_store(content, file.filename, user.id, profile, total_minutes, overrides, repository, library,
+                                  score_store)
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
-    difficulty = compute_difficulty_score(score)
-    band_fit = compute_band_fit(score, profile)
-    rehearsal_plan = build_rehearsal_plan(score, total_minutes, difficulty)
-
-    result = {
-        "title": score.title,
-        "composer": score.composer,
-        "parts": [part.name for part in score.parts],
-        "instruments": [resolve_part(part).as_dict() for part in score.parts],
-        "difficulty": difficulty,
-        "tempo": compute_tempo_metrics(score),
-        "duration": estimate_duration(score),
-        "band_fit": band_fit,
-        "rehearsal_plan": rehearsal_plan,
-    }
-    title = (score.title or "").strip() or Path(file.filename).stem
-    try:
-        work = library.store_work(user.id, WorkUpload(title, score.composer, Path(file.filename).name, content,
-                                                      hashlib.sha256(content).hexdigest()))
-        saved = save_analysis(result, content, profile, total_minutes, repository,
-                              {part.name: overrides[part.name] for part in score.parts if part.name in overrides},
-                              user_id=user.id, work_id=work.id)
-        # Its passages will sound sooner: the work is read for playback after answering.
-        if preparation_enabled():
-            background.add_task(prepare_playback, content, playback_store)
-        return {**saved, "work_id": str(work.id)}
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+    # Its passages will sound sooner: the work is read for playback after answering.
+    if preparation_enabled():
+        background.add_task(prepare_playback, content, playback_store)
+    return saved

@@ -43,6 +43,10 @@ docker compose up --build   # migra la base, crea el usuario demo y sirve en htt
 |---|---|
 | `demo@scoremaster.local` | `scoremaster-demo` |
 
+La cuenta demo arranca con contenido (`DEMO_SEED_CONTENT=1`): tres obras de banda originales y libres
+(`demo/`, CC0) ya analizadas, una banda, un concierto con su serie de ensayos y una campaña de valoración
+en borrador, para recorrer la aplicación sin subir nada.
+
 También se puede crear una cuenta desde la pantalla de acceso. «Entrar con Google»
 solo aparece si `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` están configurados; sin
 ellos la aplicación funciona igual con email y contraseña. Las medidas de seguridad
