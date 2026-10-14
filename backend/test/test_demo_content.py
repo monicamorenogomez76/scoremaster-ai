@@ -49,6 +49,25 @@ def test_the_demo_works_are_the_generated_ones_with_their_licence():
     assert "CC0" in (DEMO_DIR / "LICENSES.md").read_text()
 
 
+@pytest.mark.parametrize("filename, concert_fifths", [
+    ("marcha-de-la-plaza.musicxml", -2), ("andante-y-danza.musicxml", -3), ("coral-para-principiantes.musicxml", -1)])
+def test_each_part_has_the_written_key_of_its_transposition(filename, concert_fifths):
+    """2026-10-14: one KeySignature object shared by every part was transposed once per transposing
+    instrument (fifths 11-13); the notation engine refused it («bad key signature») in Render."""
+    import xml.etree.ElementTree as ET
+    root = ET.parse(DEMO_DIR / filename).getroot()
+    names = {part.get("id"): part.findtext("part-name") for part in root.iter("score-part")}
+    written = {}
+    for part in root.iter("part"):
+        fifths = int(part.find("measure/attributes/key/fifths").text)
+        chromatic = part.findtext("measure/attributes/transpose/chromatic")
+        # Written key = concert key raised by the interval the instrument sounds below (7 fifths per semitone, mod 12).
+        expected = concert_fifths if chromatic is None else (concert_fifths - 7 * int(chromatic) + 6) % 12 - 6
+        written[names[part.get("id")]] = fifths
+        assert -7 <= fifths <= 7 and fifths == expected, names[part.get("id")]
+    assert written["Flute"] == concert_fifths and written["Clarinet in Bb 1"] == concert_fifths + 2
+
+
 def test_without_the_account_nothing_is_seeded(clients):
     assert seed_demo_content(TestClient(app), "nadie@banda.org", "una contraseña larga", TODAY) == "skipped"
 
