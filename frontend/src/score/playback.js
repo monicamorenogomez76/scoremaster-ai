@@ -1,6 +1,6 @@
 // Sampled solo playback. The MusicXML remains on our server/browser only.
 import { apiFetch } from '../api.js';
-import { recordedPreset } from './sample-banks.js';
+import { recordedPreset, voiceGain } from './sample-banks.js';
 
 let context;
 let activeTransport;
@@ -206,15 +206,16 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   tracks.forEach((track) => {
     if (track.events.length) {
       const sound = timbre(track);
-      if (!instruments.has(sound)) instruments.set(sound, { notes: new Set(), events: [] });
+      if (!instruments.has(sound)) instruments.set(sound, { notes: new Set(), events: [], parts: 0 });
       const group = instruments.get(sound);
+      group.parts += 1;
       track.events.forEach((event) => { group.notes.add(event.note); group.events.push(event); });
     }
     (track.percussion || []).forEach((event) => timeline.push({ ...event, player: drums }));
   });
-  const players = [drums];
+  const players = [drums], voices = [];
   let transport;
-  function disposePlayers() { players.forEach((player) => player.dispose()); master.disconnect(); limiter.disconnect(); }
+  function disposePlayers() { players.forEach((player) => player.dispose()); voices.forEach((voice) => voice.disconnect()); master.disconnect(); limiter.disconnect(); }
   // Publish disposal before awaiting samples, so Stop can cancel loading too.
   activeTransport = { dispose: disposePlayers };
   async function ready(player) {
@@ -226,15 +227,23 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
     return player;
   }
   // Real recordings where they exist; the General MIDI soundfont otherwise or if they fail to load.
+  // Each sound plays through its own gain, calibrated to the source that finally loaded.
   async function loadPlayer(sound, group) {
+    const voice = ctx.createGain();
+    voice.connect(master);
+    voices.push(voice);
     const preset = Sampler && recordedPreset(sound, [...group.notes]);
     if (preset) {
-      try { return await ready(Sampler(ctx, { preset, destination: master })); }
-      catch { /* recordings unavailable: fall back to the soundfont */ }
+      try {
+        const player = await ready(Sampler(ctx, { preset, destination: voice }));
+        voice.gain.value = voiceGain(sound, true, group.parts);
+        return player;
+      } catch { /* recordings unavailable: fall back to the soundfont */ }
     }
+    voice.gain.value = voiceGain(sound, false, group.parts);
     return ready(Soundfont(ctx, { instrument: sound, kit: SOUNDFONT_KIT,
       // External loop points change pitch in some MP3 samples (e.g. clarinet D4).
-      destination: master, loadLoopData: false, notesToLoad: { notes: [...group.notes] } }));
+      destination: voice, loadLoopData: false, notesToLoad: { notes: [...group.notes] } }));
   }
   // A whole band means many instruments to download the first time: say how many are ready.
   let readyCount = 0;

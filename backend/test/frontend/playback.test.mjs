@@ -7,7 +7,7 @@ function harness() {
   const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [], samplersUsed = [], failRecorded = { value: false }, withRecordings = { value: false }, formFields = [];
   const gains = [], compressors = [];
   const audio = { currentTime: 0, sampleRate: 100, resume: async () => {},
-    createGain: () => { const node = { gain: {}, connect() {}, disconnect() {} }; gains.push(node); return node; },
+    createGain: () => { const node = { gain: {}, connect(target) { this.connectedTo = target; }, disconnect() {} }; gains.push(node); return node; },
     createDynamicsCompressor: () => { const node = { threshold: {}, knee: {}, ratio: {}, attack: {}, release: {}, connect() {}, disconnect() {} };
       compressors.push(node); return node; },
     createBuffer: () => ({ getChannelData: () => new Float32Array(200) }) };
@@ -295,4 +295,39 @@ test('the whole score is followed in the same way', async () => {
   await firePolls(timers, 1);
   assert.ok(await ready);
   assert.deepEqual(apiCalls, ['/playback', '/playback/preparations/k4', '/playback']);
+});
+
+test('each sound plays through its own calibrated gain into the master', async () => {
+  const { voiceGain } = await import('../../../frontend/src/score/sample-banks.js');
+  const h = harness();
+  h.withRecordings.value = true;
+  h.setData({ duration: 4, measures: [{ number: 1, time: 0 }], tracks: [
+    { instrument: 'B♭ Clarinet 1', sound: 'clarinet', events: [{ note: 62, time: 0, duration: 1 }] },
+    { instrument: 'B♭ Clarinet 2', sound: 'clarinet', events: [{ note: 58, time: 0, duration: 1 }] },
+    { instrument: 'Piccolo', sound: 'piccolo', events: [{ note: 86, time: 0, duration: 1 }] }
+  ] });
+  const t = await h.api.preparePlayback({}, null);
+  const master = h.gains[0];
+  const clarinets = h.samplersUsed[0].destination, piccolo = h.optionsUsed[0].destination;
+  assert.notEqual(clarinets, master);
+  assert.notEqual(piccolo, master);
+  assert.equal(clarinets.connectedTo, master);
+  assert.equal(piccolo.connectedTo, master);
+  assert.ok(Math.abs(clarinets.gain.value - voiceGain('clarinet', true, 2)) < 1e-12, 'two clarinet parts share one recording');
+  assert.ok(Math.abs(piccolo.gain.value - voiceGain('piccolo', false, 1)) < 1e-12);
+  t.stop();
+});
+
+test('a recording that falls back to the soundfont takes the soundfont gain', async () => {
+  const { voiceGain } = await import('../../../frontend/src/score/sample-banks.js');
+  const h = harness();
+  h.withRecordings.value = true;
+  h.failRecorded.value = true;
+  h.setData({ duration: 4, measures: [{ number: 1, time: 0 }], tracks: [
+    { instrument: 'Flute', sound: 'flute', events: [{ note: 72, time: 0, duration: 1 }] }
+  ] });
+  const t = await h.api.preparePlayback({}, null);
+  const voice = h.optionsUsed[0].destination;
+  assert.ok(Math.abs(voice.gain.value - voiceGain('flute', false, 1)) < 1e-12);
+  t.stop();
 });

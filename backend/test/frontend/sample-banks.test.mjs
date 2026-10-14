@@ -45,3 +45,32 @@ test('band instruments with real recordings, and General MIDI for the rest', () 
 test('a part without notes downloads nothing', () => {
   assert.deepEqual(regions(recordedPreset('flute', [])), []);
 });
+
+// Balance (2026-10-14): in a block of several voices the piccolo and the oboe were not heard. Measured
+// on the player's real output, the General MIDI sounds sat 4-6 dB under the recordings, so each sound
+// gets the gain that brings it to the common level.
+const db = gain => 20 * Math.log10(gain);
+
+test('every sound plays near the same level: the piccolo and the oboe sat 4-6 dB under the rest', async () => {
+  const { LEVEL_TARGET_DB, voiceGain } = await import('../../../frontend/src/score/sample-banks.js');
+  const measured = [['flute', true, -22.7], ['clarinet', true, -20.6], ['trumpet', true, -26.0], ['tuba', true, -23.9],
+    ['piccolo', false, -27.6], ['oboe', false, -30.1], ['baritone_sax', false, -27.6], ['timpani', false, -27.9], ['clarinet', false, -25.3]];
+  for (const [sound, recorded, level] of measured) {
+    assert.ok(Math.abs(level + db(voiceGain(sound, recorded)) - LEVEL_TARGET_DB) < 0.05, sound);
+  }
+  assert.ok(db(voiceGain('oboe', false)) > 6 && db(voiceGain('piccolo', false)) > 3.5, 'the oboe and the piccolo rise');
+  assert.ok(db(voiceGain('clarinet', true)) < 0, 'a loud recording is lowered');
+});
+
+test('a sound never rises more than 12 dB, and an unmeasured soundfont rises like the others', async () => {
+  const { voiceGain } = await import('../../../frontend/src/score/sample-banks.js');
+  assert.ok(Math.abs(db(voiceGain('glockenspiel', false)) - 12) < 1e-9, 'measured at -39.5 dB: limited');
+  assert.ok(Math.abs(db(voiceGain('violin', false)) - 4) < 1e-9, 'not measured: the usual 4 dB of the soundfont');
+  assert.equal(voiceGain('violin', true), 1, 'an unmeasured recording keeps its level');
+});
+
+test('parts that share a sound weigh less each, so a section does not cover a single voice', async () => {
+  const { voiceGain } = await import('../../../frontend/src/score/sample-banks.js');
+  assert.ok(Math.abs(voiceGain('clarinet', true, 3) - voiceGain('clarinet', true) / Math.sqrt(3)) < 1e-12);
+  assert.equal(voiceGain('flute', true, 0), voiceGain('flute', true));
+});
