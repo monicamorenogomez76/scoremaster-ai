@@ -15,7 +15,8 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
    - `DEMO_SEED_CONTENT=1` (ya en `render.yaml`): si la cuenta demo no tiene obras, al arrancar se crean las
      tres obras de `demo/`, una banda, un concierto con sus ensayos y una campaña en borrador. Una cuenta demo
      que ya tiene obras no se toca.
-   - `DEMO_USER_PASSWORD`: contraseña del usuario demo (mínimo 10 caracteres). **No** reutilizar
+   - `DEMO_USER_PASSWORD`: contraseña del usuario demo. En cada arranque la cuenta demo toma esta contraseña
+     (si cambió, se actualiza y se cierran sus sesiones abiertas): para cambiarla basta con editar la variable. Mínimo 10 caracteres. **No** reutilizar
      la de desarrollo; compartirla solo con el tribunal o los evaluadores.
    - `YOUTUBE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`:
      opcionales; vacíos desactivan esas funciones.
