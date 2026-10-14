@@ -127,6 +127,8 @@ jobs:
           python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8006 > /tmp/uvicorn.log 2>&1 &
           for attempt in $(seq 1 30); do curl -sf "$SCOREMASTER_URL/health" && exit 0; sleep 1; done
           cat /tmp/uvicorn.log; exit 1
+      - name: Pentagramas de un pasaje
+        run: node backend/test/frontend/musicxml-passage.e2e.mjs
       - name: Carga y análisis
         run: node backend/test/frontend/react-upload.e2e.mjs
       - name: Visores y reproducción
