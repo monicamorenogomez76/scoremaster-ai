@@ -68,3 +68,33 @@ test('the interface uses the Inter font that main.jsx loads, form controls inclu
   // Selects and textareas kept the browser's own font (Arial) unless a rule of their view set it.
   assert.match(declarationsOf('button, input, select, textarea'), /font:\s*inherit/);
 });
+
+// Colours that mean something by themselves keep their value in both themes: the sections of the
+// rehearsal calendar, the concert/rehearsal events, the sign-in illustration and the video frame.
+const FIXED_COLOURS = /calendar-slot--|\.event-|\.login-brand|\.video-player/;
+
+test('the interface colours come from the tokens, so the dark theme reaches every component', () => {
+  const literal = /#[0-9a-f]{3,8}\b|rgba?\(|\b(white|black)\b/i;
+  const offenders = [];
+  const body = css.replace(/:root(\[[^\]]*\])?\s*\{[^}]*\}/g, '');
+  for (const [, selector, declarations] of body.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (FIXED_COLOURS.test(selector)) continue;
+    for (const declaration of declarations.split(';')) {
+      const [property, value = ''] = declaration.split(/:(.*)/s).map(part => part.trim());
+      if (/^(color|background(-color)?|border(-[a-z]+)*|outline(-color)?)$/.test(property) && literal.test(value)) {
+        offenders.push(selector.trim() + ' { ' + property + ': ' + value + ' }');
+      }
+    }
+  }
+  assert.deepEqual(offenders, []);
+});
+
+test('the dark theme redefines every colour token of the light one', () => {
+  const tokens = block => new Set([...block.matchAll(/--([\w-]+):/g)].map(match => match[1]));
+  const light = tokens(css.match(/:root\s*\{([^}]*)\}/)[1]);
+  const darkBlock = css.match(/:root\[data-theme="dark"\]\s*\{([^}]*)\}/);
+  assert.ok(darkBlock, 'a :root[data-theme="dark"] block');
+  const dark = tokens(darkBlock[1]);
+  assert.deepEqual([...light].filter(token => !dark.has(token) && !token.startsWith('radius') && !token.startsWith('ease')), []);
+  assert.match(darkBlock[1], /color-scheme:\s*dark/);
+});

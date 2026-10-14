@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { applyTextSize, loadTextSize, saveTextSize, textSizes, updateProfile } from './settings.js';
+import { applyTextSize, applyTheme, loadTextSize, loadTheme, saveTextSize, saveTheme, textSizes, themes, updateProfile } from './settings.js';
 import { View } from './View.jsx';
 
-// Configuración (author's mock-up): the account's visible name and the text size of this device.
+// Configuración (author's mock-up): the account's visible name and the text size and theme of this device.
 export function SettingsView({ active, user, onUserChanged }) {
   const [name, setName] = useState(user?.display_name || '');
   const [size, setSize] = useState(loadTextSize);
+  const [theme, setTheme] = useState(loadTheme);
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
   useEffect(() => { setName(user?.display_name || ''); }, [user?.email, user?.display_name]);
@@ -17,6 +18,7 @@ export function SettingsView({ active, user, onUserChanged }) {
     catch (failure) { setStatus(failure.message); } finally { setSaving(false); }
   };
   const chooseSize = value => { setSize(value); saveTextSize(value); applyTextSize(value); };
+  const chooseTheme = value => { setTheme(value); saveTheme(value); applyTheme(value); };
 
   return <View name="settings" active={active} eyebrow="Configuración" title="Configuración"
     description="Tu cuenta y las preferencias de la aplicación.">
@@ -36,7 +38,13 @@ export function SettingsView({ active, user, onUserChanged }) {
             <input type="radio" name="text-size" value={value} checked={size === value} onChange={() => chooseSize(value)} />{label}
           </label>)}
         </fieldset>
-        <p className="result-supporting">Se guarda en este dispositivo.</p>
+        <fieldset className="text-size-options">
+          <legend>Tema</legend>
+          {themes.map(([value, label]) => <label key={value} className="weekday-option">
+            <input type="radio" name="theme" value={value} checked={theme === value} onChange={() => chooseTheme(value)} />{label}
+          </label>)}
+        </fieldset>
+        <p className="result-supporting">Se guardan en este dispositivo. Automático sigue el modo claro u oscuro del sistema.</p>
       </section>
     </div>
   </View>;
