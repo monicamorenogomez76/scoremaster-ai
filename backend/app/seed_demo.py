@@ -41,6 +41,9 @@ def main():
         print("Usuario demo: " + {"created": "creado", "exists": "ya existe", "updated": "contraseña actualizada",
                                 "skipped": "no configurado"}[result])
         if result != "skipped" and os.environ.get("DEMO_SEED_CONTENT") == "1":
+            from backend.app.demo_content import reset_outdated_demo
+            if reset_outdated_demo(engine, os.environ["DEMO_USER_EMAIL"]):
+                print("Contenido de la demo: las obras anteriores se sustituyen por las actuales")
             print("Contenido de la demo: " + seed_content(os.environ["DEMO_USER_EMAIL"], os.environ["DEMO_USER_PASSWORD"]))
     finally:
         engine.dispose()
