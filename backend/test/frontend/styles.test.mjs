@@ -56,3 +56,15 @@ test('every class of the stylesheet is used by a component', () => {
   const unused = [...classes].filter(name => !tokens.has(name) && !prefixes.some(prefix => name.startsWith(prefix)));
   assert.deepEqual(unused, []);
 });
+
+function declarationsOf(selector) {
+  const rule = css.match(new RegExp('(?:^|\\})\\s*' + selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}'));
+  return rule ? rule[1] : '';
+}
+
+test('the interface uses the Inter font that main.jsx loads, form controls included', () => {
+  // @fontsource-variable/inter registers the family as «Inter Variable»: «Inter» fell back to the system font.
+  assert.match(declarationsOf('body'), /font-family:\s*"Inter Variable"/);
+  // Selects and textareas kept the browser's own font (Arial) unless a rule of their view set it.
+  assert.match(declarationsOf('button, input, select, textarea'), /font:\s*inherit/);
+});
