@@ -219,9 +219,10 @@ Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](
 
 ## Limitaciones conocidas
 
-- **ScoreLint no está calibrado todavía con músicos**: los tramos del grado son provisionales. Tiende a
-  puntuar alto la percusión y el acompañamiento continuo (por ejemplo, *Persis* sale con grado 6 frente al
-  Grade 4 de su editorial); la evaluación con músicos debe confirmarlo y ajustar la escala.
+- **ScoreLint no está calibrado todavía con músicos**: los tramos del grado son provisionales. La versión
+  difficulty-v2 mide la densidad a la velocidad de cada compás y deja la percusión fuera del grado de la obra
+  (*Persis* pasó de 6 al Grade 4 de su editorial), pero solo hay una obra cuyo archivo coincide con la
+  edición que publica el grado; la evaluación con músicos debe medir cuánto se desvía.
 - **Sin articulación todavía**: el analizador de articulación no está implementado.
 - **Audio aproximado**: muestras reales para los instrumentos principales y General MIDI para el resto,
   sin expresión ni repeticiones. Si en Safari avanza el tiempo pero no se oye nada, cerrar Safari con ⌘Q y
