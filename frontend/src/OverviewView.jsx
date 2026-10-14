@@ -1,5 +1,6 @@
 import React from 'react';
-import { byDifficulty, displayFamilyName, displayInstrumentName, findingLabel, gradeOf, gradeScaleOf, gradeText } from './labels.js';
+import { byDifficulty, displayFamilyName, displayInstrumentName, familyCountsForWork, findingLabel, gradeOf, gradeScaleOf, gradeText,
+  workGradeDetail } from './labels.js';
 
 function MetricCard({ label, value, detail }) {
   return <div className="metric-card"><div className="label">{label}</div><div className="value">{value}</div><div className="subvalue">{detail}</div></div>;
@@ -20,7 +21,7 @@ export function OverviewPanel({ data, onStart, onOpenDifficulty }) {
     <div id="overview-result" hidden={!data}>{data && <>
       <div id="overview-metrics">
         <div className="dashboard-grid">
-          <MetricCard label="Grado de la obra" value={gradeText(difficulty, scale)} detail="Estimación provisional · percentil 80 por familia" />
+          <MetricCard label="Grado de la obra" value={gradeText(difficulty, scale)} detail={workGradeDetail(difficulty)} />
           <MetricCard label="Pasajes críticos" value={String(passages.length)} detail="Agrupados por instrumento" />
           <MetricCard label="Familias" value={String(families.length)} detail="Secciones de la partitura" />
         </div>
@@ -28,7 +29,8 @@ export function OverviewPanel({ data, onStart, onOpenDifficulty }) {
           <h2>Dónde concentrar el ensayo</h2>
           <p>Grado de dificultad por familia · escala de 1 a {scale.grades}</p>
           {families.map(([family, details]) => <div key={family} className="chart-row">
-            <span>{displayFamilyName(family, details)}</span>
+            <span>{displayFamilyName(family, details)}
+              {!familyCountsForWork(details) && <span className="chart-note">No cuenta para el grado de la obra</span>}</span>
             <div className="chart-track" aria-hidden="true"><div className="chart-fill" style={{ width: gradeOf(details, scale) / scale.grades * 100 + '%' }} /></div>
             <span className="chart-value">Grado {gradeOf(details, scale)}</span>
           </div>)}

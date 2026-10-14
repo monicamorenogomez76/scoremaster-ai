@@ -124,13 +124,19 @@ def stored_score(library: LibraryRepository, user_id: UUID, work_id: UUID,
     return work.title, parse_source(found[0], overrides, store)
 
 
-def prepare_missing_works(score_store, playback_store) -> None:
+def prepare_missing_works(score_store, playback_store, after_models=None) -> None:
     """Works uploaded before (or analysed while the server was preparing others) are read once, one
-    at a time, when the server starts: then proposals and passages need no reading at all."""
+    at a time, when the server starts: then proposals and passages need no reading at all.
+    after_models runs once the models are read and before the audio (the analyses made again)."""
     for source in score_store.missing_sources(SCORE_VERSION):
         try:
             parsed_work(source, score_store)
         except Exception:
             logger.warning('No se pudo preparar el modelo de una obra.', exc_info=True)
+    if after_models is not None:
+        try:
+            after_models()
+        except Exception:
+            logger.warning('No se pudieron volver a analizar las obras guardadas.', exc_info=True)
     for source in playback_store.missing_sources(TIMELINE_VERSION):
         prepare_playback(source, playback_store)

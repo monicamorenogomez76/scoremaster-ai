@@ -33,8 +33,11 @@ def test_an_instrument_reports_its_index_dimensions_and_grade_on_the_new_scales(
     legacy = compute_instrument_difficulty(_part("C4", "G5", "C4", "G5"), scale="legacy")
     current = compute_instrument_difficulty(_part("C4", "G5", "C4", "G5"))
 
-    assert current["difficulty_score"] == technical_index(legacy["difficulty_score"])
-    assert current["dimensions"] == {key: technical_index(value) for key, value in legacy["dimensions"].items()}
+    # difficulty-v2 (2026-10-14): the current scale no longer doubles the legacy score; it measures density
+    # in notes per second and drops the separate tempo, so only the shared dimensions keep the transform.
+    for key in ("range", "register", "intervals"):
+        assert current["dimensions"][key] == technical_index(legacy["dimensions"][key])
+    assert all(0 <= value <= 10 for value in current["dimensions"].values()) and "tempo" not in current["dimensions"]
     assert current["grade"] == grade_from_index(current["difficulty_score"])
 
 

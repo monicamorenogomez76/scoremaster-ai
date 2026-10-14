@@ -18,6 +18,14 @@ from backend.rules.large_intervals import find_large_intervals
 from backend.rules.endurance import find_long_passages_without_rest
 from backend.rules.weights import RULE_WEIGHTS
 
+# difficulty-v2 (author's review, 2026-10-14): density in notes per second at the local tempo, typical
+# instead of peak, longer endurance, cornets as trumpets, and the work graded by its winds and strings.
+DIFFICULTY_VERSION = "difficulty-v2"
+# Families whose grade is the work's grade. Percussion, the rhythm section, keyboards and parts without an
+# identified instrument keep their own grade, shown apart: their estimate is provisional and they used to
+# raise whole works (a snare drum in quavers made Persis a 6 against its publisher's Grade 4).
+WORK_FAMILIES = ("woodwinds", "brass", "strings")
+
 
 
 def _difficulty_level(score_value: int) -> str:
@@ -87,7 +95,7 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases", s
     )
     instrument_analyses: dict[str, dict] = {}
     for part in score.parts:
-        analysis = compute_instrument_difficulty(part, tempo_bpm, scale)
+        analysis = compute_instrument_difficulty(part, tempo_bpm, scale, score.tempo_marks)
         current = instrument_analyses.get(part.name)
         if current is None or (
             analysis["grade"], analysis["difficulty_score"]
@@ -166,16 +174,17 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases", s
         family: grade(_percentile(details["difficulty_scores"], 0.8))
         for family, details in by_family.items()
     }
-    overall_grade = max(
-        family_grades.values(),
-        default=1,
-    )
+    if scale == "legacy":
+        counted = family_grades
+    else:
+        counted = {family: value for family, value in family_grades.items() if family in WORK_FAMILIES} or family_grades
+    overall_grade = max(counted.values(), default=1)
 
     result = {
         "overall_score": overall_score,
         "level": _difficulty_level(overall_score),
         "grade": overall_grade,
-        "grade_method": "family_percentile_80",
+        "grade_method": "family_percentile_80" if scale == "legacy" else "winds_strings_percentile_80",
         "by_instrument": {
             instrument: {
                 **details,
@@ -190,6 +199,7 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases", s
                 "label_es": family_label_es(family),
                 "score": details["score"],
                 "grade": family_grades[family],
+                **({} if scale == "legacy" else {"counts_for_work": family in counted}),
                 "instruments": sorted(details["instruments"]),
                 "findings": sorted(set(details["findings"])),
             }
@@ -197,4 +207,4 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases", s
         },
         "critical_passages": critical_passages,
     }
-    return result if scale == "legacy" else {**result, "scale": SCALE}
+    return result if scale == "legacy" else {**result, "scale": SCALE, "algorithm_version": DIFFICULTY_VERSION}

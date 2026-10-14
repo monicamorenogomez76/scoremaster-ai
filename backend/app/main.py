@@ -23,7 +23,7 @@ from backend.app.concert_routes import router as concert_router
 from backend.app.evaluation_routes import router as evaluation_router
 from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.stored_scores import prepare_missing_works
-from backend.app.work_analysis import analyze_and_store
+from backend.app.work_analysis import analyze_and_store, refresh_outdated_analyses
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
     SAFE_METHODS, STORAGE_UNAVAILABLE, authenticated_user, close_analysis_engine, get_analysis_repository,
@@ -54,9 +54,17 @@ async def lifespan(app):
         close_analysis_engine()
 
 
+def _refresh_analyses(score_store):
+    """Works analysed with an earlier ScoreLint are analysed again (difficulty-v2, 2026-10-14)."""
+    refreshed = refresh_outdated_analyses(get_analysis_repository(), get_library_repository(), score_store)
+    if refreshed:
+        # uvicorn.error is the logger Render shows.
+        logging.getLogger("uvicorn.error").info("Obras analizadas de nuevo con la versión actual de ScoreLint: %s.", refreshed)
+
+
 def _prepare_missing(score_store, playback_store):
     try:
-        prepare_missing_works(score_store, playback_store)
+        prepare_missing_works(score_store, playback_store, after_models=lambda: _refresh_analyses(score_store))
     except Exception:
         logging.getLogger(__name__).warning("No se pudieron preparar las obras guardadas.", exc_info=True)
 

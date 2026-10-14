@@ -2,7 +2,7 @@
 reproducible sample of the director's works with critical AND non-critical passages, each with the
 ScoreLint prediction for that very fragment, hidden from the musicians."""
 from backend.analyzers.evaluation_sample import CRITICAL_SHARE, WorkSample, propose_passages
-from backend.domain.models import Score, ScoreMeasure, ScoreNote, ScorePart
+from backend.domain.models import Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
 
 
 def part(name, measures=40, pitch="C5", rest_from=None):
@@ -58,7 +58,8 @@ def test_each_passage_keeps_the_scorelint_prediction_for_that_fragment():
     snapshot = passage["snapshot"]
     assert 1 <= snapshot["grade"] <= 6 and 0 <= snapshot["technical_index"] <= 10
     assert snapshot["critical"] is True and snapshot["findings"] == ["SL003"]
-    assert set(snapshot["versions"]) == {"scale", "critical_detector", "sample"}
+    assert set(snapshot["versions"]) == {"scale", "critical_detector", "sample", "difficulty"}
+    assert snapshot["versions"]["difficulty"] == "difficulty-v2"
     assert passage["label"] == "Clarinet · cc. 5–8" and passage["measure_range"] == "5-8", "the core, widened to 4 measures"
 
 
@@ -79,3 +80,13 @@ def test_non_critical_windows_alternate_between_works():
     works = [work("w1"), work("w2"), work("w3")]
     passages = propose_passages(works, 6)
     assert sorted(item["work_id"] for item in passages) == ["w1", "w1", "w2", "w2", "w3", "w3"], "a small sample takes from every work"
+
+
+def test_a_passage_is_predicted_at_its_own_tempo():
+    """difficulty-v2 (2026-10-14): the same notes in an andante are easier than in an allegro."""
+    slow_then_fast = (TempoMark(1, 0.0, 60.0, 1.0), TempoMark(21, 0.0, 160.0, 1.0))
+    sample = WorkSample("w", "W", Score("w", (part("Clarinet"),), slow_then_fast), {"critical_passages": [
+        {"instrument": "Clarinet", "measure_range": "5-8", "core_range": "5-6", "findings": ["SL003"]},
+        {"instrument": "Clarinet", "measure_range": "25-28", "core_range": "25-26", "findings": ["SL003"]}]})
+    by_start = {span(item)[0]: item["snapshot"] for item in propose_passages([sample], 10) if item["snapshot"]["critical"]}
+    assert by_start[5]["technical_index"] < by_start[25]["technical_index"]

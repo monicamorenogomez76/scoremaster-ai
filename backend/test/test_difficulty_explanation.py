@@ -48,7 +48,7 @@ def valid_answer(evidence):
 def test_the_evidence_is_only_what_scorelint_measured_and_stays_small(result):
     evidence = difficulty_evidence(result)
     assert evidence["version"] == EVIDENCE_VERSION
-    assert evidence["grade"] == result["difficulty"]["grade"] and evidence["grade_label"] == "Intermedio avanzado"
+    assert evidence["grade"] == result["difficulty"]["grade"] and evidence["grade_label"] == "Fácil"   # difficulty-v2 (2026-10-14): was 4 with notes per written beat
     assert evidence["scale"] == {"grades": 6, "technical_index_max": 10}
     assert {item["name"] for item in evidence["instruments"]} == {"Flute", "Clarinet", "Tuba"}
     first = evidence["instruments"][0]
@@ -68,9 +68,12 @@ def test_the_demo_is_deterministic_valid_and_cites_real_passages(result):
     first, again = demo.explain_difficulty(evidence), demo.explain_difficulty(evidence)
     assert first == again
     explanation = validate_explanation(first, evidence)
-    assert explanation.summary.startswith("«Estudio de evaluación» tiene grado 4 (Intermedio avanzado, Grade 4 de las editoriales)")
+    assert explanation.summary.startswith("«Estudio de evaluación» tiene grado 2 (Fácil, Grade 2 de las editoriales)")
     assert 1 <= len(explanation.factors) <= 4
-    assert any(factor.passages for factor in explanation.factors)
+    # difficulty-v2: in this grade-2 study no dimension reaches half the index, so the demo says so instead of
+    # pointing at passages (validate_explanation still checks that every cited passage exists).
+    assert [factor.dimension for factor in explanation.factors] == ["general"]
+    assert explanation.factors[0].text.startswith("Ninguna dimensión destaca")
 
 
 @pytest.mark.parametrize("change, reason", [

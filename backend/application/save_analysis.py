@@ -2,6 +2,7 @@ from typing import Optional
 from uuid import UUID
 from hashlib import sha256
 
+from backend.analyzers.difficulty import DIFFICULTY_VERSION
 from backend.application.analysis_repository import AnalysisRecord, AnalysisRepository
 from backend.domain.instrument_catalog import CATALOG_VERSION
 from backend.domain.instrument_resolver import RESOLVER_VERSION
@@ -16,6 +17,8 @@ def save_analysis(result: dict, source: bytes, profile: dict, total_minutes: int
         work_id=work_id,
         source_sha256=sha256(source).hexdigest(),
         result=result,
+        # The analyses of an earlier algorithm are made again when the server starts (refresh_outdated_analyses).
+        algorithm_version=DIFFICULTY_VERSION,
         configuration={'band_profile': profile, 'total_minutes': total_minutes,
                        'instrument_overrides': instrument_overrides or {}},
         features={

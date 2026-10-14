@@ -142,7 +142,7 @@ def test_each_work_ends_on_its_tonic(filename, tonic):
 @pytest.mark.parametrize("filename, grades, critical", [
     ("coral-para-principiantes.musicxml", (1, 2), False),
     ("marcha-de-la-plaza.musicxml", (3, 4), True),
-    ("andante-y-danza.musicxml", (4, 6), True),
+    ("andante-y-danza.musicxml", (3, 4), True),   # difficulty-v2: the andante no longer counts at the dance's tempo
     (UPLOAD, (3, 4), None),   # a continuous oom-pah weighs as density and endurance (2026-10-14)
 ])
 def test_scorelint_shows_three_levels(filename, grades, critical):

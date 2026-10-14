@@ -67,9 +67,13 @@ def test_works_uploaded_before_are_prepared_when_the_server_starts(parses):
             return iter(self.sources)
     scores, timelines = Stores([CONTENT]), Stores([CONTENT])
     playback.clear_timelines()
-    prepare_missing_works(scores, timelines)
+    order = []
+    prepare_missing_works(scores, timelines, after_models=lambda: order.append(("analyses", timelines.saved)))
     assert scores.saved == 1 and timelines.saved == 1
     assert parses == [1]
+    # difficulty-v2 (2026-10-14): outdated analyses are made again once the models are read, before the
+    # audio, which on Render's free plan can take many minutes for every work.
+    assert order == [("analyses", 0)]
 
 
 def test_a_work_parsed_without_a_store_is_kept_when_a_store_is_given(parses):
