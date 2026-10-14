@@ -109,6 +109,22 @@ una escala única entre editoriales (J.W. Pepper, por ejemplo, usa letras de Beg
 la equivalencia es **orientativa**; el cálculo del grado no cambia y los tramos se calibrarán con la
 evaluación. Antes la rúbrica describía la agrupación (escuela de música, banda juvenil, banda amateur…).
 
+### Grados publicados de una obra (PR 5 del plan de cierre, 2026-10-14)
+
+En la pestaña Dificultad, la directora puede **registrar a mano** el grado que publica una editorial o un
+catálogo, con su fuente y, si quiere, el enlace y la fecha de consulta. La aplicación no lo busca ni se lo
+pide a un LLM, que podría inventarlo. Se guarda la etiqueta original y su valor en la escala 1–6:
+
+| Escala publicada | Equivalencia |
+|---|---|
+| Grade 0,5 a 6 (la mayoría de editoriales) | El mismo número, con sus medios grados. Grade 0,5 cuenta como 1 |
+| J.W. Pepper | VE (muy fácil) = 1, E = 2, ME = 3, M = 4, MA = 5, A (avanzado) = 6 |
+
+`difficulty_scale.external_grade` hace la conversión. Varias fuentes de una obra se promedian. El informe de
+la campaña (`evaluation/campaign_report.py`) compara obra a obra el grado de ScoreLint con esa media: diferencia,
+MAE, sesgo y Spearman (este último, con tres obras o más). Con pocas obras es una muestra pequeña: orienta, no
+valida la escala.
+
 No es una certificación oficial. El grado de familia es el del percentil 80
 de sus instrumentos y el de la obra, el máximo de las familias. El resultado declara
 `scale = {version: 2, grades: 6, technical_index_max: 10}`; un análisis guardado sin `scale` se

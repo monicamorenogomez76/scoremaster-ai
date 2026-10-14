@@ -1,12 +1,16 @@
 """Works and band template of the signed-in user. Every query is scoped to the owner: another
 user's work answers 404, the same as a work that does not exist."""
-from uuid import UUID
+from datetime import date
+from typing import Optional
+from urllib.parse import urlparse
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.application.accounts import User
-from backend.application.library import PREPARATION_STATUSES, LibraryRepository, Work
+from backend.application.library import PREPARATION_STATUSES, ExternalGrade, LibraryRepository, Work
+from backend.domain.difficulty_scale import external_grade
 from backend.app.dependencies import (authenticated_user, get_explanation_cache, get_explanation_provider, get_library_repository,
                                       get_playback_store)
 from backend.application.difficulty_explanation import explain_difficulty
@@ -39,6 +43,43 @@ class WorkUpdate(BaseModel):
         if value not in PREPARATION_STATUSES:
             raise ValueError("Estado de preparación desconocido.")
         return value
+
+
+class ExternalGradeIn(BaseModel):
+    """A publisher grade as the director types it: the scale it is published in and its value."""
+    scale: str = Field(max_length=20)
+    value: str = Field(max_length=10)
+    source: str = Field(min_length=1, max_length=200)
+    url: Optional[str] = Field(default=None, max_length=500)
+    consulted_on: Optional[date] = None
+
+    @field_validator("source")
+    @classmethod
+    def named_source(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Indica la editorial o el catálogo.")
+        return value.strip()
+
+    @field_validator("url")
+    @classmethod
+    def web_link(cls, value: Optional[str]) -> Optional[str]:
+        # Shown as a link: only http(s), never javascript: or data: (stored XSS).
+        if value is None or not value.strip():
+            return None
+        parsed = urlparse(value.strip())
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            raise ValueError("El enlace debe empezar por http:// o https://.")
+        return value.strip()
+
+    @model_validator(mode="after")
+    def known_grade(self):
+        external_grade(self.scale, self.value)   # ValueError → 422
+        return self
+
+
+def _external_public(grade: ExternalGrade) -> dict:
+    return {"id": str(grade.id), "scale": grade.scale, "label": grade.label, "grade": grade.grade, "source": grade.source,
+            "url": grade.url, "consulted_on": grade.consulted_on.isoformat() if grade.consulted_on else None}
 
 
 def _work_id(value: str) -> UUID:
@@ -130,3 +171,31 @@ def update_band(update: BandUpdate, user: User = Depends(authenticated_user),
     if not valid_band_profile(update.profile):
         raise HTTPException(status_code=400, detail="La plantilla debe indicar músicos (0–1000) por instrumento.")
     return {"profile": library.update_band_profile(user.id, update.profile)}
+
+
+@router.get("/works/{work_id}/external-grades")
+def list_external_grades(work_id: str, user: User = Depends(authenticated_user),
+                         library: LibraryRepository = Depends(get_library_repository)):
+    grades = library.external_grades(user.id, _work_id(work_id))
+    if grades is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return {"grades": [_external_public(grade) for grade in grades]}
+
+
+@router.post("/works/{work_id}/external-grades", status_code=201)
+def add_external_grade(work_id: str, body: ExternalGradeIn, user: User = Depends(authenticated_user),
+                       library: LibraryRepository = Depends(get_library_repository)):
+    grade, label = external_grade(body.scale, body.value)
+    saved = library.add_external_grade(user.id, _work_id(work_id), ExternalGrade(
+        uuid4(), body.scale, label, grade, body.source, body.url, body.consulted_on))
+    if saved is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return _external_public(saved)
+
+
+@router.delete("/works/{work_id}/external-grades/{grade_id}", status_code=204)
+def delete_external_grade(work_id: str, grade_id: str, user: User = Depends(authenticated_user),
+                          library: LibraryRepository = Depends(get_library_repository)):
+    if not library.delete_external_grade(user.id, _work_id(work_id), _work_id(grade_id)):
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return Response(status_code=204)

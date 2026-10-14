@@ -25,7 +25,7 @@ from typing import Iterable, Optional
 
 from backend.application.evaluations import EXPERIENCE_LEVELS
 
-REPORT_VERSION = "campaign-report-v2"
+REPORT_VERSION = "campaign-report-v3"
 HEURISTIC = "Heurística (ScoreLint)"
 # Method C, preregistered by the author before any musician's rating: never tuned on the data.
 HYBRID_RULE = ("Regla del híbrido, fijada el 2026-10-13 antes de recibir valoraciones: grado = media de ScoreLint y "
@@ -215,6 +215,23 @@ def _results(lines: list[str], methods: dict) -> None:
     lines.append("")
 
 
+def publishers(export: dict) -> dict:
+    """ScoreLint's grade of each work against the grades publishers give it (PR 5 of the closing plan).
+    Several sources of one work are averaged; works without a published grade are listed apart."""
+    rows, without = [], []
+    for work in export.get("works", []):
+        grades = work.get("external_grades") or []
+        if not grades or work.get("scorelint_grade") is None:
+            without.append(work.get("title"))
+            continue
+        published = mean(item["grade"] for item in grades)
+        rows.append({"title": work.get("title"), "scorelint": work["scorelint_grade"], "published": published,
+                     "difference": work["scorelint_grade"] - published,
+                     "sources": ", ".join("{} ({})".format(item["label"], item["source"]) for item in grades)})
+    metrics = difficulty_metrics([(row["scorelint"], row["published"]) for row in rows])
+    return {"works": rows, "without_grade": without, **{key: metrics[key] for key in ("n", "mae", "bias", "spearman")}}
+
+
 def build_report(export: dict, min_ratings: int = 1, levels: Optional[Iterable[str]] = None,
                  source_sha256: Optional[str] = None) -> dict:
     aggregated = aggregate(export, min_ratings, levels)
@@ -240,6 +257,7 @@ def build_report(export: dict, min_ratings: int = 1, levels: Optional[Iterable[s
             "by_expert_grade": _breakdown(rows, method, lambda r: round(r["expert_grade"])),
             "by_work": _breakdown(rows, method, lambda r: r["work_title"]),
         } for method in methods},
+        "publishers": publishers(export),
         "rows": rows,
     }
 
@@ -263,6 +281,27 @@ def _table(title: str, groups: dict) -> list[str]:
         d, c = metrics["difficulty"], metrics["critical"]
         lines.append(f"| {name} | {d['n']} | {_fmt(d['mae'])} | {_fmt(d['bias'])} | {_fmt(d['spearman'])} | "
                      f"{_pct(c['precision'])} | {_pct(c['recall'])} | {_fmt(c['f05'])} |")
+    return lines + [""]
+
+
+def _signed(value: float) -> str:
+    return ("+" if value > 0 else "") + _fmt(float(value), 1)
+
+
+def _publishers(section: dict) -> list[str]:
+    lines = ["## Grado de la obra: ScoreLint frente a las editoriales", ""]
+    if not section["works"]:
+        return lines + ["Ninguna obra de la campaña tiene un grado publicado registrado.", ""]
+    lines += ["Grados que publican editoriales y catálogos, registrados a mano por la directora con su fuente "
+              "(equivalencias en docs/DIFFICULTY_CRITICALITY.md). Diferencia positiva: ScoreLint puntúa más difícil.", "",
+              "| Obra | ScoreLint | Editoriales | Diferencia | Fuentes |", "|---|---|---|---|---|"]
+    for row in section["works"]:
+        lines.append(f"| {row['title']} | {row['scorelint']} | {_fmt(float(row['published']), 1)} | "
+                     f"{_signed(row['difference'])} | {row['sources']} |")
+    lines += ["", f"En {section['n']} obras: MAE {_fmt(section['mae'])}, sesgo {_fmt(section['bias'])} y Spearman "
+              f"{_fmt(section['spearman'])}. Es una muestra pequeña: orienta, no valida la escala."]
+    if section["without_grade"]:
+        lines.append("Sin grado publicado: " + ", ".join(section["without_grade"]) + ".")
     return lines + [""]
 
 
@@ -300,6 +339,7 @@ def to_markdown(report: dict) -> str:
         lines += _table(f"{name} por familia", metrics["by_family"])
         lines += _table(f"{name} por grado de los músicos", metrics["by_expert_grade"])
         lines += _table(f"{name} por obra", metrics["by_work"])
+    lines += _publishers(report["publishers"])
     lines.append("Métricas sin denominador o con menos de tres pasajes se muestran como «—». Ninguna cifra se edita a mano.")
     return "\n".join(lines) + "\n"
 

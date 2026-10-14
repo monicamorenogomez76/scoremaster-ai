@@ -155,3 +155,34 @@ def test_methods_are_also_compared_on_exactly_the_same_passages():
     # ScoreLint on p1, p2, p3: |2-2|, |4-4.5|, |5-3.5| → MAE 2/3
     assert common["methods"][HEURISTIC]["difficulty"]["mae"] == pytest.approx(2 / 3)
     assert "## Comparación en los mismos pasajes (3)" in to_markdown(report)
+
+
+def test_the_report_compares_scorelint_with_the_publishers_work_by_work():
+    """PR 5: one row per work with a published grade; several sources are averaged and listed. Spearman
+    needs three works, and the report warns that a handful of works is a small sample."""
+    from evaluation.campaign_report import build_report, to_markdown
+    export = {"campaign": {"title": "x"}, "passages": [], "ratings": [], "llm_reviews": [], "works": [
+        {"work_id": "1", "title": "Persis", "scorelint_grade": 6,
+         "external_grades": [{"grade": 5.0, "label": "Grade 5", "source": "Editorial A"},
+                             {"grade": 4.0, "label": "Pepper M", "source": "J.W. Pepper"}]},
+        {"work_id": "2", "title": "Coral", "scorelint_grade": 2, "external_grades": [{"grade": 1.5, "label": "Grade 1.5", "source": "B"}]},
+        {"work_id": "3", "title": "Marcha", "scorelint_grade": 4, "external_grades": [{"grade": 3.0, "label": "Grade 3", "source": "C"}]},
+        {"work_id": "4", "title": "Sin grado", "scorelint_grade": 3, "external_grades": []},
+    ]}
+    report = build_report(export)["publishers"]
+    assert [(row["title"], row["scorelint"], row["published"], row["difference"]) for row in report["works"]] == [
+        ("Persis", 6, 4.5, 1.5), ("Coral", 2, 1.5, 0.5), ("Marcha", 4, 3.0, 1.0)]
+    assert report["works"][0]["sources"] == "Grade 5 (Editorial A), Pepper M (J.W. Pepper)"
+    assert report["n"] == 3 and report["mae"] == 1.0 and report["bias"] == 1.0 and report["spearman"] == 1.0
+    assert report["without_grade"] == ["Sin grado"]
+    text = to_markdown(build_report(export))
+    assert "## Grado de la obra: ScoreLint frente a las editoriales" in text
+    assert "| Persis | 6 | 4.5 | +1.5 | Grade 5 (Editorial A), Pepper M (J.W. Pepper) |" in text
+    assert "muestra pequeña" in text
+
+
+def test_without_published_grades_the_report_says_so():
+    from evaluation.campaign_report import build_report, to_markdown
+    export = {"campaign": {"title": "x"}, "passages": [], "ratings": [], "llm_reviews": []}
+    assert build_report(export)["publishers"]["n"] == 0
+    assert "Ninguna obra de la campaña tiene un grado publicado registrado." in to_markdown(build_report(export))

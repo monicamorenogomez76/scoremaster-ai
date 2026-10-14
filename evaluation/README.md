@@ -73,3 +73,7 @@ obra para evitar leakage. Las exportaciones contienen valoraciones de personas r
 
 El informe da dos tablas: cada método sobre todos los pasajes que predijo y, la comparación justa, todos
 sobre **los mismos pasajes** (los que tienen predicción de todos los métodos).
+
+Al final, la sección «Grado de la obra: ScoreLint frente a las editoriales» compara el grado de ScoreLint de
+cada obra con la media de los grados publicados que registró la directora (diferencia, MAE, sesgo y
+Spearman con tres obras o más). Sin grados registrados, lo dice.

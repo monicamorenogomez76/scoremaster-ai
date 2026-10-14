@@ -1,14 +1,14 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, UniqueConstraint, delete, func, select, text
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, LargeBinary, String, UniqueConstraint, delete, func, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID, insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from backend.application.analysis_repository import AnalysisRecord
-from backend.application.library import Work, WorkUpload
+from backend.application.library import ExternalGrade, Work, WorkUpload
 from backend.infrastructure.analysis_repository import Base, StoredAnalysis, record_of
 from backend.infrastructure.band_repository import active_band, update_active_profile
 
@@ -28,6 +28,25 @@ class StoredWork(Base):
     preparation_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default='review')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class StoredExternalGrade(Base):
+    __tablename__ = 'work_external_grades'
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    work_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('works.id', ondelete='CASCADE'), nullable=False,
+                                          index=True)
+    user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    scale: Mapped[str] = mapped_column(String(20), nullable=False)
+    label: Mapped[str] = mapped_column(String(40), nullable=False)
+    grade: Mapped[float] = mapped_column(Float, nullable=False)
+    source: Mapped[str] = mapped_column(String(200), nullable=False)
+    url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    consulted_on: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+def _external(row: StoredExternalGrade) -> ExternalGrade:
+    return ExternalGrade(row.id, row.scale, row.label, row.grade, row.source, row.url, row.consulted_on)
 
 
 def _work(row: StoredWork, summary: Optional[dict] = None) -> Work:
@@ -135,3 +154,31 @@ class PostgresLibraryRepository:
         """Merge the changes into the active band: instruments of other works keep their musicians."""
         with Session(self.engine) as session, session.begin():
             return update_active_profile(session, user_id, changes)
+
+    def _owns(self, session: Session, user_id: UUID, work_id: UUID) -> bool:
+        return session.scalar(select(StoredWork.id).where(StoredWork.id == work_id, StoredWork.user_id == user_id)) is not None
+
+    def external_grades(self, user_id: UUID, work_id: UUID) -> Optional[list[ExternalGrade]]:
+        with Session(self.engine) as session:
+            if not self._owns(session, user_id, work_id):
+                return None
+            return [_external(row) for row in session.scalars(
+                select(StoredExternalGrade).where(StoredExternalGrade.work_id == work_id)
+                .order_by(StoredExternalGrade.created_at, StoredExternalGrade.id))]
+
+    def add_external_grade(self, user_id: UUID, work_id: UUID, grade: ExternalGrade) -> Optional[ExternalGrade]:
+        with Session(self.engine) as session, session.begin():
+            if not self._owns(session, user_id, work_id):
+                return None
+            row = StoredExternalGrade(id=grade.id, work_id=work_id, user_id=user_id, scale=grade.scale, label=grade.label,
+                                      grade=grade.grade, source=grade.source, url=grade.url, consulted_on=grade.consulted_on)
+            session.add(row)
+            session.flush()
+            return _external(row)
+
+    def delete_external_grade(self, user_id: UUID, work_id: UUID, grade_id: UUID) -> bool:
+        with Session(self.engine) as session, session.begin():
+            deleted = session.execute(delete(StoredExternalGrade).where(
+                StoredExternalGrade.id == grade_id, StoredExternalGrade.work_id == work_id,
+                StoredExternalGrade.user_id == user_id))
+            return deleted.rowcount > 0

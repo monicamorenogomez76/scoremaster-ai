@@ -245,3 +245,21 @@ def test_invited_musicians_never_see_the_llm_review(clients, reviewer):
     ana.post("/evaluations/" + body["id"] + "/status", json={"status": "open"})
     seen = berta.get("/evaluations/" + body["id"]).json()
     assert all("llm_review" not in item for item in seen["passages"])
+
+
+def test_the_export_carries_each_work_with_its_scorelint_and_published_grades(clients):
+    """PR 5 of the closing plan: the report compares ScoreLint's grade of each work with the publishers'."""
+    ana, _ = clients
+    body = campaign(ana).json()
+    work_ids = sorted({item["work_id"] for item in body["passages"]})
+    ana.post("/works/" + work_ids[0] + "/external-grades", json={"scale": "grade", "value": "2.5", "source": "Editorial A"})
+    ana.post("/works/" + work_ids[0] + "/external-grades", json={"scale": "pepper", "value": "E", "source": "J.W. Pepper"})
+
+    works = {item["work_id"]: item for item in ana.get("/evaluations/" + body["id"] + "/export").json()["works"]}
+
+    assert sorted(works) == work_ids
+    first = works[work_ids[0]]
+    assert 1 <= first["scorelint_grade"] <= 6 and first["title"]
+    assert [(grade["grade"], grade["label"], grade["source"]) for grade in first["external_grades"]] == [
+        (2.5, "Grade 2.5", "Editorial A"), (2.0, "Pepper E", "J.W. Pepper")]
+    assert all(works[work_id]["external_grades"] == [] for work_id in work_ids[1:])

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityStatus } from './ActivityStatus.jsx';
 import { explainWork, sourceText } from './explanations.js';
+import { addExternalGrade, comparisonText, deleteExternalGrade, listExternalGrades, scales, valueOptions } from './externalGrades.js';
 import { byDifficulty, dimensionLabelsEs, displayFamilyName, displayInstrumentName, findingLabel, gradeOf, gradeScaleOf, gradeText } from './labels.js';
 
 function Bar({ percent }) {
@@ -111,6 +112,67 @@ export function WorkExplanation({ workId, onOpenPassage }) {
       </li>)}</ul>
       <p className="explanation-tip"><strong>Para estudiarla:</strong> {result.explanation.study_tip}</p>
     </div>}
+  </section>;
+}
+
+// Grades publishers give the work (PR 5 of the closing plan): typed in from the publisher's page, never
+// looked up nor asked to the AI, and compared with ScoreLint's grade.
+const DEFAULT_VALUE = { grade: '3', pepper: 'ME' };
+
+export function PublishedGrades({ workId, grade }) {
+  const [grades, setGrades] = useState(null);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState({ scale: 'grade', value: DEFAULT_VALUE.grade, source: '', url: '', consulted_on: '' });
+  useEffect(() => {
+    let current = true;
+    setGrades(null); setError('');
+    listExternalGrades(workId).then(found => { if (current) setGrades(found); })
+      .catch(failure => { if (current) { setGrades([]); setError(failure.message); } });
+    return () => { current = false; };
+  }, [workId]);
+  const change = field => event => setDraft(previous => ({ ...previous, [field]: event.target.value }));
+  const save = async event => {
+    event.preventDefault();
+    setSaving(true); setError('');
+    try {
+      const saved = await addExternalGrade(workId, draft);
+      setGrades(previous => [...(previous || []), saved]);
+      setDraft(previous => ({ ...previous, source: '', url: '', consulted_on: '' }));
+    } catch (failure) { setError(failure.message); } finally { setSaving(false); }
+  };
+  const remove = async item => {
+    setError('');
+    try { await deleteExternalGrade(workId, item.id); setGrades(previous => previous.filter(other => other.id !== item.id)); }
+    catch (failure) { setError(failure.message); }
+  };
+  return <section id="published-grades" className="surface published-grades" aria-labelledby="published-grades-title">
+    <header className="summary-card-heading"><h2 id="published-grades-title">Grado publicado</h2></header>
+    <p className="result-supporting" aria-live="polite">{grades === null ? 'Cargando los grados publicados…' : comparisonText(grade, grades)}</p>
+    {grades?.length > 0 && <ul className="published-grade-list">{grades.map(item => <li key={item.id}>
+      <span><strong>{item.label}</strong>{' · '}
+        {item.url ? <a href={item.url} target="_blank" rel="noopener noreferrer">{item.source}</a> : item.source}
+        {item.consulted_on && <span className="table-supporting">Consultado el {item.consulted_on}</span>}</span>
+      <button type="button" className="link-action" aria-label={'Borrar ' + item.label + ' de ' + item.source} onClick={() => remove(item)}>Borrar</button>
+    </li>)}</ul>}
+    <form className="published-grade-form" onSubmit={save}>
+      <label htmlFor="published-scale">Escala
+        <select id="published-scale" value={draft.scale}
+          onChange={event => setDraft(previous => ({ ...previous, scale: event.target.value, value: DEFAULT_VALUE[event.target.value] }))}>
+          {scales.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label htmlFor="published-value">Grado
+        <select id="published-value" value={draft.value} onChange={change('value')}>
+          {valueOptions(draft.scale).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label htmlFor="published-source">Editorial o catálogo
+        <input id="published-source" type="text" required maxLength={200} value={draft.source} onChange={change('source')} /></label>
+      <label htmlFor="published-url">Enlace (opcional)
+        <input id="published-url" type="url" maxLength={500} placeholder="https://" value={draft.url} onChange={change('url')} /></label>
+      <label htmlFor="published-date">Consultado el (opcional)
+        <input id="published-date" type="date" value={draft.consulted_on} onChange={change('consulted_on')} /></label>
+      <button type="submit" className="secondary-action" disabled={saving || !draft.source.trim()}>{saving ? 'Guardando…' : 'Añadir grado'}</button>
+    </form>
+    {error && <p className="result-supporting" role="alert">{error}</p>}
+    <p className="table-supporting">Se escribe a mano desde la ficha de la editorial: la aplicación no lo busca ni se lo pide a la IA.</p>
   </section>;
 }
 
