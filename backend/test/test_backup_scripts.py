@@ -39,3 +39,24 @@ def test_local_urls_are_translated_for_the_container():
     script = '. scripts/db_url.sh; pg_url "postgresql+psycopg://u:p@127.0.0.1:5433/db"'
     out = subprocess.run(["sh", "-c", script], cwd=ROOT, capture_output=True, text=True).stdout
     assert out == "postgresql://u:p@host.docker.internal:5433/db"
+
+
+def test_a_failed_copy_leaves_no_empty_file(tmp_path):
+    """2026-10-14: with the IP not yet allowed in Render, two attempts left 0-byte .dump files that looked
+    like copies. A failed pg_dump must leave nothing behind."""
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    docker = fake_bin / "docker"
+    # Like pg_dump: it opens its output file in the mounted backups/ and then fails to connect.
+    docker.write_text("#!/bin/sh\n"
+                      "for arg in \"$@\"; do case \"$arg\" in *--file=*)\n"
+                      "  out=$(printf '%s' \"$arg\" | sed 's#.*--file=\"/backups/\\([^\"]*\\)\".*#\\1#')\n"
+                      "  : > \"$PWD/backups/$out\";; esac; done\n"
+                      "echo 'connection timed out' >&2\nexit 1\n")
+    docker.chmod(0o755)
+    name = "prueba-fallida-{}.dump".format(tmp_path.name)
+    result = subprocess.run(["sh", str(SCRIPTS[0]), name], capture_output=True, text=True,
+                            env={"PATH": "{}:/usr/bin:/bin".format(fake_bin), "DATABASE_URL_EXTERNAL": "postgresql://x"})
+    assert result.returncode != 0
+    assert not (ROOT / "backups" / name).exists()
+    assert not list((ROOT / "backups").glob(name + "*")), "no partial file either"
