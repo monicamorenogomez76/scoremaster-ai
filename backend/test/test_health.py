@@ -138,3 +138,16 @@ def test_analyze_rejects_non_musicxml_xml_files():
 
     assert response.status_code == 400
     assert "MusicXML" in response.json()["detail"]
+
+
+def test_the_page_is_revalidated_and_the_fingerprinted_assets_are_kept():
+    """2026-10-15: after a deploy the browser kept the previous page, whose script still showed «Crear
+    campaña» to the demo (the server refused it). The page is always revalidated; the built files carry a
+    hash in their name, so they never change and can be kept for a year."""
+    page = client.get("/")
+    assert page.headers["cache-control"] == "no-cache"
+    built = next((Path(__file__).resolve().parents[1] / "app" / "static" / "frontend" / "assets").glob("index-*.js"))
+    asset = client.get("/static/frontend/assets/" + built.name)
+    assert asset.status_code == 200 and asset.headers["cache-control"] == "public, max-age=31536000, immutable"
+    other = client.get("/static/frontend/index.html")
+    assert other.headers.get("cache-control") != "public, max-age=31536000, immutable"
