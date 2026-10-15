@@ -73,7 +73,17 @@ PRODUCTION = os.environ.get("APP_ENV") == "production"
 # Interactive API docs only outside production.
 app = FastAPI(title="ScoreMasterAI API", lifespan=lifespan, docs_url=None if PRODUCTION else "/docs",
               redoc_url=None if PRODUCTION else "/redoc", openapi_url=None if PRODUCTION else "/openapi.json")
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+class _BuiltStatic(StaticFiles):
+    """Vite names each built file after its content hash: it never changes, so the browser may keep it."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200 and path.replace("\\", "/").startswith("frontend/assets/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
+app.mount("/static", _BuiltStatic(directory=str(BASE_DIR / "static")), name="static")
 app.include_router(auth_router)
 app.include_router(library_router)
 app.include_router(rehearsal_router)
@@ -159,7 +169,8 @@ def root():
     frontend = BASE_DIR / "static" / "frontend" / "index.html"
     if not frontend.is_file():
         raise HTTPException(status_code=503, detail="Compila el frontend: npm --prefix frontend ci y npm --prefix frontend run build.")
-    return FileResponse(frontend)
+    # Always revalidated (2026-10-15): after a deploy the browser kept the previous page and its old script.
+    return FileResponse(frontend, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/youtube/search", dependencies=[Depends(authenticated_user)])
