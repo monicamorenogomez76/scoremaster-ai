@@ -1,17 +1,19 @@
-# Despliegue en Render
+# Despliegue en Render con la base en Neon
 
 La aplicación se publica en [Render](https://render.com) con la **misma imagen Docker** que
-`docker compose up` y un PostgreSQL gestionado (decisión de la autora, 2026-10-07; Vercel y Netlify
-no ejecutan el backend: Netlify no admite funciones Python y en Vercel music21 queda al límite de
-tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`render.yaml`](../render.yaml).
+`docker compose up` (decisión de la autora, 2026-10-07). La configuración está en [`render.yaml`](../render.yaml).
+Desde el 2026-10-25 los datos están en el PostgreSQL gratuito de [Neon](https://neon.com), que no caduca;
+la base gratuita de Render caducaba a los 30 días (ver «Base de datos en Neon»).
 
 ## Pasos (una sola vez)
 
 1. Crear una cuenta en Render e iniciar sesión con GitHub.
 2. **New → Blueprint** y elegir el repositorio `scoremaster-ai` (autorizar el acceso de Render al
    repositorio, que es privado).
-3. Render lee `render.yaml` y propone la base de datos `scoremaster-db` y el servicio web
-   `scoremaster` en Frankfurt. Pide los valores marcados como secretos:
+3. Render lee `render.yaml` y propone el servicio web `scoremaster` en Frankfurt (y la base `scoremaster-db`,
+   que solo se conserva hasta comprobar el paso a Neon). Pide los valores marcados como secretos:
+   - `DATABASE_URL`: la cadena de conexión **directa** de Neon, tal cual la da Neon (incluye
+     `sslmode=require`). Ver «Base de datos en Neon».
    - `DEMO_SEED_CONTENT=1` (ya en `render.yaml`): si la cuenta demo no tiene obras, al arrancar se crean las
      tres obras de `demo/`, una banda, un concierto con sus ensayos y una campaña abierta a la que la demo está
      invitada. Una cuenta demo
@@ -48,7 +50,8 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
 - `APP_ENV=production`: cookies `Secure`, sin documentación interactiva de la API. Render sirve
   HTTPS y uvicorn confía en sus cabeceras de proxy (`--proxy-headers`).
 - El contenedor se ejecuta con un usuario sin privilegios.
-- La base de datos solo admite conexiones de los servicios de Render (`ipAllowList: []`).
+- La conexión con Neon va cifrada (`sslmode=require` en su URL) y protegida por usuario y contraseña; la URL
+  es un secreto de Render y nunca está en el repositorio.
 - El registro de cuentas está abierto: cada usuario solo ve sus propios datos y los intentos de
   acceso están limitados. Ningún secreto está en el repositorio.
 
@@ -59,38 +62,77 @@ tamaño, sin Docker ni memoria entre peticiones). La configuración está en [`r
 | El servicio se duerme tras 15 min sin uso | El primer acceso tarda alrededor de un minuto | Abrir la aplicación un rato antes de una demostración |
 | 512 MB de memoria | Leer una obra grande con music21 usa ~330-450 MB en su pico | El servidor lee una sola obra a la vez (análisis, audio y propuestas); si Render reinicia el servicio con obras muy grandes, subir a un plan de pago |
 | CPU muy limitada | Leer una obra grande con music21 tarda unos 3 minutos (*Persis*, simulado con 0,1 CPU) | Cada obra se lee **una sola vez**: su modelo musical y su audio se guardan en la tabla `prepared_works` y sobreviven a reinicios y despliegues. Al analizar una obra se guarda su modelo; su audio se prepara en segundo plano. Al arrancar, el servidor prepara en segundo plano las obras que falten (tras el primer despliegue, unos minutos). Si se pide un pasaje antes, el navegador muestra cuánto lleva preparándose y espera hasta 15 minutos. Con la obra preparada, un pasaje suena en ~2 s, una propuesta de ensayo tarda ~13 s y la planificación de un concierto ~22 s |
-| La base de datos gratuita caduca a los 30 días | Se perderían las cuentas, obras y valoraciones | Exportar las valoraciones y hacer copia antes (ver abajo), o pasar la base de datos a un plan de pago (~6 $/mes; precios en render.com/pricing) |
+| La base de Neon se suspende tras 5 min sin uso | La primera consulta tras una pausa espera a que despierte (el servidor espera hasta 10 s al conectar) | Nada: se reanuda sola. El plan gratuito de Neon da 1 GB por proyecto y 100 horas de cómputo al mes, de sobra para el TFM |
 
 Para cambiar de plan basta con editar `plan:` en `render.yaml` (o hacerlo desde el panel de Render).
 
+## Base de datos en Neon
+
+La base gratuita de Render **caduca a los 30 días** (la del TFM, creada hacia el 2026-10-07, hacia el 6 de
+noviembre). El 2026-10-25 la autora decidió pasar los datos a Neon, cuyo plan gratuito no caduca, sin mover
+la aplicación ni cambiar su URL.
+
+**Crear la base** (una vez)
+
+1. Crear una cuenta en Neon y un proyecto con **PostgreSQL 17** en **AWS Europe Central 1 (Frankfurt)**, la
+   región del servicio de Render.
+2. **Connect** → desactivar *Connection pooling* y copiar la cadena **directa**
+   (`postgresql://…neon.tech/…?sslmode=require&channel_binding=require`). Las migraciones de Alembic y el
+   pool de SQLAlchemy necesitan la conexión directa.
+
+**Pasar los datos de Render a Neon** (sin valoraciones en curso)
+
+1. Copiar la base de Render como en «Copia de seguridad y restauración» (pasos 1–4).
+2. `scripts/restore_db.sh backups/<archivo>.dump` con la URL de Neon. Las filas que imprime deben coincidir
+   con las de la copia.
+3. Render → servicio `scoremaster` → **Environment** → `DATABASE_URL` = la URL de Neon → **Save, rebuild,
+   and deploy**. Al arrancar, `alembic upgrade head` no tiene nada que hacer: la versión viaja con la copia.
+4. Comprobar que se entra con una cuenta y con la demo, que están las obras y que suena un pasaje.
+
+Cuando todo funcione, la base `scoremaster-db` se quita de `render.yaml` (otra PR) y la de Render caduca sola.
+
 ## Copia de seguridad y restauración
 
-La base de datos gratuita **caduca a los 30 días de crearse** (creada hacia el 2026-10-07: caduca hacia el
-**6 de noviembre**). Hay que copiarla **tras cerrar la campaña de valoración y, en todo caso, antes del
-5 de noviembre**. Los scripts usan la imagen `postgres:17` de Docker (la versión de Render): no hay que
-instalar PostgreSQL. La URL se lee de `DATABASE_URL_EXTERNAL` o se pide sin mostrarla, para que no quede
-en el historial; las copias van a `backups/`, que no se versiona porque contienen datos personales.
+Hay que copiar la base **tras cerrar la campaña de valoración**. Los scripts usan la imagen `postgres:17` de
+Docker (la versión de Render y de Neon): no hay que instalar PostgreSQL. La URL se lee de
+`DATABASE_URL_EXTERNAL` o se pide sin mostrarla, para que no quede en el historial; las copias van a
+`backups/`, que no se versiona porque contienen datos personales.
 
 **Copiar**
 
-1. Render → base de datos `scoremaster-db` → **Access Control** → añadir tu IP (la página la sugiere).
-2. **Connections → External Database URL** → copiarla.
-3. En la raíz del repositorio: `scripts/backup_db.sh` y pegar la URL cuando la pida. Imprime las filas
+1. La URL de la base:
+   - Neon: **Connect** → cadena directa.
+   - Render (solo para el paso a Neon): base `scoremaster-db` → **Access Control** → añadir tu IP (la página
+     la sugiere) → **Connections → External Database URL**.
+2. En la raíz del repositorio: `scripts/backup_db.sh` y pegar la URL cuando la pida. Imprime las filas
    copiadas (usuarios, obras, análisis, ensayos, conciertos, campañas, valoraciones y valoraciones del LLM).
-4. Quitar tu IP de **Access Control**.
-5. Exportar además cada campaña desde «Valoraciones → Exportar resultados» y guardar el JSON en
+3. En Render, quitar tu IP de **Access Control**.
+4. Exportar además cada campaña desde «Valoraciones → Exportar resultados» y guardar el JSON en
    `evaluation/exports/` (no se versiona): es lo que usa el informe del paso 24.
 
-**Restaurar** (en una base nueva de Render, o en la de Compose para comprobar la copia)
+**Restaurar** (en Neon, en otra base nueva o en la de Compose para comprobar la copia)
 
-1. Crear la base nueva (Render: *New → PostgreSQL*, o recrear el Blueprint) y permitir tu IP.
-2. `scripts/restore_db.sh backups/<archivo>.dump` con la URL de la base nueva. Imprime las mismas filas,
+1. `scripts/restore_db.sh backups/<archivo>.dump` con la URL de la base de destino. Imprime las mismas filas,
    para compararlas con las de la copia.
-3. En el servicio web, cambiar `DATABASE_URL` a la base nueva (Render la enlaza sola si se recrea el
-   Blueprint). Al arrancar, `alembic upgrade head` no tiene nada que hacer: la versión viaja con la copia.
+2. En el servicio web, cambiar `DATABASE_URL` a esa base. Al arrancar, `alembic upgrade head` no tiene nada
+   que hacer: la versión viaja con la copia.
+
+Neon guarda además 6 horas de historial para volver a un momento anterior desde su panel.
 
 Comprobado en local (2026-10-13): copia de la base de Compose y restauración en una base vacía con las
 mismas filas en todas las tablas y la misma versión de migraciones (`0011`).
 
-**Alternativa de pago**: pasar la base a un plan de pago (~6 $/mes, precios en render.com/pricing) evita la
-caducidad; se cambia `plan:` en `render.yaml` o desde el panel.
+## Trabajo futuro: Vercel
+
+Valorado el 2026-10-25 y aplazado hasta después de la entrega. Vercel ejecuta FastAPI como funciones: más
+memoria (2 GB) y una CPU entera, y no se duerme como Render, pero cada petición dura como máximo 5 minutos,
+el trabajo tras responder no es fiable y las tareas programadas del plan gratuito son diarias. Habría que
+adaptar:
+
+- **Audio de un pasaje:** prepararlo dentro de la petición en lugar de responder 202 y seguir en segundo plano.
+- **«Valorar con IA» de una campaña:** por tandas, una por petición; cada valoración ya se guarda al momento.
+- **Preparación y nuevo análisis al arrancar:** una tarea programada diaria (protegida con `CRON_SECRET`) o al
+  abrir cada obra.
+- **Migraciones y cuenta demo:** en la construcción, nunca desde las versiones de prueba de cada rama.
+
+La base de Neon serviría igual.
