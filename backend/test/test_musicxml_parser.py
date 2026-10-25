@@ -135,3 +135,50 @@ def test_the_title_is_read_from_the_movement_title_too():
     assert parse_musicxml(scores / "evaluation_study.musicxml").title == "Evaluation Study"
     assert parse_musicxml(scores / "high_density.musicxml").title == "High Density Study", "work-title still works"
     assert parse_musicxml(scores / "high_register.musicxml").title == "Untitled score", "no title at all"
+
+
+def test_reads_what_the_grading_guides_look_at(tmp_path):
+    """difficulty-v3 (2026-10-25): the publishers' grading guides grade key signature, meter, tuplets,
+    dynamics, articulation and ornaments, so the parser keeps them."""
+    from music21 import articulations, dynamics, expressions, key, meter
+    score_stream = stream.Score()
+    part = stream.Part()
+    first = stream.Measure(number=1)
+    first.append(key.KeySignature(-3))
+    first.append(meter.TimeSignature("4/4"))
+    first.append(dynamics.Dynamic("mf"))
+    accented = note.Note("E-4", quarterLength=1.0)
+    accented.articulations = [articulations.Accent(), articulations.Staccato()]
+    trilled = note.Note("F4", quarterLength=1.0)
+    trilled.expressions = [expressions.Trill()]
+    first.append([accented, trilled])
+    for pitch in ("G4", "A-4", "B-4"):     # a quarter-note triplet: three in the time of two
+        triplet = note.Note(pitch)
+        triplet.duration = duration.Duration(2 / 3)
+        triplet.duration.appendTuplet(duration.Tuplet(3, 2, "quarter"))
+        first.append(triplet)
+    second = stream.Measure(number=2)
+    second.append(meter.TimeSignature("6/8"))
+    second.append(dynamics.Dynamic("ff"))
+    second.append(note.Note("C5", quarterLength=3.0))
+    third = stream.Measure(number=3)
+    third.append(note.Note("D5", quarterLength=3.0))
+    part.append([first, second, third])
+    score_stream.append(part)
+    path = tmp_path / "guides.musicxml"
+    score_stream.write("musicxml", fp=path)
+
+    measures = parse_musicxml(path).parts[0].measures
+    assert [measure.key_fifths for measure in measures] == [-3, -3, -3], "the key in force, also where it is not written"
+    assert [measure.time_signature for measure in measures] == ["4/4", "6/8", "6/8"]
+    assert [measure.dynamics for measure in measures] == [("mf",), ("ff",), ()]
+    notes = measures[0].notes
+    assert set(notes[0].articulations) == {"accent", "staccato"} and notes[0].ornaments == ()
+    assert notes[1].ornaments == ("trill",)
+    assert [item.tuplet for item in notes] == [False, False, True, True, True]
+
+
+def test_a_part_without_key_or_meter_keeps_them_empty():
+    score_path = Path(__file__).parents[2] / "test-scores" / "minimal.musicxml"
+    measure = parse_musicxml(score_path).parts[0].measures[0]
+    assert measure.dynamics == () and all(item.articulations == () and not item.tuplet for item in measure.notes)

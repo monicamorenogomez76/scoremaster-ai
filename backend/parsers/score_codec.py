@@ -9,7 +9,7 @@ from backend.domain.models import (PartMetadata, PartTransposition, Score, Score
                                    TempoMark)
 
 # Stored scores of another version are parsed again.
-SCORE_VERSION = 'score-v1'
+SCORE_VERSION = 'score-v2'   # v2 (2026-10-25): key, meter, tuplets, dynamics, articulation, ornaments
 
 
 def encode_score(score: Score) -> bytes:
@@ -17,7 +17,7 @@ def encode_score(score: Score) -> bytes:
 
 
 def _note(raw: dict) -> ScoreNote:
-    return ScoreNote(**{**raw, 'chord_pitches': tuple(raw['chord_pitches'])})
+    return ScoreNote(**{**raw, **{key: tuple(raw[key]) for key in ('chord_pitches', 'articulations', 'ornaments')}})
 
 
 def _metadata(raw: dict) -> PartMetadata:
@@ -33,7 +33,8 @@ def decode_score(data: bytes) -> Score:
         return Score(raw['title'],
                      tuple(ScorePart(part['name'],
                                      tuple(ScoreMeasure(measure['number'], tuple(_note(note) for note in measure['notes']),
-                                                        measure['duration_quarters'])
+                                                        measure['duration_quarters'], measure['key_fifths'],
+                                                        measure['time_signature'], tuple(measure['dynamics']))
                                            for measure in part['measures']),
                                      _metadata(part['metadata']))
                            for part in raw['parts']),
