@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 
 from backend.analyzers.criticality import detect_critical_passages
+from backend.analyzers.rubric_grade import rubric_grade
 from backend.domain.difficulty_scale import SCALE, grade_from_index
 from backend.domain.models import Score
 from backend.analyzers.instrument_difficulty import (
@@ -20,7 +21,10 @@ from backend.rules.weights import RULE_WEIGHTS
 
 # difficulty-v2 (author's review, 2026-10-14): density in notes per second at the local tempo, typical
 # instead of peak, longer endurance, cornets as trumpets, and the work graded by its winds and strings.
-DIFFICULTY_VERSION = "difficulty-v2"
+# difficulty-v3 (author's decision, 2026-10-25): the grades of the work, its families and its parts follow the
+# publishers' grading guides (backend/analyzers/rubric_grade.py); the technical index and its dimensions stay
+# for the critical passages and the explanations.
+DIFFICULTY_VERSION = "difficulty-v3"
 # Families whose grade is the work's grade. Percussion, the rhythm section, keyboards and parts without an
 # identified instrument keep their own grade, shown apart: their estimate is provisional and they used to
 # raise whole works (a snare drum in quavers made Persis a 6 against its publisher's Grade 4).
@@ -174,17 +178,29 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases", s
         family: grade(_percentile(details["difficulty_scores"], 0.8))
         for family, details in by_family.items()
     }
+    rubric = None
     if scale == "legacy":
         counted = family_grades
+        overall_grade = max(counted.values(), default=1)
     else:
         counted = {family: value for family, value in family_grades.items() if family in WORK_FAMILIES} or family_grades
-    overall_grade = max(counted.values(), default=1)
+        rubric = rubric_grade(score)
+        if rubric["by_instrument"]:
+            family_grades = {**family_grades, **rubric["by_family"]}
+            for instrument, details in rubric["by_instrument"].items():
+                if instrument in by_instrument:
+                    by_instrument[instrument]["grade"] = details["grade"]
+            overall_grade = rubric["grade"]
+        else:
+            # Percussion alone: the guides grade percussion by its instruments only, so its difficulty-v2 grade stays.
+            overall_grade = max(counted.values(), default=1)
 
     result = {
         "overall_score": overall_score,
         "level": _difficulty_level(overall_score),
         "grade": overall_grade,
-        "grade_method": "family_percentile_80" if scale == "legacy" else "winds_strings_percentile_80",
+        "grade_method": "family_percentile_80" if scale == "legacy" else
+                        "publisher_rubric" if rubric["by_instrument"] else "winds_strings_percentile_80",
         "by_instrument": {
             instrument: {
                 **details,
@@ -207,4 +223,5 @@ def compute_difficulty_score(score: Score, critical_detector: str = "phrases", s
         },
         "critical_passages": critical_passages,
     }
-    return result if scale == "legacy" else {**result, "scale": SCALE, "algorithm_version": DIFFICULTY_VERSION}
+    return result if scale == "legacy" else {**result, "scale": SCALE, "algorithm_version": DIFFICULTY_VERSION,
+                                             "rubric": rubric}

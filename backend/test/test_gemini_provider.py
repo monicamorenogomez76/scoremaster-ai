@@ -76,7 +76,8 @@ def test_failures_become_provider_failures_without_the_key_in_the_logs(failure, 
 
 def test_prompts_are_versioned():
     # v2 (2026-10-13): Spanish names in the text and ids only in the citation fields.
-    assert DIFFICULTY_PROMPT.version == "difficulty-explanation-v3"
+    # v4 (2026-10-25): the summary explains the grade with the criteria of the publishers' guides (grade_reasons).
+    assert DIFFICULTY_PROMPT.version == "difficulty-explanation-v4" and "grade_reasons" in DIFFICULTY_PROMPT.system
     assert REHEARSAL_PROMPT.version == "rehearsal-explanation-v2"
     for prompt in (DIFFICULTY_PROMPT, REHEARSAL_PROMPT):
         assert "«label»" in prompt.system and "nunca en el texto" in prompt.system

@@ -1,6 +1,6 @@
 import React from 'react';
 import { byDifficulty, displayFamilyName, displayInstrumentName, familyCountsForWork, findingLabel, gradeOf, gradeScaleOf, gradeText,
-  workGradeDetail } from './labels.js';
+  gradeReasons, workGradeDetail } from './labels.js';
 
 function MetricCard({ label, value, detail }) {
   return <div className="metric-card"><div className="label">{label}</div><div className="value">{value}</div><div className="subvalue">{detail}</div></div>;
@@ -25,6 +25,10 @@ export function OverviewPanel({ data, onStart, onOpenDifficulty }) {
           <MetricCard label="Pasajes críticos" value={String(passages.length)} detail="Agrupados por instrumento" />
           <MetricCard label="Familias" value={String(families.length)} detail="Secciones de la partitura" />
         </div>
+        {gradeReasons(difficulty).length > 0 && <section id="grade-reasons" className="grade-reasons" aria-labelledby="grade-reasons-title">
+          <h2 id="grade-reasons-title">Por qué tiene este grado</h2>
+          <ul>{gradeReasons(difficulty).map(reason => <li key={reason}>{reason}</li>)}</ul>
+        </section>}
         {families.length > 0 && <section className="family-chart" aria-label="Grado de dificultad por familia">
           <h2>Dónde concentrar el ensayo</h2>
           <p>Grado de dificultad por familia · escala de 1 a {scale.grades}</p>

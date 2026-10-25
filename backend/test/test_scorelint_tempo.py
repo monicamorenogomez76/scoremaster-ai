@@ -88,5 +88,6 @@ def test_a_work_for_percussion_alone_is_graded_by_its_percussion():
 
 def test_the_result_names_the_version_of_its_algorithm():
     result = compute_difficulty_score(_work(ScorePart("Flute", running("Flute", 4, 1.0))))
-    assert result["algorithm_version"] == DIFFICULTY_VERSION == "difficulty-v2"
-    assert result["grade_method"] == "winds_strings_percentile_80"
+    # difficulty-v3 (2026-10-25): the grade follows the publishers' guides.
+    assert result["algorithm_version"] == DIFFICULTY_VERSION == "difficulty-v3"
+    assert result["grade_method"] == "publisher_rubric"
