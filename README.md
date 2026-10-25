@@ -84,7 +84,7 @@ Detalles: [dificultad y criticidad](docs/DIFFICULTY_CRITICALITY.md), [identidad 
 | IA | Google Gemini mediante LangChain (`langchain-google-genai` 4.4), opcional; modo demo determinista |
 | Frontend | React 19 y Vite 8, CSS propio con tokens (tema claro y oscuro), OpenSheetMusicDisplay 1.9 para la notación y smplr 1.1 para el audio |
 | Calidad | pytest (con PostgreSQL real), pruebas de Node, recorridos Playwright y auditoría de dependencias en GitHub Actions |
-| Despliegue | Docker y Docker Compose; Render (Blueprint `render.yaml`) |
+| Despliegue | Docker y Docker Compose; Render (Blueprint `render.yaml`) con la base en Neon |
 
 ## Arranque en un paso
 
@@ -185,8 +185,9 @@ pytest, las pruebas de Node, la construcción de la imagen Docker y la auditorí
 
 ## Despliegue
 
-Render con la misma imagen Docker y PostgreSQL gestionado: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), con
-los pasos, las limitaciones del plan gratuito y los scripts probados de copia y restauración de la base.
+Render con la misma imagen Docker y la base en el PostgreSQL gratuito de Neon, que no caduca:
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), con los pasos, el paso de los datos a Neon, las limitaciones del plan
+gratuito, los scripts probados de copia y restauración y por qué Vercel queda para más adelante.
 
 ## Seguridad
 
@@ -228,8 +229,8 @@ Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](
 - **Audio aproximado**: muestras reales para los instrumentos principales y General MIDI para el resto,
   sin expresión ni repeticiones. Si en Safari avanza el tiempo pero no se oye nada, cerrar Safari con ⌘Q y
   volver a abrirlo suele resolverlo.
-- **Plan gratuito de Render**: el servicio se duerme sin uso, la CPU es lenta (una obra grande tarda unos
-  minutos en leerse la primera vez) y la base gratuita caduca a los 30 días.
+- **Plan gratuito de Render**: el servicio se duerme sin uso y la CPU es lenta (una obra grande tarda unos
+  minutos en leerse la primera vez). La base de Neon se suspende tras 5 minutos sin uso y despierta sola.
 - **Solo MusicXML**: sin PDF ni reconocimiento óptico; la interfaz está en castellano.
 - **Pendiente u opcional**: pregunta libre a la IA, interfaz en inglés, sustitutos de instrumento,
   búsqueda automática del grado publicado de una obra e importación de PDF con Audiveris.

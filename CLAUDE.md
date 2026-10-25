@@ -94,9 +94,10 @@ Cross-cutting rules that span many files:
 - Never commit `test-scores/local/` (commercial scores), `backups/` (database copies), `evaluation/exports/`
   (real ratings) or local virtualenvs such as `.venv-3.9/`. Review `git status` before `git add -A`: a branch
   created before a `.gitignore` change can still pick them up.
-- Deployment is the Render Blueprint `render.yaml` (free plan: 512 MB, slow CPU, database expiring 30 days
-  after creation); the procedure and the backup scripts (`scripts/backup_db.sh`, `scripts/restore_db.sh`) are
-  in `docs/DEPLOYMENT.md`.
+- Deployment is the Render Blueprint `render.yaml` (free plan: 512 MB, slow CPU) with the data in Neon's free
+  PostgreSQL (`DATABASE_URL` is a secret; Render's free database expired after 30 days); the procedure, the
+  move to Neon and the backup scripts (`scripts/backup_db.sh`, `scripts/restore_db.sh`) are in
+  `docs/DEPLOYMENT.md`.
 
 # React Development & UI/UX Guidelines
 
