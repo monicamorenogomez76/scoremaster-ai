@@ -19,7 +19,7 @@ Estas copias sustituyen a los originales aportados en la raíz. Las pautas de tr
 ## Guías operativas
 
 - [Guía para el tribunal](TRIBUNAL.md)
-- [Despliegue en Render y copias de seguridad](DEPLOYMENT.md)
+- [Despliegue en Render, base en Neon y copias de seguridad](DEPLOYMENT.md)
 - [Seguridad (OWASP)](SECURITY.md)
 - [Contribuir al proyecto](../CONTRIBUTING.md)
 - [Responsabilidades y skills](../AGENTS.md)

@@ -3,7 +3,7 @@
 ## Decisiones que prevalecen
 
 - PostgreSQL en desarrollo y producción; SQLAlchemy, Alembic y repositorios independientes del dominio.
-- Grados visibles enteros 1–6 y rúbrica documentada, alineada desde 2026-10-13 con la escala Grade 1–6 de las editoriales como equivalencia orientativa, sin afirmar certificación oficial. Índice técnico interno 0–10; transformación explícita. Integrado en el paso 13: índice = 2 × puntuación anterior, seis tramos iguales y `scale` en el resultado; el baseline conserva 1–5/0–5.
+- Grados visibles enteros 1–6 y rúbrica documentada, alineada desde 2026-10-13 con la escala Grade 1–6 de las editoriales como equivalencia orientativa, sin afirmar certificación oficial. Índice técnico interno 0–10; transformación explícita. Integrado en el paso 13: índice = 2 × puntuación anterior, seis tramos iguales y `scale` en el resultado; el baseline conserva 1–5/0–5. Desde difficulty-v3 (2026-10-25) el grado sigue las guías de grados de las editoriales (American Band College como base, FJH para afinar, UIL solo como confirmación) y el índice queda como medida técnica.
 - Nivel objetivo por defecto intermedio, separado del grado editorial estimado.
 - Separar Difficulty, Criticality y RehearsalPriority. Un análisis puede devolver cero críticos.
 - Los ensayos son de conjunto: un pasaje común es el que varias partes tocan igual en estructura —misma línea (mismo ritmo e intervalos, cada una en su tonalidad u octava) o mismo ritmo—, aunque sean de familias distintas. En cada pasaje se ensaya primero cada línea común, después las subsecciones con lo que queda (flautas, dobles cañas, clarinetes, saxofones, metales agudos, graves —con fagot, clarinete bajo y saxo barítono—, percusión, cuerda y rítmica) y al final un tutti para juntar (decisiones de la autora, 2026-10-04).
@@ -113,11 +113,26 @@ Entrega el 7 de noviembre. Decisiones de la autora: híbrido C preregistrado y o
 | 5 | Grados de editoriales por obra | Recomendable | Integrado: PR #105 |
 | 6 | Pregunta libre a la IA | Opcional | Pendiente, solo si queda tiempo |
 | 7 | Interfaz en inglés | Opcional | Pendiente, solo si queda tiempo |
-| 8 | Documentación de entrega | Imprescindible | Esta PR: README, guía para el tribunal, seguridad, estados y licencia MIT |
+| 8 | Documentación de entrega | Imprescindible | Integrado: PR #107 (README, guía para el tribunal, seguridad, estados y licencia MIT) |
 
 Mejoras integradas durante el cierre, a petición de la autora: lectura del título de `<movement-title>` (PR #92), base de estilos única (PR #98), tipografía Inter (PR #99), modo oscuro (PR #100), sombras, transiciones y Resumen en cuadrícula (PR #101), equilibrio de volumen entre instrumentos (PR #102) y pentagramas del pasaje en partes de varios pentagramas (PR #103).
 
 Opcional después de la entrega: búsqueda automática del grado publicado de una obra, como sugerencia que confirma la directora y solo cuando la página encontrada contiene título, compositor y grado (decisión de la autora, 2026-10-14).
+
+## Decisiones del 14 al 25 de octubre
+
+| Decisión | Estado |
+|---|---|
+| difficulty-v2: densidad a la velocidad de cada compás y percusión fuera del grado de la obra | Integrado: PR #108 |
+| Las obras con grado de otra edición no sirven para calibrar (solo *Persis* es referencia válida) | Integrado: PR #109 |
+| Solo las cuentas de `ADMIN_EMAILS` gestionan campañas y ven emails y resultados; la demo valora como un músico | Integrado: PR #110 |
+| La página se revalida tras cada despliegue | Integrado: PR #111 |
+| La base pasa a Neon, que no caduca; la aplicación sigue en Render | Integrado: PR #112 |
+| difficulty-v3: el grado sigue las guías de grados de las editoriales y explica qué criterio lo fija | Integrado: PR #113 (lectura de armadura, compás, tresillos, dinámicas, articulaciones y adornos) y PR #114 (rúbrica) |
+| Segunda opinión con un modelo de pesos abiertos para el método B, junto a Gemini (Hugging Face o Vercel AI Gateway) | Pendiente de que la autora decida cómo pagar la API |
+| Lectura de PDF con copista-2m (modelo de Hugging Face, Apache 2.0), solo en Docker local | Pendiente: prueba de viabilidad con PDF de la autora; sustituye a Audiveris como candidata |
+| Alojar la aplicación en Vercel | Aplazado a después de la entrega (ver [DEPLOYMENT.md](DEPLOYMENT.md)) |
+| Modelos de Hugging Face para la dificultad o bancos de sonido | Descartados: los de dificultad son de piano y no explicables; no hay bancos de viento con licencia clara |
 
 ## Criterios de aceptación
 
@@ -135,6 +150,10 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 20–25. Salidas IA validadas, demo identificada, fallback, versiones, caché y comparación sin anchoring ni resultados inventados. El híbrido sigue siendo experimental.
 
 ## Opcional: partituras en PDF con Audiveris (decisión de la autora, 2026-10-06)
+
+> Actualización (2026-10-25): la candidata pasa a ser copista-2m, un modelo abierto de Hugging Face (Apache 2.0,
+> funciona en CPU y devuelve MusicXML), con la misma prueba de viabilidad previa y solo en Docker local. Las
+> condiciones de abajo siguen valiendo salvo las de licencia de Audiveris.
 
 Importar PDF y convertirlos a MusicXML con Audiveris (OMR) queda como **opcional**, después de
 integrar lo pendiente y lanzar la evaluación (pasos 16–18). Amplía el alcance inicial, que excluía

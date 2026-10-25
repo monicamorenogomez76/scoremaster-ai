@@ -233,7 +233,8 @@ Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](
   minutos en leerse la primera vez). La base de Neon se suspende tras 5 minutos sin uso y despierta sola.
 - **Solo MusicXML**: sin PDF ni reconocimiento óptico; la interfaz está en castellano.
 - **Pendiente u opcional**: pregunta libre a la IA, interfaz en inglés, sustitutos de instrumento,
-  búsqueda automática del grado publicado de una obra e importación de PDF con Audiveris.
+  búsqueda automática del grado publicado de una obra, segunda opinión con un modelo de pesos abiertos e
+  importación de PDF (prueba con copista-2m, un modelo abierto de Hugging Face, solo en local).
 
 ## Créditos
 
