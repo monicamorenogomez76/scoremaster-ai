@@ -5,7 +5,7 @@ from typing import Optional, Union
 from collections import Counter
 from xml.etree import ElementTree
 
-from music21 import articulations, chord, converter, expressions, note, stream, tempo
+from music21 import articulations, chord, converter, dynamics, expressions, note, stream, tempo
 
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.domain.models import PartMetadata, PartTransposition, Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
@@ -41,6 +41,16 @@ def _has_phrase_mark(element) -> bool:
     marks = (articulations.BreathMark, articulations.Caesura)
     return any(isinstance(mark, marks) for mark in getattr(element, "articulations", [])) or \
         any(isinstance(mark, expressions.Fermata) for mark in getattr(element, "expressions", []))
+
+
+def _articulations(element) -> tuple[str, ...]:
+    """Technique marks (accent, staccato, tenuto…); breath marks and caesuras are phrase marks, not technique."""
+    return tuple(item.name for item in getattr(element, "articulations", ())
+                 if not isinstance(item, (articulations.BreathMark, articulations.Caesura)))
+
+
+def _ornaments(element) -> tuple[str, ...]:
+    return tuple(item.name for item in getattr(element, "expressions", ()) if isinstance(item, expressions.Ornament))
 
 
 def read_part_metadata(content: bytes) -> dict[str, PartMetadata]:
@@ -119,9 +129,14 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
             part_name = "{} {}".format(part_name, part_number)
         measures = []
         source_measures = parsed_part.getElementsByClass(stream.Measure)
+        key_fifths, time_signature = None, None   # in force: a measure repeats them only when they change
 
         for measure_index, parsed_measure in enumerate(source_measures, start=1):
             measure_number = int(parsed_measure.number or measure_index)
+            if parsed_measure.keySignature is not None:
+                key_fifths = int(parsed_measure.keySignature.sharps)
+            if parsed_measure.timeSignature is not None:
+                time_signature = parsed_measure.timeSignature.ratioString
             notes = []
             for mark in parsed_measure.recurse().getElementsByClass(tempo.MetronomeMark):
                 if mark.number is None:
@@ -156,10 +171,15 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
                         tie=element.tie.type if getattr(element, "tie", None) is not None else None,
                         is_grace=element.duration.isGrace,
                         chord_pitches=chord_pitches,
+                        tuplet=bool(element.duration.tuplets),
+                        articulations=_articulations(element),
+                        ornaments=_ornaments(element),
                     )
                 )
+            marked = tuple(str(item.value) for item in parsed_measure.recurse().getElementsByClass(dynamics.Dynamic))
             measures.append(ScoreMeasure(number=measure_number, notes=tuple(notes),
-                                         duration_quarters=float(parsed_measure.duration.quarterLength)))
+                                         duration_quarters=float(parsed_measure.duration.quarterLength),
+                                         key_fifths=key_fifths, time_signature=time_signature, dynamics=marked))
 
         parts.append(ScorePart(name=part_name, measures=tuple(measures), metadata=metadata_for_part(parsed_part, declared_metadata)))
 

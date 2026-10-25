@@ -20,15 +20,24 @@ def test_a_parsed_score_reads_back_the_same(name):
 
 def test_every_field_reads_back_the_same():
     note = ScoreNote("C#5", 0.5, offset_quarters=1.5, phrase_mark=True, voice="2", tie="start", is_grace=False,
-                     chord_pitches=("A4", "C#5"))
+                     chord_pitches=("A4", "C#5"), tuplet=True, articulations=("accent",), ornaments=("trill",))
     metadata = PartMetadata("P1", "Clarinet in Bb", "Cl.", ("Clarinet",), ("wind.reed.clarinet.bflat",), (72,), (1,),
                             PartTransposition(-2, -1, 0), 1, "clarinet.bb")
-    score = Score("Obra", (ScorePart("Clarinet", (ScoreMeasure(1, (note, ScoreNote(None, 1.0, is_rest=True)), 4.0),),
+    score = Score("Obra", (ScorePart("Clarinet", (ScoreMeasure(1, (note, ScoreNote(None, 1.0, is_rest=True)), 4.0, key_fifths=-3,
+                                                               time_signature="6/8", dynamics=("mf", "sfz")),),
                                      metadata),),
                   (TempoMark(1, 0.0, 96.0, 1.5),), "Autora")
     again = decode_score(encode_score(score))
     assert again == score
     assert isinstance(again.parts[0].measures[0].notes[0].chord_pitches, tuple)
+    assert isinstance(again.parts[0].measures[0].dynamics, tuple) and isinstance(again.parts[0].measures[0].notes[0].articulations, tuple)
+
+
+def test_the_stored_model_version_changes_with_what_it_keeps():
+    """difficulty-v3 keeps key, meter, tuplets, dynamics, articulation and ornaments: works stored before are
+    read again (prepare_missing_works looks for the current version)."""
+    from backend.parsers.score_codec import SCORE_VERSION
+    assert SCORE_VERSION == "score-v2"
 
 
 def test_something_else_is_not_read_as_a_score():

@@ -19,6 +19,12 @@ class ScoreNote:
 	is_grace: bool = False
 	# Every written pitch of a chord, lowest first; `pitch` is then its top note.
 	chord_pitches: tuple[str, ...] = ()
+	# What the publishers' grading guides look at (difficulty-v3, 2026-10-25): a note inside a tuplet
+	# (triplets and other irregular groups), its articulations (music21 names: accent, staccato, tenuto…)
+	# and ornaments (trill, mordent, turn…).
+	tuplet: bool = False
+	articulations: tuple[str, ...] = ()
+	ornaments: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -26,6 +32,11 @@ class ScoreMeasure:
 	number: int
 	notes: tuple[ScoreNote, ...]
 	duration_quarters: Optional[float] = None
+	# In force at this measure, written as the part reads it (difficulty-v3): sharps (+) or flats (-) of the
+	# key signature, the time signature ("6/8") and the dynamics marked in it ("mf", "sfz"…).
+	key_fifths: Optional[int] = None
+	time_signature: Optional[str] = None
+	dynamics: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
