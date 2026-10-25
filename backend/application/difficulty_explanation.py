@@ -11,10 +11,10 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.ai import ExplanationProvider
 from backend.application.explanations import InvalidExplanation, replace_terms, run_explanation
 
-EVIDENCE_VERSION = "difficulty-evidence-v2"
-PROMPT_VERSION = "difficulty-explanation-v3"
+EVIDENCE_VERSION = "difficulty-evidence-v3"   # v3 (2026-10-25): grade_reasons from the publishers' guides
+PROMPT_VERSION = "difficulty-explanation-v4"
 DIMENSIONS = ("range", "register", "intervals", "density", "endurance", "tempo")
-MAX_INSTRUMENTS, MAX_PASSAGES = 8, 8
+MAX_INSTRUMENTS, MAX_PASSAGES, MAX_REASONS = 8, 8, 6
 # Aligned with the Grade 1-6 scale of band publishers (author's decision, 2026-10-13); orientative.
 GRADE_LABELS = {1: "Muy fácil", 2: "Fácil", 3: "Intermedio", 4: "Intermedio avanzado", 5: "Avanzado", 6: "Profesional"}
 GRADE_DESCRIPTIONS = {
@@ -59,6 +59,8 @@ def difficulty_evidence(result: dict) -> dict:
         "title": result.get("title") or "Obra sin título",
         "grade": grade, "grade_label": GRADE_LABELS.get(grade, ""), "grade_standard": "Grade {}".format(grade),
         "grade_description": GRADE_DESCRIPTIONS.get(grade, ""),
+        # difficulty-v3: the criteria of the publishers' grading guides that set the grade, as the director reads them.
+        "grade_reasons": list((difficulty.get("rubric") or {}).get("reasons_es") or [])[:MAX_REASONS],
         "scale": {"grades": scale.get("grades", 6), "technical_index_max": scale.get("technical_index_max", 10)},
         "families": [{"family": entry.get("label_es") or name, "grade": entry.get("grade")}
                      for name, entry in sorted((difficulty.get("by_family") or {}).items(),

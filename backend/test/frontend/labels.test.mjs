@@ -112,3 +112,12 @@ test('the work grade says which families make it; the rest are shown apart (diff
   assert.equal(familyCountsForWork({ counts_for_work: true }), true);
   assert.equal(familyCountsForWork({}), true, 'an earlier analysis counted every family');
 });
+
+test('the work grade follows the publishers\' guides and says why (difficulty-v3, 2026-10-25)', async () => {
+  const { gradeReasons, workGradeDetail } = await import('../../../frontend/src/labels.js');
+  const reason = 'Tesitura de Tuba hasta Do4 → grado 6, por encima de la tabla (American Band College)';
+  assert.deepEqual(gradeReasons({ rubric: { reasons_es: [reason] } }), [reason]);
+  assert.equal(workGradeDetail({ algorithm_version: 'difficulty-v3', rubric: {} }),
+    'Según las guías de grados de las editoriales · viento y cuerda; la percusión se muestra aparte');
+  assert.deepEqual(gradeReasons({ algorithm_version: 'difficulty-v2' }), [], 'an earlier analysis has no reasons');
+});

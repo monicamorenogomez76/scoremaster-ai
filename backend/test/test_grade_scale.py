@@ -48,9 +48,10 @@ def test_the_analysis_declares_its_scale_and_grades_families_on_it():
 
     assert result["scale"] == SCALE == {"version": 2, "grades": 6, "technical_index_max": 10}
     families = {family: details["grade"] for family, details in result["by_family"].items()}
-    assert families == {details["family"]: grade_from_index(details["difficulty_score"])
-                        for details in result["by_instrument"].values()}
-    assert result["grade"] == max(families.values())
+    # difficulty-v3 (2026-10-25): the grades follow the publishers' guides, not the index; the index stays 0-10.
+    assert families == result["rubric"]["by_family"]
+    assert all(0 <= details["difficulty_score"] <= 10 for details in result["by_instrument"].values())
+    assert result["grade"] == max(families.values()) == result["rubric"]["grade"]
 
 
 def test_the_legacy_scale_is_kept_for_the_baseline():

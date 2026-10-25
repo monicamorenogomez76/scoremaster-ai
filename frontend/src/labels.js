@@ -155,6 +155,12 @@ export function readBandProfile(requirements, draft) {
 // section, keyboards and unidentified parts keep their own grade, shown apart.
 export const familyCountsForWork = details => details?.counts_for_work !== false;
 
-export const workGradeDetail = difficulty => difficulty?.algorithm_version
-  ? 'Estimación provisional · viento y cuerda; la percusión y la sección rítmica se muestran aparte'
-  : 'Estimación provisional · percentil 80 por familia';
+// difficulty-v3 (2026-10-25): the grade follows the publishers' grading guides, and the analysis says which of
+// their criteria sets it.
+export const workGradeDetail = difficulty => difficulty?.rubric
+  ? 'Según las guías de grados de las editoriales · viento y cuerda; la percusión se muestra aparte'
+  : difficulty?.algorithm_version
+    ? 'Estimación provisional · viento y cuerda; la percusión y la sección rítmica se muestran aparte'
+    : 'Estimación provisional · percentil 80 por familia';
+
+export const gradeReasons = difficulty => difficulty?.rubric?.reasons_es || [];

@@ -59,7 +59,7 @@ def test_each_passage_keeps_the_scorelint_prediction_for_that_fragment():
     assert 1 <= snapshot["grade"] <= 6 and 0 <= snapshot["technical_index"] <= 10
     assert snapshot["critical"] is True and snapshot["findings"] == ["SL003"]
     assert set(snapshot["versions"]) == {"scale", "critical_detector", "sample", "difficulty"}
-    assert snapshot["versions"]["difficulty"] == "difficulty-v2"
+    assert snapshot["versions"]["difficulty"] == "difficulty-v3"   # 2026-10-25: graded by the publishers' guides
     assert passage["label"] == "Clarinet · cc. 5–8" and passage["measure_range"] == "5-8", "the core, widened to 4 measures"
 
 

@@ -161,6 +161,78 @@ grados publicados que registre la directora (con su fuente) son los que miden cu
 Tonalidad, cromatismo, ritmo (tresillos, síncopas) y exposición de las partes son candidatos razonables a
 nuevas dimensiones, pero se añadirán solo cuando haya referencias con las que comprobar que mejoran.
 
+### difficulty-v3: el grado sigue las guías de las editoriales (decisión de la autora, 2026-10-25)
+
+Tras difficulty-v2 faltaba una referencia experta: solo *Persis* tenía un grado publicado que correspondía a
+su archivo. La autora aportó las guías con las que las editoriales gradúan obras de banda, y ScoreLint pasa a
+seguirlas. **Cada criterio da un grado mínimo y la obra tiene el grado de su criterio más exigente**, en lugar
+de promediar dimensiones y repartir el índice en tramos iguales.
+
+**Fuentes y jerarquía** (elegida por la autora):
+
+| Fuente | Uso |
+|---|---|
+| *American Band College Music Grading Chart* (revisada en 2000), grados 1–5 | **Base**: compás, armadura, tempo, figuras, ritmo, dinámicas, articulación, adornos, duración y tesituras escritas por instrumento |
+| *FJH Music Company, Series Guidelines* (revisadas en 2004), grados 0,5–6 | Afina los grados bajos (5/4 y 6/4 limitados en grado 2) y confirma la escritura (el clarinete de grado 1 no pasa del cambio de registro) |
+| UIL Texas, criterios de lectura a primera vista (2022) | Solo confirma la progresión de armaduras, compases y ritmos: sus niveles son de lectura a primera vista y la propia UIL no los equipara a grados |
+| UIL Texas, *Prescribed Music List* | Catálogo de obras con un grado asignado por un comité: fuente de grados publicados para comparar con ScoreLint |
+
+Los documentos son de sus editores: en el repositorio solo están sus criterios (`backend/domain/grade_rubric.py`).
+
+**Criterios** (`backend/analyzers/rubric_grade.py`):
+
+- De la obra: armadura de concierto (G1 hasta 3 ♭ y Do; G2 4 ♭; G3 5 ♭; G4 de 1 ♯ a 6 ♭; G5 cualquiera),
+  compás (simples G1; 6/8 G2, y 5/4 y 6/4 según FJH; 9/8 y 12/8 G3; 3/8, 5/8 y 7/8 G4; otros G5), cambios de
+  tonalidad y de compás (0 → G1, 1–2 → G2, 3–5 → G3, 6 o más → G4), tempo marcado (G1 72–120, G2 hasta 132,
+  G3 56–144, G4 44–168, G5 hasta 208), duración (G1 hasta 3 min, G2 5, G3 7, G4 más) y dinámicas (p y f G1;
+  mp y mf G2; pp, ff, sfz y fp G3; ppp y fff G4).
+- De cada parte: tesitura por instrumento y grado, figura más breve (corcheas G1, semicorcheas G2, fusas G3),
+  tresillos (G2), síncopas (de corchea en compás simple G2, en compás compuesto G3, de semicorchea G5),
+  articulaciones (staccato y acento G1, legato G2, tenuto G3, otras G4), adornos (trino G2; grupeto y
+  mordente G4) y notas de adorno (sueltas G2, de 2 o 3 G3).
+- **Uso limitado**: un rasgo de una parte cuenta si aparece en al menos el 5 % de sus compases con notas y en
+  más de un compás; una dinámica, si aparece en más de un compás. Las notas de final de curso (redondas de la
+  tabla) se aceptan en su grado si son como mucho el 5 % de las notas de la parte. Un salto a una nota fuera de
+  la tesitura sí sube el grado, como advierte FJH.
+- Como en v2, el grado de la obra sale de viento madera, viento metal y cuerda (cada familia, por el percentil
+  80 de sus partes); la percusión y la sección rítmica se muestran aparte. Una obra solo de percusión conserva
+  el grado de v2, porque las guías gradúan la percusión solo por sus instrumentos. Por encima de las tesituras
+  del grado 5 la parte es de grado 6.
+- El índice técnico y sus dimensiones (v2) se siguen calculando para los pasajes críticos y las explicaciones.
+  Cada pasaje de campaña (método A) se gradúa con la misma rúbrica sobre sus compases.
+
+**Tesituras escritas** (fagot, trombón/bombardino y tuba en clave de fa, comparadas por su sonido real;
+entre paréntesis, la de final de curso). Leídas de la tabla del American Band College midiendo la posición de
+las notas y revisadas con la autora el 2026-10-25:
+
+| Instrumento | G1 | G2 | G3 | G4 | G5 |
+|---|---|---|---|---|---|
+| Flauta (y flautín) | Fa4–Do6 (Re6) | Re4–Fa6 | Do4–Sol6 | Do4–Si♭6 | Do4–Do7 |
+| Oboe | Fa4–Si♭5 | Si♭3–Do6 | Si♭3–Do6 | Si♭3–Re6 | Si♭3–Re6 |
+| Fagot | Mi2–Fa3 (Do4) | Re2–Fa4 | Si♭1–Sol4 | Si♭1–Si♭4 | Si♭1–Si♭4 |
+| Clarinete (y requinto) | Sol3–Si♭4 (Mi3–Sol5) | Mi3–Do6 (Re6) | Mi3–Fa6 | Mi3–Sol6 | Mi3–Sol6 |
+| Clarinete alto y bajo | Sol3–Si♭4 (Mi3–Sol5) | Mi3–Sol5 (Si5) | Mi3–Do6 | Mi3–Sol6 | Mi3–Sol6 |
+| Saxofones | Mi4–Sol5 (Si5) | Do4–Re6 | Si3–Mi6 | Si♭3–Fa6 | Si♭3–Fa6 |
+| Trompeta, corneta y fliscorno | Si♭3–Do5 (Mi5) | La3–Fa5 | Fa♯3–Sol5 | Fa♯3–Do6 | Fa♯3–Do6 |
+| Trompa | Do4–Do5 (Fa3–Mi♭5) | Fa3–Fa5 | Fa3–Sol5 | Do3–La5 | Fa2–Do6 |
+| Trombón y bombardino | Si♭2–Re4 | Fa2–Mi♭4 | Fa2–Fa4 | Mi2–La4 | Mi2–Si♭4 |
+| Tuba | Si♭1–Re3 | Mi1–Re3 | Mi1–Fa3 | Mi1–Sol3 | Mi1–Si♭3 |
+
+**Resultado con obras reales** (en local, 2026-10-25):
+
+| Obra | difficulty-v2 | difficulty-v3 | Lo que fija el grado |
+|---|---|---|---|
+| Persis | 4 | **4** (Grade 4 de su editorial) | 16 cambios de compás, tempos de 48 a 132, unos 8 minutos y fusas en flautas y clarinetes |
+| Coral para principiantes (demo) | 1 | 2 | mf en varios compases y la tuba hasta Sol1 |
+| Marcha de la plaza (demo) | 4 | 3 | La trompa hasta Fa♯5 y el tenuto del trombón |
+| Andante y danza (demo) | 3 | 4 | Negra = 160 en la danza y la tuba hasta Sol3 |
+| March of the Toys (arr. Cao Ziyi) | 4 | 5 | Flautas hasta Si6 |
+| Oregon Trail II | 3 | 5 | Modulación a 5 ♯ durante un cuarto de la obra |
+
+Limitaciones: los umbrales de cambios de compás, del uso limitado y de las articulaciones «otras» son una
+lectura razonable de las guías, no cifras suyas; un vals marcado a negra = 192 cuenta como tempo de grado 5
+aunque se dirija a un tiempo por compás. Lo valida la evaluación con músicos.
+
 ### Grados publicados de una obra (PR 5 del plan de cierre, 2026-10-14)
 
 En la pestaña Dificultad, la directora puede **registrar a mano** el grado que publica una editorial o un

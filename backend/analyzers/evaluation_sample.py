@@ -13,6 +13,8 @@ from itertools import zip_longest
 
 from backend.analyzers.difficulty import DIFFICULTY_VERSION
 from backend.analyzers.instrument_difficulty import compute_instrument_difficulty
+from backend.analyzers.rubric_grade import rubric_grade
+from backend.domain.models import Score
 from backend.domain.difficulty_scale import SCALE
 from backend.domain.models import Score, ScorePart
 
@@ -50,14 +52,24 @@ def _plays(part: ScorePart, first: int, last: int) -> bool:
     return bool(bars) and sum(any(not note.is_rest for note in m.notes) for m in bars) * 2 >= len(bars)
 
 
+def _window_marks(marks, first: int, last: int) -> tuple:
+    """The tempo in force when the fragment starts and the changes written inside it."""
+    before = [mark for mark in marks if mark.measure_number <= first]
+    inside = [mark for mark in marks if first < mark.measure_number <= last]
+    return tuple(([max(before, key=lambda mark: (mark.measure_number, mark.offset_quarters))] if before else []) + inside)
+
+
 def _passage(sample: WorkSample, part: ScorePart, first: int, last: int, critical: bool, findings) -> dict:
     # The fragment keeps its measure numbers, so each one is measured at the tempo written for it.
-    prediction = compute_instrument_difficulty(_slice(part, first, last), tempo_marks=sample.score.tempo_marks)
+    fragment = _slice(part, first, last)
+    prediction = compute_instrument_difficulty(fragment, tempo_marks=sample.score.tempo_marks)
+    # difficulty-v3: the passage is graded by the publishers' guides, like the work.
+    graded = rubric_grade(Score(sample.title, (fragment,), _window_marks(sample.score.tempo_marks, first, last)))
     measures = str(first) if first == last else f"{first}-{last}"
     return {
         "work_id": sample.work_id, "work_title": sample.title, "parts": [part.name], "measure_range": measures,
         "label": f"{part.name} · cc. {measures.replace('-', '–')}",
-        "snapshot": {"grade": prediction["grade"], "technical_index": prediction["difficulty_score"],
+        "snapshot": {"grade": graded["grade"], "technical_index": prediction["difficulty_score"],
                      "family": prediction["family"], "critical": critical, "findings": sorted(findings),
                      "versions": {"scale": SCALE["version"], "critical_detector": "phrases", "sample": SAMPLE_VERSION,
                                   "difficulty": DIFFICULTY_VERSION}},

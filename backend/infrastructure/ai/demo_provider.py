@@ -66,9 +66,15 @@ class DemoExplanationProvider:
         summary = "«{}» tiene grado {} ({}, {} de las editoriales) en la escala de ScoreLint: {}".format(
             evidence["title"], evidence["grade"], evidence["grade_label"], evidence["grade_standard"],
             description[0].lower() + description[1:])
-        if leading:
-            summary += " Lo más exigente está en " + _joined(leading)
-            summary += "; hay {} pasajes críticos señalados.".format(len(evidence["passages"])) if evidence["passages"] else "."
+        reasons = evidence.get("grade_reasons") or []
+        if reasons:
+            # difficulty-v3: the grade is the guides', so the summary says which of their criteria sets it.
+            summary += " Lo fijan las guías de las editoriales: {}.".format(
+                "; ".join(reason[0].lower() + reason[1:] for reason in reasons[:2]))
+        elif leading:
+            summary += " Lo más exigente está en " + _joined(leading) + "."
+        if evidence["passages"]:
+            summary += " Hay {} pasajes críticos señalados.".format(len(evidence["passages"]))
         return {"summary": summary, "factors": factors, "study_tip": STUDY_TIPS[factors[0]["dimension"]]}
 
     def explain_rehearsal(self, evidence: dict) -> dict:

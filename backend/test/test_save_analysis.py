@@ -78,7 +78,7 @@ def test_api_persists_exact_legacy_result_and_configuration(postgres_engine, rep
             name: details['dimensions'] for name, details in expected['difficulty']['by_instrument'].items()}
         assert stored.features['instrument_resolution'] == {'resolver_version': RESOLVER_VERSION,
                                                             'catalog_version': CATALOG_VERSION}
-        assert stored.algorithm_version == 'difficulty-v2'   # recorded since 2026-10-14, to analyse old works again
+        assert stored.algorithm_version == 'difficulty-v3'   # recorded since 2026-10-14, to analyse old works again
         assert stored.features_version == 'legacy-features-v1'
         second = upload(client)
         assert second.status_code == 200
