@@ -91,8 +91,9 @@ Mantener score continuo, idealmente 0-10.
 
 `backend/domain/difficulty_scale.py`. El **índice técnico** 0–10 es 2 × la puntuación anterior
 0–5 (transformación explícita que conserva el orden entre partes; las dimensiones se escalan
-igual). El **grado** 1–6 sale de seis tramos iguales del índice, hasta que la evaluación con
-músicos los calibre:
+igual). El **grado** 1–6 salía de seis tramos iguales del índice. Desde difficulty-v3 (2026-10-25) el grado
+de la obra, de sus familias de viento y cuerda y de sus partes sigue las guías de las editoriales (ver
+«difficulty-v3»); los tramos quedan para el índice técnico y para la percusión. La rúbrica de cada grado:
 
 | Grado | Índice | Equivale a | Rúbrica (alineada con las editoriales, 2026-10-13) |
 |---|---|---|---|
@@ -154,8 +155,8 @@ Market* en notas por segundo de los pasajes rápidos (14,9 frente a 12,0), notas
 con modulación a cinco sostenidos, frente a 23 %), síncopas (10 % frente a 0 %) y compases sin otra parte que
 la doble (28 % frente a 0 %). Ajustar ScoreLint a esos grados sería ajustarlo a otras partituras.
 
-Queda pendiente: **los tramos índice → grado siguen siendo seis tramos iguales provisionales**, y no se
-tocan con una sola referencia válida. Calibrarlos exige obras cuyo archivo sea la edición que publica el
+Quedaba pendiente (resuelto con difficulty-v3, más abajo): **los tramos índice → grado seguían siendo seis
+tramos iguales provisionales**, y no se tocaban con una sola referencia válida. Calibrarlos exige obras cuyo archivo sea la edición que publica el
 grado (o con el grado de un experto sobre ese archivo); hasta entonces, la evaluación con músicos y los
 grados publicados que registre la directora (con su fuente) son los que miden cuánto se desvía ScoreLint.
 Tonalidad, cromatismo, ritmo (tresillos, síncopas) y exposición de las partes son candidatos razonables a
@@ -249,12 +250,13 @@ la campaña (`evaluation/campaign_report.py`) compara obra a obra el grado de Sc
 MAE, sesgo y Spearman (este último, con tres obras o más). Con pocas obras es una muestra pequeña: orienta, no
 valida la escala.
 
-No es una certificación oficial. El grado de familia es el del percentil 80
-de sus instrumentos y el de la obra, el máximo de viento madera, viento metal y cuerda
-(difficulty-v2; antes, de todas las familias). El resultado declara
+No es una certificación oficial. Desde difficulty-v3, el grado de cada parte es el de su criterio más
+exigente de las guías, el de cada familia el percentil 80 de sus partes y el de la obra el máximo entre los
+criterios de toda la obra y las familias de viento madera, viento metal y cuerda (difficulty-v2 ya dejaba
+fuera la percusión; antes contaban todas las familias). El resultado declara
 `scale = {version: 2, grades: 6, technical_index_max: 10}`; un análisis guardado sin `scale` se
 puntuó 1–5 y la interfaz lo muestra como «escala anterior». El baseline se captura con
-`scale="legacy"`. En las obras locales la mediana de las partes es 5,2 (grado 4).
+`scale="legacy"`.
 
 Debe estar contextualizado por:
 

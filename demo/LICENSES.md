@@ -34,4 +34,4 @@ fecha de codificación que escribe music21; una prueba comprueba que estos archi
 
 No se incluyen transcripciones de obras de dominio público: no se encontró ninguna en MusicXML con una
 licencia que permita redistribuirla (2026-10-14). Las marchas de Sousa que publica la Banda de los
-Marines de EE. UU. son de dominio público pero están en PDF; se podrían convertir con Audiveris (opcional).
+Marines de EE. UU. son de dominio público pero están en PDF; se podrían convertir con un lector óptico de partituras (opcional).

@@ -8,7 +8,10 @@
 - **Pasajes propuestos** (`backend/analyzers/evaluation_sample.py`): muestra reproducible de sus obras,
   ~40 % críticos y ~60 % no críticos repartidos por grados y obras; cada pasaje es una parte de
   4–12 compases y guarda la **predicción de ScoreLint para ese fragmento** (grado 1–6, índice 0–10,
-  crítico, hallazgos y versiones de escala, detector y muestra). El orden se baraja de forma
+  crítico, hallazgos y versiones de escala, detector, muestra y dificultad). Desde difficulty-v3
+  (2026-10-25) el grado del fragmento sigue las guías de las editoriales, como el de la obra: una campaña
+  creada antes guarda predicciones de otra versión y conviene crearla de nuevo antes de las valoraciones.
+  Solo las cuentas de `ADMIN_EMAILS` crean y gestionan campañas (2026-10-14). El orden se baraja de forma
   determinista para que los críticos no se agrupen. En borrador se pueden quitar pasajes.
 - **Invitación por email**: el músico entra con su cuenta y ve la campaña (no en borrador); indica
   nivel de experiencia (estudiante, amateur, profesional, docente) e instrumento principal; puede
