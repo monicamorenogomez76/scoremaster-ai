@@ -1,32 +1,31 @@
 :root {
   color-scheme: light;
-  /* Interface proposal (2026-10-05): cold white, graphite and electric blue. */
-  --bg: #fafbfc;
+  --bg: #fbf7f2;
   --panel: #ffffff;
-  --panel-alt: #f4f6fa;
-  --text: #15181e;
-  --muted: #667085;
-  --primary: #365cff;
-  --primary-strong: #2443d6;
-  --primary-soft: #eef3ff;
+  --panel-alt: #f4ede4;
+  --text: #1e1a24;
+  --muted: #645c6b;
+  --primary: #b83d24;
+  --primary-strong: #9a311c;
+  --primary-soft: #fbe9e3;
   --success: #18794e;
   --warning: #a15c00;
   --danger: #b42318;
-  --line: #e6eaf0;
-  --accent: #365cff;
+  --line: #eae2d8;
+  --accent: #b83d24;
   --on-primary: #ffffff;
-  --line-strong: #cbd5e1;
-  --primary-line: #c9d6ff;
-  --text-soft: #475569;
-  --ink: #172033;
-  --control: #e8edf4;
-  --control-hover: #dce5f0;
-  --control-ink: #334155;
-  --dialog: #f8fafc;
-  --sunken: #f1f3f9;
+  --line-strong: #8c7f74;
+  --primary-line: #f0c9bd;
+  --text-soft: #433b49;
+  --ink: #1e1a24;
+  --control: #f1eae0;
+  --control-hover: #e9dfd2;
+  --control-ink: #3b3442;
+  --dialog: #fdfaf6;
+  --sunken: #f4ede4;
   --paper: #ffffff;
-  --track: #eef1f6;
-  --warning-soft: #fff8eb;
+  --track: #efe7dc;
+  --warning-soft: #fff5e5;
   --backdrop: rgba(3, 7, 18, 0.78);
   --on-fill: #ffffff;
   /* Depth and motion (2026-10-14): layered diffuse shadows, one easing curve for every movement. */
@@ -36,50 +35,65 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 160ms;
   --duration-base: 320ms;
-  --shadow-1: 0 1px 2px rgb(30 44 90 / 0.04), 0 6px 24px rgb(30 44 90 / 0.05);
-  --shadow-2: 0 1px 2px rgb(30 44 90 / 0.06), 0 8px 20px rgb(30 44 90 / 0.08), 0 24px 48px -16px rgb(30 44 90 / 0.14);
-  --shadow-3: 0 2px 4px rgb(30 44 90 / 0.06), 0 20px 60px rgb(30 44 90 / 0.12);
-  --shadow-primary: 0 1px 2px rgb(54 92 255 / 0.25), 0 4px 12px rgb(54 92 255 / 0.18);
+  --shadow-1: 0 1px 2px rgb(60 30 30 / 0.05), 0 6px 24px rgb(60 30 30 / 0.06);
+  --shadow-2: 0 1px 2px rgb(60 30 30 / 0.06), 0 8px 20px rgb(60 30 30 / 0.09), 0 24px 48px -16px rgb(60 30 30 / 0.14);
+  --shadow-3: 0 2px 4px rgb(60 30 30 / 0.06), 0 20px 60px rgb(60 30 30 / 0.13);
+  --shadow-primary: 0 1px 2px rgb(184 61 36 / 0.25), 0 4px 12px rgb(184 61 36 / 0.18);
+  /* Concert hall identity (author's choice, 2026-10-26): warm paper and ink, vermilion of the curtain as the main
+     colour and one colour per family (brass is gold, like the instruments). Every pair measured for WCAG 2.1 AA. */
+  --font-text: "Outfit Variable", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Outfit Variable", ui-sans-serif, sans-serif;
+  --family-woodwinds: #1f7a63;
+  --family-brass: #8c6410;
+  --family-percussion: #6e4ba8;
+  --family-strings: #2d63a8;
+  --on-family: #ffffff;
 }
 /* Dark theme (2026-10-14): deep slate surfaces; the score keeps its white paper. settings.js sets
    data-theme from the director's choice or, in automatic mode, from the system. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0f1420;
-  --panel: #171d2a;
-  --panel-alt: #1e2534;
-  --text: #e7eaf0;
-  --muted: #9aa3b2;
-  --primary: #8aa0ff;
-  --primary-strong: #b4c2ff;
-  --primary-soft: #222c4d;
+  --bg: #15121a;
+  --panel: #1f1a26;
+  --panel-alt: #2a2333;
+  --text: #f5efe6;
+  --muted: #bdb3c2;
+  --primary: #ff7a59;
+  --primary-strong: #ff9a7e;
+  --primary-soft: #3a2420;
   --success: #4cc38a;
   --warning: #f0b45a;
   --danger: #ff8a7a;
-  --line: #2a3242;
-  --accent: #8aa0ff;
-  --on-primary: #0b1020;
-  --line-strong: #3a4458;
-  --primary-line: #3b4a85;
-  --text-soft: #aeb6c4;
-  --ink: #e7eaf0;
-  --control: #262f40;
-  --control-hover: #303a4e;
-  --control-ink: #d3d9e4;
-  --dialog: #131927;
-  --sunken: #0b0f19;
+  --line: #322a3b;
+  --accent: #ff7a59;
+  --on-primary: #15121a;
+  --line-strong: #7a6e86;
+  --primary-line: #6b3a2e;
+  --text-soft: #ddd4e0;
+  --ink: #f5efe6;
+  --control: #2a2333;
+  --control-hover: #352c40;
+  --control-ink: #e6dde8;
+  --dialog: #1a1620;
+  --sunken: #110e15;
   --paper: #ffffff;
-  --track: #262f40;
-  --warning-soft: #2e2414;
+  --track: #2a2333;
+  --warning-soft: #33281a;
   --backdrop: rgba(0, 0, 0, 0.7);
   --on-fill: #ffffff;
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 24px rgb(0 0 0 / 0.25);
   --shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 8px 20px rgb(0 0 0 / 0.3), 0 24px 48px -16px rgb(0 0 0 / 0.45);
   --shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 20px 60px rgb(0 0 0 / 0.5);
-  --shadow-primary: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(138 160 255 / 0.22);
+  --shadow-primary: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(255 122 89 / 0.22);
+  --family-woodwinds: #5fd3b5;
+  --family-brass: #f2c14e;
+  --family-percussion: #c9a7ff;
+  --family-strings: #7fb8ff;
+  --on-family: #15121a;
 }
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: "Inter Variable", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font-text); }
+h1, h2, h3, .topbar-brand, .login-brand-mark { font-family: var(--font-display); }
 
 h1 { margin-top: 0; font-size: clamp(2rem, 3vw, 3rem); }
 p { color: var(--muted); }
@@ -452,10 +466,11 @@ button, input, select, textarea { font: inherit; min-height: 44px; }
 button { background: var(--primary); color: var(--on-primary); border: none; cursor: pointer; border-radius: 6px; transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out); }
 button:disabled { opacity: 0.65; cursor: default; }
 :where(button, input, select, textarea, a):focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
-.brand-logo { flex-shrink: 0; filter: drop-shadow(0 5px 10px rgba(79,70,229,.18)); }
+.brand-logo { flex-shrink: 0; }
 .login-card { padding: 30px; border: 1px solid var(--line); background: var(--panel); border-radius: 24px; box-shadow: var(--shadow-3); width: min(100%, 410px); }
 .login-brand-mark { display: flex; align-items: center; gap: 11px; font-weight: 700; font-size: 1.2rem; letter-spacing: -.03em; }
-.app-shell button, .app-shell input, .app-shell select, .login-demo-button { border-radius: 12px; }
+.app-shell button, .login-demo-button { border-radius: 999px; }
+.app-shell input, .app-shell select { border-radius: 12px; }
 .nav-item { display: flex; align-items: center; gap: 8px; min-height: 44px; border: 0; background: transparent; color: var(--muted); font-size: .9rem; font-weight: 500; text-align: left; padding: 0 12px; white-space: nowrap; }
 .nav-index { color: var(--muted); font-size: .75rem; display: flex; align-items: center; width: 20px; font-family: inherit; }
 .nav-index svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -542,9 +557,9 @@ button:disabled { opacity: 0.65; cursor: default; }
 /* Interface proposal F1: summary, repertoire and work detail. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .view-heading > .primary-action { flex: none; }
-.app-shell .primary-action { border: 1px solid var(--primary); border-radius: 8px; background: var(--primary); color: var(--on-primary); font-weight: 600; }
+.app-shell .primary-action { border: 1px solid var(--primary); border-radius: 999px; background: var(--primary); color: var(--on-primary); font-weight: 600; }
 .app-shell .primary-action:hover { background: var(--primary-strong); }
-.secondary-action { width: auto; padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); font-weight: 500; }
+.secondary-action { width: auto; padding: 9px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--text); font-weight: 500; }
 .secondary-action:hover { border-color: var(--primary-line); background: var(--primary-soft); }
 .danger-action { width: auto; padding: 9px 14px; border: 1px solid var(--danger); border-radius: 8px; background: var(--panel); color: var(--danger); font-weight: 600; }
 .link-action { display: inline; width: auto; margin: 0; padding: 0; border: 0; background: none; color: var(--primary); font-weight: 600; text-align: left; }
@@ -664,7 +679,7 @@ button:disabled { opacity: 0.65; cursor: default; }
 .event-concert { background: var(--primary); color: var(--on-primary); }
 .event-rehearsal { background: #475569; }
 .weekday-picker { display: flex; flex-wrap: wrap; gap: 6px; }
-.rehearsal-editor .weekday-option { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-weight: 600; }
+.rehearsal-editor .weekday-option { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; font-weight: 600; }
 .weekday-option input { width: 18px; height: 18px; min-height: 0; }
 .pattern-preview { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .pattern-preview li { padding: 3px 8px; border-radius: 999px; background: var(--panel-alt); font-size: .8rem; }
