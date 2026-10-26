@@ -5,6 +5,8 @@ import { listPriorities, listWorks } from './library.js';
 import { blockWorkText, listRehearsals, listReviewPriorities, nextRehearsal, rehearsalDateText, summaryPriorityRows,
   todayIso } from './rehearsals.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
+import { SectionWork } from './SectionWork.jsx';
+import { planCounts } from './dashboard.js';
 import { NextStep } from './NextStep.jsx';
 import { View } from './View.jsx';
 
@@ -48,6 +50,8 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
   const next = rehearsals && nextRehearsal(rehearsals);
   const concert = nextConcert(concerts, todayIso());
   const priorityRows = priorities ? summaryPriorityRows(reviewPriorities, priorities) : null;
+  const counts = planCounts(priorityRows || []);
+  const gradeOf = workId => (works || []).find(work => work.id === workId)?.summary?.grade;
   const action = <button id="plan-rehearsal" className="primary-action" type="button" onClick={onPlanRehearsal}>Planificar ensayo</button>;
 
   // The next concert takes the place of the description, so the summary still fits at a glance.
@@ -55,7 +59,11 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
     ? <span id="next-concert"><strong>Próximo concierto:</strong> {[concert.concert.title, rehearsalDateText(concert.concert),
         concert.days === 0 ? 'hoy' : 'faltan ' + concert.days + (concert.days === 1 ? ' día' : ' días'),
         concert.remaining + (concert.remaining === 1 ? ' ensayo' : ' ensayos')].join(' · ')}{' '}
-        <button type="button" className="link-action" onClick={() => onNavigate('concerts')}>Ver conciertos</button></span>
+        <button type="button" className="link-action" onClick={() => onNavigate('concerts')}>Ver conciertos</button>
+        {(concert.concert.works || []).length > 0 && <span className="programme" aria-label="Programa del concierto">
+          {concert.concert.works.map(work => <span key={work.id} className="programme-chip">{work.title}
+            {gradeOf(work.id) != null && <> · <strong>Grado {gradeOf(work.id)}</strong></>}</span>)}
+        </span>}</span>
     : 'Lo que necesitas para dirigir la próxima sesión.';
   return <View name="summary" active={active} eyebrow="Resumen" title="Tu próximo ensayo, preparado"
     description={description} action={action}>
@@ -98,7 +106,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
         {priorityRows && priorityRows.length > 0 && <table className="summary-table">
           <thead><tr><th scope="col">Sección</th><th scope="col">Obra</th><th scope="col">Pasaje</th><th scope="col">Motivo</th><th scope="col">Origen</th></tr></thead>
           <tbody>{priorityRows.slice(0, VISIBLE_ROWS).map((row, index) => <tr key={index}>
-            <th scope="row">{row.section}</th>
+            <th scope="row">{row.family && <span className={'family-dot family-dot--' + row.family} aria-hidden="true" />}{row.section}</th>
             <td><button type="button" className="link-action" disabled={busy} onClick={() => onOpenWork(row.work_id)}>{row.title}</button>
               <span className="table-supporting">{row.detail}</span></td>
             <td>{row.range ? <button type="button" className="link-action" disabled={busy}
@@ -110,6 +118,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
         </table>}
         {priorityRows && priorityRows.length > VISIBLE_ROWS && <p className="table-supporting">Y {priorityRows.length - VISIBLE_ROWS} más.</p>}
       </Card>
+      <Card id="summary-plan" title="Dónde trabajar"><SectionWork counts={counts} /></Card>
       <Card id="summary-works" title="Obras en preparación" action={link('Ver repertorio', 'repertoire')}>
         {works && preparing.length === 0 && <div className="empty-workspace"><h3>Ninguna obra en preparación</h3>
           <p>Marca en Repertorio las obras que estáis preparando para seguirlas desde aquí.</p></div>}

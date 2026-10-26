@@ -637,13 +637,14 @@ button:disabled { opacity: 0.65; cursor: default; }
 .agenda-calendar .calendar-block { cursor: default; }
 
 /* Summary at a glance (author's mock-up): two columns on a computer, compact cards. */
-.summary-layout { display: grid; gap: 16px; align-items: start; grid-template-areas: "rehearsal" "priorities" "works"; }
+.summary-layout { display: grid; gap: 16px; align-items: start; grid-template-areas: "rehearsal" "plan" "priorities" "works"; }
 .summary-layout > * { min-width: 0; }
 #summary-rehearsal { grid-area: rehearsal; }
 #summary-priorities { grid-area: priorities; }
 #summary-works { grid-area: works; }
+#summary-plan { grid-area: plan; }
 @media (min-width: 1100px) {
-  .summary-layout { grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "rehearsal works" "priorities works"; align-items: stretch; }
+  .summary-layout { grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "rehearsal plan" "priorities works"; align-items: stretch; }
 }
 [data-view="summary"] .view-heading { margin-bottom: 14px; }
 [data-view="summary"] .view-heading h1 { font-size: clamp(1.5rem, 2.2vw, 1.9rem); }
@@ -830,3 +831,25 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .published-grade-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: end; gap: 12px; }
 .published-grade-form label { display: grid; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
 .published-grade-form input, .published-grade-form select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-weight: 400; }
+
+/* Director's dashboard (2026-10-26): where to work by section, the family colours and the programme of the concert.
+   The rehearsal blocks keep a colour per kind of block, as before: by family they looked alike (author, 2026-10-26). */
+.section-work-headline { margin: 0 0 12px; font-weight: 600; }
+.section-work { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.section-work li { display: grid; grid-template-columns: minmax(118px, auto) minmax(0, 1fr) 2.2em; align-items: center; gap: 12px; }
+.section-work .is-empty { color: var(--muted); }
+.section-work-name { white-space: nowrap; }
+.section-work-track { height: 12px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.section-work-fill { display: block; height: 100%; border-radius: 999px; }
+.section-work-fill--woodwinds { background: var(--family-woodwinds); }
+.section-work-fill--brass { background: var(--family-brass); }
+.section-work-fill--percussion { background: var(--family-percussion); }
+.section-work-fill--strings { background: var(--family-strings); }
+.section-work-count { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.family-dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: baseline; }
+.family-dot--woodwinds { background: var(--family-woodwinds); }
+.family-dot--brass { background: var(--family-brass); }
+.family-dot--percussion { background: var(--family-percussion); }
+.family-dot--strings { background: var(--family-strings); }
+.programme { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.programme-chip { padding: 4px 12px; border-radius: 999px; background: var(--panel-alt); color: var(--text); font-size: .86rem; }
