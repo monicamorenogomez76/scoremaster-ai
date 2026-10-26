@@ -62,9 +62,13 @@ function declarationsOf(selector) {
   return rule ? rule[1] : '';
 }
 
-test('the interface uses the Inter font that main.jsx loads, form controls included', () => {
-  // @fontsource-variable/inter registers the family as «Inter Variable»: «Inter» fell back to the system font.
-  assert.match(declarationsOf('body'), /font-family:\s*"Inter Variable"/);
+test('the interface uses the fonts that main.jsx loads, form controls included', () => {
+  // Concert hall identity (2026-10-26): Outfit for the text and Bricolage Grotesque for the headings, self-hosted with
+  // @fontsource-variable, which registers each family with the «Variable» suffix (without it they fall back).
+  assert.match(declarationsOf('body'), /font-family:\s*var\(--font-text\)/);
+  assert.match(css.match(/:root\s*\{([^}]*)\}/)[1], /--font-text:\s*"Outfit Variable"/);
+  assert.match(css.match(/:root\s*\{([^}]*)\}/)[1], /--font-display:\s*"Bricolage Grotesque Variable"/);
+  assert.match(declarationsOf('h1, h2, h3, .topbar-brand, .login-brand-mark'), /font-family:\s*var\(--font-display\)/);
   // Selects and textareas kept the browser's own font (Arial) unless a rule of their view set it.
   assert.match(declarationsOf('button, input, select, textarea'), /font:\s*inherit/);
 });
@@ -95,7 +99,7 @@ test('the dark theme redefines every colour token of the light one', () => {
   const darkBlock = css.match(/:root\[data-theme="dark"\]\s*\{([^}]*)\}/);
   assert.ok(darkBlock, 'a :root[data-theme="dark"] block');
   const dark = tokens(darkBlock[1]);
-  assert.deepEqual([...light].filter(token => !dark.has(token) && !token.startsWith('radius') && !token.startsWith('ease') && !token.startsWith('duration')), []);
+  assert.deepEqual([...light].filter(token => !dark.has(token) && !token.startsWith('radius') && !token.startsWith('ease') && !token.startsWith('duration') && !token.startsWith('font')), []);
   assert.match(darkBlock[1], /color-scheme:\s*dark/);
 });
 
