@@ -19,7 +19,7 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
 
 | # | Dónde | Qué hacer | Qué mirar |
 |---|---|---|---|
-| 1 | **Resumen** | Leer la pantalla de inicio | Próximo concierto, ensayo de hoy con su agenda por bloques y prioridades por sección: lo que necesita el director para la próxima sesión |
+| 1 | **Resumen** | Leer la pantalla de inicio | Próximo concierto con su programa, ensayo de hoy con su agenda por bloques, prioridades por sección, dónde trabajar y cobertura de los ensayos hasta el concierto (ensayos hechos y, por obra, tiempo ensayado y pasajes resueltos): lo que necesita el director para la próxima sesión |
 | 2 | **Repertorio → Marcha de la plaza → Dificultad** | Pulsar «Explicar la dificultad» | Grado 3 calculado por ScoreLint con «Por qué tiene este grado» (los criterios de las guías de las editoriales que lo fijan) y explicación con su fuente visible («Modo demo · sin IA» o «Gemini»). Los pasajes que cita son botones que abren la partitura |
 | 3 | **Dificultad → árbol → «Ver pasaje»** | Abrir un pasaje crítico y pulsar reproducir | Notación de esa parte, audio en sonido real y compás marcado mientras suena |
 | 4 | **Dificultad → Grado publicado** | Ver la tarjeta | El grado de una editorial se escribe a mano con su fuente y se compara con ScoreLint. La aplicación no lo busca ni se lo pide a la IA |
