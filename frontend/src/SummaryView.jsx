@@ -82,10 +82,6 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
         {next && <>
           <p className="result-supporting">{[rehearsalDateText(next), next.duration_minutes + ' minutos', next.place].filter(Boolean).join(' · ')}</p>
           <AgendaCalendar blocks={next.blocks} start={next.time} onOpenBlock={onOpenBlock} />
-          {next.blocks.length > 0 && <ul className="family-legend" aria-label="Colores de la agenda">
-            {[['band', 'Toda la banda'], ['woodwinds', 'Madera'], ['brass', 'Metal'], ['percussion', 'Percusión'], ['strings', 'Cuerda']]
-              .map(([family, name]) => <li key={family}><span className={'family-dot family-dot--' + family} aria-hidden="true" />{name}</li>)}
-          </ul>}
           {next.blocks.length === 0 && <p className="result-supporting">Este ensayo aún no tiene agenda.</p>}
           {detail && next.blocks.length > 0 && <ol className="agenda-list">{next.blocks.map((block, index) => <li key={index} className="agenda-item">
                 <span className="agenda-number" aria-hidden="true">{index + 1}</span>
