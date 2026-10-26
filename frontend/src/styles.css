@@ -826,20 +826,19 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .published-grade-form label { display: grid; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
 .published-grade-form input, .published-grade-form select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-weight: 400; }
 
-/* Director's dashboard (2026-10-26): the plan of the band, the family colours and the programme of the concert. */
-.band-plan { display: flex; flex-direction: column; gap: 6px; margin: 0; }
-.band-plan-caption { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.band-plan-caption strong { font-family: var(--font-display); font-size: 1.02rem; }
-.band-plan-caption span { color: var(--muted); font-size: .8rem; }
-.band-plan-figure { width: 100%; height: auto; }
-.band-plan-arc { fill: none; stroke-linecap: round; }
-.band-plan-arc--woodwinds { stroke: var(--family-woodwinds); }
-.band-plan-arc--brass { stroke: var(--family-brass); }
-.band-plan-arc--percussion { stroke: var(--family-percussion); }
-.band-plan-arc--strings { stroke: var(--family-strings); }
-.band-plan-podium { fill: var(--text); }
-.band-plan-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: .86rem; font-weight: 600; }
-.band-plan-legend .is-empty { color: var(--muted); font-weight: 500; }
+/* Director's dashboard (2026-10-26): where to work by section, the family colours and the programme of the concert. */
+.section-work-headline { margin: 0 0 12px; font-weight: 600; }
+.section-work { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.section-work li { display: grid; grid-template-columns: minmax(118px, auto) minmax(0, 1fr) 2.2em; align-items: center; gap: 12px; }
+.section-work .is-empty { color: var(--muted); }
+.section-work-name { white-space: nowrap; }
+.section-work-track { height: 12px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.section-work-fill { display: block; height: 100%; border-radius: 999px; }
+.section-work-fill--woodwinds { background: var(--family-woodwinds); }
+.section-work-fill--brass { background: var(--family-brass); }
+.section-work-fill--percussion { background: var(--family-percussion); }
+.section-work-fill--strings { background: var(--family-strings); }
+.section-work-count { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 .family-dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: baseline; }
 .family-dot--woodwinds { background: var(--family-woodwinds); }
 .family-dot--brass { background: var(--family-brass); }

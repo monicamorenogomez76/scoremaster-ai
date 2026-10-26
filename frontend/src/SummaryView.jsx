@@ -5,8 +5,8 @@ import { listPriorities, listWorks } from './library.js';
 import { blockWorkText, listRehearsals, listReviewPriorities, nextRehearsal, rehearsalDateText, summaryPriorityRows,
   todayIso } from './rehearsals.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
-import { BandPlan } from './BandPlan.jsx';
-import { planCounts, planDescription } from './dashboard.js';
+import { SectionWork } from './SectionWork.jsx';
+import { planCounts } from './dashboard.js';
 import { NextStep } from './NextStep.jsx';
 import { View } from './View.jsx';
 
@@ -51,7 +51,6 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
   const concert = nextConcert(concerts, todayIso());
   const priorityRows = priorities ? summaryPriorityRows(reviewPriorities, priorities) : null;
   const counts = planCounts(priorityRows || []);
-  const familyNames = { woodwinds: 'Madera', brass: 'Metal', percussion: 'Percusión', strings: 'Cuerda' };
   const gradeOf = workId => (works || []).find(work => work.id === workId)?.summary?.grade;
   const action = <button id="plan-rehearsal" className="primary-action" type="button" onClick={onPlanRehearsal}>Planificar ensayo</button>;
 
@@ -123,10 +122,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
         </table>}
         {priorityRows && priorityRows.length > VISIBLE_ROWS && <p className="table-supporting">Y {priorityRows.length - VISIBLE_ROWS} más.</p>}
       </Card>
-      <section id="summary-plan" className="summary-card surface" aria-label="Dónde trabajar">
-        <BandPlan title="Dónde trabajar" note={priorityRows && priorityRows.length === 0 ? 'Sin prioridades por ahora' : 'prioridades por sección'}
-          values={counts} label={(family, value) => familyNames[family] + ' · ' + value} description={planDescription(counts)} />
-      </section>
+      <Card id="summary-plan" title="Dónde trabajar"><SectionWork counts={counts} /></Card>
       <Card id="summary-works" title="Obras en preparación" action={link('Ver repertorio', 'repertoire')}>
         {works && preparing.length === 0 && <div className="empty-workspace"><h3>Ninguna obra en preparación</h3>
           <p>Marca en Repertorio las obras que estáis preparando para seguirlas desde aquí.</p></div>}

@@ -1,4 +1,4 @@
-// Director's dashboard (2026-10-26): the plan of the band shows which sections need work, counted from the
+// Director's dashboard (2026-10-26): «Dónde trabajar» shows which sections need work, counted from the
 // priorities. Plain functions so the Node tests can import them.
 
 export const PLAN_FAMILIES = ['woodwinds', 'brass', 'percussion', 'strings'];
@@ -23,7 +23,12 @@ export function planCounts(rows) {
   return counts;
 }
 
-export function planDescription(counts) {
-  return 'Plano de la banda con las prioridades de cada sección: '
-    + PLAN_FAMILIES.map(family => PLAN_LABELS[family] + ', ' + (counts[family] ? counts[family] : 'ninguna')).join('; ') + '.';
+// One sentence on top of the bars, so the director does not have to read the chart (2026-10-26).
+export function workHeadline(counts) {
+  const top = Math.max(...PLAN_FAMILIES.map(family => counts[family] || 0));
+  if (!top) return 'Sin prioridades por ahora.';
+  const leaders = PLAN_FAMILIES.filter(family => counts[family] === top).map(family => PLAN_LABELS[family]);
+  const names = leaders.length === 1 ? leaders[0] : leaders.slice(0, -1).join(', ') + ' y ' + leaders[leaders.length - 1];
+  const passages = top + (top === 1 ? ' pasaje' : ' pasajes');
+  return 'Más trabajo en ' + names + ': ' + passages + (leaders.length > 1 ? ' cada una' : '') + '.';
 }
