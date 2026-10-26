@@ -134,6 +134,27 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 | Alojar la aplicación en Vercel | Aplazado a después de la entrega (ver [DEPLOYMENT.md](DEPLOYMENT.md)) |
 | Modelos de Hugging Face para la dificultad o bancos de sonido | Descartados: los de dificultad son de piano y no explicables; no hay bancos de viento con licencia clara |
 
+## Mejoras para la nota (propuesta del 2026-10-25)
+
+Propuesta para reforzar la parte de IA generativa y la evaluación. Cada mejora es una PR y se aborda
+en este orden cuando la autora dé el visto bueno; la autora puede elegir un subconjunto. Siguen
+valiendo las reglas de siempre: ScoreLint es la única fuente de hechos musicales, el método B no
+recibe la predicción de ScoreLint y nada se ajusta con las valoraciones de los músicos.
+
+| # | Mejora | Qué aporta | Necesita de la autora | Esfuerzo | Estado |
+|---|---|---|---|---|---|
+| M1 | Cierre de la entrega: enlaces a vídeo y diapositivas, credenciales de prueba coherentes en README y [TRIBUNAL.md](TRIBUNAL.md), insignia de CI y sección «Resultados y limitaciones» con `evaluation.campaign_report` sobre la exportación real (sin inventar cifras) | Requisitos de BigSchool y resultados medidos | Repositorio público o acceso para el tribunal, URL del vídeo y de las diapositivas, exportación de la campaña | ½ día | Pendiente |
+| M2 | Partituras en PDF con OMR (ver la sección [Opcional: partituras en PDF](#opcional-partituras-en-pdf-con-audiveris-decisión-de-la-autora-2026-10-06)) | Función nueva con un modelo de Hugging Face | 3–4 PDF de prueba: una particella, una partitura de banda y un escaneo | 4–5 días | Pendiente: prueba de viabilidad O1 |
+| M3 | Comparación de modelos para el método B (`evaluation/model_comparison.py`): error frente a los músicos, respuestas inválidas, citas rechazadas, latencia, tokens, coste y autoconsistencia por modelo | Justifica la elección del modelo con datos | Exportación de la campaña | 1–2 días | Pendiente; el modelo de pesos abiertos depende de la decisión sobre la API |
+| M4 | Pruebas de inyección de prompts con MusicXML hostil (títulos, partes, letras) y apartado OWASP Top 10 para LLM en [SECURITY.md](SECURITY.md) | Seguridad de la capa de IA demostrada con pruebas | Nada | ½–1 día | Pendiente |
+| M5 | Panel de uso de la IA para `ADMIN_EMAILS`: llamadas por modelo, tokens, coste estimado, aciertos de caché, latencia y rechazos por motivo, sin guardar textos de usuarios | Control de la IA en producción | Nada | 1 día | Pendiente |
+| M6 | Pregunta libre con *function calling* sobre funciones de solo lectura (obras, BandFit, pasajes, ensayos), con citas comprobadas | Demo; es el punto 6 del plan de cierre | Nada | 3 días | Opcional |
+
+Descartado de forma razonada, como trabajo futuro de la memoria: entrenar o ajustar un LLM propio (con
+pocas valoraciones se evaluaría con los mismos datos con los que aprende y rompería el preregistro del
+híbrido C), RAG con pgvector, ejercicios generados por la IA y localizar pasajes en las grabaciones
+de YouTube con Gemini.
+
 ## Criterios de aceptación
 
 1. Especificaciones enlazadas y distinción entre previsto e implementado.
