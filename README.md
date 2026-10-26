@@ -83,7 +83,7 @@ Detalles: [dificultad y criticidad](docs/DIFFICULTY_CRITICALITY.md), [identidad 
 | Base de datos | PostgreSQL 17 |
 | IA | Google Gemini mediante LangChain (`langchain-google-genai` 4.4), opcional; modo demo determinista |
 | Frontend | React 19 y Vite 8, CSS propio con tokens (tema claro y oscuro), OpenSheetMusicDisplay 1.9 para la notación y smplr 1.1 para el audio |
-| Calidad | pytest (con PostgreSQL real), pruebas de Node, recorridos Playwright y auditoría de dependencias en GitHub Actions |
+| Calidad | pytest (con PostgreSQL real), pruebas de Node, recorridos Playwright, **auditoría de accesibilidad WCAG 2.1 A y AA con axe-core** en todas las pantallas (claro, oscuro y móvil) y auditoría de dependencias en GitHub Actions |
 | Despliegue | Docker y Docker Compose; Render (Blueprint `render.yaml`) con la base en Neon |
 
 ## Arranque en un paso

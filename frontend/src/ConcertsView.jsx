@@ -37,16 +37,21 @@ function MonthCalendar({ concerts, rehearsals }) {
       <h2 id="month-title">{MONTHS[shown.month - 1][0].toUpperCase() + MONTHS[shown.month - 1].slice(1)} de {shown.year}</h2>
       <button type="button" className="secondary-action" aria-label="Mes siguiente" onClick={() => step(1)}>›</button>
     </div>
-    <div className="month-grid" role="grid">
-      {DAY_NAMES.map(name => <div key={name} className="month-day-name" role="columnheader">{name}</div>)}
-      {monthGrid(shown.year, shown.month, events).flat().map((day, index) => day
-        ? <div key={day.date} role="gridcell" className={'month-day' + (day.events.some(event => event.kind === 'concert') ? ' has-concert' : '')}>
-            <span className="month-day-number">{day.day}</span>
-            {day.events.map((event, at) => <span key={at} className={'month-event event-' + event.kind} title={event.label}>
-              {event.kind === 'concert' ? event.label : phaseLabel(rehearsals.find(item => item.date === day.date && item.concert_id)?.phase)}
-            </span>)}
-          </div>
-        : <div key={'empty-' + index} className="month-day is-empty" role="gridcell" />)}
+    {/* A table of weeks for screen readers (WCAG 1.3.1); the rows do not affect the layout of the grid. */}
+    <div className="month-grid" role="table" aria-labelledby="month-title">
+      <div className="month-row" role="row">
+        {DAY_NAMES.map(name => <div key={name} className="month-day-name" role="columnheader">{name}</div>)}
+      </div>
+      {monthGrid(shown.year, shown.month, events).map((week, row) => <div key={row} className="month-row" role="row">
+        {week.map((day, index) => day
+          ? <div key={day.date} role="cell" className={'month-day' + (day.events.some(event => event.kind === 'concert') ? ' has-concert' : '')}>
+              <span className="month-day-number">{day.day}</span>
+              {day.events.map((event, at) => <span key={at} className={'month-event event-' + event.kind} title={event.label}>
+                {event.kind === 'concert' ? event.label : phaseLabel(rehearsals.find(item => item.date === day.date && item.concert_id)?.phase)}
+              </span>)}
+            </div>
+          : <div key={'empty-' + index} className="month-day is-empty" role="cell" />)}
+      </div>)}
     </div>
   </section>;
 }

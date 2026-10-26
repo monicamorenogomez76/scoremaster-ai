@@ -116,7 +116,7 @@ jobs:
         run: |
           npm --prefix frontend ci
           pip install -r requirements.txt
-          npm install --prefix /tmp/browser-tests playwright@1.63.0
+          npm install --prefix /tmp/browser-tests playwright@1.63.0 axe-core@4.10.2
           /tmp/browser-tests/node_modules/.bin/playwright install --with-deps chromium
       - name: Compilar frontend y migrar la base
         run: |
@@ -142,6 +142,8 @@ jobs:
         run: node backend/test/frontend/bands.e2e.mjs
       - name: Campañas de valoración de la directora
         run: node backend/test/frontend/evaluation.e2e.mjs
+      - name: Accesibilidad WCAG 2.1 A y AA (axe-core)
+        run: node backend/test/frontend/accessibility.e2e.mjs
       - name: Registro del servidor
         if: failure()
         run: cat /tmp/uvicorn.log
