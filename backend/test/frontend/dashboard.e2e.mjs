@@ -26,6 +26,16 @@ try {
   assert.equal(await page.locator('#current-user').textContent(), 'Usuario demo');
   console.log('PASS: sign-in rejects a wrong password and the session survives a reload');
 
+  // The sections sit in a bar across the top (author's choice, 2026-10-25): the content takes the whole width.
+  const bar = await page.locator('.topbar').boundingBox();
+  for (const name of ['summary', 'repertoire', 'band', 'concerts', 'rehearsal', 'evaluation', 'settings']) {
+    const item = await page.locator(`[data-view-target=${name}]`).boundingBox();
+    assert.ok(item && item.y >= bar.y && item.y + item.height <= bar.y + bar.height, name + ' is in the top bar');
+  }
+  assert.equal(await page.locator('#mobile-menu-button').isVisible(), false, 'no menu button on a wide screen');
+  assert.ok((await page.locator('.workspace').boundingBox()).x < 40, 'no side column before the content');
+  console.log('PASS: the sections are in the top bar and the content takes the whole width');
+
   // The rest of the walkthrough uses a new account, so saved works and band start empty.
   const director = { email: 'directora-' + Date.now() + '@banda.test', password: 'una contraseña larga' };
   await page.locator('#sign-out').click();

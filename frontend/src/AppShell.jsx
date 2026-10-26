@@ -23,35 +23,32 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
   const data = analysis?.data;
   const go = name => { setMenuOpen(false); onNavigate(name); };
   const busy = upload.state.busy;
+  // The sections sit in a bar across the top (author's choice, 2026-10-25); on a narrow screen they fold behind «Menú».
   return <div id="app-shell" className="app-shell" hidden={hidden}>
-    <aside id="sidebar" className={'sidebar' + (menuOpen ? ' is-open' : '')}>
-      <div className="sidebar-brand"><img className="brand-logo" src="/static/brand.svg" alt="" width="44" height="44" /><span>ScoreMaster</span></div>
-      <p className="nav-label">Espacio de trabajo</p>
-      <nav className="app-nav" aria-label="Navegación principal">
-        {views.map(([name, label, icon]) => <button key={name} className="nav-item" type="button" data-view-target={name}
-          aria-current={view === name ? 'page' : undefined} onClick={() => go(name)}>
-          <span className="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={icon} /></svg></span>{label}
-        </button>)}
-      </nav>
-      <div className="sidebar-bottom">
-        <button type="button" className="nav-item" data-view-target="settings" aria-current={view === 'settings' ? 'page' : undefined}
-          onClick={() => go('settings')}>
-          <span className="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></span>Configuración
-        </button>
-        <div className="demo-identity"><strong>{user?.display_name || 'Sesión iniciada'}</strong><span>{user?.email || ''}</span></div>
-        <button id="sign-out" className="sign-out" type="button" onClick={onSignOut}>Cerrar sesión</button>
+    <header className="topbar">
+      <div className="topbar-brand"><img className="brand-logo" src="/static/brand.svg" alt="" width="36" height="36" /><span>ScoreMaster</span></div>
+      <button id="mobile-menu-button" className="mobile-menu-button" type="button" aria-controls="app-menu"
+        aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>Menú</button>
+      <div id="app-menu" className={'topbar-menu' + (menuOpen ? ' is-open' : '')}>
+        <nav className="app-nav" aria-label="Navegación principal">
+          {views.map(([name, label, icon]) => <button key={name} className="nav-item" type="button" data-view-target={name}
+            aria-current={view === name ? 'page' : undefined} onClick={() => go(name)}>
+            <span className="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={icon} /></svg></span>{label}
+          </button>)}
+        </nav>
+        <div className="topbar-account">
+          <button type="button" className="nav-item" data-view-target="settings" aria-current={view === 'settings' ? 'page' : undefined}
+            onClick={() => go('settings')}>
+            <span className="nav-index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></span>
+            <span className="settings-text">Configuración</span>
+          </button>
+          <span id="current-user" className="topbar-meta">{user?.display_name || user?.email || ''}</span>
+          <button id="sign-out" className="sign-out" type="button" onClick={onSignOut}>Cerrar sesión</button>
+        </div>
       </div>
-    </aside>
-
-    <div className="app-main">
-      <header className="topbar">
-        <button id="mobile-menu-button" className="mobile-menu-button" type="button" aria-label="Abrir menú"
-          aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>Menú</button>
-        <p id="current-page-title" className="topbar-title">{(view === 'settings' ? 'Configuración' : (views.find(([name]) => name === view) || views[0])[1])}</p>
-        <ActivityStatus id="app-activity" className="topbar-activity" label={busy ? upload.state.message : ''} />
-        <span id="current-user" className="topbar-meta">{user?.display_name || user?.email || ''}</span>
-      </header>
-      <main className="workspace">
+      <ActivityStatus id="app-activity" className="topbar-activity" label={busy ? upload.state.message : ''} />
+    </header>
+    <main className="workspace">
         <SummaryView active={view} user={user} hidden={hidden} onNavigate={go} onOpenWork={onOpenWork} onOpenBlock={onOpenBlock} busy={busy}
           onPlanRehearsal={() => onEditRehearsal({})} onEditRehearsal={onEditRehearsal}
           onReviewRehearsal={onReviewRehearsal} />
@@ -65,6 +62,5 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
         <RehearsalView active={view} hidden={hidden} onOpenBlock={onOpenBlock} reviewing={rehearsalReviewing}
           onReview={onReviewRehearsal} onCloseReview={onCloseReview} editing={rehearsalEditing} onEdit={onEditRehearsal} onCloseEditor={onCloseRehearsal} data={data} minutes={minutes} onMinutesChange={onMinutesChange} onRecalculate={onRecalculate} busy={busy} onOpenPassage={onOpenPassage} />
       </main>
-    </div>
   </div>;
 }
