@@ -1,5 +1,6 @@
 // Saved rehearsals of the signed-in user: several works per rehearsal and an agenda of blocks,
 // each naming the work rehearsed in it (author's decisions, 2026-10-05).
+import { familyOfSection } from './dashboard.js';
 import { apiJson } from './api.js';
 import { blockScoreLabel, calendarLabel, findingLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
 import { rehearsalSchedule } from './schedule.js';
@@ -147,10 +148,12 @@ const measuresOf = range => (!range ? '—' : (/[-,]/.test(range) ? 'cc. ' : 'c.
 export function summaryPriorityRows(reviewItems, analysisItems) {
   return [
     ...reviewItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.sections.join(', ') || 'Toda la banda',
+      family: familyOfSection(item.sections[0]),
       parts: item.parts || [], range: item.measure_range || '',
       detail: item.block, measures: measuresOf(item.measure_range),
       reason: [statusLabel(item.status), item.note].filter(Boolean).join(' · '), origin: 'Revisión', originTitle: 'Revisión del director' })),
     ...analysisItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.family_label_es || item.family || 'Otras',
+      family: item.family || familyOfSection(item.family_label_es),
       parts: item.instrument ? [item.instrument] : [], range: item.measure_range || '',
       detail: item.instrument_label_es || item.instrument, measures: measuresOf(item.measure_range),
       reason: (item.findings || []).map(findingLabel).join(' · '), origin: 'Análisis', originTitle: 'Análisis de ScoreLint' })),
