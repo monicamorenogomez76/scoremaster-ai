@@ -139,6 +139,14 @@ try {
   const priorities = page.locator('#summary-priorities');
   await priorities.getByText('Revisión', { exact: true }).first().waitFor();
   assert.match(await priorities.textContent(), /Pendiente · Entradas de clarinetes/);
+  // «Cobertura hasta el concierto» (2026-10-26): the rehearsal held and reviewed out of the series, per work its
+  // minutes rehearsed and its passages resolved, each with its percentage written out.
+  const coverage = page.locator('#summary-coverage');
+  await coverage.waitFor();
+  assert.equal(await coverage.locator('.coverage-headline').textContent(), '1 de ' + preview + ' ensayos hechos (' + Math.round(100 / preview) + ' %)');
+  assert.deepEqual(await coverage.locator('tbody th').allTextContents(), ['High Density Study', 'Untitled score'], 'one row per work of the programme');
+  assert.match(await coverage.locator('tbody tr').nth(1).locator('td').nth(1).textContent(), /^0 %: 0 de \d+ resueltos, \d+ pendientes?$/,
+    'Untitled score was left pending, and the percentage says what it counts');
   // With everything reviewed and replanned there is nothing to suggest (after the summary reloads).
   await nextStep.waitFor({ state: 'detached' });
   // Everything is navigable: a block and a priority open the score at their passage with their instruments.

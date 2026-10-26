@@ -637,14 +637,15 @@ button:disabled { opacity: 0.65; cursor: default; }
 .agenda-calendar .calendar-block { cursor: default; }
 
 /* Summary at a glance (author's mock-up): two columns on a computer, compact cards. */
-.summary-layout { display: grid; gap: 16px; align-items: start; grid-template-areas: "rehearsal" "plan" "priorities" "works"; }
+.summary-layout { display: grid; gap: 16px; align-items: start; grid-template-areas: "rehearsal" "plan" "coverage" "priorities" "works"; }
 .summary-layout > * { min-width: 0; }
 #summary-rehearsal { grid-area: rehearsal; }
 #summary-priorities { grid-area: priorities; }
 #summary-works { grid-area: works; }
 #summary-plan { grid-area: plan; }
+#summary-coverage { grid-area: coverage; }
 @media (min-width: 1100px) {
-  .summary-layout { grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "rehearsal plan" "priorities works"; align-items: stretch; }
+  .summary-layout { grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr); grid-template-rows: auto auto 1fr; grid-template-areas: "rehearsal plan" "rehearsal coverage" "priorities works"; align-items: stretch; }
 }
 [data-view="summary"] .view-heading { margin-bottom: 14px; }
 [data-view="summary"] .view-heading h1 { font-size: clamp(1.5rem, 2.2vw, 1.9rem); }
@@ -846,6 +847,17 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .section-work-fill--percussion { background: var(--family-percussion); }
 .section-work-fill--strings { background: var(--family-strings); }
 .section-work-count { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+/* «Cobertura hasta el concierto» (2026-10-26): one row per work, each cell a bar with its percentage beside it. */
+.coverage-headline { font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.coverage-table th[scope=row] { font-weight: 600; }
+.coverage-table th, .coverage-table td { padding-block: 5px; }
+.coverage-table tbody tr:last-child th { border-bottom: 0; }
+.coverage-cell { display: grid; grid-template-columns: minmax(32px, 1fr) 3.2em; align-items: center; gap: 8px; }
+.coverage-track { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.coverage-fill { display: block; height: 100%; border-radius: 999px; }
+.coverage-fill--time { background: var(--primary); }
+.coverage-fill--resolved { background: var(--success); }
+.coverage-value { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 .family-dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: baseline; }
 .family-dot--woodwinds { background: var(--family-woodwinds); }
 .family-dot--brass { background: var(--family-brass); }

@@ -330,6 +330,7 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 2), true,
     'the summary fits on a computer screen');
   assert.equal(await todayCard.locator('.next-step').count(), 0, 'without a concert there is no step to suggest');
+  assert.equal(await page.locator('#summary-coverage').count(), 0, 'without a concert there is no coverage to show');
   await page.setViewportSize({ width: 1440, height: 1000 });
   assert.deepEqual(errors, []);
   console.log('PASS: the summary shows everything at a glance without repeating information')
