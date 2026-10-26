@@ -331,7 +331,7 @@ input[type=range] { background: transparent; }
 .login-card h2 { margin: 10px 0 8px; font-size: 1.65rem; }
 .login-card p { line-height: 1.55; }
 
-.login-note { margin-top: 16px; padding: 12px; border-left: 3px solid var(--accent); background: var(--primary-soft); color: var(--muted); font-size: .84rem; }
+.login-note { margin-top: 16px; padding: 12px; border-left: 3px solid var(--accent); background: var(--primary-soft); color: var(--text-soft); font-size: .84rem; }
 .app-shell { min-height: 100vh; }
 
 .app-nav { display: flex; align-items: center; gap: 2px; }
@@ -394,6 +394,7 @@ input[type=range] { background: transparent; }
 .rehearsal-settings button { width: auto; padding: 10px 14px; background: var(--primary); color: var(--on-primary); }
 @media (max-width: 1100px) {
   .mobile-menu-button { display: inline-flex; align-items: center; }
+  .topbar { background: var(--panel); backdrop-filter: none; }   /* opaque: the open menu must not show the page through it */
   .topbar-menu { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 8px; padding: 6px 0 14px; }
   .topbar-menu.is-open { display: flex; }
   .app-nav { flex-direction: column; align-items: stretch; }
@@ -653,6 +654,7 @@ button:disabled { opacity: 0.65; cursor: default; }
 .concert-item { grid-template-columns: minmax(0, 1fr) auto; }
 .month-calendar .secondary-action { min-width: 44px; padding: 6px 10px; }
 .month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.month-row { display: contents; }
 .month-day-name { color: var(--muted); font-size: .74rem; font-weight: 700; text-align: center; }
 .month-day { display: grid; align-content: start; gap: 2px; min-height: 64px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
 .month-day.is-empty { border-color: transparent; background: transparent; }

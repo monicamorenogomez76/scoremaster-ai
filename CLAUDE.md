@@ -38,7 +38,9 @@ also turns off the background audio preparation (`PLAYBACK_WARMUP=0`) and the da
 Browser walkthroughs are plain Node scripts `backend/test/frontend/*.e2e.mjs` run against a live server, as
 in CI (`.github/workflows/ci.yml`): build the frontend, migrate, seed, start uvicorn on port 8006, then
 `SCOREMASTER_URL=http://127.0.0.1:8006 PLAYWRIGHT_MODULE=<dir>/node_modules/playwright node backend/test/frontend/<name>.e2e.mjs`.
-Playwright is installed outside the repo (`npm install --prefix <dir> playwright@1.63.0`, then `playwright install chromium`).
+Playwright is installed outside the repo (`npm install --prefix <dir> playwright@1.63.0 axe-core@4.10.2`, then `playwright install chromium`).
+`accessibility.e2e.mjs` audits every view with axe-core (WCAG 2.1 A and AA, light, dark and phone): the project must stay
+WCAG 2.1 AA compliant (legal requirement for the author), so any violation fails CI.
 
 There is no linter. CI also runs `pip-audit -r requirements.txt` and `npm --prefix frontend audit --omit=dev`.
 
