@@ -140,6 +140,14 @@ def test_analyze_rejects_non_musicxml_xml_files():
     assert "MusicXML" in response.json()["detail"]
 
 
+def test_the_tab_icon_carries_its_version():
+    """2026-10-27: after the new logo was deployed the tab kept the old icon: browsers keep a page's icon apart and
+    seldom ask for the same address again. The link carries the icon's version; change it when the icon changes."""
+    page = client.get("/").text
+    assert 'rel="icon" href="/static/brand.svg?v=2"' in page
+    assert client.get("/static/brand.svg?v=2").status_code == 200
+
+
 def test_the_page_is_revalidated_and_the_fingerprinted_assets_are_kept():
     """2026-10-15: after a deploy the browser kept the previous page, whose script still showed «Crear
     campaña» to the demo (the server refused it). The page is always revalidated; the built files carry a
