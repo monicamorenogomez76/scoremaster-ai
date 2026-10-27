@@ -83,7 +83,8 @@ Las fases A3–A8 y el paso 25 se abordan solo si queda margen tras el paso 24.
 ## Propuesta de interfaz (2026-10-05)
 
 Navegación de la autora: Resumen · Repertorio · Mi banda · Ensayos · Asistente IA · Configuración,
-con blanco frío, grafito y azul eléctrico. Un ensayo puede trabajar varias obras y cada bloque de
+con blanco frío, grafito y azul eléctrico (sustituidos el 2026-10-26 por la identidad «Sala de conciertos»,
+más abajo). Un ensayo puede trabajar varias obras y cada bloque de
 su agenda indica la obra que se trabaja (decisiones de la autora).
 
 | Fase | Objetivo | Estado |
@@ -115,11 +116,11 @@ Entrega el 7 de noviembre. Decisiones de la autora: híbrido C preregistrado y o
 | 7 | Interfaz en inglés | Opcional | Pendiente, solo si queda tiempo |
 | 8 | Documentación de entrega | Imprescindible | Integrado: PR #107 (README, guía para el tribunal, seguridad, estados y licencia MIT) |
 
-Mejoras integradas durante el cierre, a petición de la autora: lectura del título de `<movement-title>` (PR #92), base de estilos única (PR #98), tipografía Inter (PR #99), modo oscuro (PR #100), sombras, transiciones y Resumen en cuadrícula (PR #101), equilibrio de volumen entre instrumentos (PR #102) y pentagramas del pasaje en partes de varios pentagramas (PR #103).
+Mejoras integradas durante el cierre, a petición de la autora: lectura del título de `<movement-title>` (PR #92), base de estilos única (PR #98), tipografía Inter (PR #99; sustituida por Bricolage Grotesque y Outfit en la PR #118), modo oscuro (PR #100), sombras, transiciones y Resumen en cuadrícula (PR #101), equilibrio de volumen entre instrumentos (PR #102) y pentagramas del pasaje en partes de varios pentagramas (PR #103).
 
 Opcional después de la entrega: búsqueda automática del grado publicado de una obra, como sugerencia que confirma la directora y solo cuando la página encontrada contiene título, compositor y grado (decisión de la autora, 2026-10-14).
 
-## Decisiones del 14 al 25 de octubre
+## Decisiones del 14 al 27 de octubre
 
 | Decisión | Estado |
 |---|---|
@@ -129,11 +130,25 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 | La página se revalida tras cada despliegue | Integrado: PR #111 |
 | La base pasa a Neon, que no caduca; la aplicación sigue en Render | Integrado: PR #112 |
 | difficulty-v3: el grado sigue las guías de grados de las editoriales y explica qué criterio lo fija | Integrado: PR #113 (lectura de armadura, compás, tresillos, dinámicas, articulaciones y adornos) y PR #114 (rúbrica) |
-| difficulty-v4: la tabla de la Federación Galega de Bandas de Música prevalece sobre la del American Band College donde difieren (Do mayor sigue en grado 1); ninguna obra de referencia cambia de grado (2026-10-27) | Integrado en esta PR |
+| difficulty-v4: la tabla de la Federación Galega de Bandas de Música prevalece sobre la del American Band College donde difieren (Do mayor sigue en grado 1); ninguna obra de referencia cambia de grado (2026-10-27) | Integrado: PR #124 |
 | Segunda opinión con un modelo de pesos abiertos para el método B, junto a Gemini (Hugging Face o Vercel AI Gateway) | Pendiente de que la autora decida cómo pagar la API |
-| Lectura de PDF con copista-2m (modelo de Hugging Face, Apache 2.0), solo en Docker local | Pendiente: prueba de viabilidad con PDF de la autora; sustituye a Audiveris como candidata |
+| Lectura de PDF: prueba de viabilidad que compara copista-2m, copista-28m (Hugging Face, Apache 2.0) y Audiveris 5.11 con PDF digitales de obras con MusicXML de referencia (partituras generales y particellas); oemer y PDF2Muse, que se apoya en él, quedan descartados (2026-10-27) | Pendiente: lectura de los PDF por la autora y medida con ScoreLint |
 | Alojar la aplicación en Vercel | Aplazado a después de la entrega (ver [DEPLOYMENT.md](DEPLOYMENT.md)) |
 | Modelos de Hugging Face para la dificultad o bancos de sonido | Descartados: los de dificultad son de piano y no explicables; no hay bancos de viento con licencia clara |
+
+### Diseño y cuadro de mando (2026-10-26 y 27)
+
+| Decisión | Estado |
+|---|---|
+| El menú pasa a una barra superior y el contenido ocupa todo el ancho; en pantallas estrechas se pliega tras «Menú» | Integrado: PR #116 |
+| WCAG 2.1 A y AA como requisito legal: auditoría con axe-core en todas las pantallas (claro, oscuro y móvil) dentro de la CI | Integrado: PR #121 |
+| Identidad «Sala de conciertos»: paleta con contraste AA, Bricolage Grotesque y Outfit, botones de acción en píldora y logo de los arcos de la banda | Integrado: PR #118 |
+| Cuadro de mando de la directora: «Dónde trabajar» por familias y el programa del próximo concierto con su grado | Integrado: PR #119 |
+| La pantalla de acceso sigue la paleta, con el plano de la banda y el logo | Integrado: PR #120 |
+| «Cobertura hasta el concierto»: ensayos hechos y, por obra, tiempo ensayado y pasajes resueltos | Integrado: PR #122 |
+| authlib 1.9.1 por seis vulnerabilidades publicadas | Integrado: PR #125 |
+| El día del concierto el Resumen dice «Hoy» una vez | Integrado: PR #126 |
+| El icono de la pestaña lleva versión para que el navegador muestre el logo nuevo | Integrado: PR #127 |
 
 ## Mejoras para la nota (propuesta del 2026-10-25)
 
