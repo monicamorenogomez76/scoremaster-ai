@@ -35,7 +35,9 @@ jobs:
           cache-dependency-path: omr/requirements.txt
 
       - name: Poppler
-        run: sudo apt-get install -y --no-install-recommends poppler-utils
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends poppler-utils
 
       - name: PyTorch (CPU) and the reader's packages
         run: |
