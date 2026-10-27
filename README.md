@@ -11,7 +11,7 @@ Trabajo Fin de Máster del Máster de Desarrollo con IA de BigSchool · Licencia
 tardar alrededor de un minuto). La contraseña de la cuenta demo se entrega aparte; la
 [guía para el tribunal](docs/TRIBUNAL.md) propone un recorrido de cinco minutos.
 
-![Resumen: próximo ensayo con su agenda por bloques, prioridades por sección y obras en preparación](docs/img/resumen.png)
+![Resumen: próximo concierto con su programa, ensayo de hoy con su agenda por bloques, dónde trabajar, cobertura de los ensayos hasta el concierto, prioridades por sección y obras en preparación](docs/img/resumen.png)
 
 ## Qué responde
 
@@ -245,5 +245,5 @@ Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](
   Karoryfer Samples, CC0; University of Iowa, sin restricciones) y la fuente General MIDI MusyngKite de
   [midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) (CC BY-SA 3.0). Se descargan de sus
   CDN durante la reproducción; no se incluyen en el repositorio.
-- **Tipografía**: Inter (SIL Open Font License), incluida en el build.
+- **Tipografía**: Bricolage Grotesque y Outfit (SIL Open Font License), incluidas en el build con `@fontsource-variable`.
 - **Obras de la demo**: composiciones originales de este repositorio, CC0 ([demo/LICENSES.md](demo/LICENSES.md)).
