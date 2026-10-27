@@ -1,1 +1,1 @@
-"""PDF reader of ScoreMaster: copista-2m run by GitHub Actions in the author's private repository (2026-10-27)."""
+"""PDF reader of ScoreMaster: copista-2m run by GitHub Actions in its private repository (scoremaster-omr, 2026-10-27)."""

@@ -1,6 +1,7 @@
 import React from 'react';
 import { DifficultyPanel, PublishedGrades, WorkExplanation } from './DifficultyView.jsx';
 import { OverviewPanel } from './OverviewView.jsx';
+import { PdfUpload } from './PdfUpload.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
@@ -10,7 +11,7 @@ const tabs = [['score', 'Partitura'], ['difficulty', 'Dificultad'], ['recordings
 
 // Repertoire: the list of works (and the form to add one), or the detail of the open work.
 // The detail stays mounted while hidden: the score viewer keeps its renderer between tabs and modes.
-export function RepertoireView({ active, user, hidden, analysis, mode, onModeChange, tab, onTabChange, upload, onOpenWork, onOpenPassage, scoreViewer }) {
+export function RepertoireView({ active, user, hidden, analysis, mode, onModeChange, tab, onTabChange, upload, onOpenWork, onOpenPassage, scoreViewer, minutes }) {
   const data = analysis?.data;
   const detail = mode === 'detail' && Boolean(data);
   const busy = upload.state.busy;
@@ -21,6 +22,7 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
       <h2 className="panel-title">Añadir obra</h2>
       <p className="result-supporting">Formatos admitidos: MusicXML (.musicxml, .xml) y MusicXML comprimido (.mxl). Al subirla se analiza y se guarda en tu repertorio.</p>
       <UploadWorkspace upload={upload} />
+      <PdfUpload visible={!hidden && active === 'repertoire' && mode === 'add'} minutes={minutes} onOpenWork={onOpenWork} />
     </div>
 
     <div hidden={detail}>
@@ -34,6 +36,8 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
         <div>
           <h2 id="work-detail-title">{data?.title || 'Partitura sin título'}</h2>
           <p className="result-supporting">{data?.composer || 'Compositor no indicado en el MusicXML'}</p>
+          {data?.source_format === 'pdf' && <p className="pdf-provisional" role="note">Leída de PDF · grado provisional: revisa
+            en la partitura las notas más agudas y graves, y confirma los instrumentos en Mi banda.</p>}
         </div>
         <button id="back-to-list" className="secondary-action" type="button" onClick={() => onModeChange('list')}>Volver al repertorio</button>
       </div>

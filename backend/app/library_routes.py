@@ -92,7 +92,7 @@ def _work_id(value: str) -> UUID:
 def _public(work: Work) -> dict:
     return {"id": str(work.id), "title": work.title, "composer": work.composer, "file_name": work.file_name,
             "size": work.size, "updated_at": work.updated_at.isoformat() if work.updated_at else None,
-            "summary": work.summary, "preparation_status": work.preparation_status}
+            "summary": work.summary, "preparation_status": work.preparation_status, "source_format": work.source_format}
 
 
 @router.get("/works")
@@ -123,7 +123,10 @@ def get_work(work_id: str, user: User = Depends(authenticated_user),
     record = library.latest_analysis(user.id, _work_id(work_id))
     if record is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
-    return {**record.result, "analysis_id": str(record.analysis_id), "work_id": work_id}
+    work = library.get_work(user.id, _work_id(work_id))
+    # A work read from a PDF says so: its page warns that the grade is provisional (2026-10-27).
+    return {**record.result, "analysis_id": str(record.analysis_id), "work_id": work_id,
+            "source_format": work.source_format if work else "musicxml"}
 
 
 @router.get("/works/{work_id}/explanation")

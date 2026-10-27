@@ -125,7 +125,7 @@ mismas filas en todas las tablas y la misma versión de migraciones (`0011`).
 ## Lector de PDF (GitHub Actions en un repositorio privado)
 
 Render no puede leer PDF: copista-2m necesita 2–4,5 GB de memoria. Hugging Face ya solo permite gratis los Spaces
-estáticos, así que el lector (`omr/`) corre en **GitHub Actions**, en un **repositorio privado** de la autora:
+estáticos, así que el lector (`omr/`) corre en **GitHub Actions**, en el **repositorio privado** del lector (`scoremaster-omr`):
 2.000 minutos gratis al mes en máquinas de 7 GB, sin tarjeta (decisión de la autora, 2026-10-27).
 
 **Cómo funciona:**
@@ -135,7 +135,7 @@ estáticos, así que el lector (`omr/`) corre en **GitHub Actions**, en un **rep
    y el MusicXML de la obra (o por qué falló).
 3. La máquina de GitHub se destruye al terminar, y Render borra los PDF al recibir el resultado.
 
-**Crear el repositorio del lector (una vez, con la cuenta de la autora):**
+**Crear el repositorio del lector (una vez, con tu cuenta de GitHub):**
 
 1. En GitHub, **New repository** → nombre `scoremaster-omr`, **Private**, sin README.
 2. Desde el repositorio de ScoreMaster, con `gh` ya autenticado:

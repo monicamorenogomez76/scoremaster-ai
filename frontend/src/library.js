@@ -54,7 +54,9 @@ export const updatePreparation = (id, status) => json('/works/' + encodeURICompo
   method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preparation_status: status }),
 }, 'No se pudo cambiar el estado de la obra.');
 
-export const analysisStatusText = work => (work?.summary?.grade == null ? 'Sin analizar' : 'Disponible');
+// A work read from a PDF says so: its grade is provisional (2026-10-27).
+export const analysisStatusText = work => (work?.summary?.grade == null ? 'Sin analizar'
+  : work.source_format === 'pdf' ? 'Disponible · leída de PDF' : 'Disponible');
 
 // Critical passages of the works in preparation (origin "analysis"; the director's notes arrive later).
 export const listPriorities = async () => (await json('/works/priorities', {}, 'No se pudieron cargar las prioridades.')).priorities;

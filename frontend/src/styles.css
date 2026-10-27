@@ -872,3 +872,14 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .family-dot--strings { background: var(--family-strings); }
 .programme { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .programme-chip { padding: 4px 12px; border-radius: 999px; background: var(--panel-alt); color: var(--text); font-size: .86rem; }
+/* «Desde un PDF» (2026-10-27): below the MusicXML upload, apart from it. */
+.pdf-upload { display: grid; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+.pdf-upload h3 { margin: 0; font-size: 1rem; }
+.pdf-upload > .result-supporting { margin: 0; }
+.pdf-upload > .primary-action { justify-self: start; }
+.pdf-kind { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.pdf-kind legend { margin-bottom: 4px; font-weight: 600; }
+.pdf-kind label { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.pdf-kind input[type=radio] { flex: none; width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; accent-color: var(--primary); }
+.pdf-title { display: grid; gap: 4px; max-width: 32rem; }
+.pdf-provisional { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid var(--warning); background: var(--warning-soft); }

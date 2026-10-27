@@ -1,5 +1,5 @@
 #!/bin/sh
-# Publishes the PDF reader to the author's private GitHub repository, where GitHub Actions runs it (2026-10-27).
+# Publishes the PDF reader to its private GitHub repository (scoremaster-omr), where GitHub Actions runs it (2026-10-27).
 # Usage: scripts/deploy_omr_worker.sh <user>/<repository>   e.g. scripts/deploy_omr_worker.sh monica/scoremaster-omr
 # Before: create the repository (private, empty) on GitHub; `gh auth login` already works on this machine. No secret
 # is written here or in the repository: ScoreMaster sends a one-time token with each reading.

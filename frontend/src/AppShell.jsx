@@ -54,7 +54,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
           onReviewRehearsal={onReviewRehearsal} />
         <RepertoireView active={view} user={user} hidden={hidden} analysis={analysis} mode={repertoireMode}
           onModeChange={onRepertoireModeChange} tab={workTab} onTabChange={onWorkTabChange} upload={upload}
-          onOpenWork={onOpenWork} onOpenPassage={onOpenPassage} scoreViewer={scoreViewer} />
+          onOpenWork={onOpenWork} onOpenPassage={onOpenPassage} scoreViewer={scoreViewer} minutes={minutes} />
         <BandView active={view} hidden={hidden} onBandActivated={onBandActivated} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onUpdateBand} onConfirm={onConfirmInstruments} busy={busy} />
         <SettingsView active={view} user={user} onUserChanged={onUserChanged} />
         <ConcertsView active={view} hidden={hidden} onOpenBlock={onOpenBlock} />

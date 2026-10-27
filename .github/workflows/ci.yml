@@ -101,6 +101,9 @@ jobs:
       DEMO_USER_EMAIL: demo@scoremaster.local
       DEMO_USER_PASSWORD: scoremaster-demo
       ADMIN_EMAILS: directora-e2e@banda.test
+      # The PDF option is shown (and audited) with a reader that the walkthroughs never start.
+      OMR_GITHUB_REPO: ci/sin-lector
+      OMR_GITHUB_TOKEN: ci-sin-token
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

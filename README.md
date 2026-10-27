@@ -28,7 +28,7 @@ La pantalla de cada obra responde a las tres preguntas del director:
 
 | Área | Qué hace |
 |---|---|
-| **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio, búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
+| **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`) o de **PDF** (partitura general o particellas, leídas con copista-2m en GitHub Actions; grado provisional y fuera de la evaluación), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio, búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
 | **Dificultad (ScoreLint)** | **Grado según las tablas de grados** (Federación Galega de Bandas de Música, American Band College y FJH): armadura, compás, tempo, duración, dinámicas y, por instrumento, tesitura, figuras, grupos irregulares, síncopas, articulaciones y adornos, con el criterio que fija el grado. Índice técnico con seis dimensiones (densidad rítmica, tempo, tesitura, registro, intervalos y resistencia), reglas SL002 registro agudo, SL003 alta densidad rítmica, SL004 intervalos amplios y SL005 pasaje prolongado sin descanso, y detector de **pasajes críticos** (puede no haber ninguno). Árbol de familia a instrumento y «Ver pasaje» con la notación y el audio de esa parte |
 | **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos |
 | **Conciertos** | Programa, patrón semanal y propuesta de la serie de ensayos por fases (lectura y pasajes, integración y ensayo general); calendario mensual; en el Resumen, cobertura de la serie: ensayos hechos y, por obra, tiempo ensayado y pasajes resueltos |
@@ -141,6 +141,7 @@ dependa de ellas.
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | «Entrar con Google» | Solo email y contraseña |
 | `DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`, `DEMO_SEED_CONTENT` | Cuenta demo y su contenido de ejemplo (`1`) | Sin cuenta demo |
 | `ADMIN_EMAILS` | Cuentas administradoras, separadas por comas: crean y gestionan campañas de valoración y ven los emails y resultados de los músicos. Registrar antes la cuenta (el registro no verifica el email) | Nadie puede crear campañas; cada cuenta solo valora las campañas a las que la invitan |
+| `OMR_GITHUB_REPO`, `OMR_GITHUB_TOKEN` | Lectura de PDF: el repositorio privado del lector y su token *fine-grained* (ver [DEPLOYMENT.md](docs/DEPLOYMENT.md)) | No se ofrece subir PDF |
 | `APP_ENV=production` | Cookies `Secure`, HSTS y sin documentación interactiva de la API | Modo desarrollo |
 
 A la IA solo llegan datos derivados del análisis (grados, dimensiones, compases, bloques), nunca la
@@ -232,10 +233,13 @@ Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](
   volver a abrirlo suele resolverlo.
 - **Plan gratuito de Render**: el servicio se duerme sin uso y la CPU es lenta (una obra grande tarda unos
   minutos en leerse la primera vez). La base de Neon se suspende tras 5 minutos sin uso y despierta sola.
-- **Solo MusicXML**: sin PDF ni reconocimiento óptico; la interfaz está en castellano.
+- **PDF con reconocimiento óptico**: copista-2m acierta el 87–99 % de las notas en particellas y el 73–91 % en
+  partituras generales (prueba con PDF digitales, 2026-10-27), pero una sola nota extrema mal leída puede subir el
+  grado. Por eso la obra leída de PDF lleva el grado como provisional y no entra en la evaluación. Sin OCR, las partes
+  de una partitura general llegan sin nombre de instrumento y se confirman en «Mi banda». Cada lectura tarda 1–2
+  minutos en arrancar. La interfaz está en castellano.
 - **Pendiente u opcional**: pregunta libre a la IA, interfaz en inglés, sustitutos de instrumento,
-  búsqueda automática del grado publicado de una obra, segunda opinión con un modelo de pesos abiertos e
-  importación de PDF (prueba con copista-2m, un modelo abierto de Hugging Face, solo en local).
+  búsqueda automática del grado publicado de una obra y segunda opinión con un modelo de pesos abiertos.
 
 ## Créditos
 

@@ -131,9 +131,9 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 | La base pasa a Neon, que no caduca; la aplicación sigue en Render | Integrado: PR #112 |
 | difficulty-v3: el grado sigue las guías de grados de las editoriales y explica qué criterio lo fija | Integrado: PR #113 (lectura de armadura, compás, tresillos, dinámicas, articulaciones y adornos) y PR #114 (rúbrica) |
 | difficulty-v4: la tabla de la Federación Galega de Bandas de Música prevalece sobre la del American Band College donde difieren (Do mayor sigue en grado 1); ninguna obra de referencia cambia de grado (2026-10-27) | Integrado: PR #124 |
-| difficulty-v5: las tesituras también son las de la tabla gallega (barítono y trombón bajo aparte), con las notas de final de curso del ABC en el grado 1 y las columnas 3,5 y 4,5 en el grado inferior; *Persis* sigue en 4 y la Marcha de la demo pasa a 4 (2026-10-27) | Integrado en esta PR |
+| difficulty-v5: las tesituras también son las de la tabla gallega (barítono y trombón bajo aparte), con las notas de final de curso del ABC en el grado 1 y las columnas 3,5 y 4,5 en el grado inferior; *Persis* sigue en 4 y la Marcha de la demo pasa a 4 (2026-10-27) | Integrado: PR #129 |
 | Segunda opinión con un modelo de pesos abiertos para el método B, junto a Gemini (Hugging Face o Vercel AI Gateway) | Pendiente de que la autora decida cómo pagar la API |
-| Lectura de PDF: prueba de viabilidad que compara copista-2m, copista-28m (Hugging Face, Apache 2.0) y Audiveris 5.11 con PDF digitales de obras con MusicXML de referencia (partituras generales y particellas); oemer y PDF2Muse, que se apoya en él, quedan descartados (2026-10-27) | Pendiente: lectura de los PDF por la autora y medida con ScoreLint |
+| Lectura de PDF: copista-2m en GitHub Actions, en el repositorio privado del lector (`scoremaster-omr`; Hugging Face ya no ejecuta código gratis); partitura general o particellas, grado provisional y fuera de la evaluación. Prueba de viabilidad: copista-2m frente a copista-28m y Audiveris 5.11 con PDF digitales con MusicXML de referencia; oemer y PDF2Muse descartados (2026-10-27) | Integrado: PR #130 (lector) y PR #131 (subida desde la aplicación) |
 | Alojar la aplicación en Vercel | Aplazado a después de la entrega (ver [DEPLOYMENT.md](DEPLOYMENT.md)) |
 | Modelos de Hugging Face para la dificultad o bancos de sonido | Descartados: los de dificultad son de piano y no explicables; no hay bancos de viento con licencia clara |
 
@@ -188,6 +188,10 @@ de YouTube con Gemini.
 20–25. Salidas IA validadas, demo identificada, fallback, versiones, caché y comparación sin anchoring ni resultados inventados. El híbrido sigue siendo experimental.
 
 ## Opcional: partituras en PDF con Audiveris (decisión de la autora, 2026-10-06)
+
+> Integrado (2026-10-27): la autora pidió poder subir PDF en la aplicación publicada. Lo lee copista-2m en GitHub
+> Actions, en el repositorio privado del lector (`scoremaster-omr`, ver [DEPLOYMENT.md](DEPLOYMENT.md)), con grado provisional y fuera del
+> benchmark y de la evaluación. Lo que sigue es el plan original.
 
 > Actualización (2026-10-25): la candidata pasa a ser copista-2m, un modelo abierto de Hugging Face (Apache 2.0,
 > funciona en CPU y devuelve MusicXML), con la misma prueba de viabilidad previa y solo en Docker local. Las

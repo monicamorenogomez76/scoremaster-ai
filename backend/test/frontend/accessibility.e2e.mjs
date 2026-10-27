@@ -42,6 +42,12 @@ try {
       await page.waitForLoadState('networkidle');
       await audit(page, `${name} (${scheme})`);
     }
+    // «Añadir obra», with the PDF option when the server has a reader (CI sets one that is never called).
+    await page.locator('[data-view-target=repertoire]').click();
+    await page.locator('#add-work').click();
+    await page.locator('#upload-root').waitFor({ state: 'visible' });
+    await page.waitForLoadState('networkidle');
+    await audit(page, `Añadir obra (${scheme})`);
     await page.close();
   }
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
