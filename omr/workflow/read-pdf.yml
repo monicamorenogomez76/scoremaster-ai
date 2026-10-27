@@ -1,8 +1,9 @@
-# PDF reader of ScoreMaster (author's decision, 2026-10-27). It runs in its private repository (scoremaster-omr), copied there
-# by scripts/deploy_omr_worker.sh, never in ScoreMaster's own. ScoreMaster starts it with a repository_dispatch
-# event "read-pdf"; the job (PDF addresses, kind, title and a one-time token) reaches omr/worker.py through an
-# environment variable, never written into a command. Everything is pinned to what the feasibility test measured:
-# copisteria at its commit, the copista-2m weights at their revision, PyTorch for CPU.
+# PDF reader of ScoreMaster (decided 2026-10-27). It runs in its private repository (scoremaster-omr), copied there by
+# scripts/deploy_omr_worker.sh, never in ScoreMaster's own. ScoreMaster starts it with a repository_dispatch event
+# "read-pdf"; the job (PDF addresses, kind, title and a one-time token) reaches omr/worker.py through GitHub's event
+# file, never through a variable of the step (GitHub prints those) nor written into a command. Everything is pinned
+# to what the feasibility test measured: copisteria at its commit, the copista-2m weights at their revision, PyTorch
+# for CPU.
 name: Leer PDF
 
 on:
@@ -63,8 +64,8 @@ jobs:
       - name: Install copisteria
         run: pip install --no-deps -e copisteria
 
+      # The job (with its one-time token) is read from the event file: a variable of the step would be printed here.
       - name: Read the PDFs
         env:
-          OMR_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
           COPISTERIA_DIR: ${{ github.workspace }}/copisteria
         run: python -m omr.worker

@@ -3,7 +3,8 @@
 from it, the kind of work (one score, or the parts of a work with one PDF per instrument) and a one-time token. The
 reader downloads the PDFs with that token, reads them page by page with copista-2m, tells ScoreMaster how far it got
 and sends back the work's MusicXML, or why it failed. The PDFs live in a temporary folder deleted at the end, and the
-token is masked in the log. The job comes in OMR_PAYLOAD, never through the shell."""
+token is masked in the log. The job is read from GitHub's event file, never from a variable of the step, which GitHub
+prints in the log (2026-10-27)."""
 from __future__ import annotations
 
 import json
@@ -31,12 +32,23 @@ class Refused(Exception):
     """A reason to tell ScoreMaster, in Spanish."""
 
 
+class PageFailed(Exception):
+    """copista could not read a page; the message is the end of its error, for the log only."""
+
+
 def read_page(pdf_path: str, number: int, out_dir: str) -> bytes:
     """One page read by copista-2m in its own process, so its memory goes back when it ends."""
-    subprocess.run([sys.executable, "-m", "copisteria.pipeline", "--pdf", pdf_path, "--range", f"{number}-{number}",
-                    "--out", out_dir, "--detector", "2m"], cwd=COPISTERIA_DIR, check=True, timeout=PAGE_TIMEOUT_SECONDS,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return (Path(out_dir) / f"{Path(pdf_path).stem}_p{number:02d}.musicxml").read_bytes()
+    try:
+        subprocess.run([sys.executable, "-m", "copisteria.pipeline", "--pdf", pdf_path, "--range", f"{number}-{number}",
+                        "--out", out_dir, "--detector", "2m"], cwd=COPISTERIA_DIR, check=True,
+                       timeout=PAGE_TIMEOUT_SECONDS, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        return (Path(out_dir) / f"{Path(pdf_path).stem}_p{number:02d}.musicxml").read_bytes()
+    except subprocess.CalledProcessError as error:
+        raise PageFailed("\n".join((error.stderr or "").strip().splitlines()[-6:])) from None
+    except subprocess.TimeoutExpired:
+        raise PageFailed(f"More than {PAGE_TIMEOUT_SECONDS} s on one page.") from None
+    except OSError as error:
+        raise PageFailed(f"{type(error).__name__}: {error}") from None
 
 
 def count_pages(pdf_path: str) -> int:
@@ -46,7 +58,7 @@ def count_pages(pdf_path: str) -> int:
 
 def payload_from_environment() -> dict:
     """The job as ScoreMaster sent it. Its addresses must be ScoreMaster's, over https (http only on this machine)."""
-    data = json.loads(os.environ["OMR_PAYLOAD"])
+    data = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())["client_payload"]
     callback = urlsplit(data["callback"])
     local = callback.hostname in ("127.0.0.1", "localhost")
     if callback.scheme != "https" and not local:
@@ -93,7 +105,9 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             for number in range(1, count + 1):
                 try:
                     page_xml.append(read_page(path, number, out_dir))
-                except Exception:
+                except Exception as error:
+                    # Why copista failed goes to the log (never the PDF nor the token); ScoreMaster gets the page.
+                    print(f"copista, page {number}:\n{error}", flush=True)
                     raise Refused(f"No se pudo leer la página {number} de {name}.") from None
                 done += 1
                 client.post(callback + "/progress", json={"pages_done": done, "pages_total": total})
