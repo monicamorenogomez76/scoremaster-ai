@@ -122,6 +122,47 @@ Neon guarda además 6 horas de historial para volver a un momento anterior desde
 Comprobado en local (2026-10-13): copia de la base de Compose y restauración en una base vacía con las
 mismas filas en todas las tablas y la misma versión de migraciones (`0011`).
 
+## Lector de PDF (GitHub Actions en un repositorio privado)
+
+Render no puede leer PDF: copista-2m necesita 2–4,5 GB de memoria. Hugging Face ya solo permite gratis los Spaces
+estáticos, así que el lector (`omr/`) corre en **GitHub Actions**, en un **repositorio privado** de la autora:
+2.000 minutos gratis al mes en máquinas de 7 GB, sin tarjeta (decisión de la autora, 2026-10-27).
+
+**Cómo funciona:**
+1. La directora sube el PDF; Render lo guarda y lanza en ese repositorio el evento `read-pdf`, con un **token de un
+   solo uso** para esa importación.
+2. El *workflow* descarga los PDF de Render con ese token, lee las páginas con copista-2m y devuelve a Render el avance
+   y el MusicXML de la obra (o por qué falló).
+3. La máquina de GitHub se destruye al terminar, y Render borra los PDF al recibir el resultado.
+
+**Crear el repositorio del lector (una vez, con la cuenta de la autora):**
+
+1. En GitHub, **New repository** → nombre `scoremaster-omr`, **Private**, sin README.
+2. Desde el repositorio de ScoreMaster, con `gh` ya autenticado:
+   `scripts/deploy_omr_worker.sh <usuario>/scoremaster-omr`. Copia `omr/` y el *workflow*; no lleva secretos.
+3. En GitHub, **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**:
+   - **Repository access:** *Only select repositories* → `scoremaster-omr`;
+   - **Permissions → Repository permissions → Contents: Read and write** (lo exige `repository_dispatch`);
+   - caducidad hasta después de la entrega.
+
+   Ese token solo puede lanzar el lector; no da acceso a nada más.
+
+**En Render** (Environment), dos secretos:
+
+| Variable | Valor |
+|---|---|
+| `OMR_GITHUB_REPO` | `<usuario>/scoremaster-omr` |
+| `OMR_GITHUB_TOKEN` | El token del paso 3 |
+
+Sin ellos, la opción de subir PDF no aparece.
+
+**Límites:**
+- Hasta 20 MB por PDF, 40 archivos y 80 páginas por obra.
+- Una lectura a la vez; la siguiente espera.
+- Cada lectura tarda 1–2 minutos en arrancar la máquina, más unos segundos por página.
+- Para actualizar el lector basta con volver a ejecutar `scripts/deploy_omr_worker.sh`.
+- El registro de cada lectura (pestaña **Actions** del repositorio privado) no muestra el token ni las partituras.
+
 ## Trabajo futuro: Vercel
 
 Valorado el 2026-10-25 y aplazado hasta después de la entrega. Vercel ejecuta FastAPI como funciones: más

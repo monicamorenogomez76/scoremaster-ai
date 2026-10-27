@@ -1,0 +1,13 @@
+ScoreMaster OMR
+
+This reader runs copisteria and the copista-2m weights by KobiMusic, both licensed under the Apache License,
+Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0). They are used unmodified, at the commit and revision
+pinned in omr/workflow/read-pdf.yml:
+
+- copisteria: https://github.com/kobimusic/copisteria
+- copista-2m: https://huggingface.co/kobimusic/copista-2m
+
+Their own LICENSE and NOTICE files are kept in the copisteria folder and in the model repository.
+
+The code in omr/ (worker.py, merge.py) is part of ScoreMaster, licensed under the MIT License (LICENSE at the
+repository root).
