@@ -1,7 +1,7 @@
 // Concerts of the signed-in user: programme, weekly rehearsal pattern and the series of rehearsals
 // that prepares each one (author's decisions, 2026-10-06).
 import { apiJson } from './api.js';
-import { proposalBlocks } from './rehearsals.js';
+import { proposalBlocks, rehearsalDateText } from './rehearsals.js';
 
 const send = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const path = id => '/concerts/' + encodeURIComponent(id);
@@ -75,6 +75,15 @@ export function nextConcert(concerts, today) {
   if (!concert) return null;
   const remaining = (concert.rehearsals || []).filter(item => item.date >= today && !item.reviewed).length;
   return { concert, remaining, days: daysUntil(concert.date, today) };
+}
+
+// The next concert in the summary's heading: its day, the days left and the rehearsals still to do. On the day
+// itself «Hoy» says it all (author's report, 2026-10-26: it read «Hoy · hoy · 0 ensayos»).
+export function nextConcertText({ concert, remaining, days }, today) {
+  const plural = (count, one, many) => count + ' ' + (count === 1 ? one : many);
+  return [concert.title, rehearsalDateText(concert, today),
+    ...(days === 0 ? [] : [(days === 1 ? 'falta ' : 'faltan ') + plural(days, 'día', 'días'), plural(remaining, 'ensayo', 'ensayos')]),
+  ].join(' · ');
 }
 
 // Next step of the next concert for the summary assistant (author's decision, 2026-10-06): review the
