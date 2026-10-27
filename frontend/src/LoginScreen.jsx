@@ -25,7 +25,7 @@ export function LoginScreen({ hidden, onSignedIn }) {
 
   return <section id="login-screen" className="login-screen" hidden={hidden}>
     <div className="login-brand">
-      <div className="login-brand-mark"><img className="brand-logo" src="/static/brand.svg" alt="" width="52" height="52" /><span>ScoreMaster</span></div>
+      <div className="login-brand-mark"><img className="brand-logo" src="/static/brand.svg?v=2" alt="" width="52" height="52" /><span>ScoreMaster</span></div>
       {/* The band seen from the podium, as on the dashboard (identity of 2026-10-26); only decoration. */}
       <svg className="login-brand-arcs" viewBox="0 0 440 236" aria-hidden="true" focusable="false">
         <path d="M40 220 A180 180 0 0 1 400 220" className="login-arc login-arc--percussion" />

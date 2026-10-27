@@ -26,7 +26,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
   // The sections sit in a bar across the top (author's choice, 2026-10-25); on a narrow screen they fold behind «Menú».
   return <div id="app-shell" className="app-shell" hidden={hidden}>
     <header className="topbar">
-      <div className="topbar-brand"><img className="brand-logo" src="/static/brand.svg" alt="" width="36" height="36" /><span>ScoreMaster</span></div>
+      <div className="topbar-brand"><img className="brand-logo" src="/static/brand.svg?v=2" alt="" width="36" height="36" /><span>ScoreMaster</span></div>
       <button id="mobile-menu-button" className="mobile-menu-button" type="button" aria-controls="app-menu"
         aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>Menú</button>
       <div id="app-menu" className={'topbar-menu' + (menuOpen ? ' is-open' : '')}>
