@@ -29,7 +29,7 @@ La pantalla de cada obra responde a las tres preguntas del director:
 | Área | Qué hace |
 |---|---|
 | **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio, búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
-| **Dificultad (ScoreLint)** | **Grado según las guías de grados de las editoriales** (American Band College y FJH): armadura, compás, tempo, duración, dinámicas y, por instrumento, tesitura, figuras, tresillos, síncopas, articulaciones y adornos, con el criterio que fija el grado. Índice técnico con seis dimensiones (densidad rítmica, tempo, tesitura, registro, intervalos y resistencia), reglas SL002 registro agudo, SL003 alta densidad rítmica, SL004 intervalos amplios y SL005 pasaje prolongado sin descanso, y detector de **pasajes críticos** (puede no haber ninguno). Árbol de familia a instrumento y «Ver pasaje» con la notación y el audio de esa parte |
+| **Dificultad (ScoreLint)** | **Grado según las tablas de grados** (Federación Galega de Bandas de Música, American Band College y FJH): armadura, compás, tempo, duración, dinámicas y, por instrumento, tesitura, figuras, grupos irregulares, síncopas, articulaciones y adornos, con el criterio que fija el grado. Índice técnico con seis dimensiones (densidad rítmica, tempo, tesitura, registro, intervalos y resistencia), reglas SL002 registro agudo, SL003 alta densidad rítmica, SL004 intervalos amplios y SL005 pasaje prolongado sin descanso, y detector de **pasajes críticos** (puede no haber ninguno). Árbol de familia a instrumento y «Ver pasaje» con la notación y el audio de esa parte |
 | **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos |
 | **Conciertos** | Programa, patrón semanal y propuesta de la serie de ensayos por fases (lectura y pasajes, integración y ensayo general); calendario mensual; en el Resumen, cobertura de la serie: ensayos hechos y, por obra, tiempo ensayado y pasajes resueltos |
 | **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen |
@@ -221,8 +221,9 @@ Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](
 
 ## Limitaciones conocidas
 
-- **ScoreLint no está validado todavía con músicos**: desde difficulty-v3 el grado sigue las guías de grados
-  de las editoriales (American Band College y FJH) y *Persis* coincide con el Grade 4 de su editorial, pero
+- **ScoreLint no está validado todavía con músicos**: desde difficulty-v4 el grado sigue la tabla de la
+  Federación Galega de Bandas de Música, con el American Band College y FJH donde esta no llega, y *Persis*
+  coincide con el Grade 4 de su editorial, pero
   algunos umbrales (cambios de compás, uso limitado) son una lectura de esas guías y solo hay una obra cuyo
   archivo coincide con la edición que publica el grado; la evaluación con músicos debe medir cuánto se desvía.
 - **Articulación solo para el grado**: las articulaciones, dinámicas y adornos se leen para el grado, pero aún no generan reglas ni pasajes críticos.

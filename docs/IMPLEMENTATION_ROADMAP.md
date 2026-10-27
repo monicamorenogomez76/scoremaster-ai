@@ -129,6 +129,7 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 | La página se revalida tras cada despliegue | Integrado: PR #111 |
 | La base pasa a Neon, que no caduca; la aplicación sigue en Render | Integrado: PR #112 |
 | difficulty-v3: el grado sigue las guías de grados de las editoriales y explica qué criterio lo fija | Integrado: PR #113 (lectura de armadura, compás, tresillos, dinámicas, articulaciones y adornos) y PR #114 (rúbrica) |
+| difficulty-v4: la tabla de la Federación Galega de Bandas de Música prevalece sobre la del American Band College donde difieren (Do mayor sigue en grado 1); ninguna obra de referencia cambia de grado (2026-10-27) | Integrado en esta PR |
 | Segunda opinión con un modelo de pesos abiertos para el método B, junto a Gemini (Hugging Face o Vercel AI Gateway) | Pendiente de que la autora decida cómo pagar la API |
 | Lectura de PDF con copista-2m (modelo de Hugging Face, Apache 2.0), solo en Docker local | Pendiente: prueba de viabilidad con PDF de la autora; sustituye a Audiveris como candidata |
 | Alojar la aplicación en Vercel | Aplazado a después de la entrega (ver [DEPLOYMENT.md](DEPLOYMENT.md)) |

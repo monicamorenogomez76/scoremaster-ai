@@ -1,5 +1,6 @@
-"""difficulty-v3 (author's decision, 2026-10-25): ScoreLint follows the publishers' grading guides. Each criterion
-of the American Band College chart (base), refined with FJH's series guidelines, gives a minimum grade; the work
+"""difficulty-v3 (author's decision, 2026-10-25): ScoreLint follows the publishers' grading guides. Since difficulty-v4
+(2026-10-27) the Galician federation's table (Cynthia Hutton, BANDWORLD) prevails; the American Band College chart
+gives the ranges and the length, and FJH's series guidelines refine the low grades. Each criterion gives a minimum grade; the work
 is as hard as its most demanding criterion. A feature used only in passing (fewer than 5 % of a part's measures,
 or a single measure) does not raise the grade, and end-of-year notes are accepted only when they are few."""
 import pytest
@@ -36,11 +37,11 @@ def criterion(result, name):
 def test_a_simple_work_in_b_flat_is_grade_1_and_says_why():
     result = rubric_grade(work(ScorePart("Flute", plain("D5")), tempo=100))
     assert result["grade"] == 1
-    assert criterion(result, "key")["grade"] == 1 and criterion(result, "key")["source"] == "abc"
+    assert criterion(result, "key")["grade"] == 1 and criterion(result, "key")["source"] == "fgbm"
     assert all(item["grade"] <= 1 for item in result["criteria"])
 
 
-@pytest.mark.parametrize("fifths, grade", [(-2, 1), (-3, 1), (0, 1), (-4, 2), (-5, 3), (-6, 4), (1, 4), (2, 5), (-7, 5)])
+@pytest.mark.parametrize("fifths, grade", [(-2, 1), (-3, 1), (-1, 1), (0, 1), (-4, 2), (-5, 3), (-6, 4), (1, 4), (2, 4), (3, 5), (-7, 5)])
 def test_the_concert_key_signature(fifths, grade):
     assert criterion(rubric_grade(work(ScorePart("Flute", plain(key=fifths)))), "key")["grade"] == grade
 
@@ -51,7 +52,8 @@ def test_a_transposing_part_is_read_in_concert_key():
     assert criterion(result, "key")["value"] == -2 and criterion(result, "key")["grade"] == 1
 
 
-@pytest.mark.parametrize("meter, grade", [("4/4", 1), ("2/2", 1), ("6/8", 2), ("9/8", 3), ("5/8", 4), ("7/4", 5)])
+@pytest.mark.parametrize("meter, grade", [("4/4", 1), ("2/2", 2), ("6/8", 2), ("9/8", 3), ("7/4", 3), ("4/2", 3), ("5/8", 4), ("9/4", 4),
+                                         ("11/8", 4), ("13/8", 5)])
 def test_the_meter(meter, grade):
     assert criterion(rubric_grade(work(ScorePart("Flute", plain(meter=meter)))), "meter")["grade"] == grade
 
@@ -65,7 +67,7 @@ def test_key_and_meter_changes():
     assert criterion(result, "meter_changes")["value"] == 8 and criterion(result, "meter_changes")["grade"] == 4
 
 
-@pytest.mark.parametrize("bpm, grade", [(100, 1), (132, 2), (144, 3), (160, 4), (190, 5), (60, 3), (50, 4)])
+@pytest.mark.parametrize("bpm, grade", [(100, 1), (132, 2), (144, 3), (160, 4), (190, 5), (65, 2), (60, 2), (57, 3), (50, 4), (40, 4), (36, 5)])
 def test_the_tempo(bpm, grade):
     assert criterion(rubric_grade(work(ScorePart("Flute", plain()), tempo=bpm)), "tempo")["grade"] == grade
 
@@ -111,10 +113,14 @@ def test_the_shortest_note_value(figure, grade):
     assert result["by_instrument"]["Flute"]["criteria"]["note_values"]["grade"] == grade
 
 
-def test_triplets_are_grade_2():
-    triplet = notes("D5", "E5", "F5", length=1 / 3, tuplet=True) + notes("D5", "D5", "D5", start=1.0)
-    part = ScorePart("Flute", bars(40, triplet))
-    assert rubric_grade(work(part))["by_instrument"]["Flute"]["criteria"]["tuplets"]["grade"] == 2
+@pytest.mark.parametrize("length, grade", [(1 / 3, 2), (2 / 3, 2), (1 / 6, 3), (0.2, 3), (0.75, 3), (1 / 7, 4)])
+def test_tuplets_by_their_kind(length, grade):
+    """Galician table: triplets in grade 2; easy quintuplets and sextuplets in grade 3, like the duplets of compound
+    meters; septuplets in grade 4. The kind is told by the length of the notes: a third, a fifth, a sixth or a
+    seventh of a quarter, or three quarters of one for a duplet in 6/8."""
+    group = (ScoreNote("D5", length, offset_quarters=0.0, tuplet=True),) * 2 + notes("D5", "D5", "D5", start=1.0)
+    part = ScorePart("Flute", bars(40, group))
+    assert rubric_grade(work(part))["by_instrument"]["Flute"]["criteria"]["tuplets"]["grade"] == grade
 
 
 def test_syncopation_by_meter_and_level():
@@ -137,7 +143,7 @@ def test_a_feature_used_in_passing_does_not_raise_the_grade():
     assert rubric_grade(work(ScorePart("Flute", once)))["by_instrument"]["Flute"]["grade"] == 1
 
 
-@pytest.mark.parametrize("marks, grade", [(("p", "f"), 1), (("mf",), 2), (("ff",), 3), (("sfz",), 3), (("fff",), 4)])
+@pytest.mark.parametrize("marks, grade", [(("p", "f"), 1), (("mf",), 1), (("ff",), 2), (("fp",), 2), (("sfz",), 3), (("fff",), 4)])
 def test_the_dynamics(marks, grade):
     assert criterion(rubric_grade(work(ScorePart("Flute", plain(dynamics=marks)))), "dynamics")["grade"] == grade
 
@@ -150,7 +156,7 @@ def test_a_single_dynamic_mark_does_not_raise_the_grade():
 
 @pytest.mark.parametrize("kind, marks, grade", [
     ("articulations", ("staccato", "accent"), 1), ("articulations", ("detached legato",), 2),
-    ("articulations", ("tenuto",), 3), ("articulations", ("strong accent",), 4),
+    ("articulations", ("tenuto",), 2), ("articulations", ("strong accent",), 3), ("articulations", ("staccatissimo",), 4),
     ("ornaments", ("trill",), 2), ("ornaments", ("turn",), 4), ("ornaments", ("mordent",), 4)])
 def test_articulations_and_ornaments(kind, marks, grade):
     part = ScorePart("Flute", bars(40, notes("D5", "D5", "D5", "D5", **{kind: marks})))
@@ -183,18 +189,24 @@ def test_each_deciding_criterion_is_told_in_spanish_with_its_source():
 
 
 @pytest.mark.parametrize("item, text", [
-    ({"criterion": "key", "grade": 3, "value": -5, "source": "abc"}, "Armadura de concierto con 5 ♭ → grado 3 o más (American Band College)"),
-    ({"criterion": "key", "grade": 5, "value": 5, "source": "abc"}, "Armadura de concierto con 5 ♯ → grado 5 o más (American Band College)"),
+    ({"criterion": "key", "grade": 3, "value": -5, "source": "fgbm"}, "Armadura de concierto con 5 ♭ → grado 3 o más (Federación Galega de Bandas)"),
+    ({"criterion": "key", "grade": 5, "value": 5, "source": "fgbm"}, "Armadura de concierto con 5 ♯ → grado 5 o más (Federación Galega de Bandas)"),
     ({"criterion": "meter_changes", "grade": 4, "value": 16, "source": "abc"}, "16 cambios de compás → grado 4 o más (American Band College)"),
-    ({"criterion": "tempo", "grade": 4, "value": {"slowest": 48.0, "fastest": 132.0}, "source": "abc"},
-     "Tempos de 48 a 132 pulsos por minuto → grado 4 o más (American Band College)"),
+    ({"criterion": "tempo", "grade": 4, "value": {"slowest": 48.0, "fastest": 132.0}, "source": "fgbm"},
+     "Tempos de 48 a 132 pulsos por minuto → grado 4 o más (Federación Galega de Bandas)"),
     ({"criterion": "length", "grade": 4, "value": 467, "source": "abc"}, "Duración de unos 8 minutos → grado 4 o más (American Band College)"),
-    ({"criterion": "dynamics", "grade": 3, "value": ["ff", "pp"], "source": "abc"}, "Dinámicas ff y pp → grado 3 o más (American Band College)"),
+    ({"criterion": "dynamics", "grade": 2, "value": ["ff", "pp"], "source": "fgbm"}, "Dinámicas ff y pp → grado 2 o más (Federación Galega de Bandas)"),
     ({"criterion": "meter", "grade": 2, "value": "6/4", "source": "fjh"}, "Compás 6/4 → grado 2 o más (FJH)"),
-    ({"criterion": "note_values", "instrument": "Flute", "grade": 4, "value": 0.0625, "source": "abc"},
-     "Semifusas en Flauta → grado 4 o más (American Band College)"),
-    ({"criterion": "ornaments", "instrument": "Flute", "grade": 4, "value": ["turn"], "source": "abc"},
-     "Grupeto en Flauta → grado 4 o más (American Band College)"),
+    ({"criterion": "note_values", "instrument": "Flute", "grade": 4, "value": 0.0625, "source": "fgbm"},
+     "Semifusas en Flauta → grado 4 o más (Federación Galega de Bandas)"),
+    ({"criterion": "ornaments", "instrument": "Flute", "grade": 4, "value": ["turn"], "source": "fgbm"},
+     "Grupeto en Flauta → grado 4 o más (Federación Galega de Bandas)"),
+    ({"criterion": "tuplets", "instrument": "Flute", "grade": 2, "value": 12, "source": "fgbm"},
+     "Tresillos en Flauta → grado 2 o más (Federación Galega de Bandas)"),
+    ({"criterion": "tuplets", "instrument": "Flute", "grade": 3, "value": 12, "source": "fgbm"},
+     "Quintillos o seisillos en Flauta → grado 3 o más (Federación Galega de Bandas)"),
+    ({"criterion": "tuplets", "instrument": "Flute", "grade": 4, "value": 12, "source": "fgbm"},
+     "Septillos y otros grupos irregulares en Flauta → grado 4 o más (Federación Galega de Bandas)"),
 ])
 def test_the_spanish_reasons(item, text):
     from backend.analyzers.rubric_grade import reason_es
