@@ -10,7 +10,7 @@
   4–12 compases y guarda la **predicción de ScoreLint para ese fragmento** (grado 1–6, índice 0–10,
   crítico, hallazgos y versiones de escala, detector, muestra y dificultad). Desde difficulty-v3
   (2026-10-25) el grado del fragmento sigue las guías de las editoriales, como el de la obra, y desde
-  difficulty-v4 (2026-10-27) la tabla de la Federación Galega: una campaña creada antes guarda predicciones de
+  difficulty-v4 y v5 (2026-10-27) la tabla de la Federación Galega, tesituras incluidas: una campaña creada antes guarda predicciones de
   otra versión y conviene crearla de nuevo antes de las valoraciones.
   Solo las cuentas de `ADMIN_EMAILS` crean y gestionan campañas (2026-10-14). El orden se baraja de forma
   determinista para que los críticos no se agrupen. En borrador se pueden quitar pasajes.

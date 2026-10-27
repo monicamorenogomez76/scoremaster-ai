@@ -7,8 +7,8 @@ not used in passing (LIMITED_SHARE of its active measures and at least MIN_MEASU
 accepted within a grade only when they are that few. Like difficulty-v2, the work is graded by its woodwinds, brass
 and strings (each family by the 80th percentile of its parts); percussion and the rhythm section are left out,
 since the guides grade them by instrumentation only. Since difficulty-v4 (2026-10-27) the Galician federation's table
-("fgbm") is the source of every criterion it covers; the American Band College chart keeps the ranges, the length and
-the number of key and meter changes.
+("fgbm") is the source of every criterion it covers, the ranges included (difficulty-v5); the American Band College
+chart keeps the length, the number of key and meter changes and the end-of-year notes of grade 1.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 from backend.domain.timing import is_attack, sounding_pitches
 
-RUBRIC_VERSION = "rubric-v2"
+RUBRIC_VERSION = "rubric-v3"
 WORK_FAMILIES = ("woodwinds", "brass", "strings")
 EPSILON = 1e-6
 
@@ -81,7 +81,7 @@ def _range(part: ScorePart, row: str) -> dict:
     played = [_midi(name) + shift for measure in part.measures for event in _attacks(measure)
               for name in sounding_pitches(event)]
     if not played:
-        return {"grade": 1, "value": None, "source": "abc"}
+        return {"grade": 1, "value": None, "source": "fgbm"}
     low, high = min(played), max(played)
     grade, previous = R.BEYOND_CHART_GRADE, None
     for candidate in range(1, 6):
@@ -95,7 +95,7 @@ def _range(part: ScorePart, row: str) -> dict:
         previous = ordinary
     # The note that sets the grade: the one beyond the previous grade's range (the highest when grade 1).
     value = high if previous is None or high > previous[1] else low
-    return {"grade": grade, "value": _name(value), "direction": "high" if value == high else "low", "source": "abc"}
+    return {"grade": grade, "value": _name(value), "direction": "high" if value == high else "low", "source": "fgbm"}
 
 
 def _beat(meter: str | None) -> tuple[float, bool]:

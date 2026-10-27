@@ -26,7 +26,8 @@ from backend.rules.weights import RULE_WEIGHTS
 # for the critical passages and the explanations.
 # difficulty-v4 (author's decision, 2026-10-27): the Galician federation's table prevails over the American Band
 # College chart where they differ (backend/domain/grade_rubric.py).
-DIFFICULTY_VERSION = "difficulty-v4"
+# difficulty-v5 (author's decision, 2026-10-27): the written ranges are the Galician table's too.
+DIFFICULTY_VERSION = "difficulty-v5"
 # Families whose grade is the work's grade. Percussion, the rhythm section, keyboards and parts without an
 # identified instrument keep their own grade, shown apart: their estimate is provisional and they used to
 # raise whole works (a snare drum in quavers made Persis a 6 against its publisher's Grade 4).
