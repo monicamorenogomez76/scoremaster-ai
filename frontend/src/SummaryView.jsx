@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { gradeScaleOf, gradeText } from './labels.js';
-import { listConcerts, nextConcert } from './concerts.js';
+import { listConcerts, nextConcert, nextConcertText } from './concerts.js';
 import { listPriorities, listWorks } from './library.js';
 import { blockWorkText, listRehearsals, listReviewPriorities, nextRehearsal, rehearsalDateText, summaryPriorityRows,
   todayIso } from './rehearsals.js';
@@ -58,9 +58,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
 
   // The next concert takes the place of the description, so the summary still fits at a glance.
   const description = concert
-    ? <span id="next-concert"><strong>Próximo concierto:</strong> {[concert.concert.title, rehearsalDateText(concert.concert),
-        concert.days === 0 ? 'hoy' : 'faltan ' + concert.days + (concert.days === 1 ? ' día' : ' días'),
-        concert.remaining + (concert.remaining === 1 ? ' ensayo' : ' ensayos')].join(' · ')}{' '}
+    ? <span id="next-concert"><strong>Próximo concierto:</strong> {nextConcertText(concert, todayIso())}{' '}
         <button type="button" className="link-action" onClick={() => onNavigate('concerts')}>Ver conciertos</button>
         {(concert.concert.works || []).length > 0 && <span className="programme" aria-label="Programa del concierto">
           {concert.concert.works.map(work => <span key={work.id} className="programme-chip">{work.title}

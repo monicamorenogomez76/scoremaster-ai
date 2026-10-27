@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  assistantStep, concertProgress, createConcert, daysUntil, nextConcert, listConcerts, monthGrid, patternDates, phaseLabel, planItemsToSave,
+  assistantStep, concertProgress, createConcert, daysUntil, nextConcert, nextConcertText, listConcerts, monthGrid, patternDates, phaseLabel, planItemsToSave,
   proposeConcertPlan, saveConcertPlan, weekdayOptions,
 } from '../../../frontend/src/concerts.js';
 
@@ -77,6 +77,16 @@ test('the next concert and the rehearsals still to do before it', () => {
   ];
   assert.deepEqual(nextConcert(concerts, '2026-10-14'), { concert: concerts[1], remaining: 2, days: 15 });
   assert.equal(nextConcert(concerts, '2026-12-21'), null);
+});
+
+test('the summary tells the next concert once: the day, the days left and the rehearsals still to do', () => {
+  const concert = { title: 'Santa Cecilia', date: '2026-11-22', time: '20:00' };
+  assert.equal(nextConcertText({ concert, remaining: 3, days: 26 }, '2026-10-27'),
+    'Santa Cecilia · domingo, 22 de noviembre de 2026 · 20:00 · faltan 26 días · 3 ensayos');
+  assert.equal(nextConcertText({ concert, remaining: 1, days: 1 }, '2026-11-21'),
+    'Santa Cecilia · domingo, 22 de noviembre de 2026 · 20:00 · falta 1 día · 1 ensayo');
+  // On the concert day «Hoy» says it all: no «hoy» again and no rehearsals left to count (author's report, 2026-10-26).
+  assert.equal(nextConcertText({ concert, remaining: 0, days: 0 }, '2026-11-22'), 'Santa Cecilia · Hoy · 20:00');
 });
 
 test('the assistant suggests the next step of the next concert', () => {
