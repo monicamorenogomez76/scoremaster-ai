@@ -122,6 +122,42 @@ Neon guarda además 6 horas de historial para volver a un momento anterior desde
 Comprobado en local (2026-10-13): copia de la base de Compose y restauración en una base vacía con las
 mismas filas en todas las tablas y la misma versión de migraciones (`0011`).
 
+## Lector de PDF (Space privado de Hugging Face)
+
+Render no puede leer PDF: copista-2m necesita 2–4,5 GB de memoria. El lector (`omr/`) corre en un **Space Docker
+privado** de la cuenta de Hugging Face de la autora, en el hardware gratuito (2 CPU y 16 GB). Solo Render lo llama
+(decisión de la autora, 2026-10-27).
+
+**Crear el Space (una vez, con la cuenta de la autora):**
+
+1. En Hugging Face: **New Space** → nombre `scoremaster-omr`, SDK **Docker** (plantilla en blanco), hardware
+   **CPU basic** (gratis), visibilidad **Private**.
+2. En el Space, **Settings → Variables and secrets → New secret**: `OMR_TOKEN`, con un valor largo y aleatorio
+   (por ejemplo, la salida de `openssl rand -hex 32`). No se escribe en ningún archivo ni en el chat.
+3. En tu equipo, `hf auth login` con un token de **escritura** de tu cuenta, y desde el repositorio:
+   `scripts/deploy_omr_space.sh <usuario>/scoremaster-omr`. Hugging Face construye la imagen en unos 10 minutos
+   (el registro está en la pestaña **Logs** del Space).
+4. Crea otro token de tu cuenta, de **solo lectura** (Settings → Access Tokens, tipo *Read*): es el que deja
+   entrar a Render en el Space privado.
+
+**En Render** (Environment), tres secretos:
+
+| Variable | Valor |
+|---|---|
+| `OMR_SERVICE_URL` | `https://<usuario>-scoremaster-omr.hf.space` |
+| `OMR_SERVICE_TOKEN` | El mismo valor que `OMR_TOKEN` del Space |
+| `OMR_HF_TOKEN` | El token de solo lectura del paso 4 |
+
+Sin ellos, la opción de subir PDF no aparece.
+
+**Cómo funciona y límites:**
+- Cada página se lee por separado y el Space une las páginas en una obra; Render consulta el avance mientras la
+  directora espera.
+- Hasta 20 MB por PDF, 40 archivos y 80 páginas por obra.
+- Los PDF se borran al terminar y el resultado se olvida en cuanto Render lo recoge, o una hora después.
+- **Se duerme a las 48 horas sin uso:** la primera lectura después tarda 2–3 minutos más en despertarlo.
+- Para actualizar el lector basta con volver a ejecutar `scripts/deploy_omr_space.sh`.
+
 ## Trabajo futuro: Vercel
 
 Valorado el 2026-10-25 y aplazado hasta después de la entrega. Vercel ejecuta FastAPI como funciones: más

@@ -64,6 +64,8 @@ only source of musical facts; the LLM only explains or gives an independent opin
   (`ai/demo_provider.py`, `ai/gemini_provider.py`, prompts in `ai/prompts.py`).
 - `backend/app`: FastAPI routes (`main.py` plus `*_routes.py`), dependency wiring (`dependencies.py`), security
   middleware (CSP, HSTS in production, Origin check) and `seed_demo.py`.
+- `omr/`: the PDF reader, deployed apart to the author's private Hugging Face Space (copista-2m, `app.py`) with
+  `merge.py` joining the pages staff by staff; tests fake the reading. Deployment in `docs/DEPLOYMENT.md`.
 - `frontend/src`: React views (Resumen, Repertorio, Mi banda, Conciertos, Ensayos, Valoraciones,
   Configuración); API helpers and pure functions live in plain `.js` modules so Node tests can import them.
 
