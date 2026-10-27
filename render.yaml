@@ -40,6 +40,10 @@ services:
         sync: false          # optional
       - key: GEMINI_API_KEY
         sync: false          # optional: without it the explanations use the identified demo
+      - key: OMR_GITHUB_REPO
+        sync: false          # optional: the author's private repository of the PDF reader (user/scoremaster-omr)
+      - key: OMR_GITHUB_TOKEN
+        sync: false          # its fine-grained token (Contents: write); without both, PDFs are not offered
       - key: GOOGLE_CLIENT_ID
         sync: false          # optional: Google sign-in stays off while empty
       - key: GOOGLE_CLIENT_SECRET

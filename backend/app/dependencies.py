@@ -11,6 +11,7 @@ from backend.application.bands import BandRepository
 from backend.application.concerts import ConcertRepository
 from backend.application.evaluations import EvaluationRepository
 from backend.application.library import LibraryRepository
+from backend.application.pdf_imports import OmrDispatcher, PdfImportRepository
 from backend.application.rehearsals import RehearsalRepository
 from backend.application.auth import AuthService
 from backend.infrastructure.account_repository import PostgresAccountRepository
@@ -19,6 +20,8 @@ from backend.infrastructure.band_repository import PostgresBandRepository
 from backend.infrastructure.concert_repository import PostgresConcertRepository
 from backend.infrastructure.evaluation_repository import PostgresEvaluationRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
+from backend.infrastructure.omr_dispatcher import configured_dispatcher
+from backend.infrastructure.pdf_import_repository import PostgresPdfImportRepository
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.infrastructure.ai.gemini_provider import shared_provider, shared_review_provider
 from backend.infrastructure.explanation_cache import PostgresExplanationCache
@@ -121,6 +124,18 @@ def get_concert_repository() -> ConcertRepository:
         return PostgresConcertRepository(analysis_engine())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+
+
+def get_pdf_import_repository() -> PdfImportRepository:
+    try:
+        return PostgresPdfImportRepository(analysis_engine())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+
+
+def get_omr_dispatcher() -> Optional[OmrDispatcher]:
+    """The PDF reader in GitHub Actions, when OMR_GITHUB_REPO and OMR_GITHUB_TOKEN are set (2026-10-27)."""
+    return configured_dispatcher()
 
 
 def authenticated_user(request: Request, accounts: AccountRepository = Depends(get_account_repository)) -> User:

@@ -17,6 +17,8 @@ class WorkUpload:
     file_name: str
     source: bytes
     source_sha256: str
+    # "pdf" when the reader in GitHub Actions read it from a PDF (2026-10-27): its grade is provisional.
+    source_format: str = "musicxml"
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,7 @@ class Work:
     # Latest analysis in brief: grade, number of critical passages and band compatibility.
     summary: dict = field(default_factory=dict)
     preparation_status: str = "review"
+    source_format: str = "musicxml"
 
 
 @dataclass(frozen=True)

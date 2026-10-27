@@ -26,6 +26,7 @@ class StoredWork(Base):
     source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
     preparation_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default='review')
+    source_format: Mapped[str] = mapped_column(String(10), nullable=False, server_default='musicxml')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -51,7 +52,7 @@ def _external(row: StoredExternalGrade) -> ExternalGrade:
 
 def _work(row: StoredWork, summary: Optional[dict] = None) -> Work:
     return Work(row.id, row.title, row.composer, row.file_name, row.size, row.created_at, row.updated_at, summary or {},
-                row.preparation_status)
+                row.preparation_status, row.source_format)
 
 
 # Summary of the latest analysis of each work, read from the stored JSON without loading it whole.
@@ -88,7 +89,7 @@ class PostgresLibraryRepository:
         """A new work, or the same work updated when its owner uploads the same file again."""
         values = dict(id=uuid4(), user_id=user_id, title=upload.title[:300], composer=(upload.composer or None),
                       file_name=upload.file_name[:255], source=upload.source, source_sha256=upload.source_sha256,
-                      size=len(upload.source))
+                      size=len(upload.source), source_format=upload.source_format)
         statement = insert(StoredWork).values(**values).on_conflict_do_update(
             constraint='uq_works_user_source',
             set_={'title': values['title'], 'composer': values['composer'], 'file_name': values['file_name'],

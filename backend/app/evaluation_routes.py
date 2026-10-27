@@ -135,6 +135,10 @@ def create_campaign(body: CampaignIn, user: User = Depends(authenticated_user),
         raise HTTPException(status_code=403, detail=ADMIN_ONLY)
     samples = []
     for work_id in dict.fromkeys(body.work_ids):
+        # A work read from a PDF may carry reading errors: its grade is provisional (2026-10-27).
+        work = library.get_work(user.id, work_id)
+        if work is not None and work.source_format == "pdf":
+            raise HTTPException(status_code=422, detail="Las obras leídas de PDF no entran en la evaluación.")
         found, latest = stored_score(library, user.id, work_id, score_store), library.latest_analysis(user.id, work_id)
         if found is None or latest is None:
             raise HTTPException(status_code=422, detail="Alguna obra no existe o no tiene análisis.")
