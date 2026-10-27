@@ -1,8 +1,8 @@
 """Musical timing of the parsed events: what is an attack, the bar length and each voice's line.
 
 A chord is one attack, a continued or stopped tie is not an attack and a grace note is an extra
-one. Each voice of a staff is one player, so a bar is as busy as its busiest voice (author's
-decisions, 2026-10-05).
+one. Each voice of a staff is one player, so a bar is as busy as its busiest voice (decided
+2026-10-05).
 """
 from __future__ import annotations
 

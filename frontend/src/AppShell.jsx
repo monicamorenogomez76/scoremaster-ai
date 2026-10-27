@@ -23,7 +23,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
   const data = analysis?.data;
   const go = name => { setMenuOpen(false); onNavigate(name); };
   const busy = upload.state.busy;
-  // The sections sit in a bar across the top (author's choice, 2026-10-25); on a narrow screen they fold behind «Menú».
+  // The sections sit in a bar across the top (chosen 2026-10-25); on a narrow screen they fold behind «Menú».
   return <div id="app-shell" className="app-shell" hidden={hidden}>
     <header className="topbar">
       <div className="topbar-brand"><img className="brand-logo" src="/static/brand.svg?v=2" alt="" width="36" height="36" /><span>ScoreMaster</span></div>

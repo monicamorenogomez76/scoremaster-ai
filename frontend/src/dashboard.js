@@ -33,7 +33,7 @@ export function workHeadline(counts) {
   return 'Más trabajo en ' + names + ': ' + passages + (leaders.length > 1 ? ' cada una' : '') + '.';
 }
 
-// «Cobertura hasta el concierto» (author's request, 2026-10-26), over the series of the next concert: rehearsals
+// «Cobertura hasta el concierto» (requested 2026-10-26), over the series of the next concert: rehearsals
 // held (before today or already reviewed), minutes rehearsed per work over its minutes planned (a block reviewed as
 // not done does not count) and passages resolved per work, each passage with the status of its latest review.
 const share = (done, total) => ({ done, total, percent: total ? Math.round(done * 100 / total) : null });

@@ -91,7 +91,7 @@ export function stopPlayback() {
   activeTransport = null;
 }
 
-// Timelines of the passages opened (author's report, 2026-10-07: with real band scores a passage took
+// Timelines of the passages opened (reported 2026-10-07: with real band scores a passage took
 // many seconds to sound). A passage starts being prepared when its dialog opens, so pressing play
 // reuses the same request; a failed one is asked again next time.
 const passageTimelines = new Map();

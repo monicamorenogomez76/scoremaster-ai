@@ -152,7 +152,7 @@ def authenticated_user(request: Request, accounts: AccountRepository = Depends(g
 
 def is_admin(user: User) -> bool:
     """Administrators (ADMIN_EMAILS, separated by commas) manage the evaluation campaigns: only they see the
-    musicians' emails and results; any other account only rates what it is invited to (author's decision,
+    musicians' emails and results; any other account only rates what it is invited to (decided
     2026-10-14). Read on every request, so changing the variable needs no restart of the code."""
     admins = {item.strip().lower() for item in os.environ.get("ADMIN_EMAILS", "").split(",") if item.strip()}
     return user.email.strip().lower() in admins

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { applyTextSize, applyTheme, loadTextSize, loadTheme, saveTextSize, saveTheme, textSizes, themes, updateProfile } from './settings.js';
 import { View } from './View.jsx';
 
-// Configuración (author's mock-up): the account's visible name and the text size and theme of this device.
+// Configuración (as in its mock-up): the account's visible name and the text size and theme of this device.
 export function SettingsView({ active, user, onUserChanged }) {
   const [name, setName] = useState(user?.display_name || '');
   const [size, setSize] = useState(loadTextSize);

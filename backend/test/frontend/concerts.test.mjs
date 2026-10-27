@@ -85,7 +85,7 @@ test('the summary tells the next concert once: the day, the days left and the re
     'Santa Cecilia · domingo, 22 de noviembre de 2026 · 20:00 · faltan 26 días · 3 ensayos');
   assert.equal(nextConcertText({ concert, remaining: 1, days: 1 }, '2026-11-21'),
     'Santa Cecilia · domingo, 22 de noviembre de 2026 · 20:00 · falta 1 día · 1 ensayo');
-  // On the concert day «Hoy» says it all: no «hoy» again and no rehearsals left to count (author's report, 2026-10-26).
+  // On the concert day «Hoy» says it all: no «hoy» again and no rehearsals left to count (reported 2026-10-26).
   assert.equal(nextConcertText({ concert, remaining: 0, days: 0 }, '2026-11-22'), 'Santa Cecilia · Hoy · 20:00');
 });
 

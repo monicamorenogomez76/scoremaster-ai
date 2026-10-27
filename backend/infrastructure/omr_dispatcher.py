@@ -1,4 +1,4 @@
-"""Starts the PDF reader in its private GitHub repository (scoremaster-omr; author's decision, 2026-10-27): a
+"""Starts the PDF reader in its private GitHub repository (scoremaster-omr; decided 2026-10-27): a
 repository_dispatch event "read-pdf" carrying the job. OMR_GITHUB_REPO names the repository and OMR_GITHUB_TOKEN is a
 fine-grained token of that repository only (Contents: write, which repository_dispatch requires); it is never logged."""
 import os

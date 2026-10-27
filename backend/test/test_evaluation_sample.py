@@ -1,4 +1,4 @@
-"""Passages proposed for the musicians' evaluation (author's decisions, 2026-10-07): a stratified,
+"""Passages proposed for the musicians' evaluation (decided 2026-10-07): a stratified,
 reproducible sample of the director's works with critical AND non-critical passages, each with the
 ScoreLint prediction for that very fragment, hidden from the musicians."""
 from backend.analyzers.evaluation_sample import CRITICAL_SHARE, WorkSample, propose_passages

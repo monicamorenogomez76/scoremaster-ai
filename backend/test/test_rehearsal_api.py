@@ -36,7 +36,7 @@ def test_a_rehearsal_is_saved_with_its_agenda_and_belongs_to_its_owner(clients):
     assert [(block["title"], block["minutes"]) for block in saved["blocks"]] == [
         ("Calentamiento", 15), ("Pasajes prioritarios", 25), ("Tutti", 20)]
     assert saved["blocks"][1]["work_id"] == work["work_id"] and saved["blocks"][1]["sections"] == ["Clarinetes"]
-    # The type of each block colours the agenda calendar (author's request, 2026-10-05).
+    # The type of each block colours the agenda calendar (requested 2026-10-05).
     assert [block["group"] for block in saved["blocks"]] == ["warmup", "clarinets", "tutti"]
     # The parts of each block open the score at its passage with only its instruments.
     assert [block["parts"] for block in saved["blocks"]] == [[], ["Clarinet"], []]
@@ -63,7 +63,7 @@ def test_a_rehearsal_can_work_on_several_works(clients):
     assert saved["works"] == [{"id": first["work_id"], "title": first["title"]},
                               {"id": second["work_id"], "title": second["title"]}]
     assert [block["work_id"] for block in saved["blocks"]] == [first["work_id"], second["work_id"], None]
-    # Each block says which work is being rehearsed in it (author's request, 2026-10-05).
+    # Each block says which work is being rehearsed in it (requested 2026-10-05).
     assert [block["work_title"] for block in saved["blocks"]] == [first["title"], second["title"], None]
 
 

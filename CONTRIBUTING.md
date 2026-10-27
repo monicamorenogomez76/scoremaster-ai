@@ -50,7 +50,7 @@ y verificado.
 - Indicar la herramienta, la carpeta de trabajo y el resultado esperado.
 - Aprovechar la experiencia en C#/.NET, Java y SQL para explicar conceptos nuevos.
 - No dar por conocidos macOS, VS Code, Python, Node.js ni Docker.
-- Alternar tareas guiadas realizadas por la autora con tareas delegadas al asistente.
+- Alternar tareas guiadas hechas a mano con tareas delegadas al asistente.
 - Reservar oportunidades para comprender el código, escribir pruebas y revisar PRs.
 - Documentar las decisiones y sus motivos para preparar la defensa del TFM.
 

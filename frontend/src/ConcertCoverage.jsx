@@ -20,7 +20,7 @@ function CoverageCell({ percent, detail, tone }) {
 export const coverageHeadline = ({ rehearsals }) => rehearsals.total
   ? rehearsals.done + ' de ' + rehearsals.total + ' ensayos hechos (' + rehearsals.percent + ' %)' : null;
 
-// «Cobertura hasta el concierto» (author's request, 2026-10-26): per work of the programme, the minutes rehearsed and
+// «Cobertura hasta el concierto» (requested 2026-10-26): per work of the programme, the minutes rehearsed and
 // the passages resolved in the director's reviews. Compact, so the summary still fits on one screen.
 export function ConcertCoverage({ coverage }) {
   const { rehearsals, works } = coverage;

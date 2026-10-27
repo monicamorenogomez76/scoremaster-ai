@@ -1,4 +1,4 @@
-"""What the LLM sees of a passage in the independent review (step 22, author's decision 2026-10-13):
+"""What the LLM sees of a passage in the independent review (step 22, decided 2026-10-13):
 objective measurements and the notes, never ScoreLint's grade, index, dimensions or findings."""
 from pathlib import Path
 

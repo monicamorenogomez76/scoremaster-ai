@@ -1,5 +1,5 @@
 """Passages of the same work are prepared without reading the whole score again (2026-10-07: with
-real band scores the author waited 10-20 s per passage, most of it in music21; on Render's free plan
+real band scores it took 10-20 s per passage, most of it in music21; on Render's free plan
 a passage of Persis took more than the 60 s the browser waited)."""
 from pathlib import Path
 

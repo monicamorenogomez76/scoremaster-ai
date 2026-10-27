@@ -34,7 +34,7 @@ function SeriesProposal({ concert, label, onSaved, onOpenBlock }) {
   </>;
 }
 
-// The one thing to do next for the coming concert, inside the rehearsal card (author's decision,
+// The one thing to do next for the coming concert, inside the rehearsal card (decided
 // 2026-10-06: no separate panel repeating the concert or the rehearsal). Nothing when all is done.
 export function NextStep({ concerts, rehearsals, onReviewRehearsal, onOpenBlock, onChanged }) {
   const today = todayIso();

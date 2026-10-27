@@ -1,5 +1,5 @@
 """Band works for the demo account and the TFM video (PR 4 of the closing plan; rewritten 2026-10-14 so
-they follow the rules of harmony, voice leading and band scoring, at the author's request).
+they follow the rules of harmony, voice leading and band scoring, as requested).
 
 Original works of this repository (CC0), composed deterministically:
 python scripts/generate_demo_scores.py [folder, demo/ by default].
@@ -17,7 +17,7 @@ written pitch, with each instrument's transposition, as a publisher's MusicXML w
 - «Coral para principiantes» (E flat, 4/4): an eight-bar four-part chorale played by the woodwinds, the
   brass and the whole band, with a breath at the end of every phrase.
 - «Pasodoble de las fiestas» (F minor, A flat, D flat; 2/4), kept apart in para-subir/ as a compressed .mxl:
-  it is not seeded, so it can be uploaded live to show the whole process (author's request, 2026-10-14).
+  it is not seeded, so it can be uploaded live to show the whole process (requested 2026-10-14).
 """
 from dataclasses import dataclass, field
 from pathlib import Path

@@ -1,4 +1,4 @@
-"""Bands of each director (author's decisions, 2026-10-06): several fixed templates such as «Unió
+"""Bands of each director (decided 2026-10-06): several fixed templates such as «Unió
 Musical d'Albalat dels Sorells», with locality, rehearsal days, the full instrumentation and a level
 per section. One band is active: analyses and BandFit use its template. Another user's band is 404."""
 import pytest

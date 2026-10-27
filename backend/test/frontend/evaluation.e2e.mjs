@@ -1,4 +1,4 @@
-// Evaluation campaigns (steps 16-18, author's decisions, 2026-10-07). The director: passages proposed
+// Evaluation campaigns (steps 16-18, decided 2026-10-07). The director: passages proposed
 // from her works with ScoreLint's prediction, trimmed in draft, musicians invited by email, the campaign
 // opened, exported and closed. An invited musician: profile, then each passage rated (difficulty 1-6,
 // critical, priority, comment) after seeing and hearing it, never with the prediction.

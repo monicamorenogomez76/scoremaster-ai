@@ -1,6 +1,6 @@
 """Step 10: musical timing and attacks — chords, ties, voices and grace notes.
 
-Author's decisions (2026-10-05): a grace note is an extra attack; with several voices in one
+Decided on 2026-10-05: a grace note is an extra attack; with several voices in one
 staff, each voice is one player and the bar's density is that of its busiest voice.
 """
 from music21 import chord, note, stream, tie

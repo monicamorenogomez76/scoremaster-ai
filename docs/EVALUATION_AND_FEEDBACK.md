@@ -2,7 +2,7 @@
 
 # Evaluation and Expert Feedback
 
-## Implementado: campañas de valoración (pasos 16–18, decisiones de la autora, 2026-10-07)
+## Implementado: campañas de valoración (pasos 16–18, decisiones del 2026-10-07)
 
 - **Campaña** de la directora con título e instrucciones; estados borrador → abierta → cerrada.
 - **Pasajes propuestos** (`backend/analyzers/evaluation_sample.py`): muestra reproducible de sus obras,
@@ -29,7 +29,7 @@
   instrumento, y valora los pasajes uno a uno tras verlos y escucharlos (o ver su parte en toda la
   obra), con la rúbrica de grados de `docs/DIFFICULTY_CRITICALITY.md`; cada valoración se guarda al
   pasar al siguiente y puede seguir otro día. Con la campaña cerrada solo puede consultarlas.
-- **Método B, LLM independiente (paso 22, decisiones de la autora, 2026-10-13)**: botón «Valorar con IA» en la
+- **Método B, LLM independiente (paso 22, decisiones del 2026-10-13)**: botón «Valorar con IA» en la
   campaña. Gemini recibe de cada pasaje solo **medidas objetivas y sus notas** (`passage-features-v1`:
   instrumento, compases, tempo vigente, duración, ataques y notas por segundo, figura más breve, tesitura
   escrita y real, transposición, salto mayor y medio, tramo más largo sin descanso, proporción de silencio,
@@ -40,7 +40,7 @@
   enviado (tabla `evaluation_llm_reviews`, migración 0010); repetir no vuelve a preguntar lo ya valorado con
   las mismas versiones, y un fallo se reintenta la vez siguiente. La exportación incluye `llm_reviews` y el
   informe añade una fila «LLM (proveedor · modelo · prompt)» por versión.
-- **Método C, híbrido (paso 24)**, preregistrado por la autora el 2026-10-13, antes de recibir valoraciones:
+- **Método C, híbrido (paso 24)**, preregistrado el 2026-10-13, antes de recibir valoraciones:
   grado = media de ScoreLint y del LLM redondeando hacia arriba los medios puntos; crítico solo si los dos
   coinciden (prima la precisión, como F0.5). El informe añade una fila por versión del LLM y una tabla con
   todos los métodos sobre los mismos pasajes.

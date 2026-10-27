@@ -1,7 +1,7 @@
 """Saved rehearsals of each user: records and repository port (no database code).
 
 A rehearsal can work on several works; each block of its agenda may name one of them. It may belong
-to a concert, and after it the director reviews each block (author's decisions, 2026-10-06).
+to a concert, and after it the director reviews each block (decided 2026-10-06).
 """
 from dataclasses import dataclass
 from datetime import date, datetime

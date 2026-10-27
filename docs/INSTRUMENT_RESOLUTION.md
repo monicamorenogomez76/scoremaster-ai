@@ -11,7 +11,7 @@ el nombre (minúsculas, acentos, `♭`/`flat` → `b`, puntuación), separa los 
 parte (`2`, `II`, `2nd`, `1 & 2`, `1/2`) y busca el alias **exacto**: no hay coincidencia
 por substring ni difusa. Lo que no está en el catálogo es `UNKNOWN`.
 
-Decisiones musicales de la autora, para contexto de banda:
+Decisiones musicales, para contexto de banda:
 
 - «Clarinet»/«Clarinete» sin afinación es clarinete en Si♭ (en orquesta podría ser en La).
 - «Trumpet»/«Trompeta» es en Si♭; «Horn»/«Trompa» es la trompa en Fa, otro instrumento.
@@ -63,7 +63,7 @@ primero la propuesta y los candidatos). `/analyze` recibe `instrument_overrides`
 identidad del catálogo, validada) y el parser añade `PartMetadata.confirmed_id`: el resolver la usa
 antes que cualquier evidencia, con fuente `USER` y confianza 1.0, así que la dificultad, los grupos
 de ensayo y BandFit la aplican. Las confirmaciones se guardan en la configuración del análisis.
-BandFit agrupa por identidad (decisiones de la autora, 2026-10-04): un músico por voz
+BandFit agrupa por identidad (decisiones del 2026-10-04): un músico por voz
 («Clarinet 1 & 2» cuenta dos; los pentagramas de una parte de viento son sus voces y los de un
 teclado, un solo músico) y la percusión como percusionistas en total, uno por parte. Las partes sin
 confirmar se listan aparte y no cuentan en el porcentaje. Queda para más adelante: recordar alias

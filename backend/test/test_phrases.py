@@ -1,4 +1,4 @@
-"""Melodic phrase boundaries from the author's criteria (pauses, lengthening, written marks, restarts)."""
+"""Melodic phrase boundaries from the criteria of 2026-10-04 (pauses, lengthening, written marks, restarts)."""
 from backend.analyzers.phrases import find_phrases
 from backend.domain.models import ScoreMeasure, ScoreNote, ScorePart
 

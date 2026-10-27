@@ -1,6 +1,6 @@
-"""Melodic phrase boundaries, from the author's criteria (2026-10-04).
+"""Melodic phrase boundaries, from the criteria of 2026-10-04.
 
-Several hints add up and none decides alone, following the cautions of the author:
+Several hints add up and none decides alone, following these cautions:
 - a relevant pause: a rest long compared with the local rhythm and with the surrounding rests
   (a short or recurring rest belongs to the motive or to an accompaniment pattern);
 - a lengthened note: alone it does not end a phrase (it may sit in the middle), but followed by a
@@ -9,7 +9,7 @@ Several hints add up and none decides alone, following the cautions of the autho
 - a restart of the phrase's opening pattern (rhythm and intervals) after a possible ending.
 A phrase covers the measures of its notes, so an upbeat stays with the phrase it starts, and a long
 phrase is never cut. Short fragments separated by weak boundaries join into phrases of 4 or 8
-measures (author's decision); a whole measure of rest or a written mark is a strong boundary that
+measures (decided); a whole measure of rest or a written mark is a strong boundary that
 never joins. A harmonic cadence of the ensemble (harmony.py) adds a hint to the note sounding on
 its arrival: with a lengthening or a pause it ends the phrase, alone it does not (a part that keeps
 moving through the cadence is not cut). A change of pattern is not a boundary because it may only

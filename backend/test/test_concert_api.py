@@ -1,4 +1,4 @@
-"""Concerts of each user (author's plan, 2026-10-06): date, programme of works in concert order and a
+"""Concerts of each user (planned 2026-10-06): date, programme of works in concert order and a
 weekly rehearsal pattern; rehearsals belong to at most one concert and the director reviews them
 block by block. Another user's concert answers 404."""
 import pytest
