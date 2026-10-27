@@ -10,6 +10,6 @@ SQLAlchemy==2.0.54
 alembic==1.16.5
 psycopg[binary]==3.2.13
 argon2-cffi==23.1.0
-authlib==1.8.0
+authlib==1.9.1
 langchain-core==1.6.10
 langchain-google-genai==4.4.2
