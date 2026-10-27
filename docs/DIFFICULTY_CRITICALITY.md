@@ -234,6 +234,51 @@ Limitaciones: los umbrales de cambios de compás, del uso limitado y de las arti
 lectura razonable de las guías, no cifras suyas; un vals marcado a negra = 192 cuenta como tempo de grado 5
 aunque se dirija a un tiempo por compás. Lo valida la evaluación con músicos.
 
+### difficulty-v4: la tabla de la Federación Galega (decisión de la autora, 2026-10-27)
+
+La autora aportó la *Táboa de niveis de dificultade* de la Federación Galega de Bandas de Música, una traducción
+de la tabla de Cynthia Hutton (BANDWORLD), de la que también parte la del American Band College. **Donde las dos
+difieren, prevalece la gallega.** El American Band College se mantiene para lo que la gallega no trae (la
+duración de la obra y el número de cambios de tonalidad y de compás) y para las tesituras, hasta medir las de la
+tabla gallega. FJH sigue afinando los grados bajos y UIL solo confirma. La rúbrica pasa a `rubric-v2` y el
+análisis a `difficulty-v4`; las obras se vuelven a analizar solas al arrancar.
+
+Lo que cambia respecto a difficulty-v3:
+
+| Criterio | difficulty-v3 (American Band College) | difficulty-v4 (tabla gallega) |
+|---|---|---|
+| Compás 2/2 | G1 | G2 («pouco uso», con 5/4 y 6/4) |
+| Compases 4/2, 6/2 y 7/4 | G5 (no estaban) | G3 |
+| Compases 11/8, 10/4 y 9/4 | G5 (no estaban) | G4 |
+| Armadura de 2 ♯ | G5 | G4 («de 2 sostidos a 6 bemois») |
+| Tempo más lento | G2 desde 72; G4 y G5 desde 44 | G2 desde 60; G4 y G5 desde 40 |
+| Dinámicas | mp y mf G2; pp, ff y fp G3 | De p a f (con mp y mf) G1; pp, ff y fp G2; sfz y sffz G3 |
+| Articulación | Tenuto G3; marcato G4 | Tenuto G2; marcato G3 |
+| Grupos irregulares | Cualquiera, G2 | Tresillos G2; quintillos, seisillos y dosillos de compás compuesto G3; septillos y otros G4 |
+
+El tipo de grupo irregular se deduce de la duración de sus notas (un tercio, un quinto, un sexto o un séptimo de
+negra), así que no hace falta volver a leer las obras.
+
+**Excepción decidida por la autora:** la tabla gallega no pone Do mayor en los grados 1 ni 2 y en el grado 3 pide
+«pouco uso das armaduras de DóM e RebM». Una obra en Do mayor de concierto sigue en grado 1: ese consejo es de
+escritura para banda, no una dificultad para el músico.
+
+**Resultado con las mismas obras** (en local, 2026-10-27): ninguna cambia de grado. *Persis* sigue en el Grade 4
+de su editorial.
+
+| Obra | difficulty-v3 | difficulty-v4 | Lo que fija el grado |
+|---|---|---|---|
+| Persis | 4 | **4** | Igual que en v3 (cambios de compás, tempos, duración y semifusas) |
+| Coral para principiantes (demo) | 2 | 2 | Solo las tesituras (el mf ya es de grado 1) |
+| Marcha de la plaza (demo) | 3 | 3 | La trompa hasta Fa♯5 (el tenuto ya es de grado 2) |
+| Andante y danza (demo) | 4 | 4 | Negra = 160 en la danza y la tuba hasta Sol3 |
+| March of the Toys (arr. Cao Ziyi) | 5 | 5 | Flautas hasta Si6 |
+| Oregon Trail II | 5 | 5 | Modulación a 5 ♯ |
+
+Siguen sin medirse, en ninguna de las dos tablas, las voces independientes, los solos, las divisiones de sección
+y el material musical. Las tesituras de la página 3 de la tabla gallega quedan por medir: si difieren de las del
+American Band College, la autora las revisará antes de usarlas.
+
 ### Grados publicados de una obra (PR 5 del plan de cierre, 2026-10-14)
 
 En la pestaña Dificultad, la directora puede **registrar a mano** el grado que publica una editorial o un

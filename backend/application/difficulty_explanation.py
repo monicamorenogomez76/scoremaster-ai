@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.ai import ExplanationProvider
 from backend.application.explanations import InvalidExplanation, replace_terms, run_explanation
 
-EVIDENCE_VERSION = "difficulty-evidence-v3"   # v3 (2026-10-25): grade_reasons from the publishers' guides
+EVIDENCE_VERSION = "difficulty-evidence-v4"   # v3 (2026-10-25): grade_reasons from the publishers' guides; v4 (2026-10-27): from the Galician table first
 PROMPT_VERSION = "difficulty-explanation-v4"
 DIMENSIONS = ("range", "register", "intervals", "density", "endurance", "tempo")
 MAX_INSTRUMENTS, MAX_PASSAGES, MAX_REASONS = 8, 8, 6

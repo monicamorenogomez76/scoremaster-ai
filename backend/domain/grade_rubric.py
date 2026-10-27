@@ -1,9 +1,13 @@
 """The publishers' grading guides as data (difficulty-v3, author's decision, 2026-10-25). No logic here: the
 analyzer (backend/analyzers/rubric_grade.py) applies it.
 
-Sources, in the author's order of precedence:
-- abc: American Band College Music Grading Chart (revised 2000-03-01), grades 1-5: meter, key signature, tempo,
-  note values, rhythm, dynamics, articulation, ornaments, length and written ranges by instrument.
+Sources, in the author's order of precedence (difficulty-v4, 2026-10-27):
+- fgbm: Táboa de niveis de dificultade of the Federación Galega de Bandas de Música, after Cynthia Hutton
+  (BANDWORLD), grades 1-5: meter, key signature, tempo, note values and tuplets, rhythm, dynamics, articulation and
+  ornaments. It prevails where the others differ, except that concert C stays in grade 1 (author's decision: its
+  "little use" in grade 3 is advice on writing for band, not a difficulty for the player).
+- abc: American Band College Music Grading Chart (revised 2000-03-01), grades 1-5: the length of the work, the
+  number of key and meter changes and the written ranges by instrument.
 - fjh: The FJH Music Company, Series Guidelines Overview and Selection Criteria (revised 2004-02), grades 0.5-6:
   refines the low grades (5/4 and 6/4 limited in grade 2).
 - UIL Texas band sight-reading criteria (2022) only confirmed the progression of keys, meters and rhythms; its
@@ -13,7 +17,10 @@ chart and reviewed by the author (2026-10-25); see docs/DIFFICULTY_CRITICALITY.m
 """
 from __future__ import annotations
 
+from fractions import Fraction
+
 SOURCES = {
+    "fgbm": "Táboa de niveis de dificultade, Federación Galega de Bandas de Música (Cynthia Hutton, BANDWORLD)",
     "abc": "American Band College Music Grading Chart (2000)",
     "fjh": "FJH Music Company Series Guidelines (2004)",
 }
@@ -63,8 +70,8 @@ RANGE_ROW_BY_INSTRUMENT = {
 # Beyond the grade 5 range the part is professional: grade 6 of ScoreLint's scale.
 BEYOND_CHART_GRADE = 6
 
-# Concert key signature (fifths: + sharps, - flats). Grade 1: one to three flats, C at the end of the year;
-# grade 2: none to four flats; grade 3: none to five flats; grade 4: one sharp to six flats; grade 5: any.
+# Concert key signature (fifths: + sharps, - flats). Grade 1: B-flat, E-flat, F and their relatives, and C (author's
+# decision); grade 2: A-flat; grade 3: up to five flats; grade 4: two sharps to six flats; grade 5: any.
 def key_grade(fifths: int) -> int:
     if -3 <= fifths <= 0:
         return 1
@@ -72,15 +79,16 @@ def key_grade(fifths: int) -> int:
         return 2
     if fifths == -5:
         return 3
-    if -6 <= fifths <= 1:
+    if -6 <= fifths <= 2:
         return 4
     return 5
 
 
-# Meters: simple duple and triple in grade 1; easy compound 6/8 in grade 2 (FJH: limited 6/4 and 5/4 there too);
-# 9/8 and the like in grade 3; 3/8 and asymmetrical 5/8, 7/8 in grade 4; any meter in grade 5.
-METER_GRADES = {"2/4": 1, "3/4": 1, "4/4": 1, "2/2": 1, "6/8": 2, "6/4": 2, "5/4": 2, "9/8": 3, "12/8": 3, "3/2": 3,
-                "3/8": 4, "5/8": 4, "7/8": 4}
+# Meters: 2/4, 3/4 and 4/4 in grade 1; 6/8 and a little 5/4, 6/4 and 2/2 in grade 2 (FJH agrees on 5/4 and 6/4);
+# 9/8, 12/8, 3/2, 4/2, 6/2 and 7/4 in grade 3; 3/8 and the asymmetrical 5/8, 7/8, 11/8, 10/4 and 9/4 in grade 4; any
+# meter in grade 5.
+METER_GRADES = {"2/4": 1, "3/4": 1, "4/4": 1, "2/2": 2, "6/8": 2, "6/4": 2, "5/4": 2, "9/8": 3, "12/8": 3, "3/2": 3,
+                "4/2": 3, "6/2": 3, "7/4": 3, "3/8": 4, "5/8": 4, "7/8": 4, "11/8": 4, "10/4": 4, "9/4": 4}
 OTHER_METER_GRADE = 5
 COMPOUND_NUMERATORS = (6, 9, 12)
 
@@ -96,10 +104,10 @@ def changes_grade(count: int) -> int:
     return 4
 
 
-# Tempo as marked (beats per minute): grade 1 72-120, grade 2 72-132, grade 3 56-144, grade 4 44-168, grade 5 44-208.
+# Tempo as marked (beats per minute): grade 1 72-120, grade 2 60-132, grade 3 56-144, grade 4 40-168, grade 5 40-208.
 def tempo_grade(slowest: float, fastest: float) -> int:
     fast = 1 if fastest <= 120 else 2 if fastest <= 132 else 3 if fastest <= 144 else 4 if fastest <= 168 else 5
-    slow = 1 if slowest >= 72 else 3 if slowest >= 56 else 4 if slowest >= 44 else 5
+    slow = 1 if slowest >= 72 else 2 if slowest >= 60 else 3 if slowest >= 56 else 4 if slowest >= 40 else 5
     return max(fast, slow)
 
 
@@ -114,17 +122,29 @@ def note_value_grade(shortest: float) -> int:
     return 1 if shortest >= 0.5 else 2 if shortest >= 0.25 else 3 if shortest >= 0.125 else 4
 
 
-TUPLET_GRADE = 2               # triplets from grade 2
+# Tuplets, by the length of their notes in quarters: triplets (thirds) in grade 2; easy quintuplets, sextuplets and
+# sixteenth triplets (fifths, sixths, tenths, twelfths, twentieths) in grade 3, with the duplets and quadruplets of
+# compound meters (every value of duple and triple subdivision); septuplets and other asymmetrical groups in grade 4.
+def tuplet_grade(duration_quarters: float) -> int:
+    denominator = Fraction(duration_quarters).limit_denominator(64).denominator
+    if denominator == 3:
+        return 2
+    if denominator in (5, 6, 10, 12, 20) or denominator & (denominator - 1) == 0:
+        return 3
+    return 4
+
+
 SYNCOPATION_GRADES = {"eighth": 2, "compound": 3, "sixteenth": 5}   # simple, compound, complex sixteenth syncopation
 
-# Dynamics: p to f in grade 1; mp and mf in grade 2; pp to ff with sfz and fp in grade 3; ppp to fff in grade 4.
-DYNAMIC_GRADES = {"p": 1, "f": 1, "mp": 2, "mf": 2, "pp": 3, "ff": 3, "sfz": 3, "sf": 3, "fp": 3, "sfp": 3, "fz": 3,
+# Dynamics: p to f in grade 1; pp to ff and simple fp in grade 2; sudden changes, sfz and sffz in grade 3; ppp to fff
+# in grade 4.
+DYNAMIC_GRADES = {"p": 1, "mp": 1, "mf": 1, "f": 1, "pp": 2, "ff": 2, "fp": 2, "sfz": 3, "sf": 3, "sfp": 3, "fz": 3,
                   "rfz": 3, "rf": 3, "sffz": 3, "ppp": 4, "fff": 4}
 OTHER_DYNAMIC_GRADE = 5
 
-# Articulation: attack, release, slurs, staccato and accent in grade 1; legato in grade 2; tenuto in grade 3; any
-# other mark (marcato, staccatissimo…) from grade 4, where several articulations sound together.
-ARTICULATION_GRADES = {"staccato": 1, "accent": 1, "detached legato": 2, "tenuto": 3}
+# Articulation: attacks, slurs, basic accents and a little staccato in grade 1 (the limited use covers "a little");
+# tenuto and legato in grade 2; marcato in grade 3; any other mark (staccatissimo, portato…) from grade 4.
+ARTICULATION_GRADES = {"staccato": 1, "accent": 1, "detached legato": 2, "tenuto": 2, "strong accent": 3}
 OTHER_ARTICULATION_GRADE = 4
 
 # Ornaments: none in grade 1; simple trills and single grace notes in grade 2; double or triple grace-note figures in

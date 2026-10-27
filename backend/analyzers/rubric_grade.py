@@ -6,7 +6,9 @@ tuplets, syncopation, articulation, ornaments and grace notes to each part. A pa
 not used in passing (LIMITED_SHARE of its active measures and at least MIN_MEASURES), and end-of-year notes are
 accepted within a grade only when they are that few. Like difficulty-v2, the work is graded by its woodwinds, brass
 and strings (each family by the 80th percentile of its parts); percussion and the rhythm section are left out,
-since the guides grade them by instrumentation only.
+since the guides grade them by instrumentation only. Since difficulty-v4 (2026-10-27) the Galician federation's table
+("fgbm") is the source of every criterion it covers; the American Band College chart keeps the ranges, the length and
+the number of key and meter changes.
 """
 from __future__ import annotations
 
@@ -23,7 +25,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 from backend.domain.timing import is_attack, sounding_pitches
 
-RUBRIC_VERSION = "rubric-v1"
+RUBRIC_VERSION = "rubric-v2"
 WORK_FAMILIES = ("woodwinds", "brass", "strings")
 EPSILON = 1e-6
 
@@ -144,15 +146,16 @@ def _part_criteria(part: ScorePart, row: str | None) -> dict:
     note_grades = [R.note_value_grade(min(values(measure))) if values(measure) else 1 for measure in measures]
     grade = _tolerant(note_grades, active)
     shortest = min((min(values(m)) for m, g in zip(measures, note_grades) if g >= grade and values(m)), default=None)
-    criteria["note_values"] = {"grade": grade, "value": shortest, "source": "abc"}
+    criteria["note_values"] = {"grade": grade, "value": shortest, "source": "fgbm"}
 
-    tuplets = [R.TUPLET_GRADE if any(event.tuplet for event in _attacks(measure)) else 1 for measure in measures]
+    tuplets = [max((R.tuplet_grade(event.duration_quarters) for event in _attacks(measure)
+                    if event.tuplet and event.duration_quarters > 0), default=1) for measure in measures]
     criteria["tuplets"] = {"grade": _tolerant(tuplets, active), "value": sum(1 for value in tuplets if value > 1),
-                           "source": "abc"}
+                           "source": "fgbm"}
 
     syncopation = [_syncopation(measure) for measure in measures]
     criteria["syncopation"] = {"grade": _tolerant(syncopation, active),
-                               "value": sum(1 for value in syncopation if value > 1), "source": "abc"}
+                               "value": sum(1 for value in syncopation if value > 1), "source": "fgbm"}
 
     for kind, table, other in (("articulations", R.ARTICULATION_GRADES, R.OTHER_ARTICULATION_GRADE),
                                ("ornaments", R.ORNAMENT_GRADES, R.OTHER_ORNAMENT_GRADE)):
@@ -161,12 +164,12 @@ def _part_criteria(part: ScorePart, row: str | None) -> dict:
         grade = _tolerant(grades, active)
         marks = sorted({mark for measure, value in zip(measures, grades) if value >= grade and value > 1
                         for event in _attacks(measure) for mark in getattr(event, kind) if table.get(mark, other) >= grade})
-        criteria[kind] = {"grade": grade, "value": marks, "source": "abc"}
+        criteria[kind] = {"grade": grade, "value": marks, "source": "fgbm"}
 
     grace = [R.grace_notes_grade(_longest_grace_group(measure)) if _longest_grace_group(measure) else 1
              for measure in measures]
     criteria["grace_notes"] = {"grade": _tolerant(grace, active), "value": max(map(_longest_grace_group, measures), default=0),
-                               "source": "abc"}
+                               "source": "fgbm"}
     return criteria
 
 
@@ -190,7 +193,7 @@ def _work_criteria(score: Score, pitched: list[ScorePart]) -> list[dict]:
         grades = [R.key_grade(fifths) for fifths in keys]
         grade = _tolerant(grades, len(keys)) if len(keys) > 1 else grades[0]
         value = next((fifths for fifths, value in zip(keys, grades) if value == grade), keys[0])
-        criteria.append({"criterion": "key", "grade": grade, "value": value, "source": "abc"})
+        criteria.append({"criterion": "key", "grade": grade, "value": value, "source": "fgbm"})
         changes = _changes(keys)
         criteria.append({"criterion": "key_changes", "grade": R.changes_grade(changes), "value": changes, "source": "abc"})
     meter_part = next((part for part in pitched if any(m.time_signature for m in part.measures)), None)
@@ -200,14 +203,14 @@ def _work_criteria(score: Score, pitched: list[ScorePart]) -> list[dict]:
         grade = _tolerant(grades, len(meters)) if len(meters) > 1 else grades[0]
         value = next((meter for meter, value in zip(meters, grades) if value == grade), meters[0])
         criteria.append({"criterion": "meter", "grade": grade, "value": value,
-                         "source": "fjh" if value in ("6/4", "5/4") else "abc"})
+                         "source": "fjh" if value in ("6/4", "5/4") else "fgbm"})
         changes = _changes(meters)
         criteria.append({"criterion": "meter_changes", "grade": R.changes_grade(changes), "value": changes,
                          "source": "abc"})
     if score.tempo_marks:
         beats = [mark.beats_per_minute for mark in score.tempo_marks]
         criteria.append({"criterion": "tempo", "grade": R.tempo_grade(min(beats), max(beats)),
-                         "value": {"slowest": min(beats), "fastest": max(beats)}, "source": "abc"})
+                         "value": {"slowest": min(beats), "fastest": max(beats)}, "source": "fgbm"})
     seconds = estimate_duration(score)["seconds"]
     criteria.append({"criterion": "length", "grade": R.length_grade(seconds), "value": seconds, "source": "abc"})
     measures_with = {}
@@ -219,7 +222,7 @@ def _work_criteria(score: Score, pitched: list[ScorePart]) -> list[dict]:
     grade = max((R.DYNAMIC_GRADES.get(mark, R.OTHER_DYNAMIC_GRADE) for mark in marks), default=1)
     criteria.append({"criterion": "dynamics", "grade": grade,
                      "value": [mark for mark in marks if R.DYNAMIC_GRADES.get(mark, R.OTHER_DYNAMIC_GRADE) == grade],
-                     "source": "abc"})
+                     "source": "fgbm"})
     return criteria
 
 
@@ -265,8 +268,9 @@ def rubric_grade(score: Score) -> dict:
 # --- the reasons, in Spanish, for the director and the explanations -------------------------------------------------
 
 MAX_REASONS = 8
-GRADE_1_REASON = "Todos los criterios están dentro del grado 1 (American Band College)"
-SOURCE_NAMES = {"abc": "American Band College", "fjh": "FJH"}
+GRADE_1_REASON = "Todos los criterios están dentro del grado 1 (Federación Galega de Bandas y American Band College)"
+SOURCE_NAMES = {"fgbm": "Federación Galega de Bandas", "abc": "American Band College", "fjh": "FJH"}
+TUPLETS = {2: "Tresillos", 3: "Quintillos o seisillos"}
 NOTE_NAMES = {"C": "Do", "D": "Re", "E": "Mi", "F": "Fa", "G": "Sol", "A": "La", "B": "Si"}
 FIGURES = {0.25: "Semicorcheas", 0.125: "Fusas", 0.0625: "Semifusas"}
 MARKS = {"staccato": "staccato", "accent": "acento", "tenuto": "tenuto", "detached legato": "legato",
@@ -307,7 +311,7 @@ def reason_es(item: dict, rubric: dict) -> str:
     elif criterion == "note_values":
         text = "{} en {}".format(FIGURES.get(value, "Figuras muy rápidas"), where)
     elif criterion == "tuplets":
-        text = "Tresillos en " + where
+        text = "{} en {}".format(TUPLETS.get(item["grade"], "Septillos y otros grupos irregulares"), where)
     elif criterion == "syncopation":
         text = "Síncopas en " + where
     elif criterion in ("articulations", "ornaments"):

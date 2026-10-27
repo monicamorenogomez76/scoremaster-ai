@@ -52,7 +52,8 @@ only source of musical facts; the LLM only explains or gives an independent opin
 - `backend/domain`: framework-free model (`models.py`: `Score` → `ScorePart` → `ScoreMeasure` → `ScoreNote`,
   written pitch plus the part's transposition), instrument catalogue and resolver, timing helpers and the
   grade scale (`difficulty_scale.py`: index 0–10 → grades 1–6, rubric aligned with the publishers' Grade 1–6) and
-  the publishers' grading guides as data (`grade_rubric.py`, difficulty-v3: the grades come from it).
+  the grading tables as data (`grade_rubric.py`, difficulty-v4: the Galician federation's table first, then the
+  American Band College and FJH; the grades come from it).
 - `backend/parsers`: MusicXML/.mxl → domain `Score` with music21 (`musicxml_parser.py`), sounding-pitch audio
   timelines (`playback.py`), `score_codec.py` (Score ⇄ JSON) and `reader.py`.
 - `backend/analyzers` + `backend/rules`: the engines — difficulty (`rubric_grade.py` grades by the guides; the
