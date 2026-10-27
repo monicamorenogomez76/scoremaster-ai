@@ -221,7 +221,7 @@ Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](
 
 ## Limitaciones conocidas
 
-- **ScoreLint no está validado todavía con músicos**: desde difficulty-v4 el grado sigue la tabla de la
+- **ScoreLint no está validado todavía con músicos**: desde difficulty-v5 el grado sigue la tabla de la
   Federación Galega de Bandas de Música, con el American Band College y FJH donde esta no llega, y *Persis*
   coincide con el Grade 4 de su editorial, pero
   algunos umbrales (cambios de compás, uso limitado) son una lectura de esas guías y solo hay una obra cuyo

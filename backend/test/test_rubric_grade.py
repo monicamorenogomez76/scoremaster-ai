@@ -81,10 +81,12 @@ def test_the_length_of_the_work():
     assert criterion(rubric_grade(work(ScorePart("Flute", plain(count=160)), tempo=100)), "length")["grade"] == 3
 
 
-@pytest.mark.parametrize("pitch, grade", [("C6", 1), ("D6", 2), ("F6", 2), ("G6", 3), ("B-6", 4), ("C7", 5), ("D7", 6)])
+@pytest.mark.parametrize("pitch, grade", [("C6", 1), ("D6", 2), ("E-6", 2), ("F6", 3), ("G6", 3), ("B-6", 4), ("C7", 5),
+                                          ("D7", 6)])
 def test_the_range_of_each_instrument_by_grade(pitch, grade):
-    """The flute's written range: grade 1 reaches C6, grade 5 C7; beyond the chart is grade 6. D6 is grade 1 only as an
-    end-of-year note now and then: in every bar it is grade 2."""
+    """The flute's written range in the Galician table (2026-10-27): grade 1 reaches C6, grade 2 E-flat 6, grade 3 G6,
+    grade 5 C7; beyond the chart is grade 6. D6 is grade 1 only as an end-of-year note now and then (American Band
+    College): in every bar it is grade 2."""
     many = bars(40, notes("D5", "D5", "D5", pitch))
     assert rubric_grade(work(ScorePart("Flute", many)))["by_instrument"]["Flute"]["grade"] == grade
 
@@ -102,7 +104,7 @@ def test_low_brass_is_read_at_concert_pitch():
     """The chart writes trombone, baritone and tuba in bass clef at concert pitch: a euphonium part written in
     treble clef (sounding a ninth lower) is compared by its sound."""
     treble = PartMetadata(transposition=PartTransposition(-14, -8, 0))
-    part = ScorePart("Euphonium", bars(40, notes("E5", "E5", "E5", "E5")), treble)   # sounds D4
+    part = ScorePart("Euphonium", bars(40, notes("C5", "C5", "C5", "C5")), treble)   # sounds B-flat 3
     assert rubric_grade(work(part))["by_instrument"]["Euphonium"]["grade"] == 1
 
 
@@ -171,13 +173,39 @@ def test_grace_notes_single_and_in_groups():
     assert grade(single) == 2 and grade(group) == 3
 
 
+@pytest.mark.parametrize("name, metadata, pitch, grade", [
+    ("Trumpet in Bb", PartMetadata(transposition=PartTransposition(-2, -1, 0)), "D6", 5),
+    ("Trumpet in Bb", PartMetadata(transposition=PartTransposition(-2, -1, 0)), "A5", 3),
+    ("Horn in F", PartMetadata(transposition=PartTransposition(-7, -4, 0)), "G5", 3),
+    ("Tuba", PartMetadata(), "F3", 3),
+    ("Horn in F", PartMetadata(transposition=PartTransposition(-7, -4, 0)), "C3", 5),
+    ("Horn in F", PartMetadata(transposition=PartTransposition(-7, -4, 0)), "E3", 4),
+    ("Oboe", PartMetadata(), "F6", 5),
+    ("Clarinet in Bb", CLARINET, "C6", 3),
+    ("Bassoon", PartMetadata(), "C5", 5),
+    ("Tuba", PartMetadata(), "D1", 4),
+    ("Tuba", PartMetadata(), "C1", 5),
+    ("Baritone Saxophone", PartMetadata(transposition=PartTransposition(-21, -12, 0)), "A3", 4),
+    ("Alto Saxophone", PartMetadata(transposition=PartTransposition(-9, -5, 0)), "A3", 6),
+])
+def test_the_galician_ranges(name, metadata, pitch, grade):
+    """Ranges of the Galician table (2026-10-27), written for each instrument (bassoon and tuba at concert pitch in
+    bass clef): its low baritone saxophone reaches A3 in grade 4, where the other saxophones stop at B-flat 3. The
+    in-between columns of trumpet, horn and tuba (3,5 and 4,5) still count as the lower grade (author's decision)."""
+    middle = {"Bassoon": "C3", "Tuba": "C2"}.get(name, "D5")
+    part = ScorePart(name, bars(40, notes(middle, middle, middle, pitch)), metadata)
+    result = rubric_grade(work(part))["by_instrument"][name]
+    assert result["grade"] == grade
+    assert result["criteria"]["range"]["source"] == "fgbm"
+
+
 def test_the_work_is_as_hard_as_its_most_demanding_criterion_and_percussion_does_not_count():
     trumpet = ScorePart("Trumpet in Bb", bars(40, notes("C6", "D5", "D5", "D5")),
                         PartMetadata(transposition=PartTransposition(-2, -1, 0)))
     drums = ScorePart("Snare Drum", bars(40, notes(*["C5"] * 32, length=0.125)))
     result = rubric_grade(work(ScorePart("Flute", plain()), trumpet, drums, tempo=100))
-    assert result["grade"] == 4, "the trumpet reaches C6"
-    assert result["deciding"] == [{"criterion": "range", "instrument": "Trumpet in Bb", "grade": 4, "value": "C6", "source": "abc"}]
+    assert result["grade"] == 4, "the trumpet reaches C6, the Galician table's column 4,5"
+    assert result["deciding"] == [{"criterion": "range", "instrument": "Trumpet in Bb", "grade": 4, "value": "C6", "source": "fgbm"}]
     assert "Snare Drum" not in result["by_instrument"], "percussion has no range or rhythm criteria in the guides"
 
 
@@ -185,7 +213,7 @@ def test_each_deciding_criterion_is_told_in_spanish_with_its_source():
     trumpet = ScorePart("Trumpet in Bb", bars(40, notes("C6", "D5", "D5", "D5")),
                         PartMetadata(transposition=PartTransposition(-2, -1, 0)))
     result = rubric_grade(work(trumpet, tempo=100))
-    assert result["reasons_es"] == ["Tesitura de Trompeta en Si bemol hasta Do6 → grado 4 o más (American Band College)"]
+    assert result["reasons_es"] == ["Tesitura de Trompeta en Si bemol hasta Do6 → grado 4 o más (Federación Galega de Bandas)"]
 
 
 @pytest.mark.parametrize("item, text", [

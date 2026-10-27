@@ -51,7 +51,7 @@ def test_the_evidence_is_only_what_scorelint_measured_and_stays_small(result):
     # difficulty-v3 (2026-10-25): the study's tuba reaches C4, above the guides' grade 5 range, so it is grade 6
     # and the evidence says which criterion of the guides sets it.
     assert evidence["grade"] == result["difficulty"]["grade"] == 6 and evidence["grade_label"] == "Profesional"
-    assert evidence["grade_reasons"] == ["Tesitura de Tuba hasta Do4 → grado 6, por encima de la tabla (American Band College)"]
+    assert evidence["grade_reasons"] == ["Tesitura de Tuba hasta Do4 → grado 6, por encima de la tabla (Federación Galega de Bandas)"]
     assert evidence["scale"] == {"grades": 6, "technical_index_max": 10}
     assert {item["name"] for item in evidence["instruments"]} == {"Flute", "Clarinet", "Tuba"}
     first = evidence["instruments"][0]

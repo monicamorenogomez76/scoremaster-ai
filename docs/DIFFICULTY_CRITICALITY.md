@@ -276,8 +276,51 @@ de su editorial.
 | Oregon Trail II | 5 | 5 | Modulación a 5 ♯ |
 
 Siguen sin medirse, en ninguna de las dos tablas, las voces independientes, los solos, las divisiones de sección
-y el material musical. Las tesituras de la página 3 de la tabla gallega quedan por medir: si difieren de las del
-American Band College, la autora las revisará antes de usarlas.
+y el material musical.
+
+### difficulty-v5: las tesituras de la tabla gallega (decisión de la autora, 2026-10-27)
+
+Las tesituras de la página 3 de la tabla gallega se midieron por píxeles: líneas del pentagrama, compases y centro de
+cada cabeza de nota. Las alteraciones y las columnas se comprobaron a ojo en cada recorte. Difieren de las del
+American Band College sobre todo en los grados 1 y 2, donde son más estrechas, y la autora decidió adoptarlas con dos
+matices:
+
+- En el grado 1 se conservan las **notas de final de curso** del American Band College. Unas pocas notas (hasta el
+  5 % de la parte) entre la tesitura gallega del grado 1 y la de final de curso no suben el grado.
+- Las **columnas intermedias** de trompeta, trompa y tuba (3,5 y 4,5) cuentan como el grado inferior. Esta regla se
+  eligió **después de ver** que con la otra lectura *Persis* (Grade 4 de su editorial) pasaba a grado 5 por el Si5 de
+  su primera trompeta, que la tabla sitúa en la columna 4,5 de trompeta. No se ajustó con valoraciones de músicos.
+
+La tabla gallega trae aparte el **saxofón barítono** (llega a La3 en los grados 4 y 5) y el **trombón bajo** (hasta
+Do2 en el grado 5). La rúbrica pasa a `rubric-v3` y el análisis a `difficulty-v5`.
+
+**Tesituras escritas** (fagot, trombón/bombardino y tuba en clave de fa, por su sonido real; entre paréntesis, la de
+final de curso del grado 1):
+
+| Instrumento | G1 | G2 | G3 | G4 | G5 |
+|---|---|---|---|---|---|
+| Flauta (y flautín) | Sol4–Do6 (Fa4–Re6) | Fa4–Mi♭6 | Re4–Sol6 | Do4–Si♭6 | Do4–Do7 |
+| Oboe | Fa4–Sol5 (Fa4–Si♭5) | Do4–Si♭5 | Si♭3–Do6 | Si♭3–Re6 | Si♭3–Fa6 |
+| Fagot | Fa2–Fa3 (Mi2–Do4) | Fa2–Do4 | Si♭1–Mi♭4 | Si♭1–Si♭4 | Si♭1–Do5 |
+| Clarinete | Sol3–Si♭4 (Mi3–Sol5) | Mi3–Sol5 | Mi3–Do6 | Mi3–Sol6 | Mi3–Sol6 |
+| Clarinete alto y bajo | Sol3–Si♭4 (Mi3–Sol5) | Mi3–Sol5 | Mi3–Do6 | Mi3–Mi6 | Mi3–Sol6 |
+| Saxofón | Sol4–Sol5 (Mi4–Si5) | Re4–Si♭5 | Si♭3–Mi6 | Si♭3–Fa6 | Si♭3–Fa6 |
+| Saxofón barítono | Mi4–La5 (Mi4–Si5) | Do4–La5 | Si♭3–Mi6 | La3–Fa6 | La3–Fa6 |
+| Trompeta | Si♭3–Re5 (Si♭3–Mi5) | La3–Mi5 | Sol3–La5 (3,5) | Fa♯3–Do6 (4,5) | Fa♯3–Re6 |
+| Trompa | Si♭3–Do5 (Fa3–Mi♭5) | La3–Re5 | Fa3–Sol5 (3,5) | Mi3–La5 | Do3–Si♭5 |
+| Trombón y bombardino | La♭2–Si♭3 (La♭2–Re4) | Sol2–Re4 | Fa2–Fa4 | Mi2–La4 | Mi2–Si♭4 (trombón bajo Do2) |
+| Tuba | Si♭1–Si♭2 (Si♭1–Re3) | Mi1–Do3 | Mi♭1–Fa3 (3,5) | Re1–La3 | Do1–Si♭3 |
+
+**Resultado con las mismas obras** (en local, 2026-10-27):
+
+| Obra | difficulty-v4 | difficulty-v5 | Lo que fija el grado |
+|---|---|---|---|
+| Persis | 4 | **4** (Grade 4 de su editorial) | Cambios de compás, tempos, duración, semifusas y la trompeta hasta Si5 |
+| Coral para principiantes (demo) | 2 | 2 | Tesituras de oboe, clarinete, trombón, bombardino y tuba |
+| Marcha de la plaza (demo) | 3 | **4** | El clarinete hasta Re6 (el grado 3 gallego llega a Do6) y la trompa hasta Fa♯5 |
+| Andante y danza (demo) | 4 | 4 | Negra = 160 y tesituras de oboe, clarinete, trompa y tuba |
+| March of the Toys (arr. Cao Ziyi) | 5 | 5 | Flautas hasta Si6 y fagot hasta Si4 |
+| Oregon Trail II | 5 | 5 | Modulación a 5 ♯ y corneta hasta Si5 |
 
 ### Grados publicados de una obra (PR 5 del plan de cierre, 2026-10-14)
 
