@@ -1,4 +1,4 @@
-# PDF reader of ScoreMaster (author's decision, 2026-10-27). It runs in the author's private repository, copied there
+# PDF reader of ScoreMaster (author's decision, 2026-10-27). It runs in its private repository (scoremaster-omr), copied there
 # by scripts/deploy_omr_worker.sh, never in ScoreMaster's own. ScoreMaster starts it with a repository_dispatch
 # event "read-pdf"; the job (PDF addresses, kind, title and a one-time token) reaches omr/worker.py through an
 # environment variable, never written into a command. Everything is pinned to what the feasibility test measured:

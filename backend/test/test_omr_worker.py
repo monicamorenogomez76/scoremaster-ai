@@ -1,4 +1,4 @@
-"""The PDF reader run by GitHub Actions in the author's private repository (omr/worker.py, author's decision,
+"""The PDF reader run by GitHub Actions in its private repository (scoremaster-omr; omr/worker.py, author's decision,
 2026-10-27). ScoreMaster sends the job with a one-time token: the reader downloads the PDFs from ScoreMaster with it,
 reads them page by page, tells its progress and sends back the work's MusicXML, or why it failed. The reading of a
 page and ScoreMaster are faked here: the tests never run copista nor call the network."""

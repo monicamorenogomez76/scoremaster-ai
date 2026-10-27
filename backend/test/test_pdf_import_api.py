@@ -1,5 +1,5 @@
 """PDF scores in the published app (author's decision, 2026-10-27). The director uploads one score or the parts of a
-work; ScoreMaster keeps the PDFs and starts the reader in the author's private GitHub repository with a one-time token.
+work; ScoreMaster keeps the PDFs and starts the reader in its private GitHub repository (scoremaster-omr) with a one-time token.
 The reader downloads the PDFs with it, tells its progress and sends back the work's MusicXML, which ScoreMaster
 analyses like any upload. The work is marked as read from a PDF, its grade is provisional and it is never offered to
 the musicians' evaluation. The reader is faked here: these tests never call GitHub."""

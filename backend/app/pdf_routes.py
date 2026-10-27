@@ -1,5 +1,5 @@
 """PDF scores (author's decision, 2026-10-27). The director uploads one score or the parts of a work (one PDF per
-instrument); ScoreMaster keeps the PDFs and starts the reader in the author's private GitHub repository with a
+instrument); ScoreMaster keeps the PDFs and starts the reader in its private GitHub repository (scoremaster-omr) with a
 one-time token. The reader, with no session, downloads the PDFs with that token, tells its progress and sends back
 the work's MusicXML or why it failed; ScoreMaster then analyses the work like any upload, marked as read from a PDF.
 The token is kept only as its sha256 and is spent, with the PDFs, when the result arrives."""

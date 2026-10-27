@@ -1,4 +1,4 @@
-"""Starting the PDF reader in the author's private GitHub repository (2026-10-27): a repository_dispatch "read-pdf"
+"""Starting the PDF reader in its private GitHub repository (scoremaster-omr, 2026-10-27): a repository_dispatch "read-pdf"
 with the job, authorised by a fine-grained token of that repository only. GitHub is faked: no network."""
 import json
 
