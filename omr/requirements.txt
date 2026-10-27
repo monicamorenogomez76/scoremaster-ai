@@ -1,9 +1,7 @@
-fastapi==0.143.0
-uvicorn==0.54.0
-python-multipart==0.0.32
+httpx==0.28.1
 music21==8.3.0
 huggingface_hub==2.3.0
 numpy==2.5.4
 pillow==13.0.0
 scipy==1.18.1
-opencv-python==5.0.0.93
+opencv-python-headless==5.0.0.93

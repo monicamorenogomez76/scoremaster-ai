@@ -122,41 +122,46 @@ Neon guarda además 6 horas de historial para volver a un momento anterior desde
 Comprobado en local (2026-10-13): copia de la base de Compose y restauración en una base vacía con las
 mismas filas en todas las tablas y la misma versión de migraciones (`0011`).
 
-## Lector de PDF (Space privado de Hugging Face)
+## Lector de PDF (GitHub Actions en un repositorio privado)
 
-Render no puede leer PDF: copista-2m necesita 2–4,5 GB de memoria. El lector (`omr/`) corre en un **Space Docker
-privado** de la cuenta de Hugging Face de la autora, en el hardware gratuito (2 CPU y 16 GB). Solo Render lo llama
-(decisión de la autora, 2026-10-27).
+Render no puede leer PDF: copista-2m necesita 2–4,5 GB de memoria. Hugging Face ya solo permite gratis los Spaces
+estáticos, así que el lector (`omr/`) corre en **GitHub Actions**, en un **repositorio privado** de la autora:
+2.000 minutos gratis al mes en máquinas de 7 GB, sin tarjeta (decisión de la autora, 2026-10-27).
 
-**Crear el Space (una vez, con la cuenta de la autora):**
+**Cómo funciona:**
+1. La directora sube el PDF; Render lo guarda y lanza en ese repositorio el evento `read-pdf`, con un **token de un
+   solo uso** para esa importación.
+2. El *workflow* descarga los PDF de Render con ese token, lee las páginas con copista-2m y devuelve a Render el avance
+   y el MusicXML de la obra (o por qué falló).
+3. La máquina de GitHub se destruye al terminar, y Render borra los PDF al recibir el resultado.
 
-1. En Hugging Face: **New Space** → nombre `scoremaster-omr`, SDK **Docker** (plantilla en blanco), hardware
-   **CPU basic** (gratis), visibilidad **Private**.
-2. En el Space, **Settings → Variables and secrets → New secret**: `OMR_TOKEN`, con un valor largo y aleatorio
-   (por ejemplo, la salida de `openssl rand -hex 32`). No se escribe en ningún archivo ni en el chat.
-3. En tu equipo, `hf auth login` con un token de **escritura** de tu cuenta, y desde el repositorio:
-   `scripts/deploy_omr_space.sh <usuario>/scoremaster-omr`. Hugging Face construye la imagen en unos 10 minutos
-   (el registro está en la pestaña **Logs** del Space).
-4. Crea otro token de tu cuenta, de **solo lectura** (Settings → Access Tokens, tipo *Read*): es el que deja
-   entrar a Render en el Space privado.
+**Crear el repositorio del lector (una vez, con la cuenta de la autora):**
 
-**En Render** (Environment), tres secretos:
+1. En GitHub, **New repository** → nombre `scoremaster-omr`, **Private**, sin README.
+2. Desde el repositorio de ScoreMaster, con `gh` ya autenticado:
+   `scripts/deploy_omr_worker.sh <usuario>/scoremaster-omr`. Copia `omr/` y el *workflow*; no lleva secretos.
+3. En GitHub, **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**:
+   - **Repository access:** *Only select repositories* → `scoremaster-omr`;
+   - **Permissions → Repository permissions → Contents: Read and write** (lo exige `repository_dispatch`);
+   - caducidad hasta después de la entrega.
+
+   Ese token solo puede lanzar el lector; no da acceso a nada más.
+
+**En Render** (Environment), dos secretos:
 
 | Variable | Valor |
 |---|---|
-| `OMR_SERVICE_URL` | `https://<usuario>-scoremaster-omr.hf.space` |
-| `OMR_SERVICE_TOKEN` | El mismo valor que `OMR_TOKEN` del Space |
-| `OMR_HF_TOKEN` | El token de solo lectura del paso 4 |
+| `OMR_GITHUB_REPO` | `<usuario>/scoremaster-omr` |
+| `OMR_GITHUB_TOKEN` | El token del paso 3 |
 
 Sin ellos, la opción de subir PDF no aparece.
 
-**Cómo funciona y límites:**
-- Cada página se lee por separado y el Space une las páginas en una obra; Render consulta el avance mientras la
-  directora espera.
+**Límites:**
 - Hasta 20 MB por PDF, 40 archivos y 80 páginas por obra.
-- Los PDF se borran al terminar y el resultado se olvida en cuanto Render lo recoge, o una hora después.
-- **Se duerme a las 48 horas sin uso:** la primera lectura después tarda 2–3 minutos más en despertarlo.
-- Para actualizar el lector basta con volver a ejecutar `scripts/deploy_omr_space.sh`.
+- Una lectura a la vez; la siguiente espera.
+- Cada lectura tarda 1–2 minutos en arrancar la máquina, más unos segundos por página.
+- Para actualizar el lector basta con volver a ejecutar `scripts/deploy_omr_worker.sh`.
+- El registro de cada lectura (pestaña **Actions** del repositorio privado) no muestra el token ni las partituras.
 
 ## Trabajo futuro: Vercel
 
