@@ -139,13 +139,19 @@ estáticos, así que el lector (`omr/`) corre en **GitHub Actions**, en el **rep
 
 1. En GitHub, **New repository** → nombre `scoremaster-omr`, **Private**, sin README.
 2. Desde el repositorio de ScoreMaster, con `gh` ya autenticado:
-   `scripts/deploy_omr_worker.sh <usuario>/scoremaster-omr`. Copia `omr/` y el *workflow*; no lleva secretos.
+   `scripts/deploy_omr_worker.sh <usuario>/scoremaster-omr`. Copia solo el *workflow*; no lleva secretos. El código del
+   lector (`omr/`) no se copia: el *workflow* lo descarga de la rama main de ScoreMaster en cada lectura, así que se
+   actualiza solo, como la aplicación en Render.
 3. En GitHub, **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**:
    - **Repository access:** *Only select repositories* → `scoremaster-omr`;
    - **Permissions → Repository permissions → Contents: Read and write** (lo exige `repository_dispatch`);
    - caducidad hasta después de la entrega.
 
    Ese token solo puede lanzar el lector; no da acceso a nada más.
+4. **Mientras el repositorio de ScoreMaster sea privado**, el lector necesita permiso para descargar su código: otro
+   token *fine-grained* con **Repository access:** *Only select repositories* → `scoremaster-ai` y **Contents: Read-only**.
+   Se guarda en el repositorio del lector, en **Settings → Secrets and variables → Actions → New repository secret**,
+   con el nombre `SCOREMASTER_READ_TOKEN`. Cuando ScoreMaster sea público, deja de hacer falta.
 
 **En Render** (Environment), dos secretos:
 
@@ -160,7 +166,8 @@ Sin ellos, la opción de subir PDF no aparece.
 - Hasta 20 MB por PDF, 40 archivos y 80 páginas por obra.
 - Una lectura a la vez; la siguiente espera.
 - Cada lectura tarda 1–2 minutos en arrancar la máquina, más unos segundos por página.
-- Para actualizar el lector basta con volver a ejecutar `scripts/deploy_omr_worker.sh`.
+- El lector se actualiza solo al fusionar en main. `scripts/deploy_omr_worker.sh` solo hace falta si cambia
+  `omr/workflow/read-pdf.yml`.
 - El registro de cada lectura (pestaña **Actions** del repositorio privado) no muestra el token ni las partituras.
 
 ## Trabajo futuro: Vercel

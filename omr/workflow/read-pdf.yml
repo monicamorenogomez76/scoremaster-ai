@@ -1,9 +1,11 @@
-# PDF reader of ScoreMaster (decided 2026-10-27). It runs in its private repository (scoremaster-omr), copied there by
-# scripts/deploy_omr_worker.sh, never in ScoreMaster's own. ScoreMaster starts it with a repository_dispatch event
-# "read-pdf"; the job (PDF addresses, kind, title and a one-time token) reaches omr/worker.py through GitHub's event
-# file, never through a variable of the step (GitHub prints those) nor written into a command. Everything is pinned
-# to what the feasibility test measured: copisteria at its commit, the copista-2m weights at their revision, PyTorch
-# for CPU.
+# PDF reader of ScoreMaster (decided 2026-10-27). Only this workflow lives in its private repository (scoremaster-omr),
+# copied there by scripts/deploy_omr_worker.sh; the reader's code (omr/) is checked out from ScoreMaster's main branch
+# at every reading, so it updates itself like the app on Render (2026-10-28). While ScoreMaster's repository is
+# private, the secret SCOREMASTER_READ_TOKEN (read-only, that repository only) lets it check out; once public, none is
+# needed. ScoreMaster starts it with a repository_dispatch event "read-pdf"; the job (PDF addresses, kind, title and a
+# one-time token) reaches omr/worker.py through GitHub's event file, never through a variable of the step (GitHub
+# prints those) nor written into a command. Everything is pinned to what the feasibility test measured: copisteria at
+# its commit, the copista-2m weights at their revision, PyTorch for CPU.
 name: Leer PDF
 
 on:
@@ -19,6 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  SCOREMASTER_REPOSITORY: monicamorenogomez76/scoremaster-ai
   COPISTERIA_COMMIT: 5d1cd54286bb8a27e33a495c88fadf0e2101152d
   COPISTA_REVISION: c37d89e1e52edc95c1a73bda0aea5f2f71a9c763
 
@@ -27,13 +30,21 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
+      - name: The reader's code, from ScoreMaster's main branch
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ env.SCOREMASTER_REPOSITORY }}
+          ref: main
+          path: scoremaster
+          sparse-checkout: omr
+          token: ${{ secrets.SCOREMASTER_READ_TOKEN || github.token }}
+          persist-credentials: false
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: omr/requirements.txt
+          cache-dependency-path: scoremaster/omr/requirements.txt
 
       - name: Poppler
         run: |
@@ -43,7 +54,7 @@ jobs:
       - name: PyTorch (CPU) and the reader's packages
         run: |
           pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cpu
-          pip install -r omr/requirements.txt
+          pip install -r scoremaster/omr/requirements.txt
 
       - name: copisteria and the copista-2m weights (kept between readings)
         id: copisteria
@@ -66,6 +77,7 @@ jobs:
 
       # The job (with its one-time token) is read from the event file: a variable of the step would be printed here.
       - name: Read the PDFs
+        working-directory: scoremaster
         env:
           COPISTERIA_DIR: ${{ github.workspace }}/copisteria
         run: python -m omr.worker
