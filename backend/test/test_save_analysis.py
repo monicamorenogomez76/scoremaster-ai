@@ -19,7 +19,7 @@ from backend.application.accounts import User
 from backend.infrastructure.account_repository import PostgresAccountRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.app.main import app
-from backend.domain.instrument_catalog import CATALOG_VERSION
+from backend.domain.instrument_catalog import catalog_version
 from backend.domain.instrument_resolver import RESOLVER_VERSION, resolve_part
 from backend.infrastructure.analysis_repository import PostgresAnalysisRepository, StoredAnalysis
 from backend.parsers.musicxml_parser import parse_musicxml
@@ -77,7 +77,7 @@ def test_api_persists_exact_legacy_result_and_configuration(postgres_engine, rep
         assert stored.features['instrument_dimensions'] == {
             name: details['dimensions'] for name, details in expected['difficulty']['by_instrument'].items()}
         assert stored.features['instrument_resolution'] == {'resolver_version': RESOLVER_VERSION,
-                                                            'catalog_version': CATALOG_VERSION}
+                                                            'catalog_version': catalog_version()}
         assert stored.algorithm_version == 'difficulty-v5'   # recorded since 2026-10-14, to analyse old works again
         assert stored.features_version == 'legacy-features-v1'
         second = upload(client)

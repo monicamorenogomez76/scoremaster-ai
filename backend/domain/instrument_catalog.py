@@ -1,6 +1,7 @@
 """Canonical instrument identities and exact multilingual aliases.
 
-The catalog lives in instrument_catalog.json. Matching is exact on the normalized
+The catalog lives in the database (2026-10-28): the infrastructure hands it over with use_catalog; until then, and in
+the tests without a database, it is the seed in instrument_catalog.json. Matching is exact on the normalized
 name: there is no substring or fuzzy matching, so "English Horn" can never become
 "Horn". Anything not in the catalog is UNKNOWN and must be confirmed by a person.
 
@@ -12,6 +13,7 @@ instrument itself; any other key stays unknown («Trompa en Mib»).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import unicodedata
@@ -22,8 +24,7 @@ from pathlib import Path
 UNKNOWN = "UNKNOWN"
 ALIAS = "ALIAS"
 CATALOG_PATH = Path(__file__).with_name("instrument_catalog.json")
-# Recorded with every persisted analysis, so results stay traceable when aliases change.
-CATALOG_VERSION = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))["version"]
+_FIELDS = ("id", "section", "family", "variant", "transposition", "label_es", "label_en", "sound", "rehearsal_group")
 
 _ROMAN = {"i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5, "vi": 6}
 _NUMBER = r"\b(?:\d+|vi|iv|v|iii|ii|i)\b"
@@ -134,10 +135,26 @@ def _split_part_numbers(prepared: str) -> tuple[str, tuple[int, ...]]:
 
 
 @lru_cache(maxsize=1)
-def _load() -> tuple[tuple[InstrumentIdentity, ...], dict[str, InstrumentIdentity]]:
+def _seed() -> tuple[str, tuple[dict, ...]]:
     document = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    return document["version"], tuple(document["instruments"])
+
+
+def seed_instruments() -> tuple[dict, ...]:
+    """The instruments the database starts with, in catalog order: id, fields and aliases."""
+    return _seed()[1]
+
+
+def _fingerprint(items) -> str:
+    """The content of a catalog, whatever the order or spelling of its names."""
+    content = [[item.get(field) for field in _FIELDS] + [sorted({normalize_instrument_name(a) for a in item["aliases"]})]
+               for item in items]
+    return hashlib.sha256(json.dumps(content, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def _build(items) -> tuple[tuple[InstrumentIdentity, ...], dict[str, InstrumentIdentity]]:
     entries, index = [], {}
-    for item in document["instruments"]:
+    for item in items:
         identity = InstrumentIdentity(item["id"], item["section"], item["family"], item["variant"],
                                       item["transposition"], item["label_es"], item["label_en"], tuple(item["aliases"]),
                                       item.get("sound"), item.get("rehearsal_group"))
@@ -160,6 +177,32 @@ def _load() -> tuple[tuple[InstrumentIdentity, ...], dict[str, InstrumentIdentit
                 if not any(_is_key(word) for word in alias.split()):
                     index.setdefault(alias + " " + KEY_MARK + key, identity)
     return tuple(entries), index
+
+
+_current: dict = {}
+
+
+def use_catalog(items) -> None:
+    """The catalog read from the database (id, fields and aliases per instrument, in order); None goes back to the seed.
+    Its version is the seed's while the content is the same, so loading the seed analyses nothing again."""
+    version, seed = _seed()
+    items = seed if items is None else tuple(items)
+    built = _build(items)
+    fingerprint = _fingerprint(items)
+    _current.update(entries=built[0], index=built[1],
+                    version=version if fingerprint == _fingerprint(seed) else version + "+" + fingerprint[:12])
+
+
+def _load() -> tuple[tuple[InstrumentIdentity, ...], dict[str, InstrumentIdentity]]:
+    if not _current:
+        use_catalog(None)
+    return _current["entries"], _current["index"]
+
+
+def catalog_version() -> str:
+    """Recorded with every persisted analysis, so results stay traceable and are redone when the catalog changes."""
+    _load()
+    return _current["version"]
 
 
 def catalog_entries() -> tuple[InstrumentIdentity, ...]:

@@ -10,6 +10,7 @@ from backend.application.analysis_repository import AnalysisRepository
 from backend.application.bands import BandRepository
 from backend.application.concerts import ConcertRepository
 from backend.application.evaluations import EvaluationRepository
+from backend.application.instruments import InstrumentRepository
 from backend.application.library import LibraryRepository
 from backend.application.pdf_imports import OmrDispatcher, PdfImportRepository
 from backend.application.rehearsals import RehearsalRepository
@@ -19,6 +20,7 @@ from backend.infrastructure.analysis_repository import PostgresAnalysisRepositor
 from backend.infrastructure.band_repository import PostgresBandRepository
 from backend.infrastructure.concert_repository import PostgresConcertRepository
 from backend.infrastructure.evaluation_repository import PostgresEvaluationRepository
+from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.infrastructure.omr_dispatcher import configured_dispatcher
 from backend.infrastructure.pdf_import_repository import PostgresPdfImportRepository
@@ -129,6 +131,13 @@ def get_concert_repository() -> ConcertRepository:
 def get_pdf_import_repository() -> PdfImportRepository:
     try:
         return PostgresPdfImportRepository(analysis_engine())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+
+
+def get_instrument_repository() -> InstrumentRepository:
+    try:
+        return PostgresInstrumentRepository(analysis_engine())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
 
