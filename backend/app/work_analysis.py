@@ -13,8 +13,8 @@ from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
 from backend.app.stored_scores import confirm_instruments, parsed_work
 from backend.application.library import WorkUpload
 from backend.application.save_analysis import save_analysis
-from backend.domain.instrument_catalog import catalog_version
-from backend.domain.instrument_resolver import RESOLVER_VERSION, resolve_part
+from backend.domain.instrument_catalog import catalog_version, instrument_name_key
+from backend.domain.instrument_resolver import RESOLVED, RESOLVER_VERSION, resolve_part
 
 
 logger = logging.getLogger(__name__)
@@ -35,11 +35,25 @@ def _result(score, profile: dict, total_minutes: int) -> dict:
     }
 
 
+def learned_overrides(score, learned: dict[str, str]) -> dict[str, str]:
+    """The instruments the account confirmed before for parts the catalog does not recognise (2026-10-28): «Fiscornio 3»
+    takes what «Fiscornio 1» was confirmed as. A part the catalog recognises keeps its instrument."""
+    found = {}
+    for part in score.parts:
+        instrument = learned.get(instrument_name_key(part.metadata.part_name or part.name))
+        if instrument and resolve_part(part).status != RESOLVED:
+            found[part.name] = instrument
+    return found
+
+
 def analyze_and_store(content: bytes, file_name: str, user_id: UUID, profile: dict, total_minutes: int, overrides: dict,
-                      repository, library, score_store=None, source_format: str = "musicxml") -> dict:
+                      repository, library, score_store=None, source_format: str = "musicxml",
+                      learned: dict | None = None) -> dict:
     """The saved analysis with its work id. Raises SQLAlchemyError when the storage fails."""
     # Parsed once per file: updating the band or the rehearsal minutes reuses the kept model.
-    score = confirm_instruments(parsed_work(content, score_store), overrides)
+    parsed = parsed_work(content, score_store)
+    overrides = {**learned_overrides(parsed, learned or {}), **overrides}
+    score = confirm_instruments(parsed, overrides)
     # Template: what the work needs for instruments never configured, then the saved band,
     # then the musicians sent with this request.
     needed = {item["key"]: item["required"] for item in compute_band_fit(score, {})["requirements"]}

@@ -142,6 +142,14 @@ def get_instrument_repository() -> InstrumentRepository:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
 
 
+def get_instrument_store() -> Optional[InstrumentRepository]:
+    """Names learnt and instruments created by each account; without a database nothing is learnt."""
+    try:
+        return PostgresInstrumentRepository(analysis_engine())
+    except ValueError:
+        return None
+
+
 def get_omr_dispatcher() -> Optional[OmrDispatcher]:
     """The PDF reader in GitHub Actions, when OMR_GITHUB_REPO and OMR_GITHUB_TOKEN are set (2026-10-27)."""
     return configured_dispatcher()

@@ -3,6 +3,7 @@ backend/infrastructure/instrument_repository.py; the resolver receives the catal
 from __future__ import annotations
 
 from typing import Optional, Protocol
+from uuid import UUID
 
 # What a catalog instrument may say, besides its labels and names: the values the resolver, BandFit, the rehearsal
 # plan and playback know.
@@ -32,3 +33,17 @@ class InstrumentRepository(Protocol):
         """DuplicateName when the id or a name is taken."""
 
     def update_instrument(self, instrument_id: str, fields: dict) -> Optional[dict]: ...
+
+    def private(self) -> list[dict]:
+        """Every instrument created by an account, so the resolver finds it by its id."""
+
+    def for_account(self, user_id: UUID) -> list[dict]:
+        """The instruments the account created."""
+
+    def learned(self, user_id: UUID) -> dict[str, str]:
+        """Part names the account confirmed (normalized, without part numbers) → instrument id."""
+
+    def learn(self, user_id: UUID, names: list[tuple[str, str, str]]) -> None:
+        """(name, normalized name, instrument id) confirmed by the account; a name confirmed again takes the new one."""
+
+    def create_own(self, user_id: UUID, fields: dict) -> dict: ...

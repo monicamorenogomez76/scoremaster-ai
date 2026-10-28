@@ -17,7 +17,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTT
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
-from backend.app.dependencies import (authenticated_user, get_analysis_repository, get_library_repository,
+from backend.app.dependencies import (authenticated_user, get_analysis_repository, get_instrument_store, get_library_repository,
                                       get_omr_dispatcher, get_pdf_import_repository, get_score_store)
 from backend.app.library_routes import valid_band_profile
 from backend.app.work_analysis import analyze_and_store
@@ -157,10 +157,13 @@ def reader_progress(import_id: str, progress: Progress, authorization: Optional[
     return Response(status_code=204)
 
 
-def _analyse(found: PdfImport, imports, repository, library, score_store) -> None:
+def _analyse(found: PdfImport, imports, repository, library, score_store, instruments=None) -> None:
     try:
+        # The instruments the account confirmed before name the parts the catalog does not know (2026-10-28).
+        learned = instruments.learned(found.user_id) if instruments else None
         saved = analyze_and_store(imports.musicxml(found.id), found.title + ".musicxml", found.user_id, found.band_profile,
-                                  found.total_minutes, {}, repository, library, score_store, source_format="pdf")
+                                  found.total_minutes, {}, repository, library, score_store, source_format="pdf",
+                                  learned=learned)
         imports.done(found.id, UUID(saved["work_id"]))
     except Exception:
         logger.warning("No se pudo analizar una obra leída de PDF.", exc_info=True)
@@ -172,7 +175,7 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
                   authorization: Optional[str] = Header(default=None),
                   imports: PdfImportRepository = Depends(get_pdf_import_repository),
                   repository=Depends(get_analysis_repository), library=Depends(get_library_repository),
-                  score_store=Depends(get_score_store)):
+                  score_store=Depends(get_score_store), instruments=Depends(get_instrument_store)):
     found = _reader(import_id, authorization, imports)
     content = (result.musicxml or "").encode("utf-8")
     if result.error or not content:
@@ -182,5 +185,5 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
     else:
         imports.received(found.id, content)
         # music21 is slow on Render: the reader is answered at once and the work is analysed afterwards.
-        background.add_task(_analyse, found, imports, repository, library, score_store)
+        background.add_task(_analyse, found, imports, repository, library, score_store, instruments)
     return JSONResponse(status_code=202, content={})

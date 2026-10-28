@@ -66,14 +66,16 @@ def signed_in_test_user(request):
 @pytest.fixture(autouse=True)
 def no_prepared_store():
     """Prepared works stay in memory, never in the database of DATABASE_URL, unless a test gives a store."""
-    from backend.app.dependencies import get_explanation_cache, get_playback_store, get_score_store
+    from backend.app.dependencies import get_explanation_cache, get_instrument_store, get_playback_store, get_score_store
     from backend.app.main import app
+    app.dependency_overrides[get_instrument_store] = lambda: None
     app.dependency_overrides[get_playback_store] = lambda: None
     app.dependency_overrides[get_score_store] = lambda: None
     app.dependency_overrides[get_explanation_cache] = lambda: None
     try:
         yield
     finally:
+        app.dependency_overrides.pop(get_instrument_store, None)
         app.dependency_overrides.pop(get_playback_store, None)
         app.dependency_overrides.pop(get_score_store, None)
         app.dependency_overrides.pop(get_explanation_cache, None)
@@ -82,9 +84,11 @@ def no_prepared_store():
 @pytest.fixture(autouse=True)
 def seed_instrument_catalog():
     """Every test starts and ends with the seed catalog, whatever catalog a test loaded from its database."""
-    from backend.domain.instrument_catalog import use_catalog
+    from backend.domain.instrument_catalog import use_catalog, use_private_instruments
     use_catalog(None)
+    use_private_instruments(())
     try:
         yield
     finally:
         use_catalog(None)
+        use_private_instruments(())

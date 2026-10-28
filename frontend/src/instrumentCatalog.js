@@ -45,3 +45,20 @@ export const deleteInstrumentName = nameId => apiJson('/admin/instruments/names/
 
 export const createInstrument = body => apiJson('/admin/instruments', { method: 'POST', ...json(body) },
   'No se pudo crear el instrumento.');
+
+// «Otro instrumento…» when a part to confirm is not in the catalog (2026-10-28): it is created for this account
+// with its name, family and key, and the part name is learnt for the next works.
+export const OTHER_INSTRUMENT = '__other__';
+
+export const ownInstrumentForm = part => ({ label_es: String(part || '').replace(/\s+\d+(\s*(y|&|\/|-)\s*\d+)*$/, '').trim(),
+  section: 'woodwinds', transposition: '', sound: '', rehearsal_group: 'flutes' });
+
+export const ownInstrumentBody = (part, form) => ({
+  name: part, label_es: form.label_es.trim(),
+  family: plain(form.label_es).replace(/[^a-z]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'other',
+  section: form.section, transposition: form.transposition || null, sound: form.sound || null,
+  rehearsal_group: form.rehearsal_group,
+});
+
+export const createOwnInstrument = body => apiJson('/instruments', { method: 'POST', ...json(body) },
+  'No se pudo crear el instrumento.');

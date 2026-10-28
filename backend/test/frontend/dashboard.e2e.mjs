@@ -172,27 +172,55 @@ try {
   await page.unroute('**/youtube/search?*');
   console.log('PASS: video search falls back to a YouTube link and plays only valid links');
 
-  // A part the catalog does not know waits for the user before counting in the band template.
-  const unnamed = Buffer.from(fixture.toString().replace('<part-name>Clarinet</part-name>', '<part-name>Melodía</part-name>'));
-  await page.locator('[data-view-target=repertoire]').click();
-  await page.locator('#add-work').click();
-  await page.locator('#file').setInputFiles({ name: 'melodia.musicxml', mimeType: 'application/xml', buffer: unnamed });
-  await waitIdle();
-  await page.locator('#upload-form button[type=submit]').click();
-  await page.locator('#overview-result').waitFor({ state: 'attached' });
-  await waitIdle();
-  await page.locator('[data-view-target=band]').click();
+  // A part the catalog does not know waits for the user before counting in the band template; what is confirmed is
+  // learnt for the account's next works (2026-10-28).
+  const melody = 'Melodía';
+  const upload = async (part, name) => {
+    await page.locator('[data-view-target=repertoire]').click();
+    await page.locator('#add-work').click();
+    await page.locator('#file').setInputFiles({ name, mimeType: 'application/xml',
+      buffer: Buffer.from(fixture.toString().replace('<part-name>Clarinet</part-name>', `<part-name>${part}</part-name>`)
+        .replace('<score-partwise version="4.0">', `<score-partwise version="4.0"><!-- ${name} -->`)) });
+    await waitIdle();
+    await page.locator('#upload-form button[type=submit]').click();
+    await page.locator('#overview-result').waitFor({ state: 'attached' });
+    await waitIdle();
+    await page.locator('[data-view-target=band]').click();
+  };
+  await upload(melody + ' 1', 'melodia.musicxml');
   const confirmation = page.locator('#instrument-confirmation');
   await confirmation.waitFor();
-  assert.match(await confirmation.textContent(), /Melodía · Sin identificar/);
+  assert.match(await confirmation.textContent(), new RegExp(melody + ' 1 · Sin identificar'));
   assert.equal(await page.locator('#band-profile-editor').isHidden(), true, 'nothing counts before confirming');
-  await page.getByLabel('Instrumento de Melodía').selectOption({ label: 'Clarinete en Si bemol' });
+  await page.getByLabel('Instrumento de ' + melody + ' 1').selectOption({ label: 'Clarinete en Si bemol' });
   await page.locator('#confirm-instruments').click();
   await page.getByLabel('Músicos de Clarinete en Si bemol').waitFor();
   assert.equal(await confirmation.count(), 0, 'confirmed parts leave the list');
   assert.equal(await page.getByLabel('Músicos de Clarinete en Si bemol').inputValue(), '0', 'the saved band applies to the next work');
   await page.locator('#band-content').getByText('Clarinete en Si bemol: falta en la plantilla; se necesita 1.').waitFor();
   console.log('PASS: an unknown part is confirmed from the catalog and the saved band applies to it');
+
+  await upload(melody + ' 2', 'melodia-2.musicxml');
+  await page.getByLabel('Músicos de Clarinete en Si bemol').waitFor();
+  assert.equal(await confirmation.count(), 0, 'the next work comes recognised');
+  console.log('PASS: the confirmed name is learnt for the next works');
+
+  // «Otro instrumento…»: an instrument the catalog does not have is created for the account with its name and key.
+  const own = 'Dulzaina';
+  await upload(own + ' 1', 'dulzaina.musicxml');
+  await confirmation.waitFor();
+  await page.getByLabel('Instrumento de ' + own + ' 1').selectOption({ label: 'Otro instrumento…' });
+  const ownForm = confirmation.locator('.own-instrument-form');
+  assert.equal(await ownForm.getByLabel('Nombre').inputValue(), own, 'the part name without its number');
+  await ownForm.getByLabel('Tonalidad').selectOption({ label: 'Mi♭' });
+  await ownForm.getByLabel('Suena como').selectOption('oboe');
+  await ownForm.getByLabel('Grupo de ensayo').selectOption({ label: 'Dobles cañas' });
+  await ownForm.getByRole('button', { name: 'Crear instrumento' }).click();
+  await ownForm.waitFor({ state: 'detached' });
+  assert.equal(await page.getByLabel('Instrumento de ' + own + ' 1').inputValue().then(value => value.startsWith('own.')), true);
+  await page.locator('#confirm-instruments').click();
+  await page.getByLabel('Músicos de ' + own).waitFor();
+  console.log('PASS: an instrument the catalog does not have is created for the account and confirmed');
 
   await page.locator('#sign-out').click();
   await page.locator('#login-screen').waitFor({ state: 'visible' });
@@ -208,8 +236,8 @@ try {
   await login(page, director);
   await page.locator('[data-view-target=repertoire]').click();
   const works = page.locator('#works-content .works-item');
-  await works.nth(1).waitFor();
-  assert.equal(await works.count(), 2);
+  await works.nth(3).waitFor();
+  assert.equal(await works.count(), 4);
   const original = works.filter({ hasText: 'high_register.musicxml' });
   assert.match(await original.locator('.works-summary').textContent(), /^Grado \d · /);
   await original.locator('.work-open').click();
@@ -218,10 +246,12 @@ try {
   assert.equal(await page.getByLabel('Músicos de Clarinete en Si bemol').inputValue(), '0');
   await page.locator('[data-view-target=repertoire]').click();
   await page.locator('#back-to-list').click();
-  const copy = works.filter({ hasText: 'melodia.musicxml' });
-  await copy.locator('.work-delete').click();
-  await copy.locator('.work-delete-confirm').click();
-  await page.waitForFunction(() => document.querySelectorAll('#works-content .works-item').length === 1);
+  for (const [file, left] of [['melodia.musicxml', 3], ['melodia-2.musicxml', 2], ['dulzaina.musicxml', 1]]) {
+    const copy = works.filter({ hasText: file });
+    await copy.locator('.work-delete').click();
+    await copy.locator('.work-delete-confirm').click();
+    await page.waitForFunction(count => document.querySelectorAll('#works-content .works-item').length === count, left);
+  }
   assert.deepEqual(errors, []);
   console.log('PASS: saved works reopen after signing in again and can be deleted');
 

@@ -13,9 +13,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from backend.analyzers.band_fit import PERCUSSION
 from backend.application.accounts import User
 from backend.application.instruments import KEYS, REHEARSAL_GROUPS, SECTIONS, DuplicateName, InstrumentRepository
-from backend.app.dependencies import authenticated_user, get_instrument_repository, is_admin
-from backend.domain.instrument_catalog import (catalog_entries, catalog_version, match_instrument_name,
-                                               normalize_instrument_name, seed_instruments, use_catalog)
+from backend.app.dependencies import authenticated_user, get_instrument_repository, get_instrument_store, is_admin
+from backend.domain.instrument_catalog import (catalog_entries, catalog_version, instrument_name_key,
+                                               match_instrument_name, normalize_instrument_name, seed_instruments,
+                                               use_catalog, use_private_instruments)
 
 router = APIRouter()
 NOT_FOUND = "El instrumento no existe."
@@ -29,9 +30,23 @@ def load_instrument_catalog(repository: InstrumentRepository) -> None:
     """The resolver uses the catalog of the database; without it, or if it cannot be read, the seed."""
     try:
         use_catalog(repository.common() or None)
+        use_private_instruments(repository.private())
     except (SQLAlchemyError, ValueError):
         logging.getLogger("uvicorn.error").warning("No se pudo leer el catálogo de instrumentos; se usa el inicial.",
                                                    exc_info=True)
+
+
+def confirmable_ids(user: User, store: Optional[InstrumentRepository]) -> set[str]:
+    """The instruments an account may confirm: the common ones and those it created."""
+    common = {identity.canonical_id for identity in catalog_entries()}
+    return common | {item["id"] for item in store.for_account(user.id)} if store else common
+
+
+def learn_confirmations(user: User, store: Optional[InstrumentRepository], overrides: dict[str, str]) -> None:
+    """The instrument confirmed for each part name is remembered for the account, without the part numbers."""
+    if store:
+        store.learn(user.id, [(part, key, instrument) for part, instrument in overrides.items()
+                              if re.search(r"[a-z]", key := instrument_name_key(part))])
 
 
 def _admin(user: User):
@@ -96,10 +111,45 @@ class InstrumentChange(BaseModel):
 
 
 @router.get("/instruments/catalog")
-def instrument_catalog():
+def instrument_catalog(user: User = Depends(authenticated_user), store=Depends(get_instrument_store)):
+    """The common instruments and, after them, the account's own."""
+    own = store.for_account(user.id) if store else []
     return {"instruments": [{"canonical_id": identity.canonical_id, "label_es": identity.label_es, "section": identity.section}
-                            for identity in catalog_entries()],
-            "percussion_key": PERCUSSION}
+                            for identity in catalog_entries()]
+            + [{"canonical_id": item["id"], "label_es": item["label_es"], "section": item["section"], "own": True}
+               for item in own],
+            "percussion_key": PERCUSSION, "sounds": SOUNDS}
+
+
+class OwnInstrumentIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    label_es: str = Field(min_length=1, max_length=80)
+    section: Literal[SECTIONS]
+    family: str = Field(pattern=r"^[a-z][a-z_]{0,39}$")
+    transposition: Optional[Literal[KEYS]] = None
+    sound: Optional[str] = None
+    rehearsal_group: Literal[REHEARSAL_GROUPS]
+
+    @field_validator("sound")
+    @classmethod
+    def known_sound(cls, value):
+        return _known_sound(value)
+
+
+@router.post("/instruments", status_code=201)
+def create_own_instrument(body: OwnInstrumentIn, user: User = Depends(authenticated_user),
+                          store=Depends(get_instrument_store)):
+    """An instrument the catalog does not have, for this account only (2026-10-28): its name in the score is learnt."""
+    if store is None:
+        raise HTTPException(status_code=503, detail="No se pudo guardar el instrumento.")
+    label = body.label_es.strip()
+    created = store.create_own(user.id, {
+        "section": body.section, "family": body.family, "variant": body.transposition.lower() if body.transposition else None,
+        "transposition": body.transposition, "label_es": label, "label_en": label, "sound": body.sound,
+        "rehearsal_group": body.rehearsal_group})
+    learn_confirmations(user, store, {body.name.strip(): created["id"]})
+    use_private_instruments(store.private())
+    return {"canonical_id": created["id"], "label_es": created["label_es"], "section": created["section"], "own": True}
 
 
 @router.get("/admin/instruments")

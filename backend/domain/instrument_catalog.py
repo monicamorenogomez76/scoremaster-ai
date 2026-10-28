@@ -209,8 +209,29 @@ def catalog_entries() -> tuple[InstrumentIdentity, ...]:
     return _load()[0]
 
 
+_private: dict[str, InstrumentIdentity] = {}
+
+
+def use_private_instruments(items) -> None:
+    """The instruments an account created (2026-10-28): found by their id, never by a name of the common catalog, and
+    out of the catalog version. Only the account that owns one can confirm it (checked by the application)."""
+    built = {}
+    for item in items:
+        built[item["id"]] = InstrumentIdentity(item["id"], item["section"], item["family"], item["variant"],
+                                               item["transposition"], item["label_es"], item["label_en"], (),
+                                               item.get("sound"), item.get("rehearsal_group"))
+    _private.clear()
+    _private.update(built)
+
+
 def identity_by_id(canonical_id: str) -> InstrumentIdentity | None:
-    return next((identity for identity in catalog_entries() if identity.canonical_id == canonical_id), None)
+    found = next((identity for identity in catalog_entries() if identity.canonical_id == canonical_id), None)
+    return found or _private.get(canonical_id)
+
+
+def instrument_name_key(name: str) -> str:
+    """A part name without its part numbers, normalized: «Fiscornio 1» and «Fiscornio 3» are the same name."""
+    return normalize_instrument_name(_split_part_numbers(_prepare(name))[0])
 
 
 # Instruments read in more than one key keep their identity whatever key is written (euphonium in B flat in treble clef,
