@@ -89,9 +89,25 @@ def test_the_token_never_reaches_the_log_unmasked(scoremaster, capsys):
     assert not any(TOKEN in line for line in lines[1:])
 
 
-def test_the_payload_comes_from_the_environment_never_from_the_shell(monkeypatch, scoremaster):
-    monkeypatch.setenv("OMR_PAYLOAD", json.dumps(payload()))
+def test_the_job_is_read_from_github_s_event_file_never_from_the_environment(monkeypatch, tmp_path):
+    """GitHub prints every variable of a step in its log: the job, with its token, comes from the event file
+    (2026-10-27, the token of a reading showed in the log)."""
+    event = tmp_path / "event.json"
+    event.write_text(json.dumps({"action": "read-pdf", "client_payload": payload()}))
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.delenv("OMR_PAYLOAD", raising=False)
     assert worker.payload_from_environment() == payload()
-    monkeypatch.setenv("OMR_PAYLOAD", json.dumps({**payload(), "callback": "http://elsewhere.test/x"}))
+    event.write_text(json.dumps({"client_payload": {**payload(), "callback": "http://elsewhere.test/x"}}))
     with pytest.raises(ValueError):
         worker.payload_from_environment()   # only https callbacks
+
+
+def test_why_copista_failed_reaches_the_log_without_the_token(scoremaster, capsys):
+    def read_page(pdf_path, number, out_dir):
+        raise worker.PageFailed("Traceback (most recent call last):\n  ...\nValueError: no staves found on the page")
+
+    worker.run(payload("parts", ("Flauta 1.pdf",)), client=scoremaster["client"], read_page=read_page,
+               count_pages=lambda path: 1)
+    out = capsys.readouterr().out
+    assert "ValueError: no staves found on the page" in out
+    assert scoremaster["result"] == {"error": "No se pudo leer la página 1 de Flauta 1.pdf."}
