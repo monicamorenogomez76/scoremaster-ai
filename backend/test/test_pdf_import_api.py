@@ -158,3 +158,31 @@ def test_works_read_from_a_pdf_never_enter_the_musicians_evaluation(clients, rea
     response = ana.post("/evaluations", json={"title": "Campaña", "work_ids": [work_id], "size": 10})
     assert response.status_code == 422
     assert response.json()["detail"] == "Las obras leídas de PDF no entran en la evaluación."
+
+
+def test_the_reader_gets_the_catalog_and_the_names_the_account_learnt(clients, reader, postgres_engine):  # noqa: F811
+    """The reader finds the instrument of each part with ScoreMaster's catalog (2026-10-28), with the names the account
+    confirmed before: «Fiscornio» is a part name when the account confirmed «Fiscornio 1» once."""
+    from backend.app.dependencies import get_instrument_store
+    from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
+    app.dependency_overrides[get_instrument_store] = lambda: PostgresInstrumentRepository(postgres_engine)
+    ana, berta = clients
+    PostgresInstrumentRepository(postgres_engine).learn(_user_id(postgres_engine, "ana@banda.org"),
+                                                        [("Fiscornio 1", "fiscornio", "flugelhorn.bb")])
+    upload(ana)
+    upload(berta)
+    ana_job, berta_job = reader.jobs
+    catalog = machine(ana, ana_job, "/instruments", method="GET")
+    assert catalog.status_code == 200
+    body = catalog.json()
+    assert "flugelhorn.bb" in [item["id"] for item in body["instruments"]]
+    assert "fiscorn" in next(item for item in body["instruments"] if item["id"] == "flugelhorn.bb")["aliases"]
+    assert body["learned"] == ["fiscornio"]
+    assert machine(berta, berta_job, "/instruments", method="GET").json()["learned"] == []
+    assert machine(ana, {**ana_job, "token": "otro"}, "/instruments", method="GET").status_code == 401
+
+
+def _user_id(engine, email):
+    from sqlalchemy import text
+    with engine.connect() as connection:
+        return connection.execute(text("SELECT id FROM users WHERE email = :email"), {"email": email}).scalar_one()

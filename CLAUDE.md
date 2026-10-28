@@ -68,7 +68,8 @@ only source of musical facts; the LLM only explains or gives an independent opin
   middleware (CSP, HSTS in production, Origin check) and `seed_demo.py`.
 - `omr/`: the PDF reader, run by GitHub Actions in its private repository (scoremaster-omr: `workflow/read-pdf.yml`,
   `worker.py` with copista-2m) with `merge.py` joining the pages staff by staff; tests fake the reading and
-  ScoreMaster. The workflow checks out `omr/` from main at every reading. Deployment in `docs/DEPLOYMENT.md`.
+  ScoreMaster. The workflow checks out `omr/` and `backend/domain` (the instrument catalogue, filled from
+  ScoreMaster's database at every job) from main at every reading. Deployment in `docs/DEPLOYMENT.md`.
 - `frontend/src`: React views (Resumen, Repertorio, Mi banda, Conciertos, Ensayos, Valoraciones,
   Configuración); API helpers and pure functions live in plain `.js` modules so Node tests can import them.
 
