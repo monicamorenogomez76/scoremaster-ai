@@ -121,7 +121,7 @@ INSTRUMENT_WORDS = re.compile(
     r"\b(flaut\w*|flute|fl[öo]te|piccolo|ottavino|oboe|hautbois|corno ingl\w*|english horn|fagot\w*|bassoon|basson|"
     r"clarin\w*|klarinette|requinto|sax\w*|trompet\w*|trumpet|tromba|cornet\w*|fliscorno|flugel\w*|trompa|horn|corno|"
     r"trombo\w*|tromb[óo]n|posaune|bombardino|euphonium|bar[íi]tono|baritone|tuba|contrabaj\w*|bass|bajo|percu\w*|"
-    r"timbal\w*|timpani|caja|snare|bombo|platillos?|cymbals?|xil[óo]fono|xylophone|glockenspiel|lira|campanas|piano|"
+    r"timbal\w*|timpani|caja|snare|bombo|platillos?|platos?|cymbals?|xil[óo]fono|xylophone|glockenspiel|lira|campanas|piano|"
     r"arpa|harp|violonchelo|cello|viola|viol[íi]n|violin|guitarra|guitar|"
     r"fl|ob|fg|cl|tpt|tp|trp|tbn|tb|hn|cr|tba|perc|timp|euph|bomb)\b\.?", re.IGNORECASE)
 
@@ -141,9 +141,10 @@ def looks_like_score(text: str) -> bool:
 
 
 def instrument_name(text: str) -> str | None:
-    """The shortest line naming an instrument, without the page number printed beside it."""
-    lines = [re.sub(r"\s{2,}\d+\s*$", "", line).strip() for line in (text or "").splitlines()]
-    named = [line for line in lines if line and len(line) <= 40 and INSTRUMENT_WORDS.search(line)]
+    """The shortest piece of a line naming an instrument. A line is cut where words stand far apart (2026-10-28: a PDF
+    printed the name on the line of the dedication), which also leaves out the page number printed beside it."""
+    pieces = [piece.strip() for line in (text or "").splitlines() for piece in re.split(r"\s{3,}", line)]
+    named = [piece for piece in pieces if piece and len(piece) <= 40 and INSTRUMENT_WORDS.search(piece)]
     return min(named, key=len) if named else None
 
 
@@ -176,6 +177,9 @@ def _auto(read: list[tuple[str, list[tuple[int, bytes, str]]]], title: str) -> b
             (score if staves(xml) >= SCORE_STAVES else parts).append((xml, text))
     groups = _parts_of(parts) if parts else []
     named = any(instrument_name(text) for _, text in parts)
+    if named:
+        # A cover or a page of notes before the named parts is no part (2026-10-28).
+        groups = [(name, xml) for name, xml in groups if not name.startswith("Parte ")]
     if groups and (named or not score):
         summary = ", ".join(f"{name} ({len(xml)} {'página' if len(xml) == 1 else 'páginas'})" for name, xml in groups)
         print(f"La obra se saca de las particellas: {summary}.", flush=True)
@@ -229,6 +233,8 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                 musicxml = combine_parts([(name, join_pages([xml for _, xml, _ in pages_xml], name))
                                           for name, pages_xml in read], data["title"])
         except Exception:
+            import traceback
+            print("\n".join(traceback.format_exc().strip().splitlines()[-8:]), flush=True)
             raise Refused("No se pudo unir lo leído en una obra.") from None
         client.post(callback + "/result", json={"musicxml": musicxml.decode("utf-8")}).raise_for_status()
         print(f"Leídas {total} páginas.", flush=True)

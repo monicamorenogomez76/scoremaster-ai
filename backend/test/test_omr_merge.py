@@ -86,3 +86,15 @@ def test_scorelint_reads_the_joined_work(tmp_path):
     score = parse_musicxml(path)
     assert score.title == "Obra leída"
     assert [len(part.measures) for part in score.parts] == [4, 4]
+
+
+def test_a_note_too_short_to_write_does_not_spoil_the_work():
+    """2026-10-28 («Paco el barba»): copista read an ornament as a 2048th note and music21 refused to write the whole
+    work. Notes no music could carry (shorter than a 128th) are dropped; the rest of the measure stays."""
+    tiny = page(1, 1).replace(b"<duration>4</duration><type>half</type>",
+                              b"<duration>4</duration><type>half</type></note><note><pitch><step>D</step><octave>5</octave>"
+                              b"</pitch><duration>1</duration><type>2048th</type><time-modification><actual-notes>3</actual-notes>"
+                              b"<normal-notes>2</normal-notes><normal-type>2048th</normal-type></time-modification>")
+    root, _, measures = parts_of(join_pages([tiny], title="Obra"))
+    assert measures[0][0].findtext("note/pitch/step") == "C"
+    assert all(note.findtext("type") != "2048th" for note in measures[0][0].findall("note"))
