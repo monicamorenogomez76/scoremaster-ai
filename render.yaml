@@ -1,5 +1,5 @@
 # Render Blueprint (https://render.com/docs/blueprint-spec): the same Docker image as `docker compose up`.
-# Free plan chosen by the author (2026-10-07): the service sleeps after 15 minutes without use. The data lives
+# Free plan, chosen on 2026-10-07: the service sleeps after 15 minutes without use. The data lives
 # in Neon's free PostgreSQL since 2026-10-25, because Render's free database expires after 30 days; the
 # Render database below stays only until the move is checked (see docs/DEPLOYMENT.md).
 databases:

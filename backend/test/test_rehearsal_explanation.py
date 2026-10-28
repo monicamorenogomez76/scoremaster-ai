@@ -1,4 +1,4 @@
-"""«¿Por qué este plan?» (step 20, author's request 2026-10-07): a saved rehearsal is explained only
+"""«¿Por qué este plan?» (step 20, requested 2026-10-07): a saved rehearsal is explained only
 from its blocks, the analysis of its works, its concert and the last review; every block it cites must
 exist, and the demo answers when no real provider can."""
 import pytest

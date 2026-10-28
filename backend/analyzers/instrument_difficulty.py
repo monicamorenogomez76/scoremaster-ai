@@ -150,7 +150,7 @@ FAMILY_WEIGHTS = {
     "keyboard": {"range": 0.20, "register": 0.15, "intervals": 0.20, "density": 0.25, "endurance": 0.15, "tempo": 0.05},
     "other": {"range": 0.20, "register": 0.20, "intervals": 0.20, "density": 0.20, "endurance": 0.15, "tempo": 0.05},
 }
-# Neutral weights until expert data allows calibrating the rhythm section (author's decision).
+# Neutral weights until expert data allows calibrating the rhythm section (decided).
 FAMILY_WEIGHTS["rhythm"] = dict(FAMILY_WEIGHTS["other"])
 
 
@@ -241,7 +241,7 @@ def _family_and_profile(part: ScorePart) -> tuple[str, InstrumentProfile | None]
     return identity.section, INSTRUMENT_PROFILES.get(PROFILE_BY_CANONICAL_ID.get(identity.canonical_id, ""))
 
 
-# Current scale (author's review, 2026-10-14): density is notes per second at the tempo of each measure,
+# Current scale (reviewed 2026-10-14): density is notes per second at the tempo of each measure,
 # taken at the 75th percentile of the measures (the peaks are the critical passages' job), against a reference
 # 2.5 times the old per-beat one; endurance reaches its top after three times the old run (about 24 bars);
 # no separate tempo dimension, since speed is already inside notes per second.

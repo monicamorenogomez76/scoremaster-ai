@@ -1,4 +1,4 @@
-// PDF scores (author's decision, 2026-10-27): the server keeps the PDFs and starts the reader in GitHub Actions; the
+// PDF scores (decided 2026-10-27): the server keeps the PDFs and starts the reader in GitHub Actions; the
 // browser follows the reading until the work is analysed. Plain functions, so the Node tests can import them.
 import { apiFetch, apiJson } from './api.js';
 

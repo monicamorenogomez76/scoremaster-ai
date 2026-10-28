@@ -1,4 +1,4 @@
-"""Bands of each director (author's decisions, 2026-10-06): several fixed templates, one of them
+"""Bands of each director (decided 2026-10-06): several fixed templates, one of them
 active, each with its locality, rehearsal days, full instrumentation and a level per section.
 Records and repository port only."""
 from dataclasses import dataclass, field

@@ -1,4 +1,4 @@
-"""Explaining the difficulty of a work (step 20, author's decision 2026-10-07): the explanation is
+"""Explaining the difficulty of a work (step 20, decided 2026-10-07): the explanation is
 written only from ScoreLint's analysis, every reference it makes is checked against that evidence,
 and without a real provider (or when it fails) a deterministic demo, never presented as AI, answers."""
 from pathlib import Path

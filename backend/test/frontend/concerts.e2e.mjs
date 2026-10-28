@@ -1,4 +1,4 @@
-// Concerts (author's plan, 2026-10-06): a concert with its programme and weekly pattern, the series of
+// Concerts (planned 2026-10-06): a concert with its programme and weekly pattern, the series of
 // rehearsals the app proposes up to the general rehearsal, saved after the director reviews it.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
@@ -151,7 +151,7 @@ try {
   await nextStep.waitFor({ state: 'detached' });
   // Everything is navigable: a block and a priority open the score at their passage with their instruments.
   // Opening a passage of another work: the dialog answers at once while the work loads, and the
-  // passage's audio starts being prepared before play is pressed (author's report, 2026-10-07).
+  // passage's audio starts being prepared before play is pressed (reported 2026-10-07).
   await page.route('**/works/*/file', async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue(); });
   const prepared = page.waitForRequest(request => request.url().endsWith('/playback'), { timeout: 45000 });
   const sectional = page.locator('#summary-rehearsal .calendar-slot--clarinets').first().getByRole('button');

@@ -1,4 +1,4 @@
-"""PDF reader of ScoreMaster, run by GitHub Actions in its private repository (scoremaster-omr) (author's decision,
+"""PDF reader of ScoreMaster, run by GitHub Actions in its private repository (scoremaster-omr; decided
 2026-10-27: Hugging Face no longer runs code for free). ScoreMaster starts the workflow with a job: the PDFs to download
 from it, the kind of work (one score, or the parts of a work with one PDF per instrument) and a one-time token. The
 reader downloads the PDFs with that token, reads them page by page with copista-2m, tells ScoreMaster how far it got

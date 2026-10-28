@@ -1,4 +1,4 @@
-"""What the LLM receives of a passage in the independent review (step 22, author's decision 2026-10-13).
+"""What the LLM receives of a passage in the independent review (step 22, decided 2026-10-13).
 
 Objective measurements of the fragment and its notes, so that the LLM reads the music as the musicians
 do; never ScoreLint's grade, technical index, dimensions or findings (no anchoring, method B of

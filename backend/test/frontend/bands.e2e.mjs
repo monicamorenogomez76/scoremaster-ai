@@ -1,4 +1,4 @@
-// Bands (author's decisions, 2026-10-06): several fixed templates such as «Unió Musical d'Albalat dels
+// Bands (decided 2026-10-06): several fixed templates such as «Unió Musical d'Albalat dels
 // Sorells», one active; the active one is the template of BandFit, and a concert takes its rehearsal days.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';

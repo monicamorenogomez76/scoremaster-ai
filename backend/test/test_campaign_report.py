@@ -125,7 +125,7 @@ def test_the_llm_gets_its_own_row_per_version_and_only_on_the_passages_it_review
 
 
 def test_the_hybrid_is_the_preregistered_rule_on_the_passages_with_both_predictions():
-    """Step 24, method C, fixed by the author on 2026-10-13 before any musician's rating: grade = mean of
+    """Step 24, method C, fixed on 2026-10-13 before any musician's rating: grade = mean of
     ScoreLint and the LLM rounding halves up; critical only when both say so. Never tuned on the data."""
     from evaluation.campaign_report import HYBRID_RULE, hybrid_grade
     assert (hybrid_grade(2, 3), hybrid_grade(2, 4), hybrid_grade(5, 6), hybrid_grade(1, 1)) == (3, 3, 6, 1)

@@ -15,7 +15,7 @@ class ScoreNote:
 	voice: Optional[str] = None
 	# "start", "continue" or "stop": a continued or stopped tie is not a new attack.
 	tie: Optional[str] = None
-	# Grace notes take no time but are attacked (author's decision, 2026-10-05).
+	# Grace notes take no time but are attacked (decided 2026-10-05).
 	is_grace: bool = False
 	# Every written pitch of a chord, lowest first; `pitch` is then its top note.
 	chord_pitches: tuple[str, ...] = ()

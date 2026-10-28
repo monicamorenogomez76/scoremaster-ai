@@ -1,4 +1,4 @@
-"""Rehearsal series that prepares a concert (author's decisions, 2026-10-06): dates from a weekly
+"""Rehearsal series that prepares a concert (decided 2026-10-06): dates from a weekly
 pattern, phases up to the concert with the general rehearsal last, more tutti as the concert comes
 closer, the director's review changing the priorities, and works rotating when they do not fit."""
 from datetime import date

@@ -6,10 +6,10 @@
 - Grados visibles enteros 1–6 y rúbrica documentada, alineada desde 2026-10-13 con la escala Grade 1–6 de las editoriales como equivalencia orientativa, sin afirmar certificación oficial. Índice técnico interno 0–10; transformación explícita. Integrado en el paso 13: índice = 2 × puntuación anterior, seis tramos iguales y `scale` en el resultado; el baseline conserva 1–5/0–5. Desde difficulty-v3 (2026-10-25) el grado sigue las guías de grados de las editoriales (American Band College como base, FJH para afinar, UIL solo como confirmación) y el índice queda como medida técnica.
 - Nivel objetivo por defecto intermedio, separado del grado editorial estimado.
 - Separar Difficulty, Criticality y RehearsalPriority. Un análisis puede devolver cero críticos.
-- Los ensayos son de conjunto: un pasaje común es el que varias partes tocan igual en estructura —misma línea (mismo ritmo e intervalos, cada una en su tonalidad u octava) o mismo ritmo—, aunque sean de familias distintas. En cada pasaje se ensaya primero cada línea común, después las subsecciones con lo que queda (flautas, dobles cañas, clarinetes, saxofones, metales agudos, graves —con fagot, clarinete bajo y saxo barítono—, percusión, cuerda y rítmica) y al final un tutti para juntar (decisiones de la autora, 2026-10-04).
-- Primera entrega: base musical fiable. Después revisión estructurada LLM y evaluación híbrida. Asistente conversacional solo con evidencias validadas (partes, compases, hallazgos, plan y diario) y demo identificada sin API key; sin RAG ni agentes autónomos (decisión de la autora, 2026-10-04).
-- Persistir resultados estructurados y feedback. El MusicXML original se guarda privado de su usuario y se borra con la obra o la cuenta; no se guardan bancos de audio (decisión de la autora, 2026-10-04).
-- Cuentas con email y contraseña (Google opcional), sesiones en servidor y CSRF; cada dato pertenece a un usuario y se autoriza en el servidor (decisión de la autora, 2026-10-04).
+- Los ensayos son de conjunto: un pasaje común es el que varias partes tocan igual en estructura —misma línea (mismo ritmo e intervalos, cada una en su tonalidad u octava) o mismo ritmo—, aunque sean de familias distintas. En cada pasaje se ensaya primero cada línea común, después las subsecciones con lo que queda (flautas, dobles cañas, clarinetes, saxofones, metales agudos, graves —con fagot, clarinete bajo y saxo barítono—, percusión, cuerda y rítmica) y al final un tutti para juntar (decisiones del 2026-10-04).
+- Primera entrega: base musical fiable. Después revisión estructurada LLM y evaluación híbrida. Asistente conversacional solo con evidencias validadas (partes, compases, hallazgos, plan y diario) y demo identificada sin API key; sin RAG ni agentes autónomos (decisión del 2026-10-04).
+- Persistir resultados estructurados y feedback. El MusicXML original se guarda privado de su usuario y se borra con la obra o la cuenta; no se guardan bancos de audio (decisión del 2026-10-04).
+- Cuentas con email y contraseña (Google opcional), sesiones en servidor y CSRF; cada dato pertenece a un usuario y se autoriza en el servidor (decisión del 2026-10-04).
 - Un objetivo por PR, pruebas y documentación. Integración secuencial mediante squash.
 
 ## Baseline integrado
@@ -82,10 +82,10 @@ Las fases A3–A8 y el paso 25 se abordan solo si queda margen tras el paso 24.
 
 ## Propuesta de interfaz (2026-10-05)
 
-Navegación de la autora: Resumen · Repertorio · Mi banda · Ensayos · Asistente IA · Configuración,
+Navegación propuesta: Resumen · Repertorio · Mi banda · Ensayos · Asistente IA · Configuración,
 con blanco frío, grafito y azul eléctrico (sustituidos el 2026-10-26 por la identidad «Sala de conciertos»,
 más abajo). Un ensayo puede trabajar varias obras y cada bloque de
-su agenda indica la obra que se trabaja (decisiones de la autora).
+su agenda indica la obra que se trabaja.
 
 | Fase | Objetivo | Estado |
 |---|---|---|
@@ -99,11 +99,11 @@ su agenda indica la obra que se trabaja (decisiones de la autora).
 ## Despliegue adelantado (2026-10-07)
 
 Para que los músicos valoren con cuenta propia, la aplicación se publica en Render antes de la
-evaluación (plan gratuito, decisión de la autora): ver [DEPLOYMENT.md](DEPLOYMENT.md).
+evaluación (plan gratuito): ver [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Plan de cierre (2026-10-13 – 2026-11-07)
 
-Entrega el 7 de noviembre. Decisiones de la autora: híbrido C preregistrado y obras de demostración propias.
+Entrega el 7 de noviembre. Decisiones: híbrido C preregistrado y obras de demostración propias.
 
 | # | PR del plan | Prioridad | Estado |
 |---|---|---|---|
@@ -116,9 +116,9 @@ Entrega el 7 de noviembre. Decisiones de la autora: híbrido C preregistrado y o
 | 7 | Interfaz en inglés | Opcional | Pendiente, solo si queda tiempo |
 | 8 | Documentación de entrega | Imprescindible | Integrado: PR #107 (README, guía para el tribunal, seguridad, estados y licencia MIT) |
 
-Mejoras integradas durante el cierre, a petición de la autora: lectura del título de `<movement-title>` (PR #92), base de estilos única (PR #98), tipografía Inter (PR #99; sustituida por Bricolage Grotesque y Outfit en la PR #118), modo oscuro (PR #100), sombras, transiciones y Resumen en cuadrícula (PR #101), equilibrio de volumen entre instrumentos (PR #102) y pentagramas del pasaje en partes de varios pentagramas (PR #103).
+Mejoras integradas durante el cierre: lectura del título de `<movement-title>` (PR #92), base de estilos única (PR #98), tipografía Inter (PR #99; sustituida por Bricolage Grotesque y Outfit en la PR #118), modo oscuro (PR #100), sombras, transiciones y Resumen en cuadrícula (PR #101), equilibrio de volumen entre instrumentos (PR #102) y pentagramas del pasaje en partes de varios pentagramas (PR #103).
 
-Opcional después de la entrega: búsqueda automática del grado publicado de una obra, como sugerencia que confirma la directora y solo cuando la página encontrada contiene título, compositor y grado (decisión de la autora, 2026-10-14).
+Opcional después de la entrega: búsqueda automática del grado publicado de una obra, como sugerencia que confirma la directora y solo cuando la página encontrada contiene título, compositor y grado (decisión del 2026-10-14).
 
 ## Decisiones del 14 al 27 de octubre
 
@@ -132,7 +132,7 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 | difficulty-v3: el grado sigue las guías de grados de las editoriales y explica qué criterio lo fija | Integrado: PR #113 (lectura de armadura, compás, tresillos, dinámicas, articulaciones y adornos) y PR #114 (rúbrica) |
 | difficulty-v4: la tabla de la Federación Galega de Bandas de Música prevalece sobre la del American Band College donde difieren (Do mayor sigue en grado 1); ninguna obra de referencia cambia de grado (2026-10-27) | Integrado: PR #124 |
 | difficulty-v5: las tesituras también son las de la tabla gallega (barítono y trombón bajo aparte), con las notas de final de curso del ABC en el grado 1 y las columnas 3,5 y 4,5 en el grado inferior; *Persis* sigue en 4 y la Marcha de la demo pasa a 4 (2026-10-27) | Integrado: PR #129 |
-| Segunda opinión con un modelo de pesos abiertos para el método B, junto a Gemini (Hugging Face o Vercel AI Gateway) | Pendiente de que la autora decida cómo pagar la API |
+| Segunda opinión con un modelo de pesos abiertos para el método B, junto a Gemini (Hugging Face o Vercel AI Gateway) | Pendiente de decidir cómo pagar la API |
 | Lectura de PDF: copista-2m en GitHub Actions, en el repositorio privado del lector (`scoremaster-omr`; Hugging Face ya no ejecuta código gratis); partitura general o particellas, grado provisional y fuera de la evaluación. Prueba de viabilidad: copista-2m frente a copista-28m y Audiveris 5.11 con PDF digitales con MusicXML de referencia; oemer y PDF2Muse descartados (2026-10-27) | Integrado: PR #130 (lector) y PR #131 (subida desde la aplicación) |
 | Alojar la aplicación en Vercel | Aplazado a después de la entrega (ver [DEPLOYMENT.md](DEPLOYMENT.md)) |
 | Modelos de Hugging Face para la dificultad o bancos de sonido | Descartados: los de dificultad son de piano y no explicables; no hay bancos de viento con licencia clara |
@@ -151,17 +151,17 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 | El día del concierto el Resumen dice «Hoy» una vez | Integrado: PR #126 |
 | El icono de la pestaña lleva versión para que el navegador muestre el logo nuevo | Integrado: PR #127 |
 
-## Mejoras para la nota (propuesta del 2026-10-25)
+## Mejoras propuestas (2026-10-25)
 
 Propuesta para reforzar la parte de IA generativa y la evaluación. Cada mejora es una PR y se aborda
-en este orden cuando la autora dé el visto bueno; la autora puede elegir un subconjunto. Siguen
+en este orden cuando se aprueben; se puede elegir un subconjunto. Siguen
 valiendo las reglas de siempre: ScoreLint es la única fuente de hechos musicales, el método B no
 recibe la predicción de ScoreLint y nada se ajusta con las valoraciones de los músicos.
 
-| # | Mejora | Qué aporta | Necesita de la autora | Esfuerzo | Estado |
+| # | Mejora | Qué aporta | Requisitos previos | Esfuerzo | Estado |
 |---|---|---|---|---|---|
 | M1 | Cierre de la entrega: enlaces a vídeo y diapositivas, credenciales de prueba coherentes en README y [TRIBUNAL.md](TRIBUNAL.md), insignia de CI y sección «Resultados y limitaciones» con `evaluation.campaign_report` sobre la exportación real (sin inventar cifras) | Requisitos de BigSchool y resultados medidos | Repositorio público o acceso para el tribunal, URL del vídeo y de las diapositivas, exportación de la campaña | ½ día | Pendiente |
-| M2 | Partituras en PDF con OMR (ver la sección [Opcional: partituras en PDF](#opcional-partituras-en-pdf-con-audiveris-decisión-de-la-autora-2026-10-06)) | Función nueva con un modelo de Hugging Face | 3–4 PDF de prueba: una particella, una partitura de banda y un escaneo | 4–5 días | Pendiente: prueba de viabilidad O1 |
+| M2 | Partituras en PDF con OMR (ver la sección [Opcional: partituras en PDF](#opcional-partituras-en-pdf-con-audiveris-decisión-del-2026-10-06)) | Función nueva con un modelo de Hugging Face | 3–4 PDF de prueba: una particella, una partitura de banda y un escaneo | 4–5 días | Pendiente: prueba de viabilidad O1 |
 | M3 | Comparación de modelos para el método B (`evaluation/model_comparison.py`): error frente a los músicos, respuestas inválidas, citas rechazadas, latencia, tokens, coste y autoconsistencia por modelo | Justifica la elección del modelo con datos | Exportación de la campaña | 1–2 días | Pendiente; el modelo de pesos abiertos depende de la decisión sobre la API |
 | M4 | Pruebas de inyección de prompts con MusicXML hostil (títulos, partes, letras) y apartado OWASP Top 10 para LLM en [SECURITY.md](SECURITY.md) | Seguridad de la capa de IA demostrada con pruebas | Nada | ½–1 día | Pendiente |
 | M5 | Panel de uso de la IA para `ADMIN_EMAILS`: llamadas por modelo, tokens, coste estimado, aciertos de caché, latencia y rechazos por motivo, sin guardar textos de usuarios | Control de la IA en producción | Nada | 1 día | Pendiente |
@@ -187,9 +187,9 @@ de YouTube con Gemini.
 16–19. Evidencias, feedback por análisis/pasaje/versiones y evaluación reproducible por obra, sin leakage.
 20–25. Salidas IA validadas, demo identificada, fallback, versiones, caché y comparación sin anchoring ni resultados inventados. El híbrido sigue siendo experimental.
 
-## Opcional: partituras en PDF con Audiveris (decisión de la autora, 2026-10-06)
+## Opcional: partituras en PDF con Audiveris (decisión del 2026-10-06)
 
-> Integrado (2026-10-27): la autora pidió poder subir PDF en la aplicación publicada. Lo lee copista-2m en GitHub
+> Integrado (2026-10-27): subir PDF en la aplicación publicada. Lo lee copista-2m en GitHub
 > Actions, en el repositorio privado del lector (`scoremaster-omr`, ver [DEPLOYMENT.md](DEPLOYMENT.md)), con grado provisional y fuera del
 > benchmark y de la evaluación. Lo que sigue es el plan original.
 

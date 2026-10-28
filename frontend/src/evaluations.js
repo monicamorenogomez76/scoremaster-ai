@@ -1,4 +1,4 @@
-// Evaluation campaigns (steps 16-18, author's decisions, 2026-10-07): the director proposes passages of
+// Evaluation campaigns (steps 16-18, decided 2026-10-07): the director proposes passages of
 // her works, invites musicians by the email of their account and exports their ratings.
 import { apiFetch, apiJson } from './api.js';
 
@@ -65,7 +65,7 @@ export function shortfallText(requested, proposed) {
 }
 
 // The musician's side: the same rubric as ScoreLint (docs/DIFFICULTY_CRITICALITY.md), never its prediction.
-// Aligned with the Grade 1-6 scale of band publishers (author's decision, 2026-10-13).
+// Aligned with the Grade 1-6 scale of band publishers (decided 2026-10-13).
 export const GRADE_RUBRIC = [
   { grade: 1, label: 'Muy fácil', standard: 'Grade 1', description: 'Primer año de instrumento: negras, blancas y redondas en compases simples, con tesitura reducida.' },
   { grade: 2, label: 'Fácil', standard: 'Grade 2', description: 'Unos dos años de práctica: corcheas, puntillos, síncopas y tresillos sencillos, primeros compases compuestos.' },
@@ -138,7 +138,7 @@ export function llmReviewText(status) {
   return status.done + ' de ' + status.total + ' pasajes valorados por ' + who + '.';
 }
 
-// Only an administrator creates and manages campaigns (author's decision, 2026-10-14); any other account
+// Only an administrator creates and manages campaigns (decided 2026-10-14); any other account
 // only rates the campaigns it is invited to and sees only its own ratings.
 export const evaluationIntro = canManage => canManage
   ? 'Músicos de confianza valoran pasajes de tus obras para comparar su criterio con el de ScoreLint.'

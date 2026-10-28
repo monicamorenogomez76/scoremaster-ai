@@ -10,7 +10,7 @@ cercana a cada nota y transposición de smplr; el resto usa el banco General MID
 que también actúa como respaldo si las grabaciones no se descargan. Pendientes: dinámicas,
 articulaciones y un renderer desacoplado. Ver «Créditos de sonido» en el README.
 
-Valoración de la autora (2026-10-04): la reproducción mejora pero todavía no es buena;
+Valoración del 2026-10-04: la reproducción mejora pero todavía no es buena;
 se aplaza. Candidatos para retomarlo: dinámicas y articulaciones del MusicXML, envolventes
 y release por instrumento, reverberación ligera, más capas de velocidad y bibliotecas
 con más muestras por instrumento (University of Iowa, VSCO 2 CE completo).

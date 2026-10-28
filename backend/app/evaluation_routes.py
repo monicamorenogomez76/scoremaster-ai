@@ -3,7 +3,7 @@ the results; an invited musician (by the email of their account) rates the passa
 ScoreLint's prediction. Anyone else gets 404, the same as a campaign that does not exist.
 
 Only an administrator (ADMIN_EMAILS) creates and manages campaigns and so sees the musicians' emails and
-results (author's decision, 2026-10-14). Any other account, even the owner of an earlier campaign, keeps
+results (decided 2026-10-14). Any other account, even the owner of an earlier campaign, keeps
 only the musician's view of the campaigns it is invited to."""
 from typing import Optional
 from uuid import UUID
@@ -227,7 +227,7 @@ def rate(campaign_id: str, passage_id: str, body: RatingIn, user: User = Depends
 def work_file(campaign_id: str, work_id: str, user: User = Depends(authenticated_user),
               evaluations: EvaluationRepository = Depends(get_evaluation_repository),
               library: LibraryRepository = Depends(get_library_repository)):
-    """The whole work (author's decision): for the owner, from the library; for an invited musician, of a passage."""
+    """The whole work (decided): for the owner, from the library; for an invited musician, of a passage."""
     found = library.work_file(user.id, _id(work_id)) or evaluations.evaluator_work_file(user.email, _id(campaign_id), _id(work_id))
     if found is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)

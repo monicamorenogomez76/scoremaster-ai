@@ -19,14 +19,14 @@ from backend.rules.large_intervals import find_large_intervals
 from backend.rules.endurance import find_long_passages_without_rest
 from backend.rules.weights import RULE_WEIGHTS
 
-# difficulty-v2 (author's review, 2026-10-14): density in notes per second at the local tempo, typical
+# difficulty-v2 (reviewed 2026-10-14): density in notes per second at the local tempo, typical
 # instead of peak, longer endurance, cornets as trumpets, and the work graded by its winds and strings.
-# difficulty-v3 (author's decision, 2026-10-25): the grades of the work, its families and its parts follow the
+# difficulty-v3 (decided 2026-10-25): the grades of the work, its families and its parts follow the
 # publishers' grading guides (backend/analyzers/rubric_grade.py); the technical index and its dimensions stay
 # for the critical passages and the explanations.
-# difficulty-v4 (author's decision, 2026-10-27): the Galician federation's table prevails over the American Band
+# difficulty-v4 (decided 2026-10-27): the Galician federation's table prevails over the American Band
 # College chart where they differ (backend/domain/grade_rubric.py).
-# difficulty-v5 (author's decision, 2026-10-27): the written ranges are the Galician table's too.
+# difficulty-v5 (decided 2026-10-27): the written ranges are the Galician table's too.
 DIFFICULTY_VERSION = "difficulty-v5"
 # Families whose grade is the work's grade. Percussion, the rhythm section, keyboards and parts without an
 # identified instrument keep their own grade, shown apart: their estimate is provisional and they used to

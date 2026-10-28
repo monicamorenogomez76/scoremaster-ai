@@ -1,4 +1,4 @@
-"""Grade of a work by the publishers' grading guides (difficulty-v3, author's decision, 2026-10-25).
+"""Grade of a work by the publishers' grading guides (difficulty-v3, decided 2026-10-25).
 
 Each criterion of backend/domain/grade_rubric.py gives a minimum grade: the work is as hard as its most demanding
 criterion. Key, meter, their changes, tempo, length and dynamics belong to the whole work; range, note values,

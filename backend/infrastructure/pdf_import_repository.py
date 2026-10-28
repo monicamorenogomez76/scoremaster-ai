@@ -1,4 +1,4 @@
-"""PDF imports in PostgreSQL (author's decision, 2026-10-27). The one-time token is kept only as its sha256 and is
+"""PDF imports in PostgreSQL (decided 2026-10-27). The one-time token is kept only as its sha256 and is
 forgotten, with the PDFs, as soon as the reader sends its result."""
 from datetime import datetime
 from typing import Optional

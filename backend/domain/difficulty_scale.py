@@ -1,6 +1,6 @@
 """Visible difficulty grades 1-6 and the internal technical index 0-10 (step 13).
 
-Author's decisions (2026-10-05): the index is twice the previous 0-5 score, an explicit transform
+Decided on 2026-10-05: the index is twice the previous 0-5 score, an explicit transform
 that keeps the order between parts, and six equal bands of the index give the grade until the
 evaluation with musicians calibrates them. The rubric (docs/DIFFICULTY_CRITICALITY.md) describes
 the band that can play each grade; it is not an official certification.

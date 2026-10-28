@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { blockWorkText, rehearsalDateText, reviewRehearsal, reviewStatusOptions } from './rehearsals.js';
 
-// The director's review after a rehearsal (author's decision, 2026-10-06): how each block went and a
+// The director's review after a rehearsal (decided 2026-10-06): how each block went and a
 // note; what is left pending gains priority when the next rehearsals are replanned.
 export function RehearsalReview({ rehearsal, onSaved, onCancel }) {
   const [blocks, setBlocks] = useState(() => rehearsal.blocks.map(block => ({

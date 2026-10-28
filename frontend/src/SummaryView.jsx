@@ -11,7 +11,7 @@ import { ConcertCoverage, coverageHeadline } from './ConcertCoverage.jsx';
 import { NextStep } from './NextStep.jsx';
 import { View } from './View.jsx';
 
-// At a glance on a computer (author's request, 2026-10-05): a few rows, the rest one click away.
+// At a glance on a computer (requested 2026-10-05): a few rows, the rest one click away.
 const VISIBLE_ROWS = 4;
 
 function Card({ id, title, action, children }) {
@@ -21,7 +21,7 @@ function Card({ id, title, action, children }) {
   </section>;
 }
 
-// Home of the director, after the author's mock-up: the next rehearsal (with the next step of the
+// Home of the director, after its mock-up: the next rehearsal (with the next step of the
 // concert) and the priorities on the left, the works in preparation on the right, as cells of one
 // grid (2026-10-14) so the works column runs the whole height.
 export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOpenBlock, onPlanRehearsal, onEditRehearsal,

@@ -1,4 +1,4 @@
-"""The demo works are music a band could play (author's request, 2026-10-14: «no siguen ninguna regla
+"""The demo works are music a band could play (requested 2026-10-14: «no siguen ninguna regla
 de armonía, composición o instrumentación»). The harmony is checked on the composer's plan: four voices
 without parallel fifths or octaves, complete chords, sevenths resolving down and melodies whose notes on
 the beat belong to the chord. The written files are checked for ranges, the final tonic and the grades
@@ -34,7 +34,7 @@ UPLOAD = "para-subir/pasodoble-de-las-fiestas.mxl"
 
 def test_the_demo_works_are_composed(compositions):
     """Three works seeded in the demo account and a pasodoble kept apart, compressed, to upload live and show
-    the whole process (author's request, 2026-10-14)."""
+    the whole process (requested 2026-10-14)."""
     assert sorted(compositions) == ["andante-y-danza.musicxml", "coral-para-principiantes.musicxml", "marcha-de-la-plaza.musicxml",
                                     UPLOAD]
 

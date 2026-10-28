@@ -1,4 +1,4 @@
-"""PDF scores (author's decision, 2026-10-27): the reader in the Hugging Face Space (omr/) writes one MusicXML per
+"""PDF scores (decided 2026-10-27): the reader in GitHub Actions (omr/) writes one MusicXML per
 page; omr/merge.py joins the pages of a score staff by staff, and the parts read from several PDFs into one work."""
 from xml.etree import ElementTree as ET
 
