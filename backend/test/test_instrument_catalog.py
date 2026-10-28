@@ -174,17 +174,20 @@ def test_generic_ambiguous_or_unknown_names_stay_unknown(name):
 def test_match_keeps_the_original_name_and_reports_the_alias_used():
     match = match_instrument_name("  Clarinete  en SI BEMOL 2 ")
     assert match.original_name == "  Clarinete  en SI BEMOL 2 "
-    assert match.matched_alias == "clarinete en si bemol"
+    assert match.matched_alias == "clarinete kbb", "the key is read into one token (2026-10-28)"
     assert match.source == "ALIAS"
     assert match.part_numbers == (2,)
 
 
 def test_normalization_unifies_flats_case_accents_and_spacing_without_dropping_tunings():
-    assert normalize_instrument_name("B♭ Clarinet") == "bb clarinet"
-    assert normalize_instrument_name("B-flat  Clarinet") == "bb clarinet"
-    assert normalize_instrument_name("E flat Clarinet") == "eb clarinet"
+    # 2026-10-28: every spelling of the key becomes one token at the end of the name.
+    assert normalize_instrument_name("B♭ Clarinet") == "clarinet kbb"
+    assert normalize_instrument_name("B-flat  Clarinet") == "clarinet kbb"
+    assert normalize_instrument_name("E flat Clarinet") == "clarinet keb"
     assert normalize_instrument_name("Saxofón Barítono") == "saxofon baritono"
-    assert normalize_instrument_name("Clarinet in A") == "clarinet in a"
+    assert normalize_instrument_name("Clarinet in A") == "clarinet ka"
+    assert normalize_instrument_name("Clarinete en Si bemol") == normalize_instrument_name("Klarinette in B") \
+        .replace("klarinette", "clarinete")
 
 
 def test_identity_keeps_variant_transposition_and_labels():
@@ -210,9 +213,11 @@ def test_catalog_integrity():
         assert entry.section in sections, entry.canonical_id
         assert entry.label_es and entry.label_en, entry.canonical_id
         for alias in entry.aliases:
-            assert alias == normalize_instrument_name(alias), "aliases are stored normalized: " + alias
-            assert alias not in seen, "alias {} used by {} and {}".format(alias, seen.get(alias), entry.canonical_id)
-            seen[alias] = entry.canonical_id
+            # Aliases are written as scores print them; what must never happen is one name for two instruments.
+            key = normalize_instrument_name(alias)
+            assert seen.get(key, entry.canonical_id) == entry.canonical_id, \
+                "alias {} used by {} and {}".format(alias, seen.get(key), entry.canonical_id)
+            seen[key] = entry.canonical_id
 
 
 @pytest.mark.parametrize("name, canonical_id", [

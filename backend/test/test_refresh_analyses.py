@@ -33,3 +33,17 @@ def test_works_analysed_with_an_earlier_scorelint_are_analysed_again(clients, po
     assert [row.algorithm_version for row in versions] == ["legacy-v1", DIFFICULTY_VERSION], "the old analysis stays as history"
     assert versions[1].configuration["band_profile"]["clarinet.bb"] == 3, "the same band as before"
     assert refresh_outdated_analyses(*repositories) == 0
+
+
+def test_works_analysed_with_an_earlier_instrument_catalog_are_analysed_again(clients, postgres_engine):
+    """2026-10-28: the catalog learnt names in seven languages and every spelling of the key; a part unknown before
+    («Trumpet in B b») now has its instrument, which changes the grade, BandFit and the sound."""
+    ana, _ = clients
+    work = analyze(ana).json()["work_id"]
+    repositories = PostgresAnalysisRepository(postgres_engine), PostgresLibraryRepository(postgres_engine)
+    with postgres_engine.begin() as connection:
+        connection.execute(text("UPDATE analyses SET features = jsonb_set(features, "
+                                "'{instrument_resolution,catalog_version}', '\"instrument-catalog-v1\"') WHERE work_id = :work"),
+                           {"work": work})
+    assert refresh_outdated_analyses(*repositories) == 1
+    assert refresh_outdated_analyses(*repositories) == 0
