@@ -164,6 +164,13 @@ def test_a_pdf_with_only_parts_named_in_its_text(scoremaster):
     assert part_names(scoremaster["result"]["musicxml"]) == ["Trompeta en Si♭ 1", "Percusión 1", "Percusión 2"]
 
 
+def test_with_named_parts_a_page_without_a_name_before_them_is_left_out(scoremaster):
+    """A cover with a few notes («Paco el barba», 2026-10-28) is no part when the others say their instrument."""
+    pages = [(1, "PACO EL BARBA\nMarxa Mora"), (1, "Tuba"), (1, "Trombone 1")]
+    run_auto(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Tuba", "Trombone 1"]
+
+
 def test_a_pdf_without_music_says_so(scoremaster):
     run_auto(scoremaster, [(0, "Índice"), (0, "Notas")])
     assert scoremaster["result"] == {"error": "No se encontró música en el PDF."}
@@ -174,3 +181,34 @@ def test_an_instrument_name_is_the_short_line_that_names_one():
     assert worker.instrument_name("Concierto para clarinete y banda\nFl. 1") == "Fl. 1"
     assert worker.instrument_name("Bb Clarinet 3            2") == "Bb Clarinet 3"
     assert worker.instrument_name("Paco el barba\nPasodoble") is None
+    # A PDF printed with PDFCreator (2026-10-28, «Paco el barba»): the name shares its line with other text, far apart.
+    assert worker.instrument_name(' Paco " El Barba"\n Horn in F 1                         (Massanassa)') == "Horn in F 1"
+    assert worker.instrument_name("Platos                 Capitanía 2011 Filá Ibn Al Abbar") == "Platos"
+    assert worker.instrument_name("Timpani            Capitanía 2011") == "Timpani"
+
+
+# Faster (2026-10-28): with named parts, the score's pages are told by their text and never read; the director sees
+# each step of the reading.
+def test_with_named_parts_the_score_pages_are_not_read(scoremaster):
+    read = []
+    pages = [(0, "PACO EL BARBA"), (12, "Fl.\nOb.\nCl. 1\nCl. 2\nSax. A.\nTpt. 1\nTbn.\nTuba"), (12, "Fl.\nCl.\nTpt.\nTbn.\nTuba"),
+             (1, "Paco el barba\nFlauta 1"), (1, "Trombón 1")]
+
+    def read_page(pdf_path, number, out_dir):
+        read.append(number)
+        staves, _ = pages[number - 1]
+        if not staves:
+            raise worker.PageFailed("no staves")
+        return page(staves, 2, "C")
+
+    worker.run(payload("auto"), client=scoremaster["client"], read_page=read_page, count_pages=lambda path: len(pages),
+               page_text=lambda path, number: pages[number - 1][1])
+    assert read == [1, 4, 5], "the score's pages (2 and 3) are skipped by their text"
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta 1", "Trombón 1"]
+    assert scoremaster["progress"][-1] == {"pages_done": 3, "pages_total": 3}
+
+
+def test_a_score_page_is_told_by_the_instruments_written_beside_its_staves():
+    assert worker.looks_like_score("Fl.\nOb.\nCl. 1\nCl. 2\nTpt.")
+    assert not worker.looks_like_score("Paco el barba\nConcierto para clarinete y banda\nClarinete en Si♭ 1")
+    assert not worker.looks_like_score("")

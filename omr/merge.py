@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import copy
 
-from music21 import clef, converter, instrument, key, metadata, note, stream, meter
+from music21 import clef, converter, duration, instrument, key, metadata, note, stream, meter
 from music21.musicxml.m21ToXml import GeneralObjectExporter
+from music21.musicxml.xmlObjects import MusicXMLExportException
 
 
 def _staves(xml: bytes) -> list[stream.Part]:
@@ -84,12 +85,47 @@ def _first_attributes(part: stream.Part, model: stream.Measure) -> None:
             first.insert(0, copy.deepcopy(element))
 
 
+# Shorter than a 128th: no band part carries it; copista sometimes reads an ornament so (2026-10-28) and music21 then
+# refuses to write the whole work.
+SHORTEST_QUARTERS = 1 / 32
+
+
+UNWRITABLE_TYPES = {"256th", "512th", "1024th", "2048th"}
+
+
+def _unwritable(element) -> bool:
+    written = element.duration
+    return (written.type in UNWRITABLE_TYPES or any(component.type in UNWRITABLE_TYPES for component in written.components)
+            or any(tuplet.durationNormal is not None and tuplet.durationNormal.type in UNWRITABLE_TYPES
+                   for tuplet in written.tuplets))
+
+
+def _fix_unwritable(part: stream.Part) -> None:
+    """A note written with a type no MusicXML carries takes the type of how long it lasts; one too short to play goes."""
+    for element in list(part.recurse().notesAndRests):
+        if element.duration.isGrace or not _unwritable(element):
+            continue
+        if element.duration.quarterLength < SHORTEST_QUARTERS:
+            element.activeSite.remove(element)
+        else:
+            element.duration = duration.Duration(element.duration.quarterLength)
+
+
 def _write(title: str, parts: list[stream.Part]) -> bytes:
     score = stream.Score()
     score.metadata = metadata.Metadata(title=title)
     for part in parts:
         score.insert(0, part)
-    return GeneralObjectExporter(score).parse()
+    try:
+        return GeneralObjectExporter(score).parse()
+    except MusicXMLExportException:
+        # music21 retouching the notation copista wrote may make up a 2048th (2026-10-28, «Paco el barba»): the
+        # notation is written as read, with only the impossible types fixed.
+        for part in parts:
+            _fix_unwritable(part)
+        exporter = GeneralObjectExporter(score)
+        exporter.makeNotation = False
+        return exporter.parse()
 
 
 def join_pages(pages: list[bytes], title: str) -> bytes:

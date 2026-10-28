@@ -90,6 +90,17 @@ def test_a_pdf_with_score_and_parts_is_found_out_by_the_reader(clients, reader):
     assert reader.jobs[0]["kind"] == "auto"
 
 
+def test_the_director_sees_the_reader_getting_ready(clients, reader):  # noqa: F811
+    """2026-10-28: the reader tells it started before installing copista, so the wait has news."""
+    ana, _ = clients
+    created = upload(ana)
+    job = reader.jobs[0]
+    assert machine(ana, job, "/progress", json={"pages_done": 0, "pages_total": 0, "stage": "preparing"}).status_code == 204
+    assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "preparing"
+    machine(ana, job, "/progress", json={"pages_done": 0, "pages_total": 9})
+    assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "reading"
+
+
 def test_the_reader_s_failure_reaches_the_director(clients, reader):  # noqa: F811
     ana, _ = clients
     created = upload(ana, files=(("Flauta 1.pdf", PDF),), kind="parts")

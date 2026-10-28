@@ -40,11 +40,26 @@ export async function startPdfImport(files, kind, title, minutes) {
 export const pdfImportStatus = id => apiJson('/pdf-imports/' + encodeURIComponent(id), {},
   'No se pudo consultar la lectura del PDF.');
 
-export function pdfStatusText(status) {
+// Seconds left, from the polls' samples ({at: ms, done: pages}) since the first page read (the first one also loads
+// copista); null until there are two of them.
+export function remainingSeconds(samples, total) {
+  const read = (samples || []).filter(sample => sample.done >= 1);
+  if (read.length < 2) return null;
+  const first = read[0], last = read[read.length - 1];
+  const rate = (last.done - first.done) / ((last.at - first.at) / 1000);
+  return rate > 0 ? Math.round((total - last.done) / rate) : null;
+}
+
+const leftText = seconds => (seconds == null ? '' : seconds < 60 ? ' · falta menos de un minuto'
+  : seconds <= 90 ? ' · queda un minuto' : ` · quedan unos ${Math.ceil(seconds / 60)} minutos`);
+
+// Each step of the reading in words (2026-10-28: the wait had no news), with the time left while reading.
+export function pdfStatusText(status, remaining = null) {
   switch (status?.status) {
-    case 'queued': return 'Poniendo en marcha el lector de PDF. Tarda uno o dos minutos…';
+    case 'queued': return 'En cola en GitHub: el lector arranca en un minuto o dos…';
+    case 'preparing': return 'Preparando el lector (copista)…';
     case 'reading': return status.pages_total
-      ? `Leyendo la página ${status.pages_done} de ${status.pages_total}…` : 'Preparando la lectura…';
+      ? `Leyendo la página ${status.pages_done} de ${status.pages_total}${leftText(remaining)}…` : 'Preparando la lectura…';
     case 'analysing': return 'Analizando la obra leída…';
     case 'done': return 'Obra leída y analizada.';
     case 'failed': return status.error || 'No se pudo leer el PDF.';
