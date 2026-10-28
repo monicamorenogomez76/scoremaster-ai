@@ -70,7 +70,7 @@ def group_common_passages(critical_passages: list[dict]) -> list[CommonPassage]:
     return passages
 
 
-# Author's decision (2026-10-04): parts play "the same" when they share the line (same rhythm
+# Decided on 2026-10-04: parts play "the same" when they share the line (same rhythm
 # and melodic intervals, in any key or octave) or only the rhythm.
 LINE_INTERVAL_SHARE = 0.85   # within a measure, share of equal melodic intervals for "same line"
 SHARED_MEASURE_SHARE = 0.75  # share of the measures where either part plays that must coincide

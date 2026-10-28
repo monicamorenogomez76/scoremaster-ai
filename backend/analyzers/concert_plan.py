@@ -1,6 +1,6 @@
 """Rehearsal series that prepares a concert.
 
-Author's decisions (2026-10-06); the percentages and factors are initial rules, editable by the
+Decided on 2026-10-06; the percentages and factors are initial rules, editable by the
 director before saving and to be calibrated:
 - Dates follow a weekly pattern from a start date until the day before the concert.
 - Phases: the first third of the series reads and works the passages (25 % tutti), the middle

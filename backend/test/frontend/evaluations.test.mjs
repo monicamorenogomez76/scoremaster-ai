@@ -69,7 +69,7 @@ test('the director is told when the works give fewer passages than asked', () =>
 
 test('the musician rates with the same rubric as ScoreLint, grade by grade', () => {
   assert.deepEqual(GRADE_RUBRIC.map(item => item.grade), [1, 2, 3, 4, 5, 6]);
-  // Aligned with the Grade 1-6 scale of band publishers (author's decision, 2026-10-13).
+  // Aligned with the Grade 1-6 scale of band publishers (decided 2026-10-13).
   assert.deepEqual(GRADE_RUBRIC[3], { grade: 4, label: 'Intermedio avanzado', standard: 'Grade 4',
     description: 'Cuatro a seis años de práctica: ritmos exigentes, tonalidades y compases menos habituales, pasajes técnicos.' });
   assert.deepEqual(GRADE_RUBRIC.map(item => item.label), ['Muy fácil', 'Fácil', 'Intermedio', 'Intermedio avanzado', 'Avanzado', 'Profesional']);

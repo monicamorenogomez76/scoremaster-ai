@@ -1,5 +1,5 @@
 // Concerts of the signed-in user: programme, weekly rehearsal pattern and the series of rehearsals
-// that prepares each one (author's decisions, 2026-10-06).
+// that prepares each one (decided 2026-10-06).
 import { apiJson } from './api.js';
 import { proposalBlocks, rehearsalDateText } from './rehearsals.js';
 
@@ -78,7 +78,7 @@ export function nextConcert(concerts, today) {
 }
 
 // The next concert in the summary's heading: its day, the days left and the rehearsals still to do. On the day
-// itself «Hoy» says it all (author's report, 2026-10-26: it read «Hoy · hoy · 0 ensayos»).
+// itself «Hoy» says it all (reported 2026-10-26: it read «Hoy · hoy · 0 ensayos»).
 export function nextConcertText({ concert, remaining, days }, today) {
   const plural = (count, one, many) => count + ' ' + (count === 1 ? one : many);
   return [concert.title, rehearsalDateText(concert, today),
@@ -86,7 +86,7 @@ export function nextConcertText({ concert, remaining, days }, today) {
   ].join(' · ');
 }
 
-// Next step of the next concert for the summary assistant (author's decision, 2026-10-06): review the
+// Next step of the next concert for the summary assistant (decided 2026-10-06): review the
 // rehearsal already held, replan after a review newer than the plan, plan a concert without series,
 // or show its next rehearsal. Without concerts the assistant proposes a single rehearsal.
 export function assistantStep(concerts, rehearsals, today) {

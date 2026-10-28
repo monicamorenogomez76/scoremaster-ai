@@ -1,10 +1,10 @@
-"""The publishers' grading guides as data (difficulty-v3, author's decision, 2026-10-25). No logic here: the
+"""The publishers' grading guides as data (difficulty-v3, decided 2026-10-25). No logic here: the
 analyzer (backend/analyzers/rubric_grade.py) applies it.
 
-Sources, in the author's order of precedence (difficulty-v4, 2026-10-27):
+Sources, in order of precedence (difficulty-v4, 2026-10-27):
 - fgbm: Táboa de niveis de dificultade of the Federación Galega de Bandas de Música, after Cynthia Hutton
   (BANDWORLD), grades 1-5: meter, key signature, tempo, note values and tuplets, rhythm, dynamics, articulation and
-  ornaments, and the written ranges by instrument (page 3). It prevails where the others differ, except that concert C stays in grade 1 (author's decision: its
+  ornaments, and the written ranges by instrument (page 3). It prevails where the others differ, except that concert C stays in grade 1 (decided then: its
   "little use" in grade 3 is advice on writing for band, not a difficulty for the player).
 - abc: American Band College Music Grading Chart (revised 2000-03-01), grades 1-5: the length of the work, the
   number of key and meter changes and the end-of-year notes of grade 1. Its ranges were used until 2026-10-27.
@@ -13,7 +13,7 @@ Sources, in the author's order of precedence (difficulty-v4, 2026-10-27):
 - UIL Texas band sight-reading criteria (2022) only confirmed the progression of keys, meters and rhythms; its
   levels are for sight-reading and are not grades, so no threshold comes from it.
 The documents belong to their publishers: only the criteria are written here. The ranges were read from the ABC
-chart and reviewed by the author (2026-10-25); see docs/DIFFICULTY_CRITICALITY.md.
+chart and reviewed note by note (2026-10-25); see docs/DIFFICULTY_CRITICALITY.md.
 """
 from __future__ import annotations
 
@@ -26,10 +26,10 @@ SOURCES = {
 }
 
 # Written ranges by grade, from the Galician table (2026-10-27): (lowest, highest) of the ordinary range and of the
-# end-of-year one. Only grade 1 has end-of-year notes, from the American Band College chart (author's decision): a
+# end-of-year one. Only grade 1 has end-of-year notes, from the American Band College chart (decided): a
 # few notes beyond the Galician grade 1 do not raise the part. Bassoon, trombone/baritone and tuba are at concert
 # pitch in bass clef; the others are written for the instrument. The table's in-between columns of trumpet, horn and
-# tuba (3,5 and 4,5) count as the lower grade (author's decision, chosen after seeing that Persis, Grade 4 of its
+# tuba (3,5 and 4,5) count as the lower grade (decided after seeing that Persis, Grade 4 of its
 # publisher, has its first trumpet up to B5, in the trumpet's column 4,5).
 RANGES: dict[str, dict[int, tuple[tuple[str, str], tuple[str, str]]]] = {
     "flute": {1: (("G4", "C6"), ("F4", "D6")), 2: (("F4", "E-6"),) * 2, 3: (("D4", "G6"),) * 2,
@@ -77,8 +77,8 @@ RANGE_ROW_BY_INSTRUMENT = {
 # Beyond the grade 5 range the part is professional: grade 6 of ScoreLint's scale.
 BEYOND_CHART_GRADE = 6
 
-# Concert key signature (fifths: + sharps, - flats). Grade 1: B-flat, E-flat, F and their relatives, and C (author's
-# decision); grade 2: A-flat; grade 3: up to five flats; grade 4: two sharps to six flats; grade 5: any.
+# Concert key signature (fifths: + sharps, - flats). Grade 1: B-flat, E-flat, F and their relatives, and C (decided
+# 2026-10-27); grade 2: A-flat; grade 3: up to five flats; grade 4: two sharps to six flats; grade 5: any.
 def key_grade(fifths: int) -> int:
     if -3 <= fifths <= 0:
         return 1

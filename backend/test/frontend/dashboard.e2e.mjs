@@ -26,7 +26,7 @@ try {
   assert.equal(await page.locator('#current-user').textContent(), 'Usuario demo');
   console.log('PASS: sign-in rejects a wrong password and the session survives a reload');
 
-  // The sections sit in a bar across the top (author's choice, 2026-10-25): the content takes the whole width.
+  // The sections sit in a bar across the top (chosen 2026-10-25): the content takes the whole width.
   const bar = await page.locator('.topbar').boundingBox();
   for (const name of ['summary', 'repertoire', 'band', 'concerts', 'rehearsal', 'evaluation', 'settings']) {
     const item = await page.locator(`[data-view-target=${name}]`).boundingBox();
@@ -311,7 +311,7 @@ try {
   assert.deepEqual(errors, []);
   console.log('PASS: the app proposes the agenda of the chosen works, every block with its work');
 
-  // The summary looks like the author's mock-up: everything at a glance on a computer.
+  // The summary looks like its mock-up: everything at a glance on a computer.
   await page.locator('#rehearsal-editor').getByRole('button', { name: 'Cancelar' }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.locator('[data-view-target=summary]').click();
@@ -323,7 +323,7 @@ try {
   await todayCard.getByRole('button', { name: 'Ver detalle' }).click();
   await todayCard.locator('.agenda-list').waitFor();
   await todayCard.getByRole('button', { name: 'Ocultar detalle' }).click();
-  // No panel repeats what the cards already say (author's decision, 2026-10-06).
+  // No panel repeats what the cards already say (decided 2026-10-06).
   assert.equal(await page.locator('#summary-assistant').count(), 0);
   const worksCard = page.locator('#summary-works'), worksBox = await worksCard.boundingBox(), rehearsalBox = await todayCard.boundingBox();
   assert.ok(worksBox.x > rehearsalBox.x + rehearsalBox.width - 1, 'the works in preparation are a column on the right');

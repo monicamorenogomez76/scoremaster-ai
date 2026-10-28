@@ -1,4 +1,4 @@
-"""Explaining the difficulty of a work (step 20, author's decision 2026-10-07).
+"""Explaining the difficulty of a work (step 20, decided 2026-10-07).
 
 Data → algorithms → rules → generative AI: the evidence is built only from ScoreLint's stored
 analysis, the provider answers a fixed schema, and every instrument and passage it cites must be in
@@ -15,7 +15,7 @@ EVIDENCE_VERSION = "difficulty-evidence-v5"   # v3 (2026-10-25): grade_reasons f
 PROMPT_VERSION = "difficulty-explanation-v4"
 DIMENSIONS = ("range", "register", "intervals", "density", "endurance", "tempo")
 MAX_INSTRUMENTS, MAX_PASSAGES, MAX_REASONS = 8, 8, 6
-# Aligned with the Grade 1-6 scale of band publishers (author's decision, 2026-10-13); orientative.
+# Aligned with the Grade 1-6 scale of band publishers (decided 2026-10-13); orientative.
 GRADE_LABELS = {1: "Muy fácil", 2: "Fácil", 3: "Intermedio", 4: "Intermedio avanzado", 5: "Avanzado", 6: "Profesional"}
 GRADE_DESCRIPTIONS = {
     1: "Primer año de instrumento: negras, blancas y redondas en compases simples, con tesitura reducida.",

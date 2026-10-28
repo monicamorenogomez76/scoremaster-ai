@@ -1,7 +1,7 @@
 # Despliegue en Render con la base en Neon
 
 La aplicación se publica en [Render](https://render.com) con la **misma imagen Docker** que
-`docker compose up` (decisión de la autora, 2026-10-07). La configuración está en [`render.yaml`](../render.yaml).
+`docker compose up` (decisión del 2026-10-07). La configuración está en [`render.yaml`](../render.yaml).
 Desde el 2026-10-25 los datos están en el PostgreSQL gratuito de [Neon](https://neon.com), que no caduca;
 la base gratuita de Render caducaba a los 30 días (ver «Base de datos en Neon»).
 
@@ -19,7 +19,7 @@ la base gratuita de Render caducaba a los 30 días (ver «Base de datos en Neon�
      invitada. Una cuenta demo
      que ya tiene obras no se toca, con una excepción: si todas sus obras son versiones anteriores de las de
      `demo/` y nadie ha valorado aún su campaña, se vacía y se crea de nuevo con las actuales.
-   - `ADMIN_EMAILS`: email de las cuentas administradoras, separados por comas (la de la autora). Solo ellas
+   - `ADMIN_EMAILS`: email de las cuentas administradoras, separados por comas. Solo ellas
      crean campañas de valoración y ven los emails y resultados de los músicos. Registrar antes la cuenta: el
      registro no verifica el email. Nunca la cuenta demo.
    - `DEMO_USER_PASSWORD`: contraseña del usuario demo. En cada arranque la cuenta demo toma esta contraseña
@@ -31,7 +31,7 @@ la base gratuita de Render caducaba a los 30 días (ver «Base de datos en Neon�
      las redacta Gemini; sin ella responde la demo identificada. Se crea gratis en
      https://aistudio.google.com/apikey. `GEMINI_MODEL` cambia el modelo (por defecto `gemini-3.8-flash`).
      `GEMINI_REVIEW_MODEL` elige otro modelo solo para «Valorar con IA» (método B), por ejemplo
-     `gemini-3.5-flash-lite` (en la cuenta de la autora, 15 peticiones/minuto y 500/día, frente a 5 y 20 de
+     `gemini-3.5-flash-lite` (en la cuenta del proyecto, 15 peticiones/minuto y 500/día, frente a 5 y 20 de
      `gemini-3.8-flash`); `GEMINI_REQUESTS_PER_MINUTE` (5 por defecto) ajusta la pausa entre peticiones.
      En el nivel gratuito Google puede usar lo enviado para mejorar sus productos: solo se envían datos
      derivados del análisis (grados, dimensiones, compases, bloques), nunca la partitura, emails ni nombres.
@@ -69,7 +69,7 @@ Para cambiar de plan basta con editar `plan:` en `render.yaml` (o hacerlo desde 
 ## Base de datos en Neon
 
 La base gratuita de Render **caduca a los 30 días** (la del TFM, creada hacia el 2026-10-07, hacia el 6 de
-noviembre). El 2026-10-25 la autora decidió pasar los datos a Neon, cuyo plan gratuito no caduca, sin mover
+noviembre). El 2026-10-25 se decidió pasar los datos a Neon, cuyo plan gratuito no caduca, sin mover
 la aplicación ni cambiar su URL.
 
 **Crear la base** (una vez)
@@ -126,7 +126,7 @@ mismas filas en todas las tablas y la misma versión de migraciones (`0011`).
 
 Render no puede leer PDF: copista-2m necesita 2–4,5 GB de memoria. Hugging Face ya solo permite gratis los Spaces
 estáticos, así que el lector (`omr/`) corre en **GitHub Actions**, en el **repositorio privado** del lector (`scoremaster-omr`):
-2.000 minutos gratis al mes en máquinas de 7 GB, sin tarjeta (decisión de la autora, 2026-10-27).
+2.000 minutos gratis al mes en máquinas de 7 GB, sin tarjeta (decisión del 2026-10-27).
 
 **Cómo funciona:**
 1. La directora sube el PDF; Render lo guarda y lanza en ese repositorio el evento `read-pdf`, con un **token de un

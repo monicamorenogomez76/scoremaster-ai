@@ -39,7 +39,7 @@
   --shadow-2: 0 1px 2px rgb(60 30 30 / 0.06), 0 8px 20px rgb(60 30 30 / 0.09), 0 24px 48px -16px rgb(60 30 30 / 0.14);
   --shadow-3: 0 2px 4px rgb(60 30 30 / 0.06), 0 20px 60px rgb(60 30 30 / 0.13);
   --shadow-primary: 0 1px 2px rgb(184 61 36 / 0.25), 0 4px 12px rgb(184 61 36 / 0.18);
-  /* Concert hall identity (author's choice, 2026-10-26): warm paper and ink, vermilion of the curtain as the main
+  /* Concert hall identity (chosen 2026-10-26): warm paper and ink, vermilion of the curtain as the main
      colour and one colour per family (brass is gold, like the instruments). Every pair measured for WCAG 2.1 AA. */
   --font-text: "Outfit Variable", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: "Bricolage Grotesque Variable", "Outfit Variable", ui-sans-serif, sans-serif;
@@ -643,7 +643,7 @@ button:disabled { opacity: 0.65; cursor: default; }
 .rehearsal-block-work { margin-top: 2px; color: var(--text); font-size: .86rem; font-weight: 600; }
 .agenda-calendar .calendar-block { cursor: default; }
 
-/* Summary at a glance (author's mock-up): two columns on a computer, compact cards. */
+/* Summary at a glance (as in its mock-up): two columns on a computer, compact cards. */
 .summary-layout { display: grid; gap: 16px; align-items: start; grid-template-areas: "rehearsal" "plan" "coverage" "priorities" "works"; }
 .summary-layout > * { min-width: 0; }
 #summary-rehearsal { grid-area: rehearsal; }
@@ -841,7 +841,7 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .published-grade-form input, .published-grade-form select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-weight: 400; }
 
 /* Director's dashboard (2026-10-26): where to work by section, the family colours and the programme of the concert.
-   The rehearsal blocks keep a colour per kind of block, as before: by family they looked alike (author, 2026-10-26). */
+   The rehearsal blocks keep a colour per kind of block, as before: by family they looked alike (2026-10-26). */
 .section-work-headline { margin: 0 0 12px; font-weight: 600; }
 .section-work { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .section-work li { display: grid; grid-template-columns: minmax(118px, auto) minmax(0, 1fr) 2.2em; align-items: center; gap: 12px; }

@@ -43,7 +43,7 @@ try {
   assert.equal(await page.locator('#difficulty-content .tree-node').first().isVisible(), true, 'the dashboard and the difficulty share the analysis view');
   // Step 20: the difficulty is explained from the analysis; without a provider, by the demo, never as AI.
   assert.ok(await page.locator('#work-explanation').evaluate(el => el.getBoundingClientRect().bottom <= window.innerHeight),
-    'the explanation is seen without scrolling (author, 2026-10-07: «¿dónde lo veo?»)');
+    'the explanation is seen without scrolling (2026-10-07: «¿dónde lo veo?»)');
   await page.getByRole('button', { name: 'Explicar la dificultad' }).click();
   await page.locator('#explanation-source').waitFor();
   assert.match(await page.locator('#explanation-source').textContent(), /^Modo demo · explicación redactada con reglas .* sin IA\.$/);

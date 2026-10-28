@@ -50,7 +50,7 @@ from backend.domain.instrument_catalog import (
     ("Saxofón tenor", "saxophone.tenor"),
     ("Baritone Saxophone", "saxophone.baritone"),
     ("Saxofón barítono", "saxophone.baritone"),
-    # In a concert band "Baritone" alone means the baritone saxophone (author's decision).
+    # In a concert band "Baritone" alone means the baritone saxophone (decided).
     ("Baritone", "saxophone.baritone"),
     ("Barítono", "saxophone.baritone"),
     # Brass: horn, and trumpet-family instruments kept apart.
@@ -241,7 +241,7 @@ def test_unqualified_guitar_stays_unknown_and_drum_set_stays_in_percussion():
     ("E♭ Clarinet", "clarinets"), ("B♭ Clarinet", "clarinets"), ("Alto Clarinet", "clarinets"),
     ("Soprano Saxophone", "saxophones"), ("Alto Sax", "saxophones"), ("Tenor Saxophone", "saxophones"),
     ("Trumpet", "high_brass"), ("Cornet", "high_brass"), ("Flugelhorn", "high_brass"), ("Horn in F", "high_brass"),
-    # Author's decision: woodwind basses rehearse with the low brass.
+    # Decided then: woodwind basses rehearse with the low brass.
     ("Trombone", "low_voices"), ("Bass Trombone", "low_voices"), ("Euphonium", "low_voices"), ("Tuba", "low_voices"),
     ("Bassoon", "low_voices"), ("Bass Clarinet", "low_voices"), ("Baritone Saxophone", "low_voices"),
     ("Timpani", "percussion"), ("Drumset", "percussion"), ("Xylophone", "percussion"),

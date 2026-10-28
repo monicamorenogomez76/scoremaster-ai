@@ -1,4 +1,4 @@
-"""Google Gemini through LangChain (step 21, author's choice 2026-10-07: free tier).
+"""Google Gemini through LangChain (step 21, chosen 2026-10-07: free tier).
 
 LangChain stays behind the AI port: the domain only sees ExplanationProvider. Answers use structured
 output with the same Pydantic schemas the server validates, temperature 0, a time limit and a single

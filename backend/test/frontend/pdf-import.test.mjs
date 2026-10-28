@@ -3,7 +3,7 @@ import test from 'node:test';
 import { checkPdfFiles, pdfAvailable, pdfImportStatus, pdfStatusText, PDF_POLL_MS, startPdfImport } from '../../../frontend/src/pdfImport.js';
 import { analysisStatusText } from '../../../frontend/src/library.js';
 
-// PDF scores (author's decision, 2026-10-27): the reader runs in GitHub Actions; the browser starts the reading and
+// PDF scores (decided 2026-10-27): the reader runs in GitHub Actions; the browser starts the reading and
 // follows it until the work is analysed.
 function fakeServer(routes) {
   const calls = [];

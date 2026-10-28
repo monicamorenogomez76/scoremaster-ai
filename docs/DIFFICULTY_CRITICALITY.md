@@ -21,7 +21,7 @@ Difficulty != Criticality != RehearsalPriority
 
 ### Ensayo de conjunto y pasajes comunes
 
-Decisiones de la autora (2026-10-04): los ensayos son de conjunto y un **pasaje común** es el que
+Decisiones del 2026-10-04: los ensayos son de conjunto y un **pasaje común** es el que
 varias partes tocan igual en **estructura**, cada una en su tonalidad: por ejemplo, bombardino,
 trombón y saxo tenor con la misma línea. Cuenta como «lo mismo»:
 
@@ -57,7 +57,7 @@ instrumentos. Limitación: los pasajes muy largos vienen del detector de critici
 
 ### Agenda propuesta para un ensayo de varias obras (2026-10-05)
 
-A petición de la autora, la aplicación propone la agenda de un ensayo guardado
+Desde el 2026-10-05, la aplicación propone la agenda de un ensayo guardado
 (`backend/analyzers/rehearsal_proposal.py`, `POST /rehearsals/proposal`): un **calentamiento** de
 toda la banda con el 15 % del tiempo (mínimo 5 min); el resto se reparte entre las obras **en
 proporción a su grado**, con un mínimo de 10 min por obra y en el orden elegido por el director;
@@ -69,7 +69,7 @@ iniciales, no valores calibrados; el asistente IA (F2b) podrá ajustarlos a peti
 
 ### Serie de ensayos de un concierto (2026-10-06)
 
-Decisiones de la autora (`backend/analyzers/concert_plan.py`, `POST /concerts/{id}/plan`): las
+Decisiones (`backend/analyzers/concert_plan.py`, `POST /concerts/{id}/plan`): las
 fechas salen del **patrón semanal** del concierto (días, hora y duración desde una fecha de inicio
 hasta la víspera). La serie avanza **por fases**: el primer tercio, lectura y pasajes (25 % de
 tutti); los intermedios, pasajes e integración (40 %); el penúltimo, integración (60 %), y el último
@@ -87,7 +87,7 @@ reglas iniciales para calibrar con el uso.
 
 Mantener score continuo, idealmente 0-10.
 
-## Escala visible (paso 13, decisiones de la autora, 2026-10-05)
+## Escala visible (paso 13, decisiones del 2026-10-05)
 
 `backend/domain/difficulty_scale.py`. El **índice técnico** 0–10 es 2 × la puntuación anterior
 0–5 (transformación explícita que conserva el orden entre partes; las dimensiones se escalan
@@ -104,21 +104,21 @@ de la obra, de sus familias de viento y cuerda y de sus partes sigue las guías 
 | 5 Avanzado | 6,67 – 8,33 | Grade 5 | Siete a nueve años de práctica: ritmos muy exigentes, compases cambiantes o asimétricos, toda la tesitura y escritura virtuosística |
 | 6 Profesional | 8,34 – 10 | Grade 6 | Nivel profesional o superior: extremadamente difícil en todos los aspectos |
 
-Decisión de la autora (2026-10-13): los nombres y descripciones se alinean con la escala **Grade 1–6** que
+Decisión del 2026-10-13: los nombres y descripciones se alinean con la escala **Grade 1–6** que
 usan la mayoría de editoriales de música para banda, para poder comparar con los grados publicados. No hay
 una escala única entre editoriales (J.W. Pepper, por ejemplo, usa letras de Beginning a Advanced), así que
 la equivalencia es **orientativa**; el cálculo del grado no cambia y los tramos se calibrarán con la
 evaluación. Antes la rúbrica describía la agrupación (escuela de música, banda juvenil, banda amateur…).
 
-### difficulty-v2: sin sobrevalorar (revisión de la autora, 2026-10-14)
+### difficulty-v2: sin sobrevalorar (revisión del 2026-10-14)
 
 Con obras reales, ScoreLint daba uno o dos grados de más: *Persis* (Hosay), 6 frente al Grade 4 de su
-editorial, y la autora veía sobrevaloradas las demás obras probadas. Las causas eran de cálculo, no de las
+editorial, y las demás obras probadas salían sobrevaloradas. Las causas eran de cálculo, no de las
 obras, y se corrigen solo en la escala actual (la escala heredada del baseline no cambia):
 
 | Antes | difficulty-v2 | Motivo |
 |---|---|---|
-| Densidad en ataques por pulso escrito y un único tempo, el más rápido de la obra | **Notas por segundo con el tempo de cada compás**; desaparece la dimensión de tempo aparte | «Los pasajes con muchas notas a velocidad lenta son fáciles o menos difíciles» (la autora). La velocidad ya no se cuenta dos veces |
+| Densidad en ataques por pulso escrito y un único tempo, el más rápido de la obra | **Notas por segundo con el tempo de cada compás**; desaparece la dimensión de tempo aparte | «Los pasajes con muchas notas a velocidad lenta son fáciles o menos difíciles» (revisión del 2026-10-14). La velocidad ya no se cuenta dos veces |
 | El compás más denso de la parte | **Percentil 75** de los compases, frente a una referencia 2,5 veces la anterior | Un compás rápido no hace difícil una parte entera; los picos son tarea de los pasajes críticos |
 | La resistencia llegaba al máximo con 7–8 compases sin descanso | Referencia tres veces mayor (unos 24 compases) | Tocar 16 compases seguidos es lo normal en banda, también en grado 2 |
 | Corneta y fliscorno sin perfil (caían en uno genérico) | Perfil de trompeta | Metal en Si♭ con la tesitura y la técnica de la trompeta |
@@ -162,14 +162,14 @@ grados publicados que registre la directora (con su fuente) son los que miden cu
 Tonalidad, cromatismo, ritmo (tresillos, síncopas) y exposición de las partes son candidatos razonables a
 nuevas dimensiones, pero se añadirán solo cuando haya referencias con las que comprobar que mejoran.
 
-### difficulty-v3: el grado sigue las guías de las editoriales (decisión de la autora, 2026-10-25)
+### difficulty-v3: el grado sigue las guías de las editoriales (decisión del 2026-10-25)
 
 Tras difficulty-v2 faltaba una referencia experta: solo *Persis* tenía un grado publicado que correspondía a
-su archivo. La autora aportó las guías con las que las editoriales gradúan obras de banda, y ScoreLint pasa a
+su archivo. Se aportaron las guías con las que las editoriales gradúan obras de banda, y ScoreLint pasa a
 seguirlas. **Cada criterio da un grado mínimo y la obra tiene el grado de su criterio más exigente**, en lugar
 de promediar dimensiones y repartir el índice en tramos iguales.
 
-**Fuentes y jerarquía** (elegida por la autora):
+**Fuentes y jerarquía** (elegida el 2026-10-25):
 
 | Fuente | Uso |
 |---|---|
@@ -204,7 +204,7 @@ Los documentos son de sus editores: en el repositorio solo están sus criterios 
 
 **Tesituras escritas** (fagot, trombón/bombardino y tuba en clave de fa, comparadas por su sonido real;
 entre paréntesis, la de final de curso). Leídas de la tabla del American Band College midiendo la posición de
-las notas y revisadas con la autora el 2026-10-25:
+las notas y revisadas una a una el 2026-10-25:
 
 | Instrumento | G1 | G2 | G3 | G4 | G5 |
 |---|---|---|---|---|---|
@@ -234,9 +234,9 @@ Limitaciones: los umbrales de cambios de compás, del uso limitado y de las arti
 lectura razonable de las guías, no cifras suyas; un vals marcado a negra = 192 cuenta como tempo de grado 5
 aunque se dirija a un tiempo por compás. Lo valida la evaluación con músicos.
 
-### difficulty-v4: la tabla de la Federación Galega (decisión de la autora, 2026-10-27)
+### difficulty-v4: la tabla de la Federación Galega (decisión del 2026-10-27)
 
-La autora aportó la *Táboa de niveis de dificultade* de la Federación Galega de Bandas de Música, una traducción
+Se aportó la *Táboa de niveis de dificultade* de la Federación Galega de Bandas de Música, una traducción
 de la tabla de Cynthia Hutton (BANDWORLD), de la que también parte la del American Band College. **Donde las dos
 difieren, prevalece la gallega.** El American Band College se mantiene para lo que la gallega no trae (la
 duración de la obra y el número de cambios de tonalidad y de compás) y para las tesituras, hasta medir las de la
@@ -259,7 +259,7 @@ Lo que cambia respecto a difficulty-v3:
 El tipo de grupo irregular se deduce de la duración de sus notas (un tercio, un quinto, un sexto o un séptimo de
 negra), así que no hace falta volver a leer las obras.
 
-**Excepción decidida por la autora:** la tabla gallega no pone Do mayor en los grados 1 ni 2 y en el grado 3 pide
+**Excepción decidida:** la tabla gallega no pone Do mayor en los grados 1 ni 2 y en el grado 3 pide
 «pouco uso das armaduras de DóM e RebM». Una obra en Do mayor de concierto sigue en grado 1: ese consejo es de
 escritura para banda, no una dificultad para el músico.
 
@@ -278,11 +278,11 @@ de su editorial.
 Siguen sin medirse, en ninguna de las dos tablas, las voces independientes, los solos, las divisiones de sección
 y el material musical.
 
-### difficulty-v5: las tesituras de la tabla gallega (decisión de la autora, 2026-10-27)
+### difficulty-v5: las tesituras de la tabla gallega (decisión del 2026-10-27)
 
 Las tesituras de la página 3 de la tabla gallega se midieron por píxeles: líneas del pentagrama, compases y centro de
 cada cabeza de nota. Las alteraciones y las columnas se comprobaron a ojo en cada recorte. Difieren de las del
-American Band College sobre todo en los grados 1 y 2, donde son más estrechas, y la autora decidió adoptarlas con dos
+American Band College sobre todo en los grados 1 y 2, donde son más estrechas, y se decidió adoptarlas con dos
 matices:
 
 - En el grado 1 se conservan las **notas de final de curso** del American Band College. Unas pocas notas (hasta el
@@ -556,11 +556,11 @@ persistencia). Un compás es candidato con puntuación ≥ 5 (absoluto) o si est
 su parte y supera en 2 la mediana de los 4 compases a cada lado (relativo y destacado). Los
 candidatos consecutivos forman un núcleo, que exige al menos 4 tiempos y 2 reglas distintas. El
 núcleo se amplía a las frases completas que toca (`phrases.py`), así que un pasaje nunca corta una
-frase. Señal de velocidad (decisión de la autora, 2026-10-04): un compás tocado a
+frase. Señal de velocidad (decisión del 2026-10-04): un compás tocado a
 ≥ 8 notas por segundo al tempo escrito (semicorcheas desde negra = 120) es candidato por sí solo, y un
 núcleo formado solo por esos compases es crítico con un único tipo de aviso si dura ≥ 4 tiempos.
 Los umbrales generales se mantienen hasta la evaluación con músicos; las frases largas que amplían
-los pasajes (hasta 54 c. en Persis) son aceptadas por la autora. Puede haber cero críticos. Los valores son iniciales y deben calibrarse con la evaluación.
+los pasajes (hasta 54 c. en Persis) se dieron por buenas al revisarlas. Puede haber cero críticos. Los valores son iniciales y deben calibrarse con la evaluación.
 El detector anterior queda como `critical_detector="legacy"` solo para el baseline.
 
 ## Señales mínimas
@@ -623,13 +623,13 @@ Requerir:
 
 ---
 
-## Frases melódicas (criterios de la autora, 2026-10-04)
+## Frases melódicas (criterios del 2026-10-04)
 
 Los pasajes críticos y los bloques de ensayo **nunca cortan una frase melódica**; una frase
 larga se mantiene entera. `backend/analyzers/phrases.py` detecta los límites sumando pistas, sin
 que ninguna decida sola:
 
-| Criterio de la autora | Implementación | Peso |
+| Criterio | Implementación | Peso |
 |---|---|---|
 | Pausas relevantes | Silencio ≥ 1,5 × la nota típica de la frase, ≥ corchea y destacado frente a los silencios vecinos (un silencio breve o recurrente es del motivo o del acompañamiento) | 2 |
 | Alargamiento al final | Nota ≥ 2 × la típica anterior; sola no corta, con pausa o reinicio sí | 1 (+1 con pausa) |
@@ -641,15 +641,15 @@ que ninguna decida sola:
 | Cambio de patrón | No corta: puede ser solo una subdivisión | — |
 
 Hay límite cuando la suma llega a 2: la cadencia cierra con nota alargada o con pausa, y sola no
-corta las partes que siguen moviéndose (decisiones de la autora, 2026-10-04). Sin transposiciones
+corta las partes que siguen moviéndose (decisiones del 2026-10-04). Sin transposiciones
 declaradas (partes «Voice» de un PDF) la armonía no es fiable y no se detectan cadencias; de los
 acordes dentro de un pentagrama la armonía usa todavía solo la nota superior. Los fragmentos separados por límites débiles se unen en
-frases de **4 u 8 compases** (decisión de la autora): la frase se cierra al llegar a 4 o a 8, y de
+frases de **4 u 8 compases**: la frase se cierra al llegar a 4 o a 8, y de
 5 a 7 solo se une el siguiente fragmento si completa exactamente 8. Un silencio de un compás entero
 o una marca escrita es un límite fuerte que nunca se une. El parser conserva la posición de cada
 nota en el compás, la duración del compás y las marcas escritas.
 
-## Tiempos y ataques (paso 10, decisiones de la autora, 2026-10-05)
+## Tiempos y ataques (paso 10, decisiones del 2026-10-05)
 
 El parser conserva voz, ligadura, nota de adorno y todas las notas de cada acorde
 (`ScoreNote.voice`, `tie`, `is_grace`, `chord_pitches`; `pitch` es la nota superior).

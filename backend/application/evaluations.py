@@ -1,4 +1,4 @@
-"""Evaluation campaigns (steps 16-18, author's decisions, 2026-10-07): records and repository port.
+"""Evaluation campaigns (steps 16-18, decided 2026-10-07): records and repository port.
 
 The director proposes passages of her works and invites musicians by email; each invited musician,
 with an account, rates the passages without seeing ScoreLint's prediction (the passage snapshot).

@@ -2,7 +2,7 @@ import React from 'react';
 import { agendaCalendarLabel, agendaSchedule, blockGroup, blockWorkText } from './rehearsals.js';
 
 // Coloured timeline of a saved agenda: each block as wide as its minutes, coloured by its type
-// like the rehearsal plan; the work rehearsed in it is its main text (author's request, 2026-10-05).
+// like the rehearsal plan; the work rehearsed in it is its main text (requested 2026-10-05).
 // With onOpenBlock, the boxes of a work open its passage in the score.
 export function AgendaCalendar({ blocks, start, onOpenBlock }) {
   if (!blocks.length) return null;

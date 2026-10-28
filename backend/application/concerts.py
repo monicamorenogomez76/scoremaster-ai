@@ -1,5 +1,5 @@
 """Concerts of each user: date, programme of works in concert order and the weekly pattern of the
-rehearsals that prepare it (author's decisions, 2026-10-06). Records and repository port only."""
+rehearsals that prepare it (decided 2026-10-06). Records and repository port only."""
 from dataclasses import dataclass
 from datetime import date
 from typing import Optional, Protocol

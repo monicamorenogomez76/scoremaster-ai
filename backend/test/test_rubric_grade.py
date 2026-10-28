@@ -1,4 +1,4 @@
-"""difficulty-v3 (author's decision, 2026-10-25): ScoreLint follows the publishers' grading guides. Since difficulty-v4
+"""difficulty-v3 (decided 2026-10-25): ScoreLint follows the publishers' grading guides. Since difficulty-v4
 (2026-10-27) the Galician federation's table (Cynthia Hutton, BANDWORLD) prevails; the American Band College chart
 gives the ranges and the length, and FJH's series guidelines refine the low grades. Each criterion gives a minimum grade; the work
 is as hard as its most demanding criterion. A feature used only in passing (fewer than 5 % of a part's measures,
@@ -191,7 +191,7 @@ def test_grace_notes_single_and_in_groups():
 def test_the_galician_ranges(name, metadata, pitch, grade):
     """Ranges of the Galician table (2026-10-27), written for each instrument (bassoon and tuba at concert pitch in
     bass clef): its low baritone saxophone reaches A3 in grade 4, where the other saxophones stop at B-flat 3. The
-    in-between columns of trumpet, horn and tuba (3,5 and 4,5) still count as the lower grade (author's decision)."""
+    in-between columns of trumpet, horn and tuba (3,5 and 4,5) still count as the lower grade (decided)."""
     middle = {"Bassoon": "C3", "Tuba": "C2"}.get(name, "D5")
     part = ScorePart(name, bars(40, notes(middle, middle, middle, pitch)), metadata)
     result = rubric_grade(work(part))["by_instrument"][name]

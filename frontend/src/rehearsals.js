@@ -1,5 +1,5 @@
 // Saved rehearsals of the signed-in user: several works per rehearsal and an agenda of blocks,
-// each naming the work rehearsed in it (author's decisions, 2026-10-05).
+// each naming the work rehearsed in it (decided 2026-10-05).
 import { familyOfSection } from './dashboard.js';
 import { apiJson } from './api.js';
 import { blockScoreLabel, calendarLabel, findingLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
@@ -101,7 +101,7 @@ export const blockTypeOptions = () => [['warmup', 'Calentamiento · banda comple
   ...SECTIONS.map(group => [group, 'Seccional · ' + rehearsalGroupName(group)]), ['tutti', 'Tutti'], ['other', 'Otro']];
 
 // Words that reveal the type of a block written by hand (accents and case ignored). The warm-up is a
-// whole-band category of its own (author's decision, 2026-10-05).
+// whole-band category of its own (decided 2026-10-05).
 const GROUP_WORDS = [
   ['warmup', ['calentamiento', 'banda completa']], ['tutti', ['tutti']], ['common', ['comun']],
   ['flutes', ['flauta', 'flautin']], ['double_reeds', ['doble', 'oboe', 'fagot']], ['clarinets', ['clarinete']],
@@ -131,7 +131,7 @@ export function agendaCalendarLabel(block) {
 export const agendaSchedule = (blocks, start) => rehearsalSchedule(
   blocks.map(block => ({ ...block, minutes: Number(block.minutes) || 0 })), start || undefined);
 
-// The director's review after a rehearsal (author's decision, 2026-10-06): one status and note per block.
+// The director's review after a rehearsal (decided 2026-10-06): one status and note per block.
 export const reviewStatusOptions = [['resolved', 'Resuelto'], ['improve', 'Mejorable'], ['pending', 'Pendiente'], ['not_done', 'No se hizo']];
 const statusLabel = status => (reviewStatusOptions.find(([value]) => value === status) || [, status])[1];
 

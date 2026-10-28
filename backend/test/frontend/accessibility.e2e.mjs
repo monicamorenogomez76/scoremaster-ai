@@ -1,4 +1,4 @@
-// Accessibility audit (WCAG 2.1 A and AA, author's requirement, 2026-10-26): axe-core checks every view of the
+// Accessibility audit (WCAG 2.1 A and AA, a legal requirement, 2026-10-26): axe-core checks every view of the
 // app, signed out and signed in, in the light and the dark theme and with the phone menu open. Any violation fails
 // the walkthrough, so no change can break accessibility unnoticed. axe-core is installed next to Playwright
 // (AXE_MODULE, or found from PLAYWRIGHT_MODULE's folder), never as a dependency of the app.
