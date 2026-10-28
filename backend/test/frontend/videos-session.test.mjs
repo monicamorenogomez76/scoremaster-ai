@@ -58,3 +58,16 @@ test('without integrated results the musician is told why', () => {
   assert.match(searchStatus({ mode: 'link', reason: 'rejected' }, 0), /^YouTube ha rechazado la búsqueda integrada/);
   assert.match(searchStatus({ mode: 'link', reason: 'unavailable' }, 0), /^No se pudo contactar con YouTube/);
 });
+
+// 2026-10-28: on Render's free plan the request for the notation waited behind the audio preparation, and the score
+// only showed about when play could start. An uncompressed MusicXML is read in the browser; only .mxl goes to the server.
+test('an uncompressed MusicXML is read in the browser, a compressed one by the server', async () => {
+  const calls = [];
+  const session = createScoreSession(async url => { calls.push(url); return { ok: true, text: async () => '<from-server/>' }; });
+  session.setFile(new File(['<?xml version="1.0"?><score-partwise/>'], 'obra.musicxml'));
+  assert.equal(await session.loadSource(), '<?xml version="1.0"?><score-partwise/>');
+  assert.equal(calls.length, 0, 'no request for a plain MusicXML');
+  session.setFile(new File(['PK\u0003\u0004 zipped'], 'obra.mxl'));
+  assert.equal(await session.loadSource(), '<from-server/>');
+  assert.deepEqual(calls, ['/notation-source']);
+});

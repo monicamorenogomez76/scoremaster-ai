@@ -87,10 +87,16 @@ export function PassageDialog({ ref, session }) {
       container.current.replaceChildren();
       show({ title: state.label + (wholePart ? ' · toda la obra' : ' · compases ' + measureRange), status: 'Cargando el pasaje completo…', range: '' });
       if (!dialog.current.open) dialog.current.showModal();
-      // Its audio starts being prepared now, so play does not wait for the server.
-      passageTimeline(sessionOf(state).getFile(), state).catch(() => {});
       try {
         state.source = await sessionOf(state).loadSource();
+      } catch (error) {
+        show({ status: error.message || 'No se pudo representar este pasaje.' });
+        return;
+      }
+      // The score first, then the audio (2026-10-28): on Render's free plan, preparing the audio kept the server busy
+      // and the score only showed about when play could start. The audio still starts before play is pressed.
+      passageTimeline(sessionOf(state).getFile(), state).catch(() => {});
+      try {
         if (state === passage.current) await render();
       } catch (error) {
         show({ status: error.message || 'No se pudo representar este pasaje.' });
