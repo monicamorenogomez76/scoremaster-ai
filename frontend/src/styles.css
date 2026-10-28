@@ -736,6 +736,13 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .settings-card label { display: grid; gap: 5px; font-size: .85rem; font-weight: 600; }
 .settings-card input[type=text] { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-weight: 400; }
 .settings-card .primary-action { justify-self: start; }
+.instrument-confirm-item { display: grid; gap: 8px; }
+.instrument-confirm-item .band-profile-row { grid-template-columns: minmax(0, 1fr) minmax(160px, 220px); }
+.own-instrument-form { display: grid; gap: 8px; margin: 0; padding: 12px 16px 16px; border: 1px solid var(--line); border-radius: 12px; }
+.own-instrument-form legend { padding: 0 4px; font-weight: 600; }
+.own-instrument-form label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
+.own-instrument-form input, .own-instrument-form select { padding: 8px 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-weight: 400; }
+.own-instrument-form .secondary-action { justify-self: start; }
 .instrument-admin { grid-column: 1 / -1; }
 .instrument-admin select, .instrument-admin textarea { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); font-weight: 400; }
 .instrument-admin summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-weight: 600; line-height: 1.5; }

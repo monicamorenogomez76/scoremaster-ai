@@ -47,7 +47,7 @@ def compute_band_fit(score: Score, band_profile: dict[str, int]) -> dict:
         key = PERCUSSION if percussion else identity.canonical_id
         group = groups.setdefault(key, {
             "label_es": PERCUSSION_LABEL_ES if percussion else identity.label_es,
-            "order": percussion_order if percussion else order[identity.canonical_id],
+            "order": percussion_order if percussion else order.get(identity.canonical_id, len(order)),
             "voices": set(), "parts": set()})
         numbers = () if percussion else _voice_numbers(part, identity)
         part_key = part.metadata.part_id or part.name

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addInstrumentName, createInstrument, deleteInstrumentName, filterInstruments, instrumentKeys, loadAdminInstruments,
-  newInstrumentBody } from '../../../frontend/src/instrumentCatalog.js';
+import { addInstrumentName, createInstrument, createOwnInstrument, deleteInstrumentName, filterInstruments, instrumentKeys, loadAdminInstruments,
+  newInstrumentBody, OTHER_INSTRUMENT, ownInstrumentBody, ownInstrumentForm } from '../../../frontend/src/instrumentCatalog.js';
 
 // The instrument catalog in the database (2026-10-28): the administration adds the names an instrument is written
 // with and new common instruments from Configuración.
@@ -52,4 +52,18 @@ test('the administration reads and changes the catalog through the API', async (
   assert.equal((await createInstrument({ label_es: 'Dulzaina' })).canonical_id, 'dulzaina');
   fakeServer({ 'POST /admin/instruments/flugelhorn.bb/names': [409, { detail: 'Ese nombre ya corresponde a Trompeta.' }] });
   await assert.rejects(addInstrumentName('flugelhorn.bb', 'Trompeta'), /ya corresponde a Trompeta/);
+});
+
+test('an instrument the catalog does not have is created for the account from the part to confirm', async () => {
+  assert.equal(OTHER_INSTRUMENT, '__other__');
+  assert.deepEqual(ownInstrumentBody('Dulzaina 1', { label_es: ' Dulzaina ', section: 'woodwinds', transposition: 'Eb',
+    sound: 'oboe', rehearsal_group: 'double_reeds' }), {
+    name: 'Dulzaina 1', label_es: 'Dulzaina', family: 'dulzaina', section: 'woodwinds', transposition: 'Eb', sound: 'oboe',
+    rehearsal_group: 'double_reeds' });
+  assert.equal(ownInstrumentBody('X', { label_es: 'Gaita gallega', section: 'woodwinds', transposition: '', sound: '',
+    rehearsal_group: 'flutes' }).transposition, null);
+  assert.equal(ownInstrumentForm('Dulzaina 1').label_es, 'Dulzaina', 'the part name without its number');
+  const calls = fakeServer({ 'POST /instruments': [201, { canonical_id: 'own.1', label_es: 'Dulzaina', section: 'woodwinds', own: true }] });
+  assert.equal((await createOwnInstrument({ name: 'Dulzaina 1' })).canonical_id, 'own.1');
+  assert.equal(JSON.parse(calls[0].body).name, 'Dulzaina 1');
 });

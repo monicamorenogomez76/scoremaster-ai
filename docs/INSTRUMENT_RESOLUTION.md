@@ -91,7 +91,22 @@ catálogo de las pruebas sin base.
 - **Un nombre nunca nombra dos instrumentos:** se rechaza (409) si el catálogo ya lo reconoce, incluso con su
   tonalidad. La base lo garantiza con un índice único sobre el nombre normalizado.
 
-Las columnas `owner_id` quedan preparadas para los nombres aprendidos y los instrumentos propios de cada cuenta.
+**Nombres aprendidos e instrumentos propios (2026-10-28):** lo que una cuenta confirma se aprende para sus siguientes
+obras.
+- **Cómo se aprende:** el nombre de la parte, normalizado y sin números de parte, se guarda en `instrument_names`
+  con el `owner_id` de la cuenta. Así, si «Fiscornio 1» se confirma como fliscorno, «Fiscornio 3» sale reconocido en
+  la obra siguiente, también si viene de un PDF. La configuración del análisis guarda lo aplicado como confirmación.
+- **Prioridad del catálogo común:** lo aprendido solo nombra las partes que el catálogo común no reconoce; nunca
+  cambia un nombre que el catálogo ya conoce.
+- **Instrumentos propios:** si el instrumento no está en el catálogo, «Mi banda» ofrece «Otro instrumento…». Pide el
+  nombre, la familia, la tonalidad, el sonido y el grupo de ensayo, y crea un instrumento propio de la cuenta
+  (`own.<id>`) que aprende el nombre de la parte. Cuenta en BandFit y en la plantilla, y en el grado, con el perfil
+  genérico de su familia.
+- **Aislamiento entre cuentas:** lo aprendido y los instrumentos propios de una cuenta no llegan a ninguna otra.
+  Confirmar el instrumento propio de otra cuenta se rechaza (400).
+
+Queda para más adelante que el audio de `/playback` use las confirmaciones, como ya pasaba con las confirmaciones del
+paso 09.
 
 ## 1. Problema
 

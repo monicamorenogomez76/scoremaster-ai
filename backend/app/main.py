@@ -20,7 +20,8 @@ from backend.app.library_routes import router as library_router, valid_band_prof
 from backend.app.band_routes import router as band_router
 from backend.app.concert_routes import router as concert_router
 from backend.app.evaluation_routes import router as evaluation_router
-from backend.app.instrument_routes import load_instrument_catalog, router as instrument_router
+from backend.app.instrument_routes import (confirmable_ids, learn_confirmations, load_instrument_catalog,
+                                           router as instrument_router)
 from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.pdf_routes import router as pdf_router
 from backend.app.stored_scores import prepare_missing_works
@@ -28,12 +29,11 @@ from backend.app.work_analysis import analyze_and_store, refresh_outdated_analys
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
     SAFE_METHODS, STORAGE_UNAVAILABLE, analysis_engine, authenticated_user, close_analysis_engine, get_analysis_repository,
-    get_library_repository, get_playback_store, get_score_store,
+    get_instrument_store, get_library_repository, get_playback_store, get_score_store,
 )
 from backend.application.accounts import User
 from backend.application.analysis_repository import AnalysisRepository
 from backend.application.library import LibraryRepository
-from backend.domain.instrument_catalog import identity_by_id
 from backend.domain.models import Score
 from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
 from backend.parsers.musicxml_source import extract_musicxml
@@ -232,14 +232,14 @@ def playback_preparation(key: str = FastAPIPath(..., pattern="^[0-9a-f]{64}$")):
 MAX_INSTRUMENT_OVERRIDES = 256
 
 
-def _instrument_overrides(raw: str) -> dict[str, str]:
-    """Part name → catalog identity confirmed by the user; anything else is rejected."""
+def _instrument_overrides(raw: str, confirmable: set[str]) -> dict[str, str]:
+    """Part name → catalog identity (common or the account's own) confirmed by the user; anything else is rejected."""
     try:
         overrides = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="instrument_overrides must be valid JSON.") from exc
     if not isinstance(overrides, dict) or len(overrides) > MAX_INSTRUMENT_OVERRIDES or not all(
-            isinstance(part, str) and len(part) <= 200 and isinstance(identity, str) and identity_by_id(identity)
+            isinstance(part, str) and len(part) <= 200 and isinstance(identity, str) and identity in confirmable
             for part, identity in overrides.items()):
         raise HTTPException(status_code=400, detail="instrument_overrides must map part names to catalog instruments.")
     return overrides
@@ -256,9 +256,11 @@ def analyze_score(
     library: LibraryRepository = Depends(get_library_repository),
     playback_store=Depends(get_playback_store),
     score_store=Depends(get_score_store),
+    instruments=Depends(get_instrument_store),
     user: User = Depends(authenticated_user),
 ):
-    """Analyse a score and keep it in the user's library; the saved band completes the template."""
+    """Analyse a score and keep it in the user's library; the saved band completes the template. The instruments
+    confirmed are learnt for the account's next works (2026-10-28)."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Expected a MusicXML file upload.")
     extension = Path(file.filename).suffix.lower()
@@ -274,7 +276,7 @@ def analyze_score(
         raise HTTPException(status_code=400, detail="band_profile must be valid JSON.") from exc
     if not valid_band_profile(profile):
         raise HTTPException(status_code=400, detail="band_profile must map instruments to musician counts.")
-    overrides = _instrument_overrides(instrument_overrides)
+    overrides = _instrument_overrides(instrument_overrides, confirmable_ids(user, instruments))
 
     content = _read_upload(file)
     if not content:
@@ -285,7 +287,8 @@ def analyze_score(
 
     try:
         saved = analyze_and_store(content, file.filename, user.id, profile, total_minutes, overrides, repository, library,
-                                  score_store)
+                                  score_store, learned=instruments.learned(user.id) if instruments else None)
+        learn_confirmations(user, instruments, overrides)
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
     # Its passages will sound sooner: the work is read for playback after answering.

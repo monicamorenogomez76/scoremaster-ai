@@ -2,10 +2,10 @@
 normalized, and a normalized name is unique among the common ones."""
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Identity, Index, Integer, String, delete, func, select, text
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import UUID as PGUUID, insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column
@@ -116,3 +116,37 @@ class PostgresInstrumentRepository:
             row.updated_at = func.now()
         with Session(self.engine) as session:
             return _fields(session.get(StoredInstrument, instrument_id))
+
+    def private(self) -> list[dict]:
+        with Session(self.engine) as session:
+            return [_fields(row) for row in session.scalars(select(StoredInstrument)
+                                                            .where(StoredInstrument.owner_id.is_not(None)))]
+
+    def for_account(self, user_id: UUID) -> list[dict]:
+        with Session(self.engine) as session:
+            return [_fields(row) for row in session.scalars(select(StoredInstrument).where(StoredInstrument.owner_id == user_id)
+                                                            .order_by(StoredInstrument.created_at))]
+
+    def learned(self, user_id: UUID) -> dict[str, str]:
+        with Session(self.engine) as session:
+            rows = session.execute(select(StoredInstrumentName.name_key, StoredInstrumentName.instrument_id)
+                                   .where(StoredInstrumentName.owner_id == user_id)).all()
+        return {key: instrument_id for key, instrument_id in rows}
+
+    def learn(self, user_id: UUID, names: list[tuple[str, str, str]]) -> None:
+        if not names:
+            return
+        rows = {key: {'name': name[:120], 'name_key': key, 'instrument_id': instrument_id, 'owner_id': user_id}
+                for name, key, instrument_id in names}
+        statement = insert(StoredInstrumentName).values(list(rows.values()))
+        statement = statement.on_conflict_do_update(
+            index_elements=['owner_id', 'name_key'], index_where=text('owner_id IS NOT NULL'),
+            set_={'instrument_id': statement.excluded.instrument_id, 'name': statement.excluded.name})
+        with Session(self.engine) as session, session.begin():
+            session.execute(statement)
+
+    def create_own(self, user_id: UUID, fields: dict) -> dict:
+        with Session(self.engine, expire_on_commit=False) as session, session.begin():
+            row = StoredInstrument(id='own.' + uuid4().hex[:12], position=0, owner_id=user_id, **fields)
+            session.add(row)
+        return _fields(row)

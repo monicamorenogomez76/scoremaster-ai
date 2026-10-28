@@ -7,6 +7,7 @@
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { login } from './login.mjs';
 const require = createRequire(import.meta.url);
 const playwrightModule = process.env.PLAYWRIGHT_MODULE || 'playwright';
@@ -68,6 +69,21 @@ try {
   await admin.locator('.instrument-admin-list details').first().locator('summary').click();
   await admin.locator('.instrument-new summary').click();
   await audit(admin, 'Configuración › Instrumentos');
+  // «Otro instrumento…» for a part the catalog does not know (never confirmed, so it stays unknown in every run).
+  const unknownPart = readFileSync(new URL('../../../test-scores/high_register.musicxml', import.meta.url), 'utf8')
+    .replace('<part-name>Clarinet</part-name>', '<part-name>Gaita de fole</part-name>');
+  await admin.locator('[data-view-target=repertoire]').click();
+  await admin.locator('#add-work').click();
+  await admin.locator('#file').setInputFiles({ name: 'gaita.musicxml', mimeType: 'application/xml', buffer: Buffer.from(unknownPart) });
+  const uploadIdle = () => admin.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
+  await uploadIdle();
+  await admin.locator('#upload-form button[type=submit]').click();
+  await admin.locator('#overview-result').waitFor({ state: 'attached' });
+  await uploadIdle();
+  await admin.locator('[data-view-target=band]').click();
+  await admin.getByLabel('Instrumento de Gaita de fole').selectOption({ label: 'Otro instrumento…' });
+  await admin.locator('.own-instrument-form').waitFor();
+  await audit(admin, 'Mi banda › Otro instrumento');
   await admin.close();
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
   await phone.goto(url);
