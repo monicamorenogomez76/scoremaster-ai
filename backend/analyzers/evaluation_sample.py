@@ -1,4 +1,4 @@
-"""Passages proposed for the musicians' evaluation (steps 16-18, author's decisions, 2026-10-07).
+"""Passages proposed for the musicians' evaluation (steps 16-18, decided 2026-10-07).
 
 A reproducible, stratified sample of the director's works: about 40 % critical passages (to measure
 recall) and 60 % non-critical windows spread over grades (to measure false positives). Every passage

@@ -237,7 +237,7 @@ class PostgresEvaluationRepository:
             return True
 
     def evaluator_work_file(self, email: str, campaign_id: UUID, work_id: UUID) -> Optional[tuple[bytes, str]]:
-        """The whole work of a passage of the campaign (author's decision: the musician may open it)."""
+        """The whole work of a passage of the campaign (the musician may open it)."""
         with Session(self.engine) as session:
             row, _ = self._invitation(session, email, campaign_id)
             if row is None or session.scalars(select(StoredPassage.id).where(

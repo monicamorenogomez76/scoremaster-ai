@@ -4,7 +4,7 @@ Reads the JSON the director exports from «Valoraciones» and compares, passage 
 prediction stored when the campaign was created with the musicians' ratings. Nothing is tuned
 here: the tool only measures, so the same export always produces the same report.
 
-Author's protocol, documented in evaluation/README.md:
+Protocol, documented in evaluation/README.md:
 - the expert difficulty of a passage is the median of its ratings (grades 1-6, same rubric);
 - a passage is critical when most of its raters say so; a tie is left undecided and counted apart;
 - passages with fewer ratings than --min-ratings are left out and counted;
@@ -27,7 +27,7 @@ from backend.application.evaluations import EXPERIENCE_LEVELS
 
 REPORT_VERSION = "campaign-report-v3"
 HEURISTIC = "Heurística (ScoreLint)"
-# Method C, preregistered by the author before any musician's rating: never tuned on the data.
+# Method C, preregistered before any musician's rating: never tuned on the data.
 HYBRID_RULE = ("Regla del híbrido, fijada el 2026-10-13 antes de recibir valoraciones: grado = media de ScoreLint y "
                "del LLM, redondeando hacia arriba los medios puntos; crítico solo si ScoreLint y el LLM coinciden en que lo es.")
 

@@ -1,4 +1,4 @@
-"""Evaluation campaigns (steps 16-18, author's decisions, 2026-10-07): the director proposes passages of
+"""Evaluation campaigns (steps 16-18, decided 2026-10-07): the director proposes passages of
 her works and invites musicians by email; each musician, with an account, rates every passage
 (difficulty 1-6, critical, rehearsal priority 1-5, optional comment) without seeing ScoreLint's
 prediction, and may open the whole work. Results are exported with anonymous evaluators."""
@@ -15,7 +15,7 @@ pytestmark = pytest.mark.real_auth
 @pytest.fixture(autouse=True)
 def ana_is_the_administrator(monkeypatch):
     """Only an administrator (ADMIN_EMAILS) manages campaigns and sees the musicians' emails and results
-    (author's decision, 2026-10-14). Ana is the director of these tests."""
+    (decided 2026-10-14). Ana is the director of these tests."""
     monkeypatch.setenv("ADMIN_EMAILS", "Otra@banda.org, ANA@banda.org")
 
 
@@ -273,7 +273,7 @@ def test_the_export_carries_each_work_with_its_scorelint_and_published_grades(cl
 
 
 def test_only_an_administrator_manages_campaigns_and_sees_emails_and_results(clients):
-    """Author's decision (2026-10-14): any other account only rates the campaigns it is invited to."""
+    """Decided on 2026-10-14: any other account only rates the campaigns it is invited to."""
     ana, berta = clients
     assert ana.get("/auth/me").json()["user"]["is_admin"] is True
     assert berta.get("/auth/me").json()["user"]["is_admin"] is False

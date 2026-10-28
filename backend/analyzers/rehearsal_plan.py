@@ -1,6 +1,6 @@
 """Ensemble rehearsal plan.
 
-Author's decisions (2026-10-04): rehearsals are ensemble rehearsals. In every passage, first
+Decided on 2026-10-04: rehearsals are ensemble rehearsals. In every passage, first
 the parts that play the same thing rehearse together (common line or common rhythm, even across
 families); then the remaining difficult parts rehearse by subsection (flutes, double reeds,
 clarinets, saxophones, high brass, low voices, percussion, strings and rhythm); a final tutti

@@ -1,4 +1,4 @@
-"""«¿Por qué este plan?» (step 20, author's request 2026-10-07).
+"""«¿Por qué este plan?» (step 20, requested 2026-10-07).
 
 A saved rehearsal is explained only from its blocks, the stored analysis of its works, its concert and
 what the last review left pending. The director's notes travel as data, never as instructions. Every

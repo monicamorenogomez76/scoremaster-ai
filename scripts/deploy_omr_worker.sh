@@ -19,7 +19,7 @@ printf '# ScoreMaster OMR\n\nLector de PDF de ScoreMaster (copista-2m), copiado 
 cd "$work/worker"
 # GitHub runs repository_dispatch workflows only on the default branch: main.
 git checkout --quiet -B main
-# The commit carries GitHub's private address of the account, never the author's email (GitHub refuses it).
+# The commit carries GitHub's private address of the account, never a personal email (GitHub refuses it).
 noreply=$(gh api user -q '"\(.id)+\(.login)@users.noreply.github.com"')
 git config user.email "$noreply"
 git config user.name "$(gh api user -q .login)"

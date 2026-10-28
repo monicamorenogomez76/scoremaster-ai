@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { checkPdfFiles, pdfAvailable, pdfImportStatus, PDF_POLL_MS, pdfStatusText, startPdfImport } from './pdfImport.js';
 
-// «Desde un PDF» (author's decision, 2026-10-27): one score, the parts of a work (one PDF per instrument) or, by default (2026-10-28),
+// «Desde un PDF» (decided 2026-10-27): one score, the parts of a work (one PDF per instrument) or, by default (2026-10-28),
 // PDFs with both, which the reader tells apart. Read by
 // the reader in GitHub Actions. Shown only when the server has a reader. The reading takes minutes: the director
 // sees its progress and the work opens when it is analysed.

@@ -89,7 +89,7 @@ añade `analysis_id` sin modificar los campos musicales anteriores.
 
 Desde la fase A2 cada análisis pertenece a su usuario y a una obra (`works`). La obra
 guarda el archivo MusicXML original, el título, el compositor y el nombre del archivo,
-**privados de su propietario** (decisión de la autora, 2026-10-04): permiten reabrir el
+**privados de su propietario** (decisión del 2026-10-04): permiten reabrir el
 visor, el audio y replanificar sin volver a subirlo. Subir otra vez el mismo archivo
 actualiza la misma obra. Borrar la obra (o la cuenta) borra su archivo y sus análisis
 en cascada. `bands` guarda la plantilla del usuario (músicos por instrumento). El audio

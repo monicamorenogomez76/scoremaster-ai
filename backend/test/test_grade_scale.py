@@ -1,6 +1,6 @@
 """Step 13: visible grades 1-6 and an internal technical index 0-10.
 
-Author's decisions (2026-10-05): the index is twice the previous 0-5 score and is split into six
+Decided on 2026-10-05: the index is twice the previous 0-5 score and is split into six
 equal bands; each grade describes the band that can play the part, without official certification.
 """
 import pytest

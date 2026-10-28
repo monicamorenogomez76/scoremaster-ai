@@ -69,7 +69,7 @@ const CURRENT_SCALE = { grades: 6, indexMax: 10, legacy: false };
 const LEGACY_SCALE = { grades: 5, indexMax: 5, legacy: true };
 export const gradeScaleOf = difficulty => (difficulty?.scale?.grades === 6 ? CURRENT_SCALE : LEGACY_SCALE);
 
-// Aligned with the Grade 1-6 scale of band publishers (author's decision, 2026-10-13): an orientative
+// Aligned with the Grade 1-6 scale of band publishers (decided 2026-10-13): an orientative
 // equivalence, not an official certification; the grade calculation itself did not change.
 export const gradeLabelsEs = { 1: 'Muy fácil', 2: 'Fácil', 3: 'Intermedio', 4: 'Intermedio avanzado', 5: 'Avanzado', 6: 'Profesional' };
 

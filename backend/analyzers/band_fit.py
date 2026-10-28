@@ -1,6 +1,6 @@
 """BandFit by instrument identity (step 09).
 
-Author's decisions (2026-10-04): an instrument needs one musician per voice (Clarinet 1, 2 and 3
+Decided on 2026-10-04: an instrument needs one musician per voice (Clarinet 1, 2 and 3
 need three; a shared "Clarinet 1 & 2" part counts two; the staves of one wind part are its voices,
 while the staves of a keyboard part are one musician),
 and percussion is counted as percussionists in total, one per percussion part. Parts without a

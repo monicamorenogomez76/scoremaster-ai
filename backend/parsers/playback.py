@@ -41,7 +41,7 @@ def _identity(part, name, declared):
 
 # Each work is read with music21 once: its parts, measures, tempo marks and sounding notes are kept as
 # plain numbers, and every passage is cut from them (2026-10-07: parsing a real band score took most of
-# the 10-20 s the author waited per passage, and more than a minute on Render's free plan).
+# the 10-20 s waited per passage, and more than a minute on Render's free plan).
 # Keyed by content, so each request's temporary file name does not matter. A prepared band score takes
 # a few MB, against ~100-200 MB for the parsed score it replaces.
 def _scores_kept() -> int:

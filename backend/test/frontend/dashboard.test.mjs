@@ -33,7 +33,7 @@ test('the summary says in one sentence which section needs most work', () => {
   assert.equal(workHeadline({ woodwinds: 0, brass: 0, percussion: 0, strings: 0 }), 'Sin prioridades por ahora.');
 });
 
-// «Cobertura hasta el concierto» (author's request, 2026-10-26): rehearsals held, minutes rehearsed per work and
+// «Cobertura hasta el concierto» (requested 2026-10-26): rehearsals held, minutes rehearsed per work and
 // passages resolved per work, over the series of the next concert.
 const block = (work_id, minutes, measures, status) => ({ work_id, minutes, measures, review: status ? { status, note: '' } : null });
 const coverageConcert = { id: 'c1', date: '2026-11-20', works: [{ id: 'w1', title: 'Persis' }, { id: 'w2', title: 'Spania' }] };

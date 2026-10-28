@@ -1,4 +1,4 @@
-"""PDF scores (author's decision, 2026-10-27): a work says whether it was read from a PDF, and each import keeps its
+"""PDF scores (decided 2026-10-27): a work says whether it was read from a PDF, and each import keeps its
 PDFs until the reader in GitHub Actions sends the work back. The import's one-time token is kept only as its sha256;
 the PDFs are deleted when the result arrives. Deleted with the account."""
 from alembic import op

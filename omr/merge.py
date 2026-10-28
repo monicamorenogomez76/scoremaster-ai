@@ -1,4 +1,4 @@
-"""One work from the pages copista reads (author's decision, 2026-10-27). copista writes one MusicXML per page, its
+"""One work from the pages copista reads (decided 2026-10-27). copista writes one MusicXML per page, its
 parts named Part 1..n and grouped under the page's braces, so a page may group its staves differently from the next
 (flutes 1 and 2 as one part here, as two there) or leave a resting staff out. The pages of a score are therefore joined
 staff by staff: music21 splits every part into its staves, as ScoreLint's reader does, and the staves of each page

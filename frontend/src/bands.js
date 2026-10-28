@@ -1,4 +1,4 @@
-// Bands of the director (author's decisions, 2026-10-06): several fixed templates, one active, each
+// Bands of the director (decided 2026-10-06): several fixed templates, one active, each
 // with its locality, rehearsal days, full instrumentation and a level per section.
 import { apiJson } from './api.js';
 import { displayFamilyName, gradeLabelsEs, rehearsalGroupName } from './labels.js';

@@ -1,4 +1,4 @@
-"""PDF scores (author's decision, 2026-10-27): an import keeps its PDFs until the reader in GitHub Actions sends the
+"""PDF scores (decided 2026-10-27): an import keeps its PDFs until the reader in GitHub Actions sends the
 work back, and says how far the reading got. Ports only: PostgreSQL (backend/infrastructure/pdf_import_repository.py)
 and GitHub (backend/infrastructure/omr_dispatcher.py) live in the infrastructure."""
 from __future__ import annotations

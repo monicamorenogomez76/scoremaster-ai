@@ -1,4 +1,4 @@
-"""Harmonic cadences of the whole ensemble, for phrase endings (author's criteria, 2026-10-04).
+"""Harmonic cadences of the whole ensemble, for phrase endings (criteria of 2026-10-04).
 
 The melody ending on the tonic is not enough: the accompaniment decides. Every pitched part is read
 in sounding pitch (declared transposition) and the key of each measure is estimated from the

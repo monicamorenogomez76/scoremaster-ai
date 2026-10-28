@@ -1,4 +1,4 @@
-"""Gemini through LangChain (step 21, author's choice 2026-10-07): behind the AI port, with versioned
+"""Gemini through LangChain (step 21, chosen 2026-10-07): behind the AI port, with versioned
 prompts, structured output, a time limit and failures turned into ProviderFailure so that the demo
 answers. These tests never call Google: the chat model is replaced by a fake."""
 import json

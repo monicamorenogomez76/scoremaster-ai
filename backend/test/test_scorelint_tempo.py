@@ -1,8 +1,8 @@
-"""ScoreLint without overrating (author's review, 2026-10-14). Real works came out one or two grades
-above their publisher's grade (Persis: 6 against Grade 4) and the author's own (Oregon Trail II: 5 against
+"""ScoreLint without overrating (reviewed 2026-10-14). Real works came out one or two grades
+above their publisher's grade (Persis: 6 against Grade 4) and the one the director expected (Oregon Trail II: 5 against
 2): density counted notes per written beat whatever the tempo, took the busiest measure, endurance was
 at its top after 16 bars, cornets fell to a generic profile and a busy snare drum raised the whole work.
-«Los pasajes con muchas notas a velocidad lenta son fáciles o menos difíciles» (the author)."""
+«Los pasajes con muchas notas a velocidad lenta son fáciles o menos difíciles» (2026-10-14)."""
 from backend.analyzers.difficulty import DIFFICULTY_VERSION, compute_difficulty_score
 from backend.analyzers.instrument_difficulty import compute_instrument_difficulty
 from backend.domain.models import Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark

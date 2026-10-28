@@ -1,4 +1,4 @@
-"""Harmonic cadences from the whole ensemble (author's criteria, 2026-10-04): the melody ending on
+"""Harmonic cadences from the whole ensemble (criteria of 2026-10-04): the melody ending on
 the tonic is not enough, the accompaniment decides."""
 from backend.analyzers.harmony import find_cadences
 from backend.domain.models import PartMetadata, PartTransposition, Score, ScoreMeasure, ScoreNote, ScorePart
