@@ -16,18 +16,30 @@ export function createScoreSession(request = (...args) => apiFetch(...args)) {
     clear() { file = null; source = null; version++; },
     loadSource() {
       if (!file) return Promise.reject(new Error('Vuelve a subir la partitura para abrir este pasaje.'));
-      if (!source) {
-        const payload = new FormData();
-        payload.append('file', file);
-        const pending = request('/notation-source', { method: 'POST', body: payload }).then(response => {
-          if (!response.ok) throw new Error('No se pudo recuperar la partitura original.');
-          return response.text();
+      if (!source && typeof file.arrayBuffer === 'function') {
+        // An uncompressed MusicXML is read here (2026-10-28): asking the server waited behind the audio preparation on
+        // Render's free plan. A zip (.mxl, «PK») still goes to the server, which decompresses it.
+        const pending = file.arrayBuffer().then(bytes => {
+          const head = new Uint8Array(bytes, 0, Math.min(2, bytes.byteLength));
+          return head[0] === 0x50 && head[1] === 0x4b ? fromServer() : new TextDecoder().decode(bytes);
         });
-        // A failed download may be retried on the next request.
         pending.catch(() => { if (source === pending) source = null; });
         source = pending;
       }
+      if (!source) source = fromServer();
       return source;
     },
   };
+
+  // The server decompresses a .mxl; a failed download may be retried on the next request.
+  function fromServer() {
+    const payload = new FormData();
+    payload.append('file', file);
+    const pending = request('/notation-source', { method: 'POST', body: payload }).then(response => {
+      if (!response.ok) throw new Error('No se pudo recuperar la partitura original.');
+      return response.text();
+    });
+    pending.catch(() => { if (source === pending) source = null; });
+    return pending;
+  }
 }
