@@ -1,12 +1,13 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { checkPdfFiles, pdfAvailable, pdfImportStatus, PDF_POLL_MS, pdfStatusText, startPdfImport } from './pdfImport.js';
 
-// «Desde un PDF» (author's decision, 2026-10-27): one score or the parts of a work (one PDF per instrument), read by
+// «Desde un PDF» (author's decision, 2026-10-27): one score, the parts of a work (one PDF per instrument) or, by default (2026-10-28),
+// PDFs with both, which the reader tells apart. Read by
 // the reader in GitHub Actions. Shown only when the server has a reader. The reading takes minutes: the director
 // sees its progress and the work opens when it is analysed.
 export function PdfUpload({ visible, minutes, onOpenWork }) {
   const [available, setAvailable] = useState(false);
-  const [kind, setKind] = useState('score');
+  const [kind, setKind] = useState('auto');
   const [files, setFiles] = useState([]);
   const [title, setTitle] = useState('');
   const [reading, setReading] = useState(null);
@@ -64,10 +65,12 @@ export function PdfUpload({ visible, minutes, onOpenWork }) {
       un editor de partituras. Revisa la obra leída: su grado es provisional y no entra en las valoraciones de los músicos.</p>
     <fieldset className="pdf-kind" disabled={busy}>
       <legend>Qué vas a subir</legend>
+      <label><input type="radio" name="pdf-kind" value="auto" checked={kind === 'auto'} onChange={() => setKind('auto')} />
+        Detectar solo: guion, particellas o las dos cosas en el mismo PDF</label>
       <label><input type="radio" name="pdf-kind" value="score" checked={kind === 'score'} onChange={() => setKind('score')} />
-        Partitura general (uno o varios PDF, en orden)</label>
+        Solo partitura general (uno o varios PDF, en orden)</label>
       <label><input type="radio" name="pdf-kind" value="parts" checked={kind === 'parts'} onChange={() => setKind('parts')} />
-        Particellas (un PDF por instrumento, con su nombre en el archivo)</label>
+        Solo particellas (un PDF por instrumento, con su nombre en el archivo)</label>
     </fieldset>
     <label className="file-field" htmlFor={ids + 'files'}>Archivos PDF
       <input id={ids + 'files'} ref={input} type="file" accept="application/pdf,.pdf" multiple disabled={busy}

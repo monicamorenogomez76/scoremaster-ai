@@ -67,9 +67,11 @@ def test_the_parts_of_several_pdfs_are_named_after_their_files(scoremaster):
     assert "<part-name>Flauta 1</part-name>" in musicxml and "<part-name>Trombón 1</part-name>" in musicxml
 
 
-def test_a_page_that_cannot_be_read_is_reported_and_nothing_is_kept(scoremaster):
-    assert run(scoremaster, payload("parts", ("Flauta 1.pdf",)), fail_on=2) == 1
-    assert scoremaster["result"] == {"error": "No se pudo leer la página 2 de Flauta 1.pdf."}
+def test_a_page_without_music_is_skipped_and_nothing_is_kept(scoremaster, capsys):
+    """Covers and text pages are common (2026-10-28): the page is skipped and said in the log, the rest is the work."""
+    assert run(scoremaster, payload("parts", ("Flauta 1.pdf",)), fail_on=2) == 0
+    assert "<part-name>Flauta 1</part-name>" in scoremaster["result"]["musicxml"]
+    assert "Flauta 1.pdf, página 2 sin música" in capsys.readouterr().out
     assert not any(os.path.exists(folder) for folder in scoremaster["folders"])
 
 
@@ -110,4 +112,65 @@ def test_why_copista_failed_reaches_the_log_without_the_token(scoremaster, capsy
                count_pages=lambda path: 1)
     out = capsys.readouterr().out
     assert "ValueError: no staves found on the page" in out
-    assert scoremaster["result"] == {"error": "No se pudo leer la página 1 de Flauta 1.pdf."}
+    assert scoremaster["result"] == {"error": "No se encontró música en el PDF."}
+
+
+# «Detectar solo» (2026-10-28): band PDFs usually bring the score and the parts in one file, in either order. Each page
+# is told by its look: many staves per system is the score, one or two a part, none a cover or text page (skipped).
+# When there are parts with their instrument named in the PDF's text, the work comes from them (copista reads them
+# better and they say their instrument); otherwise from the score.
+def run_auto(scoremaster, pages, files=("Paco el barba (Score-parts).pdf",)):
+    """pages: (staves, text) of each page of each file; staves 0 is a page copista cannot read."""
+    def read_page(pdf_path, number, out_dir):
+        staves, _ = pages[number - 1]
+        if not staves:
+            raise worker.PageFailed("ValueError: no staves found on the page")
+        return page(staves, 2, "C")
+
+    return worker.run(payload("auto", files), client=scoremaster["client"], read_page=read_page,
+                      count_pages=lambda path: len(pages), page_text=lambda path, number: pages[number - 1][1])
+
+
+def part_names(musicxml: str) -> list[str]:
+    from xml.etree import ElementTree as ET
+    return [item.findtext("part-name") for item in ET.fromstring(musicxml.encode()).find("part-list")]
+
+
+def test_a_pdf_with_score_and_parts_gives_the_work_of_its_parts(scoremaster, capsys):
+    pages = [(0, "PACO EL BARBA\nPasodoble"), (12, "Paco el barba\nFl.\nCl."), (12, "2\nFl."),
+             (1, "Paco el barba\nFlauta 1\nPasodoble"), (1, "Flauta 1    2"), (1, "Paco el barba\nTrombón 1")]
+    assert run_auto(scoremaster, pages) == 0
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta 1", "Trombón 1"]
+    log = capsys.readouterr().out
+    assert "particellas: Flauta 1 (2 páginas), Trombón 1 (1 página)" in log
+    assert "página 1 sin música" in log
+
+
+def test_parts_before_the_score_are_found_too(scoremaster):
+    pages = [(1, "Clarinete en Si♭ 1"), (1, "Saxofón alto"), (12, "Score"), (12, "")]
+    run_auto(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Clarinete en Si♭ 1", "Saxofón alto"]
+
+
+def test_without_instrument_names_the_score_is_used(scoremaster):
+    pages = [(12, ""), (12, ""), (1, ""), (1, "")]
+    run_auto(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == [f"Parte {n}" for n in range(1, 13)]
+
+
+def test_a_pdf_with_only_parts_named_in_its_text(scoremaster):
+    pages = [(1, "Trompeta en Si♭ 1"), (1, ""), (2, "Percusión\nCaja y bombo")]
+    run_auto(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Trompeta en Si♭ 1", "Percusión 1", "Percusión 2"]
+
+
+def test_a_pdf_without_music_says_so(scoremaster):
+    run_auto(scoremaster, [(0, "Índice"), (0, "Notas")])
+    assert scoremaster["result"] == {"error": "No se encontró música en el PDF."}
+
+
+def test_an_instrument_name_is_the_short_line_that_names_one():
+    assert worker.instrument_name("PACO EL BARBA\nPasodoble para banda\nClarinete en Si♭ 2\nJ. Pérez") == "Clarinete en Si♭ 2"
+    assert worker.instrument_name("Concierto para clarinete y banda\nFl. 1") == "Fl. 1"
+    assert worker.instrument_name("Bb Clarinet 3            2") == "Bb Clarinet 3"
+    assert worker.instrument_name("Paco el barba\nPasodoble") is None

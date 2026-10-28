@@ -8,7 +8,6 @@ after their files. Without OCR the staves of a score have no instrument: the dir
 from __future__ import annotations
 
 import copy
-from pathlib import PurePath
 
 from music21 import clef, converter, instrument, key, metadata, note, stream, meter
 from music21.musicxml.m21ToXml import GeneralObjectExporter
@@ -117,7 +116,8 @@ def combine_parts(files: list[tuple[str, bytes]], title: str) -> bytes:
     file with several staves numbers them («Clarinetes 1», «Clarinetes 2»)."""
     parts = []
     for file_name, xml in files:
-        stem = PurePath(file_name).stem.strip() or "Parte"
+        # «Flauta 1.pdf» is «Flauta 1»; a name read from the page («Cl. 1») keeps its dots.
+        stem = (file_name[:-4] if file_name.lower().endswith(".pdf") else file_name).strip() or "Parte"
         found = _staves(xml)
         for number, staff in enumerate(found, 1):
             parts.append(_part(stem if len(found) == 1 else f"{stem} {number}", _measures(staff)))

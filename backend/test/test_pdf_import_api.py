@@ -83,6 +83,13 @@ def test_a_score_is_read_by_the_reader_and_analysed_like_any_upload(clients, rea
     assert machine(ana, job, "/files/0", method="GET").status_code == 401, "the token is spent and the PDFs deleted"
 
 
+def test_a_pdf_with_score_and_parts_is_found_out_by_the_reader(clients, reader):  # noqa: F811
+    """«Detectar solo» (2026-10-28): the reader tells the score from the parts page by page."""
+    ana, _ = clients
+    assert upload(ana, files=(("Paco el barba (Score-parts).pdf", PDF),), kind="auto").status_code == 202
+    assert reader.jobs[0]["kind"] == "auto"
+
+
 def test_the_reader_s_failure_reaches_the_director(clients, reader):  # noqa: F811
     ana, _ = clients
     created = upload(ana, files=(("Flauta 1.pdf", PDF),), kind="parts")
