@@ -54,15 +54,18 @@ class PostgresAnalysisRepository:
             row = session.get(StoredAnalysis, analysis_id)
             return None if row is None else record_of(row)
 
-    def outdated_latest(self, algorithm_version: str) -> list[OutdatedAnalysis]:
-        """Works whose latest analysis was made by another version of the algorithm."""
+    def outdated_latest(self, algorithm_version: str, instruments: dict | None = None) -> list[OutdatedAnalysis]:
+        """Works whose latest analysis was made by another version of the algorithm or, when given, of the instrument
+        catalog and resolver (2026-10-28: a part unknown before may now have its instrument)."""
         statement = text("""
-            select distinct on (work_id) work_id, user_id, configuration, algorithm_version
+            select distinct on (work_id) work_id, user_id, configuration, algorithm_version, features
             from analyses where work_id is not null and user_id is not null
             order by work_id, created_at desc""")
         with Session(self.engine) as session:
             return [OutdatedAnalysis(row.user_id, row.work_id, row.configuration or {})
-                    for row in session.execute(statement) if row.algorithm_version != algorithm_version]
+                    for row in session.execute(statement)
+                    if row.algorithm_version != algorithm_version
+                    or (instruments and (row.features or {}).get("instrument_resolution") != instruments)]
 
 
 # Analyses reference users and works: register those tables on the shared metadata.

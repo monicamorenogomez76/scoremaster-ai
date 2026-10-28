@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v4",
+ "version": "instrument-catalog-v5",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -15,7 +15,11 @@
     "flautin",
     "ottavino",
     "picc",
-    "picc fl"
+    "picc fl",
+    "flauti",
+    "kleine flote",
+    "petite flute",
+    "piccolo flote"
    ],
    "sound": "piccolo",
    "rehearsal_group": "flutes"
@@ -33,7 +37,13 @@
     "flauta",
     "flauto",
     "fl",
-    "c flute"
+    "c flute",
+    "flaut",
+    "flote",
+    "flute traversiere",
+    "frauta",
+    "querflote",
+    "flauta travesera"
    ],
    "sound": "flute",
    "rehearsal_group": "flutes"
@@ -65,7 +75,10 @@
    "aliases": [
     "oboe",
     "ob",
-    "hautbois"
+    "hautbois",
+    "oboè",
+    "oboi",
+    "oboen"
    ],
    "sound": "oboe",
    "rehearsal_group": "double_reeds"
@@ -84,7 +97,9 @@
     "corno ingles",
     "corno inglese",
     "eng hn",
-    "e hn"
+    "e hn",
+    "corn angles",
+    "englischhorn"
    ],
    "sound": "english_horn",
    "rehearsal_group": "double_reeds"
@@ -102,7 +117,11 @@
     "fagot",
     "fagotto",
     "bsn",
-    "bn"
+    "bn",
+    "fagott",
+    "basson",
+    "fg",
+    "fag"
    ],
    "sound": "bassoon",
    "rehearsal_group": "low_voices"
@@ -120,7 +139,9 @@
     "double bassoon",
     "contrafagot",
     "contrafagotto",
-    "cbsn"
+    "cbsn",
+    "kontrafagott",
+    "contrebasson"
    ],
    "sound": "bassoon",
    "rehearsal_group": "low_voices"
@@ -142,7 +163,13 @@
     "clarinete en mi bemol",
     "clarinetto in mib",
     "clarinetto piccolo",
-    "eb cl"
+    "eb cl",
+    "requint",
+    "es klarinette",
+    "petite clarinette",
+    "req",
+    "clarinete requinto",
+    "clarinet requint"
    ],
    "sound": "clarinet",
    "rehearsal_group": "clarinets"
@@ -168,7 +195,11 @@
     "clarinetto in si bemolle",
     "cl",
     "bb cl",
-    "clar"
+    "clar",
+    "klarinette",
+    "clarinette",
+    "clarinets",
+    "clarinetes"
    ],
    "sound": "clarinet",
    "rehearsal_group": "clarinets"
@@ -223,7 +254,15 @@
     "clarinetto basso",
     "b cl",
     "bass cl",
-    "bcl"
+    "bcl",
+    "clarinet baix",
+    "clarinete baixo",
+    "bassklarinette",
+    "clarinette basse",
+    "clarone",
+    "cl bajo",
+    "cl baix",
+    "clarinete bajo sib"
    ],
    "sound": "clarinet",
    "rehearsal_group": "low_voices"
@@ -259,7 +298,10 @@
     "saxofon soprano",
     "saxo soprano",
     "sassofono soprano",
-    "s sax"
+    "s sax",
+    "sopransaxophon",
+    "saxophone soprano",
+    "sax soprano"
    ],
    "sound": "soprano_sax",
    "rehearsal_group": "saxophones"
@@ -280,7 +322,14 @@
     "saxofon alto",
     "saxo alto",
     "sassofono contralto",
-    "a sax"
+    "a sax",
+    "saxo alt",
+    "saxofon alt",
+    "altsaxophon",
+    "saxophone alto",
+    "sax contralto",
+    "sax alto",
+    "sax a"
    ],
    "sound": "alto_sax",
    "rehearsal_group": "saxophones"
@@ -300,7 +349,11 @@
     "saxofon tenor",
     "saxo tenor",
     "sassofono tenore",
-    "t sax"
+    "t sax",
+    "tenorsaxophon",
+    "saxophone tenor",
+    "sax tenor",
+    "sax t"
    ],
    "sound": "tenor_sax",
    "rehearsal_group": "saxophones"
@@ -324,7 +377,13 @@
     "bar sax",
     "b sax",
     "baritone",
-    "baritono"
+    "baritono",
+    "saxo bariton",
+    "saxofon bariton",
+    "baritonsaxophon",
+    "saxophone baryton",
+    "sax baritono",
+    "sax bariton"
    ],
    "sound": "baritone_sax",
    "rehearsal_group": "low_voices"
@@ -348,7 +407,13 @@
     "corno in fa",
     "cor",
     "hn",
-    "hrn"
+    "hrn",
+    "waldhorn",
+    "tpa",
+    "trompes",
+    "trompas",
+    "corni",
+    "cors"
    ],
    "sound": "french_horn",
    "rehearsal_group": "high_brass"
@@ -371,7 +436,13 @@
     "tromba",
     "tromba in sib",
     "tpt",
-    "trp"
+    "trp",
+    "trompete",
+    "trompette",
+    "tpta",
+    "trompetas",
+    "trompetes",
+    "trombe"
    ],
    "sound": "trumpet",
    "rehearsal_group": "high_brass"
@@ -407,7 +478,11 @@
     "cornet in bb",
     "corneta",
     "cornetta",
-    "cnt"
+    "cnt",
+    "kornett",
+    "cornet a pistons",
+    "cornetin",
+    "cornets"
    ],
    "sound": "trumpet",
    "rehearsal_group": "high_brass"
@@ -426,7 +501,14 @@
     "bb flugelhorn",
     "fliscorno",
     "flicorno",
-    "flghn"
+    "flghn",
+    "fiscorn",
+    "fliscorn",
+    "fiscorno",
+    "bugle",
+    "flicorno soprano",
+    "fisc",
+    "fliscornos"
    ],
    "sound": "trumpet",
    "rehearsal_group": "high_brass"
@@ -446,7 +528,13 @@
     "trombon tenor",
     "trombone tenore",
     "tbn",
-    "trb"
+    "trb",
+    "trombo",
+    "posaune",
+    "tenorposaune",
+    "trombons",
+    "trombones",
+    "posaunen"
    ],
    "sound": "trombone",
    "rehearsal_group": "low_voices"
@@ -464,7 +552,10 @@
     "trombon bajo",
     "trombone basso",
     "b tbn",
-    "bass tbn"
+    "bass tbn",
+    "trombo baix",
+    "bassposaune",
+    "trombone basse"
    ],
    "sound": "trombone",
    "rehearsal_group": "low_voices"
@@ -482,7 +573,13 @@
     "bombardino",
     "eufonio",
     "flicorno basso",
-    "euph"
+    "euph",
+    "bombardi",
+    "bariton",
+    "bomb",
+    "bombardinos",
+    "euphonium sib",
+    "tenor tuba"
    ],
    "sound": "tuba",
    "rehearsal_group": "low_voices"
@@ -497,7 +594,9 @@
    "label_en": "Baritone Horn",
    "aliases": [
     "baritone horn",
-    "flicorno baritono"
+    "flicorno baritono",
+    "tenorhorn",
+    "baryton"
    ],
    "sound": "tuba",
    "rehearsal_group": "low_voices"
@@ -513,7 +612,12 @@
    "aliases": [
     "tuba",
     "bass tuba",
-    "tba"
+    "tba",
+    "basstuba",
+    "tuba basse",
+    "tubas",
+    "tuba en fa",
+    "tuba fa"
    ],
    "sound": "tuba",
    "rehearsal_group": "low_voices"
@@ -547,7 +651,10 @@
     "contrabass",
     "contrabajo",
     "contrabbasso",
-    "cb"
+    "cb",
+    "contrabaix",
+    "kontrabass",
+    "contrebasse"
    ],
    "sound": "contrabass",
    "rehearsal_group": "strings_rhythm"
@@ -617,7 +724,9 @@
     "cello",
     "violoncello",
     "violonchelo",
-    "vc"
+    "vc",
+    "violoncel",
+    "violoncelle"
    ],
    "sound": "cello",
    "rehearsal_group": "strings_rhythm"
@@ -665,7 +774,9 @@
     "timpani",
     "timbales",
     "timpano",
-    "timp"
+    "timp",
+    "timbals",
+    "pauken"
    ],
    "sound": "timpani",
    "rehearsal_group": "percussion"
@@ -685,7 +796,14 @@
     "side drum",
     "caja",
     "tamburo",
-    "s d"
+    "s d",
+    "caixa",
+    "kleine trommel",
+    "caisse claire",
+    "rullante",
+    "tambor",
+    "redoblante",
+    "caja clara"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -703,7 +821,11 @@
     "concert bass drum",
     "bombo",
     "gran cassa",
-    "b d"
+    "b d",
+    "grosse caisse",
+    "grosse trommel",
+    "grobe trommel",
+    "gran casa"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -722,7 +844,11 @@
     "clash cymbals",
     "cymbals",
     "platos",
-    "piatti"
+    "piatti",
+    "plats",
+    "becken",
+    "cymbales",
+    "platillos"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -757,7 +883,8 @@
     "drum set",
     "drum kit",
     "drums",
-    "bateria"
+    "bateria",
+    "schlagzeug"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -774,7 +901,10 @@
     "tambourine",
     "pandereta",
     "tamburello",
-    "tamb"
+    "tamb",
+    "schellentrommel",
+    "tambour de basque",
+    "pandero"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -791,7 +921,8 @@
     "triangle",
     "triangulo",
     "triangolo",
-    "trgl"
+    "trgl",
+    "triangel"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -810,7 +941,10 @@
     "bells",
     "bell lyra",
     "lira",
-    "glock"
+    "glock",
+    "jeu de timbres",
+    "campanelli",
+    "carillon"
    ],
    "sound": "glockenspiel",
    "rehearsal_group": "percussion"
@@ -826,7 +960,9 @@
    "aliases": [
     "xylophone",
     "xilofono",
-    "xylo"
+    "xylo",
+    "xilofon",
+    "xylophon"
    ],
    "sound": "xylophone",
    "rehearsal_group": "percussion"
@@ -875,7 +1011,10 @@
     "chimes",
     "tubular bells",
     "campanas tubulares",
-    "campane tubolari"
+    "campane tubolari",
+    "rohrenglocken",
+    "campanas",
+    "cloches tubulaires"
    ],
    "sound": "tubular_bells",
    "rehearsal_group": "percussion"
