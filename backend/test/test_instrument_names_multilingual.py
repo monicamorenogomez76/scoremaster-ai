@@ -7,7 +7,7 @@ import pytest
 from backend.domain.instrument_catalog import match_instrument_name
 
 
-@pytest.mark.parametrize("name, canonical_id", [
+NAMES = [
     # «Paco el barba» (PDF printed with PDFCreator, 2026-10-28)
     ("Trumpet in B b 2", "trumpet.bb"), ("Trumpet in Bb 3", "trumpet.bb"), ("Clarinet in E b", "clarinet.eb"),
     ("Clarinet in B b 1", "clarinet.bb"), ("Horn in F 1", "horn.f"), ("Tenor Sax.", "saxophone.tenor"),
@@ -61,7 +61,10 @@ from backend.domain.instrument_catalog import match_instrument_name
     ("Tubas", "tuba"), ("Timbales", "timpani"), ("Caja", "snare_drum"), ("Plato suspendido", "suspended_cymbal"),
     ("Batería", "drum_set"), ("Lira", "glockenspiel"), ("Campanas", "chimes"), ("Clarinete baixo", "clarinet.bass"),
     ("Frauta", "flute"), ("Óboe", "oboe"), ("Trompeta en Sib", "trumpet.bb"), ("Bombardino", "euphonium"),
-])
+]
+
+
+@pytest.mark.parametrize("name, canonical_id", NAMES)
 def test_instrument_names_in_band_languages(name, canonical_id):
     match = match_instrument_name(name)
     assert match.identity is not None, name

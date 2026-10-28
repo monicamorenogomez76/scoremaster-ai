@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { applyTextSize, applyTheme, loadTextSize, loadTheme, saveTextSize, saveTheme, textSizes, themes, updateProfile } from './settings.js';
+import { InstrumentAdmin } from './InstrumentAdmin.jsx';
 import { View } from './View.jsx';
 
 // Configuración (as in its mock-up): the account's visible name and the text size and theme of this device.
@@ -46,6 +47,7 @@ export function SettingsView({ active, user, onUserChanged }) {
         </fieldset>
         <p className="result-supporting">Se guardan en este dispositivo. Automático sigue el modo claro u oscuro del sistema.</p>
       </section>
+      {user?.is_admin && <InstrumentAdmin />}
     </div>
   </View>;
 }

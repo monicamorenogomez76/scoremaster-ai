@@ -736,6 +736,19 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .settings-card label { display: grid; gap: 5px; font-size: .85rem; font-weight: 600; }
 .settings-card input[type=text] { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-weight: 400; }
 .settings-card .primary-action { justify-self: start; }
+.instrument-admin { grid-column: 1 / -1; }
+.instrument-admin select, .instrument-admin textarea { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); font-weight: 400; }
+.instrument-admin summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-weight: 600; line-height: 1.5; }
+.instrument-admin-list { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 12px; }
+.instrument-admin-list > li { padding: 0 16px; border-bottom: 1px solid var(--line); }
+.instrument-admin-list > li:last-child { border-bottom: 0; }
+.instrument-names { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+.instrument-name { display: flex; align-items: center; gap: 8px; padding: 0 4px 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-alt); }
+.instrument-name .link-action { min-height: 44px; padding: 0 8px; }
+.instrument-name-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-bottom: 16px; }
+.instrument-name-form label { flex-basis: 100%; }
+.instrument-new-form { display: grid; gap: 12px; padding-bottom: 8px; }
+@media (min-width: 900px) { .instrument-new-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .instrument-new-form label:has(textarea) { grid-column: 1 / -1; } }
 .text-size-options { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
 .text-size-options legend { margin-bottom: 6px; font-size: .85rem; font-weight: 600; }
 .text-size-options .weekday-option { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; }

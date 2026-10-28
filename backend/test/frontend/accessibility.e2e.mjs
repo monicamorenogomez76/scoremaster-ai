@@ -50,6 +50,25 @@ try {
     await audit(page, `Añadir obra (${scheme})`);
     await page.close();
   }
+  // Configuración › Instrumentos is shown only to the administration (ADMIN_EMAILS has this account in CI).
+  const admin = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', bypassCSP: true });
+  await admin.goto(url);
+  const adminEmail = process.env.E2E_A11Y_ADMIN_EMAIL || 'admin-a11y@banda.test';
+  for (const mode of ['register', 'sign in']) {   // the account may exist from an earlier run
+    await admin.locator('#login-mode').click();
+    if (mode === 'register') await admin.locator('#login-name').fill('Administración');
+    await admin.locator('#login-email').fill(adminEmail);
+    await admin.locator('#login-password').fill('una contraseña larga');
+    await admin.locator('#login-submit').click();
+    await Promise.race([admin.locator('#app-shell').waitFor({ state: 'visible' }), admin.locator('#login-error').waitFor()]);
+    if (await admin.locator('#app-shell').isVisible()) break;
+  }
+  await admin.locator('[data-view-target=settings]').click();
+  await admin.locator('#settings-instruments-title').waitFor({ state: 'visible' });
+  await admin.locator('.instrument-admin-list details').first().locator('summary').click();
+  await admin.locator('.instrument-new summary').click();
+  await audit(admin, 'Configuración › Instrumentos');
+  await admin.close();
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
   await phone.goto(url);
   await login(phone);

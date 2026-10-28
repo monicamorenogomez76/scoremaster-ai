@@ -15,26 +15,27 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.analyzers.band_fit import PERCUSSION
 from backend.app.auth_routes import router as auth_router
 from backend.app.library_routes import router as library_router, valid_band_profile
 from backend.app.band_routes import router as band_router
 from backend.app.concert_routes import router as concert_router
 from backend.app.evaluation_routes import router as evaluation_router
+from backend.app.instrument_routes import load_instrument_catalog, router as instrument_router
 from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.pdf_routes import router as pdf_router
 from backend.app.stored_scores import prepare_missing_works
 from backend.app.work_analysis import analyze_and_store, refresh_outdated_analyses
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
-    SAFE_METHODS, STORAGE_UNAVAILABLE, authenticated_user, close_analysis_engine, get_analysis_repository,
+    SAFE_METHODS, STORAGE_UNAVAILABLE, analysis_engine, authenticated_user, close_analysis_engine, get_analysis_repository,
     get_library_repository, get_playback_store, get_score_store,
 )
 from backend.application.accounts import User
 from backend.application.analysis_repository import AnalysisRepository
 from backend.application.library import LibraryRepository
-from backend.domain.instrument_catalog import catalog_entries, identity_by_id
+from backend.domain.instrument_catalog import identity_by_id
 from backend.domain.models import Score
+from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.parsers.playback import (NotMusicXML, StillPreparing, build_playback, prepare_playback, preparation_enabled,
                                       preparation_status)
@@ -44,6 +45,11 @@ BASE_DIR = Path(__file__).resolve().parent
 
 @asynccontextmanager
 async def lifespan(app):
+    # The instrument catalog of the database, before any analysis (2026-10-28).
+    try:
+        load_instrument_catalog(PostgresInstrumentRepository(analysis_engine()))
+    except ValueError:
+        pass   # no database: the seed catalog
     # Works uploaded before are read once in the background, so the first proposal or passage after
     # a deploy does not wait minutes for music21 (Render's free plan, 2026-10-07).
     score_store, playback_store = get_score_store(), get_playback_store()
@@ -92,6 +98,7 @@ app.include_router(concert_router)
 app.include_router(band_router)
 app.include_router(evaluation_router)
 app.include_router(pdf_router)
+app.include_router(instrument_router)
 
 # The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
 CONTENT_SECURITY_POLICY = "; ".join([
@@ -236,13 +243,6 @@ def _instrument_overrides(raw: str) -> dict[str, str]:
             for part, identity in overrides.items()):
         raise HTTPException(status_code=400, detail="instrument_overrides must map part names to catalog instruments.")
     return overrides
-
-
-@app.get("/instruments/catalog")
-def instrument_catalog():
-    return {"instruments": [{"canonical_id": identity.canonical_id, "label_es": identity.label_es, "section": identity.section}
-                            for identity in catalog_entries()],
-            "percussion_key": PERCUSSION}
 
 
 @app.post("/analyze")

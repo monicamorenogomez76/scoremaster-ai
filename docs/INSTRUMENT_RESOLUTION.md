@@ -70,6 +70,29 @@ confirmar se listan aparte y no cuentan en el porcentaje. Queda para más adelan
 confirmados (captura progresiva), percusionistas simultáneos por compás y aplicar la confirmación
 al audio de `/playback` (el diálogo previo de partes «Voice» sigue cubriendo ese caso).
 
+**Nombres en siete idiomas (2026-10-28, `instrument-catalog-v5`, `instrument-resolver-v2`):** el catálogo reconoce
+los nombres en castellano, valenciano y catalán, inglés, alemán, italiano, francés y gallego, con sus abreviaturas. La
+tonalidad escrita de cualquier forma («in Bb», «in B b», «B♭», «Sib», «Si bemol», el alemán «in B» y «Es», «Mib», «en
+Fa», «Do») se convierte en una sola marca al final del nombre. Un nombre de la familia con tonalidad da la identidad de
+esa tonalidad («Klarinette in A» es el clarinete en La). Bombardino, tuba y trombones se aceptan en cualquier
+tonalidad. Cualquier otra tonalidad queda sin reconocer («Trompa en Mib»).
+
+**Catálogo en la base de datos (2026-10-28):** los instrumentos y todos sus nombres están en las tablas `instruments`
+e `instrument_names` (migración `0015_instrument_catalog`). El archivo JSON queda como semilla de la migración y como
+catálogo de las pruebas sin base.
+- **Al arrancar**, el servidor lee el catálogo común y se lo entrega al dominio (`use_catalog`). El dominio no conoce
+  la base.
+- **La versión del catálogo** es la de la semilla mientras el contenido sea el mismo. Cualquier nombre o instrumento
+  añadido o quitado la cambia (`instrument-catalog-v5+<huella>`), y las obras se analizan de nuevo en el siguiente
+  arranque.
+- **La administración** (`ADMIN_EMAILS`) gestiona el catálogo en Configuración › Instrumentos: busca un instrumento,
+  añade o quita los nombres con los que aparece en las partituras y crea instrumentos comunes con familia, sección,
+  tonalidad, sonido y grupo de ensayo.
+- **Un nombre nunca nombra dos instrumentos:** se rechaza (409) si el catálogo ya lo reconoce, incluso con su
+  tonalidad. La base lo garantiza con un índice único sobre el nombre normalizado.
+
+Las columnas `owner_id` quedan preparadas para los nombres aprendidos y los instrumentos propios de cada cuenta.
+
 ## 1. Problema
 
 MusicXML no garantiza una nomenclatura única de instrumentos.

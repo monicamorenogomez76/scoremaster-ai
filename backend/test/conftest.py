@@ -77,3 +77,14 @@ def no_prepared_store():
         app.dependency_overrides.pop(get_playback_store, None)
         app.dependency_overrides.pop(get_score_store, None)
         app.dependency_overrides.pop(get_explanation_cache, None)
+
+
+@pytest.fixture(autouse=True)
+def seed_instrument_catalog():
+    """Every test starts and ends with the seed catalog, whatever catalog a test loaded from its database."""
+    from backend.domain.instrument_catalog import use_catalog
+    use_catalog(None)
+    try:
+        yield
+    finally:
+        use_catalog(None)

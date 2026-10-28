@@ -100,7 +100,7 @@ jobs:
       PLAYWRIGHT_MODULE: /tmp/browser-tests/node_modules/playwright
       DEMO_USER_EMAIL: demo@scoremaster.local
       DEMO_USER_PASSWORD: scoremaster-demo
-      ADMIN_EMAILS: directora-e2e@banda.test
+      ADMIN_EMAILS: directora-e2e@banda.test,admin-a11y@banda.test
       # The PDF option is shown (and audited) with a reader that the walkthroughs never start.
       OMR_GITHUB_REPO: ci/sin-lector
       OMR_GITHUB_TOKEN: ci-sin-token

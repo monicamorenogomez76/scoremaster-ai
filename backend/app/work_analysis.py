@@ -13,7 +13,7 @@ from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
 from backend.app.stored_scores import confirm_instruments, parsed_work
 from backend.application.library import WorkUpload
 from backend.application.save_analysis import save_analysis
-from backend.domain.instrument_catalog import CATALOG_VERSION
+from backend.domain.instrument_catalog import catalog_version
 from backend.domain.instrument_resolver import RESOLVER_VERSION, resolve_part
 
 
@@ -61,7 +61,7 @@ def refresh_outdated_analyses(repository, library, score_store=None) -> int:
     as history and the work itself is not touched. Returns how many works were analysed again."""
     refreshed = 0
     for outdated in repository.outdated_latest(DIFFICULTY_VERSION, {"resolver_version": RESOLVER_VERSION,
-                                                                    "catalog_version": CATALOG_VERSION}):
+                                                                    "catalog_version": catalog_version()}):
         stored = library.work_file(outdated.user_id, outdated.work_id)
         if stored is None:
             continue

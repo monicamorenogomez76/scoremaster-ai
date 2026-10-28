@@ -50,7 +50,9 @@ Principle of the project: **data → algorithms → rules → generative AI**. S
 only source of musical facts; the LLM only explains or gives an independent opinion, never replaces them.
 
 - `backend/domain`: framework-free model (`models.py`: `Score` → `ScorePart` → `ScoreMeasure` → `ScoreNote`,
-  written pitch plus the part's transposition), instrument catalogue and resolver, timing helpers and the
+  written pitch plus the part's transposition), instrument catalogue and resolver (the catalogue lives in the
+  `instruments` and `instrument_names` tables and is handed over with `use_catalog` at startup and after every change;
+  `instrument_catalog.json` is only the seed and the tests' catalogue), timing helpers and the
   grade scale (`difficulty_scale.py`: index 0–10 → grades 1–6, rubric aligned with the publishers' Grade 1–6) and
   the grading tables as data (`grade_rubric.py`, difficulty-v5: the Galician federation's table first, ranges included, then the
   American Band College and FJH; the grades come from it).
