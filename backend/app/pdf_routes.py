@@ -67,8 +67,8 @@ def create_pdf_import(request: Request, files: list[UploadFile] = File(default=[
                       dispatcher: Optional[OmrDispatcher] = Depends(get_omr_dispatcher)):
     if dispatcher is None:
         raise HTTPException(status_code=503, detail="La lectura de PDF no está configurada en este servidor.")
-    if kind not in ("score", "parts"):
-        raise HTTPException(status_code=422, detail="Elige partitura general o particellas.")
+    if kind not in ("auto", "score", "parts"):
+        raise HTTPException(status_code=422, detail="Elige qué tiene el PDF: detectar solo, partitura general o particellas.")
     if not files or len(files) > MAX_FILES:
         raise HTTPException(status_code=422, detail=f"Sube entre 1 y {MAX_FILES} PDF.")
     try:
