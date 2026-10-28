@@ -87,8 +87,8 @@ class PostgresPdfImportRepository:
             session.execute(update(StoredPdfImport).where(StoredPdfImport.id == import_id)
                             .values(**values, updated_at=func.now()))
 
-    def progress(self, import_id: UUID, pages_done: int, pages_total: int) -> None:
-        self._update(import_id, status='reading', pages_done=pages_done, pages_total=pages_total)
+    def progress(self, import_id: UUID, pages_done: int, pages_total: int, status: str = "reading") -> None:
+        self._update(import_id, status=status, pages_done=pages_done, pages_total=pages_total)
 
     def received(self, import_id: UUID, musicxml: bytes) -> None:
         with Session(self.engine) as session, session.begin():

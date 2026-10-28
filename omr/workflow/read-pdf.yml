@@ -40,11 +40,23 @@ jobs:
           token: ${{ secrets.SCOREMASTER_READ_TOKEN || github.token }}
           persist-credentials: false
 
+      # Before installing anything, so the director sees «Preparando el lector» at once.
+      - name: Tell ScoreMaster the reader started
+        run: python3 scoremaster/omr/started.py
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: scoremaster/omr/requirements.txt
+
+      # Kept between readings even when one fails (actions/cache saves only after a success).
+      - name: Restore PyTorch, the packages and copista
+        id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.cache/pip
+            copisteria
+          key: omr-torch2.14.1-${{ hashFiles('scoremaster/omr/requirements.txt') }}-${{ env.COPISTERIA_COMMIT }}-${{ env.COPISTA_REVISION }}
 
       - name: Poppler
         run: |
@@ -56,15 +68,8 @@ jobs:
           pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cpu
           pip install -r scoremaster/omr/requirements.txt
 
-      - name: copisteria and the copista-2m weights (kept between readings)
-        id: copisteria
-        uses: actions/cache@v6
-        with:
-          path: copisteria
-          key: copisteria-${{ env.COPISTERIA_COMMIT }}-${{ env.COPISTA_REVISION }}
-
       - name: Download copisteria and the weights
-        if: steps.copisteria.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/kobimusic/copisteria copisteria
           git -C copisteria checkout "$COPISTERIA_COMMIT"
@@ -75,9 +80,17 @@ jobs:
       - name: Install copisteria
         run: pip install --no-deps -e copisteria
 
+      - name: Keep PyTorch, the packages and copista for the next readings
+        if: always() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.cache/pip
+            copisteria
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
       # The job (with its one-time token) is read from the event file: a variable of the step would be printed here.
+      # copista-2m is loaded once and reads the pages one after another (2026-10-28).
       - name: Read the PDFs
         working-directory: scoremaster
-        env:
-          COPISTERIA_DIR: ${{ github.workspace }}/copisteria
         run: python -m omr.worker

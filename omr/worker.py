@@ -38,19 +38,43 @@ class PageFailed(Exception):
     """copista could not read a page; the message is the end of its error, for the log only."""
 
 
+class _Copista:
+    """copista-2m loaded once for the whole job (2026-10-28: a process per page loaded PyTorch and the model again
+    for every page)."""
+    model = None
+
+    @classmethod
+    def read(cls, pdf_path: str, number: int, out_dir: str) -> bytes:
+        os.environ["COPISTERIA_DETECTOR"] = "2m"
+        from copisteria import read
+        from copisteria.paths import EVIDENCE
+        from copisteria.pipeline import transcribe
+        from copisteria.vision.page.scan import from_pdf
+        if cls.model is None:
+            cls.model = read.load_model(str(EVIDENCE), "cpu")
+        png = from_pdf(pdf_path, number, Path(out_dir)).path
+        return transcribe(png, cls.model).encode("utf-8")
+
+
+def _timed_out(signum, frame):
+    raise TimeoutError
+
+
 def read_page(pdf_path: str, number: int, out_dir: str) -> bytes:
-    """One page read by copista-2m in its own process, so its memory goes back when it ends."""
+    """One page read by copista-2m, at most PAGE_TIMEOUT_SECONDS."""
+    import signal
+    import traceback
+    previous = signal.signal(signal.SIGALRM, _timed_out)
+    signal.alarm(PAGE_TIMEOUT_SECONDS)
     try:
-        subprocess.run([sys.executable, "-m", "copisteria.pipeline", "--pdf", pdf_path, "--range", f"{number}-{number}",
-                        "--out", out_dir, "--detector", "2m"], cwd=COPISTERIA_DIR, check=True,
-                       timeout=PAGE_TIMEOUT_SECONDS, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-        return (Path(out_dir) / f"{Path(pdf_path).stem}_p{number:02d}.musicxml").read_bytes()
-    except subprocess.CalledProcessError as error:
-        raise PageFailed("\n".join((error.stderr or "").strip().splitlines()[-6:])) from None
-    except subprocess.TimeoutExpired:
+        return _Copista.read(pdf_path, number, out_dir)
+    except TimeoutError:
         raise PageFailed(f"More than {PAGE_TIMEOUT_SECONDS} s on one page.") from None
-    except OSError as error:
-        raise PageFailed(f"{type(error).__name__}: {error}") from None
+    except Exception:
+        raise PageFailed("\n".join(traceback.format_exc().strip().splitlines()[-6:])) from None
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
 
 
 def count_pages(pdf_path: str) -> int:
@@ -111,6 +135,11 @@ def page_text(pdf_path: str, number: int) -> str:
         return ""
 
 
+def looks_like_score(text: str) -> bool:
+    """A score page names many instruments beside its staves; a part page one, maybe in its title too."""
+    return len(INSTRUMENT_WORDS.findall(text or "")) >= 4
+
+
 def instrument_name(text: str) -> str | None:
     """The shortest line naming an instrument, without the page number printed beside it."""
     lines = [re.sub(r"\s{2,}\d+\s*$", "", line).strip() for line in (text or "").splitlines()]
@@ -167,22 +196,28 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         total = sum(pages)
         if total > MAX_PAGES:
             raise Refused(f"Se leen hasta {MAX_PAGES} páginas por obra.")
-        done, read = 0, []
-        client.post(callback + "/progress", json={"pages_done": 0, "pages_total": total})
-        for (name, path), count in zip(saved, pages):
-            out_dir = tempfile.mkdtemp(dir=folder)
-            page_xml = []
-            for number in range(1, count + 1):
-                try:
-                    page_xml.append((number, read_page(path, number, out_dir),
-                                     page_text(path, number) if data["kind"] == "auto" else ""))
-                except Exception as error:
-                    # A cover or a text page: skipped. Why copista failed goes to the log, never the PDF nor the token.
-                    print(f"{name}, página {number} sin música, se salta:\n{error}", flush=True)
-                done += 1
-                client.post(callback + "/progress", json={"pages_done": done, "pages_total": total})
-            if page_xml:
-                read.append((name, page_xml))
+        # «Detectar solo»: with parts named in the PDF's text, the score's pages are never read.
+        texts = {(path, number): page_text(path, number) if data["kind"] == "auto" else ""
+                 for (_, path), count in zip(saved, pages) for number in range(1, count + 1)}
+        named_parts = any(instrument_name(text) and not looks_like_score(text) for text in texts.values())
+        plan = [(name, path, number) for (name, path), count in zip(saved, pages) for number in range(1, count + 1)
+                if not (named_parts and looks_like_score(texts[(path, number)]))]
+        if len(plan) < total:
+            print(f"Se apartan {total - len(plan)} páginas de partitura general sin leerlas: la obra sale de las "
+                  "particellas.", flush=True)
+        done, read, by_file = 0, [], {}
+        client.post(callback + "/progress", json={"pages_done": 0, "pages_total": len(plan)})
+        out_dirs = {path: tempfile.mkdtemp(dir=folder) for _, path in saved}
+        for name, path, number in plan:
+            try:
+                xml = read_page(path, number, out_dirs[path])
+                by_file.setdefault((name, path), []).append((number, xml, texts[(path, number)]))
+            except Exception as error:
+                # A cover or a text page: skipped. Why copista failed goes to the log, never the PDF nor the token.
+                print(f"{name}, página {number} sin música, se salta:\n{error}", flush=True)
+            done += 1
+            client.post(callback + "/progress", json={"pages_done": done, "pages_total": len(plan)})
+        read = [(name, by_file[(name, path)]) for name, path in saved if (name, path) in by_file]
         if not read:
             raise Refused("No se encontró música en el PDF.")
         try:

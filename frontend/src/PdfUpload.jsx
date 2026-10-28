@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { checkPdfFiles, pdfAvailable, pdfImportStatus, PDF_POLL_MS, pdfStatusText, startPdfImport } from './pdfImport.js';
+import { checkPdfFiles, pdfAvailable, pdfImportStatus, PDF_POLL_MS, pdfStatusText, remainingSeconds, startPdfImport } from './pdfImport.js';
 
 // «Desde un PDF» (decided 2026-10-27): one score, the parts of a work (one PDF per instrument) or, by default (2026-10-28),
 // PDFs with both, which the reader tells apart. Read by
@@ -14,6 +14,7 @@ export function PdfUpload({ visible, minutes, onOpenWork }) {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState('');
   const input = useRef(null);
+  const samples = useRef([]);
   const ids = useId();
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export function PdfUpload({ visible, minutes, onOpenWork }) {
       try {
         const found = await pdfImportStatus(reading);
         if (!current) return;
+        samples.current.push({ at: Date.now(), done: found.pages_done || 0 });
         setStatus(found);
         if (found.status === 'done') { setReading(null); onOpenWork(found.work_id); return; }
         if (found.status === 'failed') { setReading(null); return; }
@@ -52,12 +54,13 @@ export function PdfUpload({ visible, minutes, onOpenWork }) {
     if (problem) return;
     try {
       setStatus({ status: 'queued' });
+      samples.current = [];
       setReading(await startPdfImport(files, kind, title.trim(), minutes));
     } catch (failure) {
       setStatus(null); setError(failure.message);
     }
   };
-  const message = error || pdfStatusText(status);
+  const message = error || pdfStatusText(status, remainingSeconds(samples.current, status?.pages_total || 0));
   const failed = Boolean(error) || status?.status === 'failed';
   return <form id="pdf-upload" className="pdf-upload" onSubmit={submit} aria-busy={busy} aria-labelledby={ids + 'title'}>
     <h3 id={ids + 'title'}>Desde un PDF</h3>

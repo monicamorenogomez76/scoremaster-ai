@@ -31,9 +31,11 @@ MAX_FILES = 40
 MAX_MUSICXML_CHARACTERS = 20 * 1024 * 1024
 NOT_FOUND = "No se encontró la lectura del PDF."
 # A reading that stopped telling its progress, or an analysis that never ended, is given up.
-STALLED = {"queued": timedelta(minutes=30), "reading": timedelta(minutes=30), "analysing": timedelta(minutes=15)}
+STALLED = {"queued": timedelta(minutes=30), "preparing": timedelta(minutes=30), "reading": timedelta(minutes=30),
+           "analysing": timedelta(minutes=15)}
 STALLED_ERROR = {"analysing": "No se pudo analizar la obra leída. Vuelve a subir el PDF.",
                  "queued": "El lector de PDF no respondió a tiempo. Vuelve a intentarlo.",
+                 "preparing": "El lector de PDF no respondió a tiempo. Vuelve a intentarlo.",
                  "reading": "El lector de PDF no respondió a tiempo. Vuelve a intentarlo."}
 
 
@@ -129,6 +131,8 @@ def _reader(import_id: str, authorization: Optional[str], imports: PdfImportRepo
 class Progress(BaseModel):
     pages_done: int = Field(ge=0, le=10000)
     pages_total: int = Field(ge=0, le=10000)
+    # "preparing" while the reader installs copista (2026-10-28); pages read mean "reading".
+    stage: Optional[str] = Field(default=None, pattern="^(preparing|reading)$")
 
 
 class Result(BaseModel):
@@ -148,7 +152,8 @@ def reader_file(import_id: str, position: int, authorization: Optional[str] = He
 @router.post("/omr/imports/{import_id}/progress", status_code=204)
 def reader_progress(import_id: str, progress: Progress, authorization: Optional[str] = Header(default=None),
                     imports: PdfImportRepository = Depends(get_pdf_import_repository)):
-    imports.progress(_reader(import_id, authorization, imports).id, progress.pages_done, progress.pages_total)
+    imports.progress(_reader(import_id, authorization, imports).id, progress.pages_done, progress.pages_total,
+                     "preparing" if progress.stage == "preparing" else "reading")
     return Response(status_code=204)
 
 
