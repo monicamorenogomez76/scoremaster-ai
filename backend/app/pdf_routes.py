@@ -22,6 +22,7 @@ from backend.app.dependencies import (authenticated_user, get_analysis_repositor
 from backend.app.library_routes import valid_band_profile
 from backend.app.work_analysis import analyze_and_store
 from backend.application.accounts import User
+from backend.domain.instrument_catalog import catalog_entries
 from backend.application.pdf_imports import OmrDispatcher, PdfImport, PdfImportRepository
 
 router = APIRouter()
@@ -155,6 +156,21 @@ def reader_progress(import_id: str, progress: Progress, authorization: Optional[
     imports.progress(_reader(import_id, authorization, imports).id, progress.pages_done, progress.pages_total,
                      "preparing" if progress.stage == "preparing" else "reading")
     return Response(status_code=204)
+
+
+@router.get("/omr/imports/{import_id}/instruments")
+def reader_instruments(import_id: str, authorization: Optional[str] = Header(default=None),
+                       imports: PdfImportRepository = Depends(get_pdf_import_repository),
+                       instruments=Depends(get_instrument_store)):
+    """The catalog the reader names the parts with (2026-10-28): the common instruments with their names and the part
+    names the account confirmed before (normalized, without part numbers)."""
+    found = _reader(import_id, authorization, imports)
+    return {"instruments": [{"id": identity.canonical_id, "section": identity.section, "family": identity.family,
+                             "variant": identity.variant, "transposition": identity.transposition,
+                             "label_es": identity.label_es, "label_en": identity.label_en, "aliases": list(identity.aliases),
+                             "sound": identity.sound, "rehearsal_group": identity.rehearsal_group}
+                            for identity in catalog_entries()],
+            "learned": sorted(instruments.learned(found.user_id)) if instruments else []}
 
 
 def _analyse(found: PdfImport, imports, repository, library, score_store, instruments=None) -> None:

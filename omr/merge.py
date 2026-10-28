@@ -4,7 +4,8 @@ parts named Part 1..n and grouped under the page's braces, so a page may group i
 staff by staff: music21 splits every part into its staves, as ScoreLint's reader does, and the staves of each page
 are aligned with those of the fullest page by clef and key signature (transposing instruments differ in key). A
 staff missing from a page rests there. The parts read from several PDFs (one per instrument) are put together, named
-after their files. Without OCR the staves of a score have no instrument: the director confirms them in «Mi banda»."""
+after their files. The staves of a score take the instrument names written beside them when there is one per staff
+(2026-10-28); otherwise they are confirmed in «Mi banda»."""
 from __future__ import annotations
 
 import copy
@@ -128,8 +129,9 @@ def _write(title: str, parts: list[stream.Part]) -> bytes:
         return exporter.parse()
 
 
-def join_pages(pages: list[bytes], title: str) -> bytes:
-    """The pages of one PDF, staff by staff, aligned with the fullest page."""
+def join_pages(pages: list[bytes], title: str, names: list[str] | None = None) -> bytes:
+    """The pages of one PDF, staff by staff, aligned with the fullest page; names, one per staff, name them (the
+    instruments written beside a score's staves)."""
     staves = [_staves(xml) for xml in pages]
     reference = [_signature(staff) for staff in max(staves, key=len, default=[])]
     joined: list[list[stream.Measure]] = [[] for _ in reference]
@@ -139,7 +141,8 @@ def join_pages(pages: list[bytes], title: str) -> bytes:
         for index in range(len(reference)):
             found = [_measures(page[at]) for at, target in enumerate(mapping) if target == index]
             joined[index].extend(found[0] if found else [_rest(measure) for measure in model])
-    parts = [_part(f"Parte {number}", measures) for number, measures in enumerate(joined, 1)]
+    names = names if names and len(names) == len(joined) else [f"Parte {number}" for number in range(1, len(joined) + 1)]
+    parts = [_part(name, measures) for name, measures in zip(names, joined)]
     first_page = max((_measures(staff) for staff in staves[0]), key=len, default=[]) if staves else []
     for part in parts:
         if first_page:
@@ -158,3 +161,9 @@ def combine_parts(files: list[tuple[str, bytes]], title: str) -> bytes:
         for number, staff in enumerate(found, 1):
             parts.append(_part(stem if len(found) == 1 else f"{stem} {number}", _measures(staff)))
     return _write(title, parts)
+
+
+def staff_of(xml: bytes, index: int) -> bytes:
+    """One staff of a joined score as a work of its own, for a part copista could not read (2026-10-28)."""
+    staff = _staves(xml)[index]
+    return _write("", [_part(staff.partName or f"Parte {index + 1}", _measures(staff))])

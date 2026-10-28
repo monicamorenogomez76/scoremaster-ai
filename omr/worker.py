@@ -20,7 +20,13 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from omr.merge import combine_parts, join_pages
+from omr.merge import combine_parts, join_pages, staff_of
+
+try:
+    # ScoreMaster's instrument catalog (2026-10-28), checked out with the reader; an older workflow brings only omr/.
+    from backend.domain.instrument_catalog import instrument_name_key, match_instrument_name, use_catalog
+except ImportError:
+    use_catalog = None
 
 MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_FILES = 40
@@ -126,6 +132,41 @@ INSTRUMENT_WORDS = re.compile(
     r"fl|ob|fg|cl|tpt|tp|trp|tbn|tb|hn|cr|tba|perc|timp|euph|bomb)\b\.?", re.IGNORECASE)
 
 
+class Catalog:
+    """ScoreMaster's catalog and the part names the account confirmed before (2026-10-28): a piece of text names an
+    instrument when the catalog recognises it. Without them the reader keeps its short list of instrument words."""
+
+    def __init__(self, document: dict | None = None):
+        self.ready = bool(use_catalog and document and document.get("instruments"))
+        self.learned = set(document.get("learned") or []) if self.ready else set()
+        if self.ready:
+            use_catalog(document["instruments"])
+
+    def names(self, piece: str) -> bool:
+        if not self.ready:
+            return bool(INSTRUMENT_WORDS.search(piece))
+        return match_instrument_name(piece).identity is not None or instrument_name_key(piece) in self.learned
+
+    def same(self, left: str, right: str) -> bool:
+        """Two names of the same instrument and players («Tpt. 1» and «Trompeta en Sib 1»)."""
+        if self.ready:
+            first, second = match_instrument_name(left), match_instrument_name(right)
+            if first.identity and second.identity:
+                return (first.identity.canonical_id, first.part_numbers) == (second.identity.canonical_id, second.part_numbers)
+        return " ".join(left.casefold().split()) == " ".join(right.casefold().split())
+
+
+catalog = Catalog()
+
+
+def _load_catalog(client: httpx.Client, callback: str) -> Catalog:
+    try:
+        return Catalog(client.get(callback + "/instruments").raise_for_status().json())
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        print("Sin el catálogo de ScoreMaster: los instrumentos se buscan con la lista corta del lector.", flush=True)
+        return Catalog()
+
+
 def page_text(pdf_path: str, number: int) -> str:
     """The text of a digital PDF's page (instrument names, titles); empty for a scan."""
     try:
@@ -135,17 +176,27 @@ def page_text(pdf_path: str, number: int) -> str:
         return ""
 
 
+def _pieces(text: str) -> list[str]:
+    """The pieces of each line, cut where words stand far apart (2026-10-28: a PDF printed the name on the line of the
+    dedication), which also leaves out the page number printed beside it."""
+    return [piece.strip() for line in (text or "").splitlines() for piece in re.split(r"\s{3,}", line) if piece.strip()]
+
+
 def looks_like_score(text: str) -> bool:
     """A score page names many instruments beside its staves; a part page one, maybe in its title too."""
-    return len(INSTRUMENT_WORDS.findall(text or "")) >= 4
+    named = sum(1 for piece in _pieces(text) if len(piece) <= 40 and catalog.names(piece))
+    return max(named, len(INSTRUMENT_WORDS.findall(text or ""))) >= 4
 
 
 def instrument_name(text: str) -> str | None:
-    """The shortest piece of a line naming an instrument. A line is cut where words stand far apart (2026-10-28: a PDF
-    printed the name on the line of the dedication), which also leaves out the page number printed beside it."""
-    pieces = [piece.strip() for line in (text or "").splitlines() for piece in re.split(r"\s{3,}", line)]
-    named = [piece for piece in pieces if piece and len(piece) <= 40 and INSTRUMENT_WORDS.search(piece)]
+    """The shortest piece of a line naming an instrument."""
+    named = [piece for piece in _pieces(text) if len(piece) <= 40 and catalog.names(piece)]
     return min(named, key=len) if named else None
+
+
+def score_names(text: str) -> list[str]:
+    """The instruments written beside the staves of a score's page, top to bottom."""
+    return [piece for piece in _pieces(text) if len(piece) <= 40 and catalog.names(piece)]
 
 
 def staves(xml: bytes) -> int:
@@ -158,34 +209,76 @@ def staves(xml: bytes) -> int:
     return total
 
 
-def _parts_of(pages: list[tuple[bytes, str]]) -> list[tuple[str, list[bytes]]]:
-    """Consecutive part pages grouped by the instrument their text names."""
-    groups: list[tuple[str, list[bytes]]] = []
+def _parts_of(pages: list[tuple[bytes | None, str]]) -> list[tuple[str, list[bytes], bool]]:
+    """Consecutive part pages grouped by the instrument their text names: (name, pages read, had pages copista could
+    not read). A page copista could not read has no music (None) but still says its instrument."""
+    groups: list[tuple[str, list[bytes], bool]] = []
     for xml, text in pages:
         name = instrument_name(text)
         if not groups or (name and name != groups[-1][0]):
-            groups.append((name or f"Parte {len(groups) + 1}", [xml]))
-        else:
-            groups[-1][1].append(xml)
+            groups.append((name or f"Parte {len(groups) + 1}", [], False))
+        found_name, found, failed = groups[-1]
+        groups[-1] = (found_name, found + ([xml] if xml is not None else []), failed or xml is None)
     return groups
 
 
-def _auto(read: list[tuple[str, list[tuple[int, bytes, str]]]], title: str) -> bytes:
+def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str] | None]:
+    """The score's pages joined, its staves named after the instruments written beside them on its first page when
+    there is one name per staff."""
+    count = staves(pages[0][0]) if pages else 0
+    joined = max((staves(xml) for xml, _ in pages), default=0)
+    names = score_names(pages[0][1]) if pages else []
+    named = names if names and len(names) == joined == count else None
+    return join_pages([xml for xml, _ in pages], title, named), named
+
+
+def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: str, read_score=lambda: []) -> bytes:
+    """read: the pages of each file, None where copista could not read the page. read_score reads the score's pages
+    that were set apart, when a part needs them."""
     score, parts = [], []
     for _, pages in read:
         for _, xml, text in pages:
-            (score if staves(xml) >= SCORE_STAVES else parts).append((xml, text))
+            if xml is None:
+                if not looks_like_score(text):
+                    parts.append((None, text))
+            else:
+                (score if staves(xml) >= SCORE_STAVES else parts).append((xml, text))
     groups = _parts_of(parts) if parts else []
     named = any(instrument_name(text) for _, text in parts)
     if named:
         # A cover or a page of notes before the named parts is no part (2026-10-28).
-        groups = [(name, xml) for name, xml in groups if not name.startswith("Parte ")]
+        groups = [group for group in groups if not group[0].startswith("Parte ")]
     if groups and (named or not score):
-        summary = ", ".join(f"{name} ({len(xml)} {'página' if len(xml) == 1 else 'páginas'})" for name, xml in groups)
+        missing = [name for name, found, _ in groups if not found]
+        from_score = _from_score(missing, [name for name, _, _ in groups], score + read_score(), title) if missing else {}
+        files = [(name, join_pages(found, name) if found else from_score[name]) for name, found, _ in groups
+                 if found or name in from_score]
+        summary = ", ".join(f"{name} ({len(found)} {'página' if len(found) == 1 else 'páginas'})"
+                            for name, found, _ in groups if found)
         print(f"La obra se saca de las particellas: {summary}.", flush=True)
-        return combine_parts([(name, join_pages(xml, name)) for name, xml in groups], title)
+        return combine_parts(files, title)
     print(f"La obra se saca de la partitura general: {len(score)} páginas.", flush=True)
-    return join_pages([xml for xml, _ in score], title)
+    return _score(score, title)[0]
+
+
+def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, str]], title: str) -> dict[str, bytes]:
+    """The staff of each part copista could not read, taken from the score (2026-10-28): the staff named like the part,
+    or the one in the part's place when the score has one staff per part. Otherwise the part is left out and said."""
+    joined, names = _score(score, title) if score else (None, None)
+    count = max((staves(xml) for xml, _ in score), default=0)
+    found = {}
+    for name in missing:
+        if names:
+            index = next((at for at, written in enumerate(names) if catalog.same(written, name)), None)
+        else:
+            index = order.index(name) if count == len(order) else None
+        if joined is None or index is None:
+            print(f"No se pudo completar {name}: ninguna página suya se leyó y la partitura general no dice qué "
+                  "pentagrama es el suyo.", flush=True)
+            continue
+        print(f"{name} sale de la partitura general (pentagrama {index + 1}).", flush=True)
+        found[name] = staff_of(joined, index)
+    return found
 
 
 def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count_pages, page_text=page_text) -> int:
@@ -194,6 +287,8 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
     client.headers["Authorization"] = "Bearer " + data["token"]
     callback = data["callback"].rstrip("/")
     folder = tempfile.mkdtemp(prefix="omr-")
+    global catalog
+    catalog = _load_catalog(client, callback)
     try:
         saved = _download(client, folder, data["files"])
         pages = [count_pages(path) for _, path in saved]
@@ -201,7 +296,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         if total > MAX_PAGES:
             raise Refused(f"Se leen hasta {MAX_PAGES} páginas por obra.")
         # «Detectar solo»: with parts named in the PDF's text, the score's pages are never read.
-        texts = {(path, number): page_text(path, number) if data["kind"] == "auto" else ""
+        texts = {(path, number): page_text(path, number) if data["kind"] in ("auto", "score") else ""
                  for (_, path), count in zip(saved, pages) for number in range(1, count + 1)}
         named_parts = any(instrument_name(text) and not looks_like_score(text) for text in texts.values())
         plan = [(name, path, number) for (name, path), count in zip(saved, pages) for number in range(1, count + 1)
@@ -209,7 +304,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         if len(plan) < total:
             print(f"Se apartan {total - len(plan)} páginas de partitura general sin leerlas: la obra sale de las "
                   "particellas.", flush=True)
-        done, read, by_file = 0, [], {}
+        done, read, by_file, failed = 0, [], {}, {}
         client.post(callback + "/progress", json={"pages_done": 0, "pages_total": len(plan)})
         out_dirs = {path: tempfile.mkdtemp(dir=folder) for _, path in saved}
         for name, path, number in plan:
@@ -219,19 +314,39 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             except Exception as error:
                 # A cover or a text page: skipped. Why copista failed goes to the log, never the PDF nor the token.
                 print(f"{name}, página {number} sin música, se salta:\n{error}", flush=True)
+                failed.setdefault((name, path), []).append((number, None, texts[(path, number)]))
             done += 1
             client.post(callback + "/progress", json={"pages_done": done, "pages_total": len(plan)})
-        read = [(name, by_file[(name, path)]) for name, path in saved if (name, path) in by_file]
-        if not read:
+        set_apart = [(name, path, number) for (name, path), count in zip(saved, pages) for number in range(1, count + 1)
+                     if (name, path, number) not in plan]
+
+        def read_score() -> list[tuple[bytes, str]]:
+            """The score's pages set apart, read when a part copista could not read needs its staff."""
+            nonlocal done
+            found = []
+            for name, path, number in set_apart:
+                try:
+                    found.append((read_page(path, number, out_dirs[path]), texts[(path, number)]))
+                except Exception as error:
+                    print(f"{name}, página {number} sin música, se salta:\n{error}", flush=True)
+                done += 1
+                client.post(callback + "/progress", json={"pages_done": done, "pages_total": len(plan) + len(set_apart)})
+            return found
+
+        if not by_file:
             raise Refused("No se encontró música en el PDF.")
+        read = [(name, sorted(by_file.get((name, path), []) + failed.get((name, path), []), key=lambda page: page[0]))
+                for name, path in saved if (name, path) in by_file or (name, path) in failed]
         try:
             if data["kind"] == "auto":
-                musicxml = _auto(read, data["title"])
+                musicxml = _auto(read, data["title"], read_score)
             elif data["kind"] == "score":
-                musicxml = join_pages([xml for _, pages_xml in read for _, xml, _ in pages_xml], data["title"])
+                musicxml = _score([(xml, text) for _, pages_xml in read for _, xml, text in pages_xml if xml is not None],
+                                  data["title"])[0]
             else:
-                musicxml = combine_parts([(name, join_pages([xml for _, xml, _ in pages_xml], name))
-                                          for name, pages_xml in read], data["title"])
+                musicxml = combine_parts([(name, join_pages([xml for _, xml, _ in pages_xml if xml is not None], name))
+                                          for name, pages_xml in read if any(xml for _, xml, _ in pages_xml)],
+                                         data["title"])
         except Exception:
             import traceback
             print("\n".join(traceback.format_exc().strip().splitlines()[-8:]), flush=True)
@@ -244,6 +359,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         print(str(reason), flush=True)
         return 1
     finally:
+        catalog = Catalog()
         shutil.rmtree(folder, ignore_errors=True)
 
 

@@ -140,8 +140,8 @@ estáticos, así que el lector (`omr/`) corre en **GitHub Actions**, en el **rep
 1. En GitHub, **New repository** → nombre `scoremaster-omr`, **Private**, sin README.
 2. Desde el repositorio de ScoreMaster, con `gh` ya autenticado:
    `scripts/deploy_omr_worker.sh <usuario>/scoremaster-omr`. Copia solo el *workflow*; no lleva secretos. El código del
-   lector (`omr/`) no se copia: el *workflow* lo descarga de la rama main de ScoreMaster en cada lectura, así que se
-   actualiza solo, como la aplicación en Render.
+   lector (`omr/`) no se copia: el *workflow* lo descarga de la rama main de ScoreMaster en cada lectura, junto con el
+   catálogo de instrumentos (`backend/domain`). Así se actualiza solo, como la aplicación en Render.
 3. En GitHub, **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**:
    - **Repository access:** *Only select repositories* → `scoremaster-omr`;
    - **Permissions → Repository permissions → Contents: Read and write** (lo exige `repository_dispatch`);
@@ -169,6 +169,10 @@ Sin ellos, la opción de subir PDF no aparece.
 - El lector se actualiza solo al fusionar en main. `scripts/deploy_omr_worker.sh` solo hace falta si cambia
   `omr/workflow/read-pdf.yml`.
 - El registro de cada lectura (pestaña **Actions** del repositorio privado) no muestra el token ni las partituras.
+- **Catálogo de instrumentos (2026-10-28):** el lector pide a ScoreMaster el catálogo de la base y los nombres que la
+  cuenta confirmó antes. Con ellos nombra las particellas y los pentagramas de la partitura general. Si una particella
+  no se puede leer, toma su pentagrama de la partitura general. Con un *workflow* anterior, que solo descarga `omr/`,
+  el lector usa su lista corta de instrumentos.
 
 ## Trabajo futuro: Vercel
 

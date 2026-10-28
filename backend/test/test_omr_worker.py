@@ -212,3 +212,74 @@ def test_a_score_page_is_told_by_the_instruments_written_beside_its_staves():
     assert worker.looks_like_score("Fl.\nOb.\nCl. 1\nCl. 2\nTpt.")
     assert not worker.looks_like_score("Paco el barba\nConcierto para clarinete y banda\nClarinete en Si♭ 1")
     assert not worker.looks_like_score("")
+
+
+# The reader names the parts with ScoreMaster's catalog and the names the account confirmed (2026-10-28), and the score
+# and the parts help each other: the score's staves take the names written beside them, and a part copista cannot read
+# comes from its staff in the score.
+def catalog_server(scoremaster, learned=("fiscornio",)):
+    from backend.domain.instrument_catalog import seed_instruments
+    handler = scoremaster["client"]._transport.handler
+
+    def with_catalog(request):
+        if request.url.path.endswith("/instruments"):
+            return httpx.Response(200, json={"instruments": list(seed_instruments()), "learned": list(learned)})
+        return handler(request)
+
+    scoremaster["client"] = httpx.Client(transport=httpx.MockTransport(with_catalog))
+
+
+def run_pages(scoremaster, pages, kind="auto"):
+    read = []
+
+    def read_page(pdf_path, number, out_dir):
+        read.append(number)
+        staves, _ = pages[number - 1]
+        if not staves:
+            raise worker.PageFailed("ValueError: no staves found on the page")
+        return page(staves, 2, "C")
+
+    worker.run(payload(kind), client=scoremaster["client"], read_page=read_page, count_pages=lambda path: len(pages),
+               page_text=lambda path, number: pages[number - 1][1])
+    return read
+
+
+def test_the_parts_are_named_with_the_catalog_and_the_names_the_account_confirmed(scoremaster):
+    catalog_server(scoremaster)
+    pages = [(1, "Concierto para clarinete y banda\nRequint"), (1, "Fiscornio 1"), (1, "Bombardí")]
+    run_pages(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Requint", "Fiscornio 1", "Bombardí"]
+
+
+def test_without_the_catalog_the_reader_keeps_its_own_list(scoremaster):
+    pages = [(1, "Flauta 1"), (1, "Requint")]
+    run_pages(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta 1"], "«Requint» is not in its short list"
+
+
+def test_the_score_s_staves_take_the_names_written_beside_them(scoremaster):
+    catalog_server(scoremaster)
+    run_pages(scoremaster, [(4, "PACO EL BARBA\nFlauta\nRequint\nFiscornio 1\nTuba"), (4, "2")])
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Requint", "Fiscornio 1", "Tuba"]
+    run_pages(scoremaster, [(4, "Flauta\nTuba"), (4, "")])
+    assert part_names(scoremaster["result"]["musicxml"]) == [f"Parte {n}" for n in range(1, 5)], "not one name per staff"
+
+
+def test_a_part_copista_cannot_read_comes_from_its_staff_in_the_score(scoremaster, capsys):
+    catalog_server(scoremaster)
+    pages = [(4, "Flauta\nClarinete\nTrompeta 1\nTuba"), (1, "Flauta"), (1, "Clarinete"), (0, "Trompeta 1"), (1, "Tuba")]
+    read = run_pages(scoremaster, pages)
+    assert read == [2, 3, 4, 5, 1], "the score is read only when a part is missing"
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Trompeta 1", "Tuba"]
+    assert "Trompeta 1 sale de la partitura general" in capsys.readouterr().out
+
+
+def test_an_unnamed_score_completes_a_part_only_with_one_staff_per_part(scoremaster, capsys):
+    catalog_server(scoremaster)
+    pages = [(4, ""), (1, "Flauta"), (1, "Clarinete"), (0, "Trompeta 1"), (1, "Tuba")]
+    run_pages(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Trompeta 1", "Tuba"], "by position"
+    pages = [(5, ""), (1, "Flauta"), (1, "Clarinete"), (0, "Trompeta 1"), (1, "Tuba")]
+    run_pages(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Tuba"]
+    assert "No se pudo completar Trompeta 1" in capsys.readouterr().out
