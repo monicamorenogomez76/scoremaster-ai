@@ -16,6 +16,7 @@ from backend.application.library import WorkUpload
 from backend.application.save_analysis import save_analysis
 from backend.domain.instrument_catalog import catalog_version, instrument_name_key
 from backend.domain.instrument_resolver import RESOLVED, RESOLVER_VERSION, resolve_part
+from backend.parsers.pdf_measures import fit_measures
 from backend.parsers.pdf_transpositions import add_transpositions
 
 
@@ -99,20 +100,24 @@ def refresh_outdated_analyses(repository, library, score_store=None) -> int:
 TRANSPOSED_SINCE = datetime(2026, 10, 29, 17, 0, tzinfo=timezone.utc)
 
 
-def transpose_works_read_before(imports, library, instruments=None) -> int:
-    """Works read from a PDF before #142 kept copista's MusicXML without <transpose> and sounded as written: they take
-    the transposition of each instrument, as a reading would take it now, without reading the PDF again. The notes stay
-    as written; refresh_outdated_analyses analyses them again because their file changed. Returns how many changed."""
+def repair_pdf_works(imports, library, instruments=None) -> int:
+    """Works read from a PDF before these fixes are repaired as a reading is now, without reading the PDF again: every
+    measure takes the length of its time signature (fit_measures, 2026-10-29) and, if read before #142, each part the
+    transposition of its instrument (copista writes none). refresh_outdated_analyses then analyses them again because
+    their file changed. Returns how many changed; once repaired, a work is left as it is."""
+    untransposed = {work_id for _, work_id, _ in imports.read_before(TRANSPOSED_SINCE)}
     changed = 0
-    for user_id, work_id, kind in imports.read_before(TRANSPOSED_SINCE):
+    for user_id, work_id, kind in imports.read_before(datetime.now(timezone.utc)):
         stored = library.work_file(user_id, work_id)
         if stored is None:
             continue
         try:
-            learned = instruments.learned(user_id) if instruments else None
-            transposed = add_transpositions(stored[0], learned, source="score" if kind == "score" else "parts")
-            if transposed != stored[0] and library.replace_source(user_id, work_id, transposed):
+            repaired = fit_measures(stored[0])
+            if work_id in untransposed:
+                learned = instruments.learned(user_id) if instruments else None
+                repaired = add_transpositions(repaired, learned, source="score" if kind == "score" else "parts")
+            if repaired != stored[0] and library.replace_source(user_id, work_id, repaired):
                 changed += 1
         except Exception:
-            logger.warning("No se pudo añadir la transposición a una obra leída de PDF.", exc_info=True)
+            logger.warning("No se pudo reparar una obra leída de PDF.", exc_info=True)
     return changed

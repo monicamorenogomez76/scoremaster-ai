@@ -24,6 +24,7 @@ from backend.app.library_routes import valid_band_profile
 from backend.app.work_analysis import analyze_and_store
 from backend.application.accounts import User
 from backend.domain.instrument_catalog import catalog_entries
+from backend.parsers.pdf_measures import fit_measures
 from backend.parsers.pdf_transpositions import add_transpositions
 from backend.application.pdf_imports import OmrDispatcher, PdfImport, PdfImportRepository
 
@@ -206,7 +207,8 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
     else:
         # copista writes the notes in the key of each instrument but no <transpose> (2026-10-29).
         try:
-            content = add_transpositions(content, instruments.learned(found.user_id) if instruments else None,
+            # Each measure keeps the length of its time signature: one read too long made its part sound late.
+            content = add_transpositions(fit_measures(content), instruments.learned(found.user_id) if instruments else None,
                                          result.concert_pitch, result.source or "parts")
         except ET.ParseError:
             imports.failed(found.id, "La lectura no es MusicXML válido.")
