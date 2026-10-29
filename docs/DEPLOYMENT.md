@@ -173,6 +173,12 @@ Sin ellos, la opción de subir PDF no aparece.
   cuenta confirmó antes. Con ellos nombra las particellas y los pentagramas de la partitura general. Si una particella
   no se puede leer, toma su pentagrama de la partitura general. Con un *workflow* anterior, que solo descarga `omr/`,
   el lector usa su lista corta de instrumentos.
+- **Transposición (2026-10-29):** copista lee las notas tal como están impresas, en la tonalidad de cada instrumento,
+  pero no escribe `<transpose>`. Al recibir la obra, ScoreMaster añade la transposición de cada instrumento que
+  reconoce (`backend/parsers/pdf_transpositions.py`). Las particellas siempre se transponen. Un guion en Do no se
+  transpone si su texto lo dice («Score in C», «Guion en Do», «sonidos reales») o si sus armaduras lo indican: en un
+  guion transpuesto el clarinete en Si♭ lleva dos sostenidos más que la flauta, y en uno en Do llevan la misma. Las
+  obras leídas antes de este cambio hay que volver a subirlas.
 
 ## Trabajo futuro: Vercel
 

@@ -283,3 +283,20 @@ def test_an_unnamed_score_completes_a_part_only_with_one_staff_per_part(scoremas
     run_pages(scoremaster, pages)
     assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Tuba"]
     assert "No se pudo completar Trompeta 1" in capsys.readouterr().out
+
+
+# A score may be printed in C (2026-10-29): ScoreMaster transposes the parts, never a score whose page says it is in C.
+def test_the_reader_says_where_the_work_came_from_and_whether_the_score_is_in_c(scoremaster):
+    run_pages(scoremaster, [(4, "SCORE IN C\nFlauta\nClarinete\nTrompeta 1\nTuba"), (4, "2")])
+    assert (scoremaster["result"]["source"], scoremaster["result"]["concert_pitch"]) == ("score", True)
+    run_pages(scoremaster, [(4, "Guion\nFlauta\nClarinete\nTrompeta 1\nTuba"), (4, "")])
+    assert (scoremaster["result"]["source"], scoremaster["result"]["concert_pitch"]) == ("score", False)
+    run_pages(scoremaster, [(4, "Partitura en Do"), (1, "Flauta"), (1, "Trombón 1")])
+    assert (scoremaster["result"]["source"], scoremaster["result"]["concert_pitch"]) == ("parts", False)
+
+
+def test_a_page_in_c_is_told_by_its_text():
+    for text in ("Score in C", "C Score", "GUIÓN EN DO", "Partitura en Do", "Concert pitch", "Sonidos reales"):
+        assert worker.at_concert_pitch(text), text
+    for text in ("Transposed score", "Trumpet in C", "Fl.\nCl. en Do", ""):
+        assert not worker.at_concert_pitch(text), text
