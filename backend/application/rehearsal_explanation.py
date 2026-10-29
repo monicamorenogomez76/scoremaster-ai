@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from backend.application.ai import ExplanationProvider
 from backend.application.difficulty_explanation import FINDING_LABELS, GRADE_LABELS
-from backend.application.explanations import InvalidExplanation, replace_terms, run_explanation
+from backend.application.explanations import InvalidExplanation, evidence_text, replace_terms, run_explanation
 
 EVIDENCE_VERSION = "rehearsal-evidence-v2"
 PROMPT_VERSION = "rehearsal-explanation-v2"
@@ -62,10 +62,11 @@ def rehearsal_evidence(rehearsal: dict, analyses: dict, concert: Optional[dict] 
         critical = [{"instrument": item.get("instrument_label_es") or item.get("instrument"), "measures": item.get("measure_range"),
                      "findings": [FINDING_LABELS.get(code, code) for code in item.get("findings") or []]}
                     for item in passages.get(block.get("work_id"), []) if _overlap(block.get("measures"), item.get("measure_range"))]
-        blocks.append({"id": "B{}".format(index), "title": block.get("title") or "", "kind": _kind(block),
-                       "minutes": block.get("minutes"), "work": block.get("work_title"),
-                       "parts": list(block.get("parts") or [])[:MAX_PARTS], "measures": block.get("measures") or "",
-                       "objective": (block.get("objective") or "")[:240], "critical_passages": critical[:MAX_PASSAGES],
+        blocks.append({"id": "B{}".format(index), "title": evidence_text(block.get("title")), "kind": _kind(block),
+                       "minutes": block.get("minutes"), "work": evidence_text(block.get("work_title")) or None,
+                       "parts": [evidence_text(part) for part in list(block.get("parts") or [])[:MAX_PARTS]],
+                       "measures": evidence_text(block.get("measures"), 40),
+                       "objective": evidence_text(block.get("objective"), 240), "critical_passages": critical[:MAX_PASSAGES],
                        "review": REVIEW.get((block.get("review") or {}).get("status"))})
     days = None
     if concert:
@@ -74,18 +75,19 @@ def rehearsal_evidence(rehearsal: dict, analyses: dict, concert: Optional[dict] 
     for work in rehearsal.get("works") or []:
         difficulty = (analyses.get(work["id"]) or {}).get("difficulty") or {}
         grade = difficulty.get("grade")
-        works.append({"title": work["title"], "grade": grade, "grade_label": GRADE_LABELS.get(grade, ""),
+        works.append({"title": evidence_text(work["title"]), "grade": grade, "grade_label": GRADE_LABELS.get(grade, ""),
                       "critical_passages": len(difficulty.get("critical_passages") or [])})
     titled = {block.get("work_id"): block.get("work_title") for block in rehearsal.get("blocks") or []}
     return {
         "version": EVIDENCE_VERSION,
         "rehearsal": {"date": str(rehearsal["date"]), "duration_minutes": rehearsal.get("duration_minutes"),
                       "phase": PHASES.get(rehearsal.get("phase")),
-                      "concert": {"title": concert["title"], "days_before": days} if concert else None,
-                      "director_notes": (rehearsal.get("objectives") or "")[:300]},
+                      "concert": {"title": evidence_text(concert["title"]), "days_before": days} if concert else None,
+                      "director_notes": evidence_text(rehearsal.get("objectives"), 300)},
         "blocks": blocks,
         "works": works,
-        "pending_from_review": [{"work": item.get("work_title") or titled.get(item.get("work_id")), "measures": item.get("measures"),
+        "pending_from_review": [{"work": evidence_text(item.get("work_title") or titled.get(item.get("work_id"))),
+                                 "measures": evidence_text(item.get("measures"), 40),
                                  "status": REVIEW.get(item.get("status"), item.get("status")),
                                  "blocks": [block["id"] for block, raw in zip(blocks, rehearsal.get("blocks") or [])
                                             if raw.get("work_id") == item.get("work_id") and _overlap(raw.get("measures"), item.get("measures"))]}
