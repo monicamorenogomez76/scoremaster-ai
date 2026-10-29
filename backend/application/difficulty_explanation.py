@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from backend.application.ai import ExplanationProvider
-from backend.application.explanations import InvalidExplanation, replace_terms, run_explanation
+from backend.application.explanations import InvalidExplanation, evidence_text, replace_terms, run_explanation
 
 EVIDENCE_VERSION = "difficulty-evidence-v5"   # v3 (2026-10-25): grade_reasons from the publishers' guides; v4-v5 (2026-10-27): from the Galician table first
 PROMPT_VERSION = "difficulty-explanation-v4"
@@ -56,23 +56,23 @@ def difficulty_evidence(result: dict) -> dict:
     tempo = result.get("tempo") or {}
     return {
         "version": EVIDENCE_VERSION,
-        "title": result.get("title") or "Obra sin título",
+        "title": evidence_text(result.get("title")) or "Obra sin título",
         "grade": grade, "grade_label": GRADE_LABELS.get(grade, ""), "grade_standard": "Grade {}".format(grade),
         "grade_description": GRADE_DESCRIPTIONS.get(grade, ""),
         # difficulty-v3: the criteria of the publishers' grading guides that set the grade, as the director reads them.
         "grade_reasons": list((difficulty.get("rubric") or {}).get("reasons_es") or [])[:MAX_REASONS],
         "scale": {"grades": scale.get("grades", 6), "technical_index_max": scale.get("technical_index_max", 10)},
-        "families": [{"family": entry.get("label_es") or name, "grade": entry.get("grade")}
+        "families": [{"family": evidence_text(entry.get("label_es") or name), "grade": entry.get("grade")}
                      for name, entry in sorted((difficulty.get("by_family") or {}).items(),
                                                key=lambda item: -(item[1].get("grade") or 0))],
-        "instruments": [{"name": name, "label": entry.get("instrument_label_es") or name,
-                         "family": entry.get("family_label_es") or entry.get("family") or "",
+        "instruments": [{"name": evidence_text(name), "label": evidence_text(entry.get("instrument_label_es") or name),
+                         "family": evidence_text(entry.get("family_label_es") or entry.get("family")),
                          "grade": entry.get("grade"), "technical_index": entry.get("difficulty_score"),
                          "dimensions": {key: round(float((entry.get("dimensions") or {}).get(key, 0)), 1) for key in DIMENSIONS},
                          "findings": _findings(entry.get("findings"))}
                         for name, entry in instruments[:MAX_INSTRUMENTS]],
-        "passages": [{"id": "P{}".format(index), "instrument": passage.get("instrument"),
-                      "label": passage.get("instrument_label_es") or passage.get("instrument"),
+        "passages": [{"id": "P{}".format(index), "instrument": evidence_text(passage.get("instrument")),
+                      "label": evidence_text(passage.get("instrument_label_es") or passage.get("instrument")),
                       "measures": passage.get("measure_range"), "findings": _findings(passage.get("findings")),
                       "signals": list(passage.get("signals") or [])}
                      for index, passage in enumerate((difficulty.get("critical_passages") or [])[:MAX_PASSAGES], start=1)],
@@ -113,5 +113,7 @@ def explain_difficulty(result: dict, provider: ExplanationProvider, demo: Explan
     evidence = difficulty_evidence(result)
     shown = run_explanation(evidence, lambda who, data: who.explain_difficulty(data), validate_explanation,
                             provider, demo, PROMPT_VERSION, readable_difficulty, cache)
-    return {**shown, "passages": {item["id"]: {"instrument": item["instrument"], "label": item["label"],
-                                               "measures": item["measures"]} for item in evidence["passages"]}}
+    # The interface finds each passage by the part's name as stored, not as the AI received it.
+    stored = (result.get("difficulty") or {}).get("critical_passages") or []
+    return {**shown, "passages": {item["id"]: {"instrument": raw.get("instrument"), "label": item["label"],
+                                               "measures": item["measures"]} for item, raw in zip(evidence["passages"], stored)}}

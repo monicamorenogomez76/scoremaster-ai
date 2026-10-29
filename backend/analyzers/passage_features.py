@@ -11,6 +11,7 @@ from music21 import pitch as m21_pitch
 
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
+from backend.domain.text import evidence_text
 from backend.domain.timing import is_attack, measure_length, sounding_pitches
 
 FEATURES_VERSION = "passage-features-v1"
@@ -107,8 +108,8 @@ def passage_features(score: Score, part_name: str, measures: str) -> dict:
     duration_seconds = seconds(total_quarters)
     return {
         "version": FEATURES_VERSION,
-        "instrument": identity.label_es if identity else part.name,
-        "part": part.name,
+        "instrument": evidence_text(identity.label_es if identity else part.name),
+        "part": evidence_text(part.name),
         "measures": str(first) if first == last else "{}-{}".format(first, last),
         "measure_count": len(bars),
         "tempo_quarter_bpm": bpm, "tempo_assumed": assumed,

@@ -6,6 +6,7 @@ import logging
 import re
 
 from backend.application.ai import ProviderFailure
+from backend.domain.text import MAX_TEXT, evidence_text  # noqa: F401 (used by the explanations)
 
 logger = logging.getLogger(__name__)
 
