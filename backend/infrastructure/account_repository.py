@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from backend.application.accounts import DuplicateEmail, StoredSession, User
+from backend.application.accounts import DuplicateEmail, PasswordReset, StoredSession, User
 from backend.infrastructure.analysis_repository import Base
 
 
@@ -28,6 +28,15 @@ class StoredSessionRow(Base):
     user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'),
                                           nullable=False, index=True)
     csrf_token: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class PasswordResetRow(Base):
+    __tablename__ = 'password_resets'
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'),
+                                          nullable=False, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -102,6 +111,21 @@ class PostgresAccountRepository:
     def delete_session(self, token_hash: str) -> None:
         with Session(self.engine) as session, session.begin():
             session.execute(delete(StoredSessionRow).where(StoredSessionRow.token_hash == token_hash))
+
+    def add_password_reset(self, reset: PasswordReset) -> None:
+        """Only the last link of an account works."""
+        with Session(self.engine) as session, session.begin():
+            session.execute(delete(PasswordResetRow).where(PasswordResetRow.user_id == reset.user_id))
+            session.add(PasswordResetRow(token_hash=reset.token_hash, user_id=reset.user_id, expires_at=reset.expires_at))
+
+    def password_reset_by_hash(self, token_hash: str) -> Optional[PasswordReset]:
+        with Session(self.engine) as session:
+            row = session.get(PasswordResetRow, token_hash)
+            return PasswordReset(row.user_id, row.token_hash, row.expires_at) if row else None
+
+    def delete_password_resets(self, user_id: UUID) -> None:
+        with Session(self.engine) as session, session.begin():
+            session.execute(delete(PasswordResetRow).where(PasswordResetRow.user_id == user_id))
 
     def record_event(self, user_id: Optional[UUID], event: str, ip: str) -> None:
         with Session(self.engine) as session, session.begin():

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { apiFetch, currentUser, onUnauthorized, signIn, signOut } from '../../../frontend/src/api.js';
+import {
+  apiFetch, currentUser, onUnauthorized, requestPasswordReset, resetPassword, resetTokenFrom, signIn, signOut,
+} from '../../../frontend/src/api.js';
 
 function fakeServer(routes) {
   const calls = [];
@@ -55,4 +57,26 @@ test('an expired session notifies the app, and signing out forgets the token', a
   assert.equal(calls.at(-1).headers.get('X-CSRF-Token'), 'token-3');
   await apiFetch('/analyze', { method: 'POST' });
   assert.equal(calls.at(-1).headers.get('X-CSRF-Token'), null);
+});
+
+test('a recovery link carries its token in the fragment, and using it signs in with a new CSRF token', async () => {
+  assert.equal(resetTokenFrom('#reset=abc_DEF-123'), 'abc_DEF-123');
+  assert.equal(resetTokenFrom('#repertoire'), '');
+  assert.equal(resetTokenFrom(''), '');
+  const calls = fakeServer({
+    '/auth/password/forgot': [202, { detail: 'Si hay una cuenta con ese email, te hemos enviado un enlace.' }],
+    '/auth/password/reset': [200, { user: { email: 'a@b.org', display_name: 'A' }, csrf_token: 'token-4' }],
+    '/analyze': [200, {}],
+  });
+  assert.equal(await requestPasswordReset('a@b.org'), 'Si hay una cuenta con ese email, te hemos enviado un enlace.');
+  assert.deepEqual(JSON.parse(calls[0].body), { email: 'a@b.org' });
+  assert.equal((await resetPassword('abc', 'otra contraseña larga')).email, 'a@b.org');
+  assert.deepEqual(JSON.parse(calls[1].body), { token: 'abc', password: 'otra contraseña larga' });
+  await apiFetch('/analyze', { method: 'POST' });
+  assert.equal(calls[2].headers.get('X-CSRF-Token'), 'token-4');
+});
+
+test('an expired recovery link reports the server message', async () => {
+  fakeServer({ '/auth/password/reset': [400, { detail: 'El enlace no es válido o ha caducado. Pide otro.' }] });
+  await assert.rejects(resetPassword('abc', 'otra contraseña larga'), { message: 'El enlace no es válido o ha caducado. Pide otro.' });
 });

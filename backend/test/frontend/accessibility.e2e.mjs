@@ -34,6 +34,20 @@ try {
     await page.goto(url);
     await page.locator('#login-screen').waitFor({ state: 'visible' });
     await audit(page, `access screen (${scheme})`);
+    // Password recovery: asking for the link, and the form a link opens (this one is not valid).
+    await page.locator('#login-forgot').click();
+    await page.locator('#login-email').fill('nadie@banda.test');
+    await page.locator('#login-submit').click();
+    await page.locator('#login-notice').waitFor();
+    await audit(page, `password recovery (${scheme})`);
+    await page.goto('about:blank');   // a new page, as when the link is opened from the email
+    await page.goto(url + '/#reset=not-a-valid-link');
+    await page.locator('#login-password').fill('una contraseña larga');
+    await page.locator('#login-submit').click();
+    await page.locator('#login-error').waitFor();
+    if (new URL(page.url()).hash) throw new Error('the recovery token stays in the address bar');
+    await audit(page, `new password (${scheme})`);
+    await page.locator('#login-mode').click();
     await login(page);
     await page.waitForLoadState('networkidle');
     for (const [view, name] of [['summary', 'Resumen'], ['repertoire', 'Repertorio'], ['band', 'Mi banda'],

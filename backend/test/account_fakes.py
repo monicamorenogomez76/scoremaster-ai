@@ -6,7 +6,7 @@ from backend.application.accounts import DuplicateEmail
 
 class InMemoryAccounts:
     def __init__(self):
-        self.users, self.sessions, self.events = {}, {}, []
+        self.users, self.sessions, self.events, self.resets = {}, {}, [], {}
 
     def add_user(self, user):
         if any(existing.email == user.email for existing in self.users.values()):
@@ -42,6 +42,16 @@ class InMemoryAccounts:
 
     def delete_session(self, token_hash):
         self.sessions.pop(token_hash, None)
+
+    def add_password_reset(self, reset):
+        self.delete_password_resets(reset.user_id)
+        self.resets[reset.token_hash] = reset
+
+    def password_reset_by_hash(self, token_hash):
+        return self.resets.get(token_hash)
+
+    def delete_password_resets(self, user_id):
+        self.resets = {key: item for key, item in self.resets.items() if item.user_id != user_id}
 
     def record_event(self, user_id, event, ip):
         self.events.append((user_id, event, ip))

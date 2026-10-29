@@ -8,6 +8,7 @@ la skill `security-best-practices` para FastAPI y React.
 | Riesgo OWASP | Medida | Dónde |
 |---|---|---|
 | A07 Fallos de identificación y autenticación | Contraseñas con Argon2id; mínimo 10 caracteres; el mismo error y el mismo coste para un email desconocido y una contraseña errónea; 5 intentos fallidos por email y dirección cada 15 minutos | `backend/application/auth.py` |
+| A07 Recuperación de la contraseña | Enlace de un solo uso por correo: token aleatorio de 256 bits, del que la base guarda solo el SHA-256. Caduca en 30 minutos y solo vale el último de cada cuenta. Al usarlo cambia la contraseña, se cierran todas las sesiones y se abre una nueva. La respuesta es la misma para cualquier email, y el correo se envía después de responder, para que el tiempo tampoco revele si existe la cuenta. Como mucho 3 enlaces por hora por email. El token viaja en el fragmento (`/#reset=…`), que el navegador nunca envía a un servidor, y la aplicación lo quita de la barra de direcciones. El enlace usa `APP_BASE_URL`, nunca la cabecera `Host`. La cuenta demo nunca recibe enlace | `auth.py`, `auth_routes.py`, `backend/infrastructure/mailer.py` |
 | A07 Sesiones | Token aleatorio de 256 bits en cookie `HttpOnly`, `SameSite=Lax` y `Secure` en producción; la base guarda solo su SHA-256; caducidad de 7 días; cierre de sesión en servidor | `auth.py`, `backend/app/auth_routes.py` |
 | A01 Control de acceso | Las rutas de análisis, audio, notación y vídeos exigen sesión (`authenticated_user`); la autorización se decide en el servidor | `backend/app/dependencies.py`, `main.py` |
 | A01 Autorización por objeto (IDOR) | Obras, archivos, análisis, bandas, conciertos, ensayos, campañas y grados publicados se consultan siempre filtrando por el usuario; un objeto ajeno responde 404 igual que uno inexistente; borrado en cascada con la obra o la cuenta. Un músico invitado solo ve los pasajes de la campaña a la que le invitaron y sus propias valoraciones, nunca la predicción de ScoreLint ni las valoraciones, emails o número de los demás |
@@ -54,7 +55,7 @@ máximo de su propio resumen y la petición fallaba. El título acotado lo evita
 ## Pendientes (ampliación futura)
 
 - Límite de intentos compartido entre procesos (hoy en memoria, válido con un solo proceso).
-- Verificación de email y recuperación de contraseña con un servidor de correo.
+- Verificación del email al registrarse (la recuperación de la contraseña por correo ya está hecha).
 - Roles (por ejemplo, director y músico) más allá de las invitaciones a campañas.
 - Copias automáticas más allá de las 6 horas de historial del plan gratuito de Neon (hoy, copias manuales con `scripts/backup_db.sh`).
 - `style-src 'unsafe-inline'` en la CSP, que hoy necesitan el visor y React.

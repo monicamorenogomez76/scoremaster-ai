@@ -106,7 +106,8 @@ valoración abierta a la que está invitada (la demo no es administradora: valor
 | `demo@scoremaster.local` | `scoremaster-demo` |
 
 También se puede crear una cuenta desde la pantalla de acceso. «Entrar con Google» solo aparece si
-`GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` están configurados.
+`GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` están configurados. «¿Has olvidado la contraseña?» envía un enlace de un
+solo uso que caduca en 30 minutos; en local, sin servicio de correo, el enlace aparece en la consola del servidor.
 
 Para enseñar el recorrido completo, [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](demo/para-subir/pasodoble-de-las-fiestas.mxl)
 no está precargada: se sube desde Repertorio → «Añadir obra».
@@ -142,6 +143,7 @@ dependa de ellas.
 | `DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`, `DEMO_SEED_CONTENT` | Cuenta demo y su contenido de ejemplo (`1`) | Sin cuenta demo |
 | `ADMIN_EMAILS` | Cuentas administradoras, separadas por comas: crean y gestionan campañas de valoración y ven los emails y resultados de los músicos. Registrar antes la cuenta (el registro no verifica el email) | Nadie puede crear campañas; cada cuenta solo valora las campañas a las que la invitan |
 | `OMR_GITHUB_REPO`, `OMR_GITHUB_TOKEN` | Lectura de PDF: el repositorio privado del lector y su token *fine-grained* (ver [DEPLOYMENT.md](docs/DEPLOYMENT.md)) | No se ofrece subir PDF |
+| `BREVO_API_KEY`, `MAIL_FROM`, `APP_BASE_URL` | Recuperación de la contraseña por correo con [Brevo](https://www.brevo.com) (plan gratuito): la clave, el remitente verificado en Brevo y la dirección pública a la que apunta el enlace | En local, el enlace sale en la consola del servidor; en producción no se ofrece |
 | `APP_ENV=production` | Cookies `Secure`, HSTS y sin documentación interactiva de la API | Modo desarrollo |
 
 A la IA solo llegan datos derivados del análisis (grados, dimensiones, compases, bloques), nunca la
