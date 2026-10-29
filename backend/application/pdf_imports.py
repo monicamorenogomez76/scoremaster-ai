@@ -43,6 +43,9 @@ class PdfImportRepository(Protocol):
     def done(self, import_id: UUID, work_id: UUID) -> None: ...
     def failed(self, import_id: UUID, error: str) -> None: ...
 
+    def read_before(self, moment: datetime) -> list[tuple[UUID, UUID, str]]:
+        """(owner, work, kind) of the imports that became a work before that moment."""
+
 
 class OmrDispatcher(Protocol):
     """Starts the reader with a job: kind, title, the PDFs' addresses, the callback and the one-time token."""

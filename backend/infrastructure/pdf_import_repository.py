@@ -109,3 +109,10 @@ class PostgresPdfImportRepository:
             session.execute(delete(StoredPdfImportFile).where(StoredPdfImportFile.import_id == import_id))
             session.execute(update(StoredPdfImport).where(StoredPdfImport.id == import_id).values(
                 status='failed', error=error[:300], token_sha256=None, musicxml=None, updated_at=func.now()))
+
+    def read_before(self, moment: datetime) -> list[tuple[UUID, UUID, str]]:
+        with Session(self.engine) as session:
+            rows = session.execute(select(StoredPdfImport.user_id, StoredPdfImport.work_id, StoredPdfImport.kind)
+                                   .where(StoredPdfImport.status == 'done', StoredPdfImport.work_id.is_not(None),
+                                          StoredPdfImport.updated_at < moment)).all()
+        return [(row.user_id, row.work_id, row.kind) for row in rows]

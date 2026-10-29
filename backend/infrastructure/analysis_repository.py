@@ -56,15 +56,17 @@ class PostgresAnalysisRepository:
 
     def outdated_latest(self, algorithm_version: str, instruments: dict | None = None) -> list[OutdatedAnalysis]:
         """Works whose latest analysis was made by another version of the algorithm or, when given, of the instrument
-        catalog and resolver (2026-10-28: a part unknown before may now have its instrument)."""
+        catalog and resolver (2026-10-28: a part unknown before may now have its instrument), or from another file of
+        the work (2026-10-29: the works read from a PDF before took their transposition)."""
         statement = text("""
-            select distinct on (work_id) work_id, user_id, configuration, algorithm_version, features
-            from analyses where work_id is not null and user_id is not null
-            order by work_id, created_at desc""")
+            select distinct on (a.work_id) a.work_id, a.user_id, a.configuration, a.algorithm_version, a.features,
+                   a.source_sha256 <> w.source_sha256 as changed
+            from analyses a join works w on w.id = a.work_id where a.user_id is not null
+            order by a.work_id, a.created_at desc""")
         with Session(self.engine) as session:
             return [OutdatedAnalysis(row.user_id, row.work_id, row.configuration or {})
                     for row in session.execute(statement)
-                    if row.algorithm_version != algorithm_version
+                    if row.changed or row.algorithm_version != algorithm_version
                     or (instruments and (row.features or {}).get("instrument_resolution") != instruments)]
 
 

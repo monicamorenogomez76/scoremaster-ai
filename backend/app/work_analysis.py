@@ -1,6 +1,7 @@
 """Analysing a work and keeping it in its owner's library: what POST /analyze does once the upload is
 validated, shared with the demo account's seed (PR 4 of the closing plan, 2026-10-14)."""
 import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from backend.application.library import WorkUpload
 from backend.application.save_analysis import save_analysis
 from backend.domain.instrument_catalog import catalog_version, instrument_name_key
 from backend.domain.instrument_resolver import RESOLVED, RESOLVER_VERSION, resolve_part
+from backend.parsers.pdf_transpositions import add_transpositions
 
 
 logger = logging.getLogger(__name__)
@@ -91,3 +93,26 @@ def refresh_outdated_analyses(repository, library, score_store=None) -> int:
         except Exception:
             logger.warning("No se pudo volver a analizar una obra con la versión actual de ScoreLint.", exc_info=True)
     return refreshed
+
+
+# When ScoreMaster started adding the transposition to what the PDF reader sends (#142, deployed on 2026-10-29).
+TRANSPOSED_SINCE = datetime(2026, 10, 29, 17, 0, tzinfo=timezone.utc)
+
+
+def transpose_works_read_before(imports, library, instruments=None) -> int:
+    """Works read from a PDF before #142 kept copista's MusicXML without <transpose> and sounded as written: they take
+    the transposition of each instrument, as a reading would take it now, without reading the PDF again. The notes stay
+    as written; refresh_outdated_analyses analyses them again because their file changed. Returns how many changed."""
+    changed = 0
+    for user_id, work_id, kind in imports.read_before(TRANSPOSED_SINCE):
+        stored = library.work_file(user_id, work_id)
+        if stored is None:
+            continue
+        try:
+            learned = instruments.learned(user_id) if instruments else None
+            transposed = add_transpositions(stored[0], learned, source="score" if kind == "score" else "parts")
+            if transposed != stored[0] and library.replace_source(user_id, work_id, transposed):
+                changed += 1
+        except Exception:
+            logger.warning("No se pudo añadir la transposición a una obra leída de PDF.", exc_info=True)
+    return changed

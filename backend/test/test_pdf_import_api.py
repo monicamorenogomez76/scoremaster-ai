@@ -214,3 +214,42 @@ def test_a_score_in_c_read_from_a_pdf_keeps_its_sounding_pitch(clients, reader, 
     with postgres_engine.connect() as connection:
         stored = connection.execute(text("SELECT source FROM works WHERE source_format = 'pdf'")).scalar_one()
     assert (b"<transpose>" in stored) == transposed
+
+
+def test_works_read_before_the_transposition_are_transposed_when_the_server_starts(clients, reader, postgres_engine):  # noqa: F811
+    """Works read from a PDF before 2026-10-29 kept copista's MusicXML without <transpose>: everything sounded as
+    written. At startup they take the transposition of each instrument and are analysed again, without reading the
+    PDF again; the notes stay as written."""
+    import hashlib
+    from sqlalchemy import text
+    from backend.app.work_analysis import refresh_outdated_analyses, transpose_works_read_before
+    from backend.infrastructure.analysis_repository import PostgresAnalysisRepository
+    from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
+    from backend.infrastructure.library_repository import PostgresLibraryRepository
+    from backend.test.test_pdf_transpositions import sounding, work
+    ana, _ = clients
+    read = work(("Trumpet in B b 1", "G"), ("Flute", "G"), ("Horn in F 1", "G"))
+    in_c = work(("Trumpet in B b 1", "G"), ("Flute", "G"))
+    for title, content, extra in (("Antes", read, {}), ("Guion en Do", in_c, {"source": "score", "concert_pitch": True})):
+        upload(ana, title=title)
+        assert machine(ana, reader.jobs[-1], "/result", json={"musicxml": content.decode(), **extra}).status_code == 202
+    with postgres_engine.begin() as connection:   # as ScoreMaster kept it before 2026-10-29
+        before = connection.execute(text("SELECT work_id FROM pdf_imports WHERE title = 'Antes'")).scalar_one()
+        sha = hashlib.sha256(read).hexdigest()
+        connection.execute(text("UPDATE works SET source = :read, source_sha256 = :sha WHERE id = :work"),
+                           {"read": read, "sha": sha, "work": before})
+        connection.execute(text("UPDATE analyses SET source_sha256 = :sha WHERE work_id = :work"), {"sha": sha, "work": before})
+        connection.execute(text("UPDATE pdf_imports SET updated_at = '2026-10-28 20:00+00' WHERE title = 'Antes'"))
+        connection.execute(text("UPDATE pdf_imports SET updated_at = '2026-10-30 10:00+00' WHERE title = 'Guion en Do'"))
+    library, instruments = PostgresLibraryRepository(postgres_engine), PostgresInstrumentRepository(postgres_engine)
+    imports, analyses = PostgresPdfImportRepository(postgres_engine), PostgresAnalysisRepository(postgres_engine)
+
+    assert transpose_works_read_before(imports, library, instruments) == 1, "the score in C read later is left alone"
+    with postgres_engine.connect() as connection:
+        source, stored_sha = connection.execute(text("SELECT source, source_sha256 FROM works WHERE id = :work"),
+                                                {"work": before}).one()
+    assert sounding(bytes(source)) == [72 - 2, 72, 72 - 7] and stored_sha == hashlib.sha256(source).hexdigest()
+    assert bytes(source).count(b"<step>C</step>") == 3, "the notes stay as written"
+    assert refresh_outdated_analyses(analyses, library) == 1, "the work changed: its analysis is made again"
+    assert transpose_works_read_before(imports, library, instruments) == 0
+    assert refresh_outdated_analyses(analyses, library) == 0
