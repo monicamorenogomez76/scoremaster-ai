@@ -222,7 +222,7 @@ def test_works_read_before_the_transposition_are_transposed_when_the_server_star
     PDF again; the notes stay as written."""
     import hashlib
     from sqlalchemy import text
-    from backend.app.work_analysis import refresh_outdated_analyses, transpose_works_read_before
+    from backend.app.work_analysis import refresh_outdated_analyses, repair_pdf_works
     from backend.infrastructure.analysis_repository import PostgresAnalysisRepository
     from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
     from backend.infrastructure.library_repository import PostgresLibraryRepository
@@ -244,12 +244,39 @@ def test_works_read_before_the_transposition_are_transposed_when_the_server_star
     library, instruments = PostgresLibraryRepository(postgres_engine), PostgresInstrumentRepository(postgres_engine)
     imports, analyses = PostgresPdfImportRepository(postgres_engine), PostgresAnalysisRepository(postgres_engine)
 
-    assert transpose_works_read_before(imports, library, instruments) == 1, "the score in C read later is left alone"
+    assert repair_pdf_works(imports, library, instruments) == 1, "the score in C read later is left alone"
     with postgres_engine.connect() as connection:
         source, stored_sha = connection.execute(text("SELECT source, source_sha256 FROM works WHERE id = :work"),
                                                 {"work": before}).one()
     assert sounding(bytes(source)) == [72 - 2, 72, 72 - 7] and stored_sha == hashlib.sha256(source).hexdigest()
     assert bytes(source).count(b"<step>C</step>") == 3, "the notes stay as written"
     assert refresh_outdated_analyses(analyses, library) == 1, "the work changed: its analysis is made again"
-    assert transpose_works_read_before(imports, library, instruments) == 0
+    assert repair_pdf_works(imports, library, instruments) == 0
     assert refresh_outdated_analyses(analyses, library) == 0
+
+
+def test_measures_read_too_long_or_too_short_keep_their_length(clients, reader, postgres_engine):  # noqa: F811
+    """2026-10-29: a measure copista read with three beats in 2/4 made every later measure of its part sound late."""
+    import hashlib
+    from sqlalchemy import text
+    from backend.app.work_analysis import refresh_outdated_analyses, repair_pdf_works
+    from backend.infrastructure.analysis_repository import PostgresAnalysisRepository
+    from backend.infrastructure.library_repository import PostgresLibraryRepository
+    from backend.test.test_pdf_measures import note, offsets, work
+    ana, _ = clients
+    read = work(note(8), note(4) + note(4) + note(4), note(8))
+    upload(ana)
+    assert machine(ana, reader.jobs[0], "/result", json={"musicxml": read.decode()}).status_code == 202
+    with postgres_engine.begin() as connection:
+        stored = bytes(connection.execute(text("SELECT source FROM works WHERE source_format = 'pdf'")).scalar_one())
+        assert offsets(stored) == [0, 2, 4], "a new reading is fitted when it arrives"
+        sha = hashlib.sha256(read).hexdigest()   # as a work read before this change
+        connection.execute(text("UPDATE works SET source = :read, source_sha256 = :sha WHERE source_format = 'pdf'"),
+                           {"read": read, "sha": sha})
+        connection.execute(text("UPDATE analyses SET source_sha256 = :sha"), {"sha": sha})
+    library, imports = PostgresLibraryRepository(postgres_engine), PostgresPdfImportRepository(postgres_engine)
+    assert repair_pdf_works(imports, library) == 1, "a work kept before is fitted when the server starts"
+    with postgres_engine.connect() as connection:
+        assert offsets(bytes(connection.execute(text("SELECT source FROM works")).scalar_one())) == [0, 2, 4]
+    assert refresh_outdated_analyses(PostgresAnalysisRepository(postgres_engine), library) == 1
+    assert repair_pdf_works(imports, library) == 0

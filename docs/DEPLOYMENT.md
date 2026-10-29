@@ -179,7 +179,14 @@ Sin ellos, la opción de subir PDF no aparece.
   transpone si su texto lo dice («Score in C», «Guion en Do», «sonidos reales») o si sus armaduras lo indican: en un
   guion transpuesto el clarinete en Si♭ lleva dos sostenidos más que la flauta, y en uno en Do llevan la misma. Las
   obras leídas antes de este cambio la reciben al arrancar el servidor, sin volver a leer el PDF
-  (`transpose_works_read_before`), y se analizan de nuevo; sus notas quedan como estaban escritas.
+  (`repair_pdf_works`), y se analizan de nuevo; sus notas quedan como estaban escritas.
+- **Compases (2026-10-29):** copista a veces lee un compás demasiado largo o corto: un silencio de compás entero
+  seguido de notas, o un grupo de fusas un poco largo. Cada uno retrasaba o adelantaba el resto de su parte frente a la
+  banda: en «Paco el barba», la mitad de las partes iban de una a dieciséis negras fuera de tiempo. Al recibir la
+  lectura, cada compás toma la duración de su compás (`backend/parsers/pdf_measures.py`). Si un compás se pasa, se
+  quita primero el silencio de compás entero leído junto a otras notas y después lo que sobrepasa la barra. Si se
+  queda corto, se completa con silencio (antes de las notas en el primer compás, que es una anacrusa). Las obras
+  guardadas antes se reparan igual al arrancar el servidor, sin volver a leer el PDF.
 
 ## Trabajo futuro: Vercel
 
