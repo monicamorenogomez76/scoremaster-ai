@@ -752,6 +752,8 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .instrument-names { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
 .instrument-name { display: flex; align-items: center; gap: 8px; padding: 0 4px 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-alt); }
 .instrument-name .link-action { min-height: 44px; padding: 0 8px; }
+.instrument-learned { display: grid; gap: 8px; margin: 16px 0; }
+.instrument-learned h3 { margin: 0; font-size: 1rem; }
 .instrument-name-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-bottom: 16px; }
 .instrument-name-form label { flex-basis: 100%; }
 .instrument-new-form { display: grid; gap: 12px; padding-bottom: 8px; }

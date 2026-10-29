@@ -47,3 +47,9 @@ class InstrumentRepository(Protocol):
         """(name, normalized name, instrument id) confirmed by the account; a name confirmed again takes the new one."""
 
     def create_own(self, user_id: UUID, fields: dict) -> dict: ...
+
+    def shared(self, user_id: UUID, name_keys: list[str]) -> dict[str, str]:
+        """Normalized name → the common instrument most other accounts confirmed for it (2026-10-29)."""
+
+    def learned_names(self) -> list[dict]:
+        """Names the accounts confirmed for common instruments: name, name_key, instrument id and how many accounts."""

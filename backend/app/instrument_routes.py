@@ -6,7 +6,7 @@ import logging
 import re
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -150,6 +150,37 @@ def create_own_instrument(body: OwnInstrumentIn, user: User = Depends(authentica
     learn_confirmations(user, store, {body.name.strip(): created["id"]})
     use_private_instruments(store.private())
     return {"canonical_id": created["id"], "label_es": created["label_es"], "section": created["section"], "own": True}
+
+
+@router.get("/instruments/suggestions")
+def instrument_suggestions(part: list[str] = Query(default=[], max_length=80), user: User = Depends(authenticated_user),
+                           store=Depends(get_instrument_store)):
+    """For parts the catalog and the account do not know, the common instrument other accounts confirmed for the same
+    name (2026-10-29). It is only proposed: the part counts once the account confirms it. Who confirmed it is not said."""
+    if store is None:
+        return {"suggestions": {}}
+    own = store.learned(user.id)
+    unknown = {name: key for name in dict.fromkeys(item.strip()[:120] for item in part)
+               if name and match_instrument_name(name).identity is None
+               and (key := instrument_name_key(name)) not in own and re.search(r"[a-z]", key)}
+    shared = store.shared(user.id, sorted(set(unknown.values())))
+    return {"suggestions": {name: shared[key] for name, key in unknown.items() if key in shared}}
+
+
+def _without_numbers(name: str) -> str:
+    """«Fiscornio 1» or «Trompeta 2-3» as the catalog keeps it: the part numbers are recognised on their own."""
+    return re.sub(r"[\s.]*\d+(\s*(-|/|&|,|y)\s*\d+)*\s*$", "", name).strip() or name
+
+
+@router.get("/admin/instruments/learned")
+def learned_names(user: User = Depends(authenticated_user),
+                  repository: InstrumentRepository = Depends(get_instrument_repository)):
+    """The names the accounts confirmed that the common catalog does not recognise yet, the most confirmed first."""
+    _admin(user)
+    labels = {identity.canonical_id: identity.label_es for identity in catalog_entries()}
+    return {"names": [{"name": _without_numbers(item["name"]), "canonical_id": item["instrument_id"],
+                       "label_es": labels.get(item["instrument_id"], item["instrument_id"]), "accounts": item["accounts"]}
+                      for item in repository.learned_names() if match_instrument_name(item["name"]).identity is None]}
 
 
 @router.get("/admin/instruments")

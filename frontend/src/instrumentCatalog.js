@@ -62,3 +62,22 @@ export const ownInstrumentBody = (part, form) => ({
 
 export const createOwnInstrument = body => apiJson('/instruments', { method: 'POST', ...json(body) },
   'No se pudo crear el instrumento.');
+
+// Shared between accounts (2026-10-29): for parts without a proposal, the instrument other accounts confirmed for the
+// same name. It comes chosen in the list but counts only once the part is confirmed; without an answer, nothing changes.
+export async function loadInstrumentSuggestions(items) {
+  const parts = (items || []).filter(item => !item.proposal).map(item => item.part);
+  if (parts.length === 0) return {};
+  try {
+    const body = await apiJson('/instruments/suggestions?' + new URLSearchParams(parts.map(part => ['part', part])), {}, '');
+    return body.suggestions || {};
+  } catch {
+    return {};
+  }
+}
+
+export const withSuggestions = (items, suggestions) => (items || []).map(item =>
+  !item.proposal && suggestions[item.part] ? { ...item, status: 'shared', proposal: suggestions[item.part] } : item);
+
+export const loadLearnedNames = () => apiJson('/admin/instruments/learned', {},
+  'No se pudieron cargar los nombres confirmados por las cuentas.');

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { addInstrumentName, createInstrument, createOwnInstrument, deleteInstrumentName, filterInstruments, instrumentKeys, loadAdminInstruments,
-  newInstrumentBody, OTHER_INSTRUMENT, ownInstrumentBody, ownInstrumentForm } from '../../../frontend/src/instrumentCatalog.js';
+  loadInstrumentSuggestions, loadLearnedNames, newInstrumentBody, OTHER_INSTRUMENT, ownInstrumentBody, ownInstrumentForm,
+  withSuggestions } from '../../../frontend/src/instrumentCatalog.js';
 
 // The instrument catalog in the database (2026-10-28): the administration adds the names an instrument is written
 // with and new common instruments from Configuración.
@@ -66,4 +67,26 @@ test('an instrument the catalog does not have is created for the account from th
   const calls = fakeServer({ 'POST /instruments': [201, { canonical_id: 'own.1', label_es: 'Dulzaina', section: 'woodwinds', own: true }] });
   assert.equal((await createOwnInstrument({ name: 'Dulzaina 1' })).canonical_id, 'own.1');
   assert.equal(JSON.parse(calls[0].body).name, 'Dulzaina 1');
+});
+
+// Shared between accounts (2026-10-29): a name other accounts confirmed comes proposed and is counted once confirmed.
+test('a name other accounts confirmed comes proposed for the parts without a proposal', async () => {
+  const calls = fakeServer({ 'GET /instruments/suggestions?part=Fiscornio+2&part=Dulzaina':
+    [200, { suggestions: { 'Fiscornio 2': 'flugelhorn.bb' } }] });
+  const items = [{ part: 'Fiscornio 2', status: 'unknown' }, { part: 'Dulzaina', status: 'unknown' },
+    { part: 'Clarinete', status: 'review', proposal: 'clarinet.bb' }];
+  const suggestions = await loadInstrumentSuggestions(items);
+  assert.equal(calls.length, 1, 'only the parts without a proposal are asked');
+  assert.deepEqual(withSuggestions(items, suggestions), [
+    { part: 'Fiscornio 2', status: 'shared', proposal: 'flugelhorn.bb' }, { part: 'Dulzaina', status: 'unknown' },
+    { part: 'Clarinete', status: 'review', proposal: 'clarinet.bb' }]);
+  assert.deepEqual(await loadInstrumentSuggestions([items[2]]), {}, 'nothing to ask');
+  fakeServer({});
+  assert.deepEqual(await loadInstrumentSuggestions(items), {}, 'without suggestions the parts are asked as before');
+});
+
+test('the administration reads the names the accounts confirmed', async () => {
+  fakeServer({ 'GET /admin/instruments/learned': [200, { names: [{ name: 'Fiscornio', canonical_id: 'flugelhorn.bb',
+    label_es: 'Fliscorno', accounts: 2 }] }] });
+  assert.equal((await loadLearnedNames()).names[0].accounts, 2);
 });

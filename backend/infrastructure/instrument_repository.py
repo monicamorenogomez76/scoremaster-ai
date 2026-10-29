@@ -150,3 +150,30 @@ class PostgresInstrumentRepository:
             row = StoredInstrument(id='own.' + uuid4().hex[:12], position=0, owner_id=user_id, **fields)
             session.add(row)
         return _fields(row)
+
+    def _confirmed(self, *conditions):
+        """How many accounts confirmed each normalized name for each common instrument, with its first spelling."""
+        accounts = func.count(StoredInstrumentName.owner_id.distinct()).label('accounts')
+        first = func.min(StoredInstrumentName.name).label('name')
+        return (select(StoredInstrumentName.name_key, StoredInstrumentName.instrument_id, first, accounts)
+                .join(StoredInstrument, StoredInstrument.id == StoredInstrumentName.instrument_id)
+                .where(StoredInstrumentName.owner_id.is_not(None), StoredInstrument.owner_id.is_(None), *conditions)
+                .group_by(StoredInstrumentName.name_key, StoredInstrumentName.instrument_id)
+                .order_by(accounts.desc(), StoredInstrumentName.name_key, StoredInstrumentName.instrument_id))
+
+    def shared(self, user_id: UUID, name_keys: list[str]) -> dict[str, str]:
+        if not name_keys:
+            return {}
+        with Session(self.engine) as session:
+            rows = session.execute(self._confirmed(StoredInstrumentName.owner_id != user_id,
+                                                   StoredInstrumentName.name_key.in_(name_keys))).all()
+        found = {}
+        for row in rows:   # the most confirmed first
+            found.setdefault(row.name_key, row.instrument_id)
+        return found
+
+    def learned_names(self) -> list[dict]:
+        with Session(self.engine) as session:
+            rows = session.execute(self._confirmed()).all()
+        return [{'name': row.name, 'name_key': row.name_key, 'instrument_id': row.instrument_id,
+                 'accounts': row.accounts} for row in rows]

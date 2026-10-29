@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { apiFetch } from './api.js';
 import { BandManager } from './BandManager.jsx';
 import { View } from './View.jsx';
-import { createOwnInstrument, instrumentGroups, instrumentKeys, instrumentSections, OTHER_INSTRUMENT, ownInstrumentBody,
-  ownInstrumentForm } from './instrumentCatalog.js';
+import { createOwnInstrument, instrumentGroups, instrumentKeys, instrumentSections, loadInstrumentSuggestions, OTHER_INSTRUMENT,
+  ownInstrumentBody, ownInstrumentForm, withSuggestions } from './instrumentCatalog.js';
 import { bandIssueText, bandStatusLabels, confirmationOptions, displayInstrumentName, unconfirmedStatusText } from './labels.js';
 
 // Parts without a confirmed instrument: the user picks it from the catalog (step 09) or, when it is not there,
@@ -48,8 +48,19 @@ function InstrumentConfirmation({ items, onConfirm, busy }) {
       .catch(() => { if (current) setCatalog([]); });
     return () => { current = false; };
   }, []);
+  const [shown, setShown] = useState(items);
   useEffect(() => {
+    let current = true;
+    setShown(items);
     setChosen(Object.fromEntries(items.map(item => [item.part, item.proposal || ''])));
+    // A name other accounts confirmed comes chosen, without changing what was already chosen.
+    loadInstrumentSuggestions(items).then(suggestions => {
+      if (!current) return;
+      const proposed = withSuggestions(items, suggestions);
+      setShown(proposed);
+      setChosen(previous => Object.fromEntries(proposed.map(item => [item.part, previous[item.part] || item.proposal || ''])));
+    });
+    return () => { current = false; };
   }, [items]);
   const selected = Object.fromEntries(Object.entries(chosen).filter(([, identity]) => identity && identity !== OTHER_INSTRUMENT));
   const created = (part, instrument) => {
@@ -60,7 +71,7 @@ function InstrumentConfirmation({ items, onConfirm, busy }) {
     <h2>Instrumentos por confirmar</h2>
     <p className="result-supporting">Estas partes no cuentan en la plantilla hasta que confirmes qué instrumento las toca.
       Lo que confirmes se recordará en tus próximas obras.</p>
-    <div className="band-profile-rows">{items.map(item =>
+    <div className="band-profile-rows">{shown.map(item =>
       <div key={item.part} className="instrument-confirm-item">
         <label className="band-profile-row">
           <span>{item.part}<small className="result-supporting"> · {unconfirmedStatusText(item)}</small></span>

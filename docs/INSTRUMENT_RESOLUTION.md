@@ -102,8 +102,20 @@ obras.
   nombre, la familia, la tonalidad, el sonido y el grupo de ensayo, y crea un instrumento propio de la cuenta
   (`own.<id>`) que aprende el nombre de la parte. Cuenta en BandFit y en la plantilla, y en el grado, con el perfil
   genérico de su familia.
-- **Aislamiento entre cuentas:** lo aprendido y los instrumentos propios de una cuenta no llegan a ninguna otra.
-  Confirmar el instrumento propio de otra cuenta se rechaza (400).
+- **Aislamiento entre cuentas:** lo aprendido por una cuenta nunca cuenta solo en otra, y sus instrumentos propios no
+  llegan a ninguna otra. Confirmar el instrumento propio de otra cuenta se rechaza (400).
+
+**Nombres compartidos entre cuentas (2026-10-29):** lo que una cuenta confirma ayuda a las demás, pero sin decidir por
+ellas.
+- **Propuesta:** si una parte no la reconocen ni el catálogo común ni la propia cuenta, pero otras cuentas confirmaron
+  ese nombre con un instrumento común, el desplegable de «Mi banda» lo trae elegido con el aviso «Propuesto: otras
+  cuentas lo confirmaron con este instrumento» (`GET /instruments/suggestions`). Si hay varios, se propone el que más
+  cuentas eligieron. La parte solo cuenta cuando se pulsa «Confirmar instrumentos». No se dice qué cuentas lo
+  confirmaron, y los instrumentos propios nunca se proponen a otra cuenta.
+- **Revisión:** la administración ve en Configuración › Instrumentos los «Nombres confirmados por las cuentas»
+  (`GET /admin/instruments/learned`), sin números de parte, con el instrumento y el número de cuentas. Con «Añadir al
+  catálogo» pasa al catálogo común (`POST /admin/instruments/{id}/names`), y desde entonces se reconoce en todas las
+  cuentas sin preguntar.
 
 Queda para más adelante que el audio de `/playback` use las confirmaciones, como ya pasaba con las confirmaciones del
 paso 09.
