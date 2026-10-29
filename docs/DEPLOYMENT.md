@@ -178,7 +178,8 @@ Sin ellos, la opción de subir PDF no aparece.
   reconoce (`backend/parsers/pdf_transpositions.py`). Las particellas siempre se transponen. Un guion en Do no se
   transpone si su texto lo dice («Score in C», «Guion en Do», «sonidos reales») o si sus armaduras lo indican: en un
   guion transpuesto el clarinete en Si♭ lleva dos sostenidos más que la flauta, y en uno en Do llevan la misma. Las
-  obras leídas antes de este cambio hay que volver a subirlas.
+  obras leídas antes de este cambio la reciben al arrancar el servidor, sin volver a leer el PDF
+  (`transpose_works_read_before`), y se analizan de nuevo; sus notas quedan como estaban escritas.
 
 ## Trabajo futuro: Vercel
 

@@ -1,10 +1,12 @@
 from datetime import date, datetime
+from hashlib import sha256
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, LargeBinary, String, UniqueConstraint, delete, func, select, text
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, LargeBinary, String, UniqueConstraint, delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID, insert
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from backend.application.analysis_repository import AnalysisRecord
@@ -117,6 +119,15 @@ class PostgresLibraryRepository:
             row = session.execute(select(StoredWork.source, StoredWork.file_name)
                                   .where(StoredWork.id == work_id, StoredWork.user_id == user_id)).first()
             return (bytes(row.source), row.file_name) if row else None
+
+    def replace_source(self, user_id: UUID, work_id: UUID, source: bytes) -> bool:
+        try:
+            with Session(self.engine) as session, session.begin():
+                return session.execute(update(StoredWork).where(StoredWork.id == work_id, StoredWork.user_id == user_id)
+                                       .values(source=source, source_sha256=sha256(source).hexdigest(), size=len(source),
+                                               updated_at=func.now())).rowcount > 0
+        except IntegrityError:
+            return False
 
     def latest_analysis(self, user_id: UUID, work_id: UUID) -> Optional[AnalysisRecord]:
         with Session(self.engine) as session:

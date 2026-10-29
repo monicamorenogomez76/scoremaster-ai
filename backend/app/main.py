@@ -25,11 +25,11 @@ from backend.app.instrument_routes import (confirmable_ids, learn_confirmations,
 from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.pdf_routes import router as pdf_router
 from backend.app.stored_scores import prepare_missing_works
-from backend.app.work_analysis import analyze_and_store, refresh_outdated_analyses
+from backend.app.work_analysis import analyze_and_store, refresh_outdated_analyses, transpose_works_read_before
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
     SAFE_METHODS, STORAGE_UNAVAILABLE, analysis_engine, authenticated_user, close_analysis_engine, get_analysis_repository,
-    get_instrument_store, get_library_repository, get_playback_store, get_score_store,
+    get_instrument_store, get_library_repository, get_pdf_import_repository, get_playback_store, get_score_store,
 )
 from backend.application.accounts import User
 from backend.application.analysis_repository import AnalysisRepository
@@ -71,6 +71,10 @@ def _refresh_analyses(score_store):
 
 def _prepare_missing(score_store, playback_store):
     try:
+        # Before preparing: the works read from a PDF before #142 change their file (2026-10-29).
+        transposed = transpose_works_read_before(get_pdf_import_repository(), get_library_repository(), get_instrument_store())
+        if transposed:
+            logging.getLogger("uvicorn.error").info("Obras de PDF con la transposición de cada instrumento: %s.", transposed)
         prepare_missing_works(score_store, playback_store, after_models=lambda: _refresh_analyses(score_store))
     except Exception:
         logging.getLogger(__name__).warning("No se pudieron preparar las obras guardadas.", exc_info=True)
