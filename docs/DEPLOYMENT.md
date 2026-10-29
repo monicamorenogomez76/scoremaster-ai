@@ -187,6 +187,13 @@ Sin ellos, la opción de subir PDF no aparece.
   quita primero el silencio de compás entero leído junto a otras notas y después lo que sobrepasa la barra. Si se
   queda corto, se completa con silencio (antes de las notas en el primer compás, que es una anacrusa). Las obras
   guardadas antes se reparan igual al arrancar el servidor, sin volver a leer el PDF.
+- **Armaduras (2026-10-29):** copista puede no leer la armadura de una página: en «Paco el barba», seis partes en Si♭
+  leyeron la primera sin sus dos sostenidos y sonaban Fa y Do donde el PDF tiene Fa♯ y Do♯. La tonalidad de la obra
+  en cada compás es la que comparten la mayoría de las partes no transpositoras (al menos dos). Una parte transpuesta
+  debe llevar esa tonalidad más el intervalo de su instrumento. Si no la lleva, toma esa armadura
+  (`fix_key_signatures`), y sus notas sin alteración impresa se escriben en ella. Las alteraciones impresas se leyeron
+  bien y se respetan hasta la barra, y una nota ligada conserva la altura de la que continúa. Sin al menos dos
+  partes de referencia no se cambia nada.
 
 ## Trabajo futuro: Vercel
 
