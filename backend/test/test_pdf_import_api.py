@@ -280,3 +280,34 @@ def test_measures_read_too_long_or_too_short_keep_their_length(clients, reader, 
         assert offsets(bytes(connection.execute(text("SELECT source FROM works")).scalar_one())) == [0, 2, 4]
     assert refresh_outdated_analyses(PostgresAnalysisRepository(postgres_engine), library) == 1
     assert repair_pdf_works(imports, library) == 0
+
+
+def test_a_key_signature_the_reader_missed_is_taken_from_the_band(clients, reader, postgres_engine):  # noqa: F811
+    """2026-10-29: six B♭ parts of «Paco el barba» read their first page without its two sharps."""
+    import hashlib
+    from music21 import converter
+    from sqlalchemy import text
+    from backend.app.work_analysis import repair_pdf_works
+    from backend.infrastructure.library_repository import PostgresLibraryRepository
+    from backend.parsers.pdf_transpositions import add_transpositions
+    from backend.test.test_pdf_key_signatures import BAND, note, part
+    parts = BAND + (("Clarinet in B b 1", {1: 0, 2: 2}, [note("F"), note("F", 1), note("C", 1)]),)
+    names = "".join(f'<score-part id="P{n}"><part-name>{item[0]}</part-name></score-part>' for n, item in enumerate(parts, 1))
+    read = ('<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"><part-list>' + names + '</part-list>'
+            + "".join(f'<part id="P{n}">{part(item[1], item[2], *item[3:])}</part>' for n, item in enumerate(parts, 1))
+            + '</score-partwise>')
+
+    def clarinet(source):
+        return [n.pitch.name for n in converter.parseData(bytes(source).decode(), format="musicxml").parts[3].flatten().notes]
+
+    upload(ana := clients[0])
+    assert machine(ana, reader.jobs[0], "/result", json={"musicxml": read}).status_code == 202
+    with postgres_engine.begin() as connection:
+        assert clarinet(connection.execute(text("SELECT source FROM works")).scalar_one()) == ["F#", "F#", "C#"]
+        before = add_transpositions(read.encode())   # as a work read after #142 and before this change
+        connection.execute(text("UPDATE works SET source = :read, source_sha256 = :sha"),
+                           {"read": before, "sha": hashlib.sha256(before).hexdigest()})
+    library = PostgresLibraryRepository(postgres_engine)
+    assert repair_pdf_works(PostgresPdfImportRepository(postgres_engine), library) == 1
+    with postgres_engine.connect() as connection:
+        assert clarinet(connection.execute(text("SELECT source FROM works")).scalar_one()) == ["F#", "F#", "C#"]

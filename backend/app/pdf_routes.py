@@ -25,7 +25,7 @@ from backend.app.work_analysis import analyze_and_store
 from backend.application.accounts import User
 from backend.domain.instrument_catalog import catalog_entries
 from backend.parsers.pdf_measures import fit_measures
-from backend.parsers.pdf_transpositions import add_transpositions
+from backend.parsers.pdf_transpositions import add_transpositions, fix_key_signatures
 from backend.application.pdf_imports import OmrDispatcher, PdfImport, PdfImportRepository
 
 router = APIRouter()
@@ -210,6 +210,8 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
             # Each measure keeps the length of its time signature: one read too long made its part sound late.
             content = add_transpositions(fit_measures(content), instruments.learned(found.user_id) if instruments else None,
                                          result.concert_pitch, result.source or "parts")
+            # A key signature the reader missed in a transposed part is taken from the band.
+            content = fix_key_signatures(content)
         except ET.ParseError:
             imports.failed(found.id, "La lectura no es MusicXML válido.")
             return JSONResponse(status_code=202, content={})

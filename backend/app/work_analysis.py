@@ -17,7 +17,7 @@ from backend.application.save_analysis import save_analysis
 from backend.domain.instrument_catalog import catalog_version, instrument_name_key
 from backend.domain.instrument_resolver import RESOLVED, RESOLVER_VERSION, resolve_part
 from backend.parsers.pdf_measures import fit_measures
-from backend.parsers.pdf_transpositions import add_transpositions
+from backend.parsers.pdf_transpositions import add_transpositions, fix_key_signatures
 
 
 logger = logging.getLogger(__name__)
@@ -102,8 +102,8 @@ TRANSPOSED_SINCE = datetime(2026, 10, 29, 17, 0, tzinfo=timezone.utc)
 
 def repair_pdf_works(imports, library, instruments=None) -> int:
     """Works read from a PDF before these fixes are repaired as a reading is now, without reading the PDF again: every
-    measure takes the length of its time signature (fit_measures, 2026-10-29) and, if read before #142, each part the
-    transposition of its instrument (copista writes none). refresh_outdated_analyses then analyses them again because
+    measure takes the length of its time signature (fit_measures, 2026-10-29), if read before #142 each part the
+    transposition of its instrument (copista writes none), and a transposed part the key signature the reader missed. refresh_outdated_analyses then analyses them again because
     their file changed. Returns how many changed; once repaired, a work is left as it is."""
     untransposed = {work_id for _, work_id, _ in imports.read_before(TRANSPOSED_SINCE)}
     changed = 0
@@ -116,6 +116,7 @@ def repair_pdf_works(imports, library, instruments=None) -> int:
             if work_id in untransposed:
                 learned = instruments.learned(user_id) if instruments else None
                 repaired = add_transpositions(repaired, learned, source="score" if kind == "score" else "parts")
+            repaired = fix_key_signatures(repaired)
             if repaired != stored[0] and library.replace_source(user_id, work_id, repaired):
                 changed += 1
         except Exception:
