@@ -186,3 +186,31 @@ def _user_id(engine, email):
     from sqlalchemy import text
     with engine.connect() as connection:
         return connection.execute(text("SELECT id FROM users WHERE email = :email"), {"email": email}).scalar_one()
+
+
+def test_the_work_read_from_a_pdf_sounds_in_the_key_of_each_instrument(clients, reader, postgres_engine):  # noqa: F811
+    """copista writes no <transpose> (2026-10-29): ScoreMaster adds the one of each instrument it recognises."""
+    from backend.test.test_pdf_transpositions import work
+    ana, _ = clients
+    upload(ana)
+    job = reader.jobs[0]
+    read = work(("Trumpet in B b 1", "G"), ("Horn in F 1", "G"))
+    assert machine(ana, job, "/result", json={"musicxml": read.decode()}).status_code == 202
+    from sqlalchemy import text
+    with postgres_engine.connect() as connection:
+        stored = connection.execute(text("SELECT source FROM works WHERE source_format = 'pdf'")).scalar_one()
+    assert stored.count(b"<transpose>") == 2 and b"<chromatic>-7</chromatic>" in stored
+
+
+@pytest.mark.parametrize("extra, transposed", [({}, True), ({"source": "parts"}, True),
+                                               ({"source": "score", "concert_pitch": True}, False)])
+def test_a_score_in_c_read_from_a_pdf_keeps_its_sounding_pitch(clients, reader, postgres_engine, extra, transposed):  # noqa: F811
+    from sqlalchemy import text
+    from backend.test.test_pdf_transpositions import work
+    ana, _ = clients
+    upload(ana)
+    read = work(("Trumpet in B b 1", "G"))
+    assert machine(ana, reader.jobs[0], "/result", json={"musicxml": read.decode(), **extra}).status_code == 202
+    with postgres_engine.connect() as connection:
+        stored = connection.execute(text("SELECT source FROM works WHERE source_format = 'pdf'")).scalar_one()
+    assert (b"<transpose>" in stored) == transposed

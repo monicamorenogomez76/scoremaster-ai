@@ -6,6 +6,7 @@ The token is kept only as its sha256 and is spent, with the PDFs, when the resul
 import hashlib
 import json
 import logging
+from xml.etree import ElementTree as ET
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -23,6 +24,7 @@ from backend.app.library_routes import valid_band_profile
 from backend.app.work_analysis import analyze_and_store
 from backend.application.accounts import User
 from backend.domain.instrument_catalog import catalog_entries
+from backend.parsers.pdf_transpositions import add_transpositions
 from backend.application.pdf_imports import OmrDispatcher, PdfImport, PdfImportRepository
 
 router = APIRouter()
@@ -139,6 +141,9 @@ class Progress(BaseModel):
 class Result(BaseModel):
     musicxml: Optional[str] = Field(default=None, max_length=MAX_MUSICXML_CHARACTERS)
     error: Optional[str] = Field(default=None, max_length=300)
+    # Where the work came from and whether the score says it is in C (2026-10-29): parts are always transposed.
+    source: Optional[str] = Field(default=None, pattern="^(parts|score)$")
+    concert_pitch: bool = False
 
 
 @router.get("/omr/imports/{import_id}/files/{position}")
@@ -199,6 +204,13 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
     elif b"<!ENTITY" in content:
         imports.failed(found.id, "La lectura no es MusicXML válido.")
     else:
+        # copista writes the notes in the key of each instrument but no <transpose> (2026-10-29).
+        try:
+            content = add_transpositions(content, instruments.learned(found.user_id) if instruments else None,
+                                         result.concert_pitch, result.source or "parts")
+        except ET.ParseError:
+            imports.failed(found.id, "La lectura no es MusicXML válido.")
+            return JSONResponse(status_code=202, content={})
         imports.received(found.id, content)
         # music21 is slow on Render: the reader is answered at once and the work is analysed afterwards.
         background.add_task(_analyse, found, imports, repository, library, score_store, instruments)

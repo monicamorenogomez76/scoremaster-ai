@@ -199,6 +199,16 @@ def score_names(text: str) -> list[str]:
     return [piece for piece in _pieces(text) if len(piece) <= 40 and catalog.names(piece)]
 
 
+CONCERT_PITCH = re.compile(r"\b(?:full\s+score|score|partitura(?:\s+general)?|gui[oó]n)\s+(?:in|en)\s+(?:c|do)\b|"
+                           r"\bc\s+score\b|\bconcert\s+pitch\b|\bsonidos?\s+reales?\b|\bsons\s+r[ée]els\b",
+                           re.IGNORECASE)
+
+
+def at_concert_pitch(text: str) -> bool:
+    """The page says the score is in C, at sounding pitch («Score in C», «Guion en Do»; 2026-10-29)."""
+    return bool(CONCERT_PITCH.search(text or ""))
+
+
 def staves(xml: bytes) -> int:
     """Staves of a page as copista wrote it: each part with its own count of staves."""
     from xml.etree import ElementTree as ET
@@ -232,9 +242,11 @@ def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str]
     return join_pages([xml for xml, _ in pages], title, named), named
 
 
-def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: str, read_score=lambda: []) -> bytes:
+def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: str,
+          read_score=lambda: []) -> tuple[bytes, str, bool]:
     """read: the pages of each file, None where copista could not read the page. read_score reads the score's pages
-    that were set apart, when a part needs them."""
+    that were set apart, when a part needs them. Returns the work, where it came from (parts or score) and whether the
+    score says it is in C."""
     score, parts = [], []
     for _, pages in read:
         for _, xml, text in pages:
@@ -256,9 +268,9 @@ def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: st
         summary = ", ".join(f"{name} ({len(found)} {'página' if len(found) == 1 else 'páginas'})"
                             for name, found, _ in groups if found)
         print(f"La obra se saca de las particellas: {summary}.", flush=True)
-        return combine_parts(files, title)
+        return combine_parts(files, title), "parts", False
     print(f"La obra se saca de la partitura general: {len(score)} páginas.", flush=True)
-    return _score(score, title)[0]
+    return _score(score, title)[0], "score", any(at_concert_pitch(text) for _, text in score)
 
 
 def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, str]], title: str) -> dict[str, bytes]:
@@ -339,11 +351,13 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                 for name, path in saved if (name, path) in by_file or (name, path) in failed]
         try:
             if data["kind"] == "auto":
-                musicxml = _auto(read, data["title"], read_score)
+                musicxml, source, concert_pitch = _auto(read, data["title"], read_score)
             elif data["kind"] == "score":
-                musicxml = _score([(xml, text) for _, pages_xml in read for _, xml, text in pages_xml if xml is not None],
-                                  data["title"])[0]
+                pages_read = [(xml, text) for _, pages_xml in read for _, xml, text in pages_xml if xml is not None]
+                musicxml, source = _score(pages_read, data["title"])[0], "score"
+                concert_pitch = any(at_concert_pitch(text) for _, text in pages_read)
             else:
+                source, concert_pitch = "parts", False
                 musicxml = combine_parts([(name, join_pages([xml for _, xml, _ in pages_xml if xml is not None], name))
                                           for name, pages_xml in read if any(xml for _, xml, _ in pages_xml)],
                                          data["title"])
@@ -351,7 +365,9 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             import traceback
             print("\n".join(traceback.format_exc().strip().splitlines()[-8:]), flush=True)
             raise Refused("No se pudo unir lo leído en una obra.") from None
-        client.post(callback + "/result", json={"musicxml": musicxml.decode("utf-8")}).raise_for_status()
+        # ScoreMaster adds the transposition of each instrument, never to a score in C (2026-10-29).
+        client.post(callback + "/result", json={"musicxml": musicxml.decode("utf-8"), "source": source,
+                                                "concert_pitch": concert_pitch}).raise_for_status()
         print(f"Leídas {total} páginas.", flush=True)
         return 0
     except Refused as reason:
