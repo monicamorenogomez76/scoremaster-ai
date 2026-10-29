@@ -96,6 +96,7 @@ const unconfirmedStatuses = {
   unknown: 'Sin identificar',
   review: 'Propuesta por los datos del archivo',
   conflict: 'El nombre y los datos del archivo no coinciden',
+  shared: 'Propuesto: otras cuentas lo confirmaron con este instrumento',
 };
 export const unconfirmedStatusText = item => unconfirmedStatuses[item.status] || unconfirmedStatuses.unknown;
 

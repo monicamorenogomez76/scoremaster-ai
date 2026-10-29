@@ -68,6 +68,9 @@ try {
   await admin.locator('#settings-instruments-title').waitFor({ state: 'visible' });
   await admin.locator('.instrument-admin-list details').first().locator('summary').click();
   await admin.locator('.instrument-new summary').click();
+  // dashboard.e2e.mjs, run before in CI, confirmed «Melodía» as a clarinet in the demo account (2026-10-29).
+  await admin.locator('#instrument-learned-title').waitFor({ state: 'visible' });
+  assert.match(await admin.locator('.instrument-learned').textContent(), /Melodía → Clarinete en Si bemol/);
   await audit(admin, 'Configuración › Instrumentos');
   // «Otro instrumento…» for a part the catalog does not know (never confirmed, so it stays unknown in every run).
   const unknownPart = readFileSync(new URL('../../../test-scores/high_register.musicxml', import.meta.url), 'utf8')
@@ -84,6 +87,19 @@ try {
   await admin.getByLabel('Instrumento de Gaita de fole').selectOption({ label: 'Otro instrumento…' });
   await admin.locator('.own-instrument-form').waitFor();
   await audit(admin, 'Mi banda › Otro instrumento');
+  // A name another account confirmed comes proposed, and counts only once confirmed.
+  await admin.locator('[data-view-target=repertoire]').click();
+  await admin.locator('#add-work').click();
+  await admin.locator('#file').setInputFiles({ name: 'melodia-3.musicxml', mimeType: 'application/xml',
+    buffer: Buffer.from(unknownPart.replace('Gaita de fole', 'Melodía 3')) });
+  await uploadIdle();
+  await admin.locator('#upload-form button[type=submit]').click();
+  await admin.locator('#overview-result').waitFor({ state: 'attached' });
+  await uploadIdle();
+  await admin.locator('[data-view-target=band]').click();
+  await admin.locator('#instrument-confirmation').getByText('Propuesto: otras cuentas lo confirmaron').waitFor();
+  assert.equal(await admin.getByLabel('Instrumento de Melodía 3').inputValue(), 'clarinet.bb');
+  await audit(admin, 'Mi banda › nombre propuesto por otras cuentas');
   await admin.close();
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
   await phone.goto(url);

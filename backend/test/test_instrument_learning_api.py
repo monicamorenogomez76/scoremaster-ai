@@ -84,3 +84,39 @@ def test_creating_an_instrument_needs_the_csrf_token(accounts):
     ana, _ = accounts
     del ana.headers["X-CSRF-Token"]
     assert ana.post("/instruments", json=DULZAINA).status_code == 403
+
+
+# Shared between accounts (2026-10-29): a name another account confirmed is proposed, never counted on its own, and the
+# administration sees how many accounts confirmed each name and makes it common with one click.
+def test_a_name_another_account_confirmed_is_proposed_but_not_counted(accounts):
+    ana, berta = accounts
+    analyze(ana, "Fiscornio 1", {"Fiscornio 1": "flugelhorn.bb"})
+    assert identity_of(analyze(berta, "Fiscornio 2", title="Otra")) is None, "it is not counted on its own"
+    answer = berta.get("/instruments/suggestions", params=[("part", "Fiscornio 2"), ("part", "Dulzaina")])
+    assert answer.status_code == 200
+    assert answer.json() == {"suggestions": {"Fiscornio 2": "flugelhorn.bb"}}
+    assert ana.get("/instruments/suggestions", params={"part": "Fiscornio 2"}).json() == {"suggestions": {}}, \
+        "the account's own confirmations already count"
+
+
+def test_instruments_an_account_created_are_never_proposed_to_another(accounts):
+    ana, berta = accounts
+    created = ana.post("/instruments", json=DULZAINA).json()
+    analyze(ana, "Gralla 1", {"Gralla 1": created["canonical_id"]})
+    assert berta.get("/instruments/suggestions", params={"part": "Dulzaina 1"}).json() == {"suggestions": {}}
+    assert berta.get("/instruments/suggestions", params={"part": "Gralla 1"}).json() == {"suggestions": {}}
+
+
+def test_the_administration_sees_the_names_confirmed_and_makes_them_common(accounts, monkeypatch):
+    ana, berta = accounts
+    monkeypatch.setenv("ADMIN_EMAILS", "ana@banda.org")
+    analyze(berta, "Fiscornio 1", {"Fiscornio 1": "flugelhorn.bb"})
+    analyze(ana, "Fiscornio 2", {"Fiscornio 2": "flugelhorn.bb"}, title="Otra")
+    assert berta.get("/admin/instruments/learned").status_code == 403
+    [learned] = ana.get("/admin/instruments/learned").json()["names"]
+    assert (learned["name"], learned["canonical_id"], learned["label_es"], learned["accounts"]) == \
+        ("Fiscornio", "flugelhorn.bb", "Fliscorno", 2), "without the part number, as the catalog keeps names"
+    assert "email" not in json.dumps(learned) and "user" not in json.dumps(learned), "who confirmed it is not shown"
+    assert ana.post("/admin/instruments/flugelhorn.bb/names", json={"name": learned["name"]}).status_code == 201
+    assert ana.get("/admin/instruments/learned").json()["names"] == [], "a common name is no longer listed"
+    assert identity_of(analyze(berta, "Fiscornio 4", title="Tercera")) == "flugelhorn.bb"

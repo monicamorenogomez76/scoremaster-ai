@@ -65,6 +65,7 @@ test('parts to confirm explain why and offer the proposal and candidates first',
   assert.equal(unconfirmedStatusText({ status: 'unknown' }), 'Sin identificar');
   assert.equal(unconfirmedStatusText({ status: 'review' }), 'Propuesta por los datos del archivo');
   assert.equal(unconfirmedStatusText({ status: 'conflict' }), 'El nombre y los datos del archivo no coinciden');
+  assert.equal(unconfirmedStatusText({ status: 'shared' }), 'Propuesto: otras cuentas lo confirmaron con este instrumento');
   const catalog = [{ canonical_id: 'flute', label_es: 'Flauta' }, { canonical_id: 'oboe', label_es: 'Oboe' },
     { canonical_id: 'trumpet.bb', label_es: 'Trompeta en Si bemol' }];
   const options = confirmationOptions({ status: 'conflict', proposal: null, candidates: ['trumpet.bb', 'flute'] }, catalog);

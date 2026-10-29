@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { addInstrumentName, createInstrument, deleteInstrumentName, filterInstruments, instrumentGroups, instrumentKeys,
-  instrumentSections, loadAdminInstruments, newInstrumentBody } from './instrumentCatalog.js';
+  instrumentSections, loadAdminInstruments, loadLearnedNames, newInstrumentBody } from './instrumentCatalog.js';
 
 const sectionName = section => (instrumentSections.find(([value]) => value === section) || [section, section])[1];
 const EMPTY_FORM = { label_es: '', label_en: '', section: 'woodwinds', family: '', transposition: '', sound: '',
@@ -10,6 +10,7 @@ const EMPTY_FORM = { label_es: '', label_en: '', section: 'woodwinds', family: '
 // in the scores and parts, and new common instruments. The works are analysed again at the next start of the server.
 export function InstrumentAdmin() {
   const [catalog, setCatalog] = useState(null);
+  const [learned, setLearned] = useState([]);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [query, setQuery] = useState('');
@@ -20,6 +21,7 @@ export function InstrumentAdmin() {
   const reload = async () => {
     try { setCatalog(await loadAdminInstruments()); setError(''); }
     catch (failure) { setError(failure.message); }
+    try { setLearned((await loadLearnedNames()).names || []); } catch { setLearned([]); }
   };
   useEffect(() => { reload(); }, []);
 
@@ -37,6 +39,8 @@ export function InstrumentAdmin() {
       setDrafts(current => ({ ...current, [instrument.canonical_id]: '' }));
     }, `«${name}» se reconoce ahora como ${instrument.label_es}.`);
   };
+  const promote = item => run(() => addInstrumentName(item.canonical_id, item.name),
+    `«${item.name}» se reconoce ahora como ${item.label_es} en todas las cuentas.`);
   const removeName = (instrument, name) => run(() => deleteInstrumentName(name.id),
     `«${name.name}» ya no se reconoce como ${instrument.label_es}.`);
   const create = event => {
@@ -84,6 +88,18 @@ export function InstrumentAdmin() {
             </details>
           </li>)}
         </ul>}
+      {learned.length > 0 && <section className="instrument-learned" aria-labelledby="instrument-learned-title">
+        <h3 id="instrument-learned-title">Nombres confirmados por las cuentas</h3>
+        <p className="result-supporting">Las cuentas los confirmaron al revisar sus obras; en las demás salen propuestos.
+          Al añadirlos al catálogo se reconocen en todas sin preguntar.</p>
+        <ul className="instrument-names">
+          {learned.map(item => <li key={item.name + item.canonical_id} className="instrument-name">
+            <span>{item.name} → {item.label_es} <span className="result-supporting">· {item.accounts === 1 ? '1 cuenta' : item.accounts + ' cuentas'}</span></span>
+            <button type="button" className="link-action" disabled={busy}
+              aria-label={`Añadir ${item.name} al catálogo como ${item.label_es}`} onClick={() => promote(item)}>Añadir al catálogo</button>
+          </li>)}
+        </ul>
+      </section>}
       <details className="instrument-new">
         <summary>Nuevo instrumento</summary>
         <form className="instrument-new-form" onSubmit={create}>
