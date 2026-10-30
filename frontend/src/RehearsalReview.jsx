@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { blockWorkText, rehearsalDateText, reviewRehearsal, reviewStatusOptions } from './rehearsals.js';
+import { t } from './i18n.js';
 
 // The director's review after a rehearsal (decided 2026-10-06): how each block went and a
 // note; what is left pending gains priority when the next rehearsals are replanned.
@@ -21,26 +22,26 @@ export function RehearsalReview({ rehearsal, onSaved, onCancel }) {
   };
 
   return <form id="rehearsal-review" className="rehearsal-editor surface" onSubmit={save} aria-labelledby="rehearsal-review-title">
-    <h2 id="rehearsal-review-title" ref={heading} tabIndex={-1}>Revisión del ensayo · {rehearsalDateText(rehearsal)}</h2>
-    <p className="result-supporting">Lo pendiente y lo mejorable ganan tiempo cuando replanifiques los ensayos siguientes; lo resuelto lo pierde.</p>
+    <h2 id="rehearsal-review-title" ref={heading} tabIndex={-1}>{t('Revisión del ensayo · {date}', { date: rehearsalDateText(rehearsal) })}</h2>
+    <p className="result-supporting">{t('Lo pendiente y lo mejorable ganan tiempo cuando replanifiques los ensayos siguientes; lo resuelto lo pierde.')}</p>
     <ol className="agenda-editor">{rehearsal.blocks.map((block, index) => <li key={index} className="review-block">
       <fieldset>
         <legend>{index + 1}. {block.title} · {block.minutes} min</legend>
         <p className="table-supporting">{blockWorkText(block)}</p>
-        <div className="review-statuses" role="radiogroup" aria-label={'Cómo fue: ' + block.title}>
+        <div className="review-statuses" role="radiogroup" aria-label={t('Cómo fue: {title}', { title: block.title })}>
           {reviewStatusOptions.map(([status, label]) => <label key={status} className="weekday-option">
             <input type="radio" name={'review-' + index} value={status} checked={blocks[index].status === status}
-              onChange={() => set(index, 'status', status)} />{label}
+              onChange={() => set(index, 'status', status)} />{t(label)}
           </label>)}
         </div>
-        <label>Nota<input type="text" maxLength={500} value={blocks[index].note} onChange={event => set(index, 'note', event.target.value)} /></label>
+        <label>{t('Nota')}<input type="text" maxLength={500} value={blocks[index].note} onChange={event => set(index, 'note', event.target.value)} /></label>
       </fieldset>
     </li>)}</ol>
-    <label className="editor-wide">Notas del ensayo<textarea rows={2} maxLength={2000} value={notes} onChange={event => setNotes(event.target.value)} /></label>
+    <label className="editor-wide">{t('Notas del ensayo')}<textarea rows={2} maxLength={2000} value={notes} onChange={event => setNotes(event.target.value)} /></label>
     {error && <p className="result-supporting" role="alert">{error}</p>}
     <div className="editor-actions">
-      <button type="submit" className="primary-action" disabled={saving}>{saving ? 'Guardando…' : 'Guardar revisión'}</button>
-      <button type="button" className="secondary-action" onClick={onCancel}>Cancelar</button>
+      <button type="submit" className="primary-action" disabled={saving}>{saving ? t('Guardando…') : t('Guardar revisión')}</button>
+      <button type="button" className="secondary-action" onClick={onCancel}>{t('Cancelar')}</button>
     </div>
   </form>;
 }
