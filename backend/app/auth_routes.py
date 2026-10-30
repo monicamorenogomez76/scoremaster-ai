@@ -190,7 +190,9 @@ def update_me(body: ProfileBody, user: User = Depends(authenticated_user),
 @router.get("/config")
 def config(mailer: Optional[Mailer] = Depends(get_mailer)):
     return {"google_enabled": google_enabled(), "demo_email": os.environ.get("DEMO_USER_EMAIL") or None,
-            "password_reset_enabled": mailer is not None}
+            "password_reset_enabled": mailer is not None,
+            # The email must be confirmed where it is asked (production) and can be (with mail).
+            "email_verification": mailer is not None and os.environ.get("APP_ENV") == "production"}
 
 
 # The recovery email in the language of the interface it was asked from.

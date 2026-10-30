@@ -116,3 +116,13 @@ def test_another_link_can_be_asked_for_three_times_an_hour(client):
     answers = [client.post("/auth/email/resend", headers={"X-CSRF-Token": csrf}).status_code for _ in range(3)]
     assert answers == [202, 202, 202]
     assert len(client.outbox.messages) == 3, "the one of the registration and two more: three an hour"
+
+
+@pytest.mark.real_auth
+def test_the_app_is_told_whether_the_email_must_be_confirmed(client, monkeypatch):
+    monkeypatch.setenv("APP_ENV", "development")
+    assert client.get("/auth/config").json()["email_verification"] is False, "not asked locally nor in CI"
+    monkeypatch.setenv("APP_ENV", "production")
+    assert client.get("/auth/config").json()["email_verification"] is True
+    app.dependency_overrides[get_mailer] = lambda: None
+    assert client.get("/auth/config").json()["email_verification"] is False, "without mail it could never be confirmed"

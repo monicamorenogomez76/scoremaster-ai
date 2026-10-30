@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { authConfig, resendVerification } from './api.js';
 import { t } from './i18n.js';
 
-// The email of the account still to confirm (2026-10-30), or what the confirmation link said. Only when the server can
-// send the link; the administration and the invitations wait for it in production.
+// The email of the account still to confirm (2026-10-30), or what the confirmation link said. Only where the server asks
+// for it (production, with mail): there the administration and the invitations wait for it.
 export function EmailNotice({ user, notice }) {
   const [canSend, setCanSend] = useState(false);
   const [state, setState] = useState({ busy: false, message: '' });
   useEffect(() => {
     let current = true;
-    authConfig().then(config => { if (current) setCanSend(Boolean(config.password_reset_enabled)); });
+    authConfig().then(config => { if (current) setCanSend(Boolean(config.email_verification)); });
     return () => { current = false; };
   }, []);
   const resend = async () => {
