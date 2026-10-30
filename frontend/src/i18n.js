@@ -30,6 +30,9 @@ export function saveLanguage(code, storage = deviceStorage()) {
 
 export const currentLanguage = () => language;
 
+// Locale for dates and numbers in the current language.
+export const dateLocale = () => (language === 'en' ? 'en-GB' : 'es-ES');
+
 export function setLanguage(code) {
   language = languages.some(([known]) => known === code) ? code : 'es';
 }

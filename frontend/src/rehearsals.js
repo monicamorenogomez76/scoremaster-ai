@@ -4,14 +4,15 @@ import { familyOfSection } from './dashboard.js';
 import { apiJson } from './api.js';
 import { blockScoreLabel, calendarLabel, findingLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
 import { rehearsalSchedule } from './schedule.js';
+import { dateLocale, t } from './i18n.js';
 
 const send = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const path = id => '/rehearsals/' + encodeURIComponent(id);
 
-export const listRehearsals = async () => (await apiJson('/rehearsals', {}, 'No se pudieron cargar los ensayos.')).rehearsals;
-export const createRehearsal = rehearsal => apiJson('/rehearsals', send('POST', rehearsal), 'No se pudo guardar el ensayo.');
-export const updateRehearsal = (id, rehearsal) => apiJson(path(id), send('PUT', rehearsal), 'No se pudo guardar el ensayo.');
-export const deleteRehearsal = id => apiJson(path(id), { method: 'DELETE' }, 'No se pudo eliminar el ensayo.');
+export const listRehearsals = async () => (await apiJson('/rehearsals', {}, t('No se pudieron cargar los ensayos.'))).rehearsals;
+export const createRehearsal = rehearsal => apiJson('/rehearsals', send('POST', rehearsal), t('No se pudo guardar el ensayo.'));
+export const updateRehearsal = (id, rehearsal) => apiJson(path(id), send('PUT', rehearsal), t('No se pudo guardar el ensayo.'));
+export const deleteRehearsal = id => apiJson(path(id), { method: 'DELETE' }, t('No se pudo eliminar el ensayo.'));
 
 // Local date as YYYY-MM-DD: "today" is the director's day, not the server's.
 export function todayIso(now = new Date()) {
@@ -30,9 +31,9 @@ export const nextRehearsal = (rehearsals, today = todayIso()) => splitRehearsals
 
 export function rehearsalDateText(rehearsal, today = todayIso()) {
   const time = rehearsal.time ? ' · ' + rehearsal.time : '';
-  if (rehearsal.date === today) return 'Hoy' + time;
+  if (rehearsal.date === today) return t('Hoy') + time;
   const [year, month, day] = rehearsal.date.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + time;
+  return new Date(year, month - 1, day).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + time;
 }
 
 export function agendaTime(blocks, duration) {
@@ -51,29 +52,28 @@ export function moveBlock(blocks, index, step) {
 export const duplicateBlock = (blocks, index) => [...blocks.slice(0, index + 1), { ...blocks[index] }, ...blocks.slice(index + 1)];
 
 export function blockWorkText(block) {
-  if (!block.work_title) return 'Toda la banda · sin obra concreta';
-  const several = /[-,]/.test(block.measures || '');
-  const measures = block.measures ? (several ? 'cc. ' : 'c. ') + block.measures.replace(/-/g, '–') : '';
+  if (!block.work_title) return t('Toda la banda · sin obra concreta');
+  const measures = block.measures ? measuresOf(block.measures) : '';
   return [block.work_title, measures].filter(Boolean).join(' · ');
 }
 
 // The app proposes the agenda of the chosen works (warm-up, then the ensemble plan of each work);
 // nothing is saved until the director reviews it.
 export const proposeRehearsal = (workIds, minutes) => apiJson('/rehearsals/proposal',
-  send('POST', { work_ids: workIds, duration_minutes: minutes }), 'No se pudo proponer la agenda.');
+  send('POST', { work_ids: workIds, duration_minutes: minutes }), t('No se pudo proponer la agenda.'));
 
-const WARMUP_OBJECTIVE = 'Afinación, sonido y articulación de toda la banda.';
+const warmupObjective = () => t('Afinación, sonido y articulación de toda la banda.');
 
 function proposalTitle(segment) {
-  if (segment.type === 'warmup') return 'Calentamiento';
-  if (segment.type === 'runthrough') return 'Pasada completa';
-  if (segment.type === 'tutti') return 'Tutti para juntar';
+  if (segment.type === 'warmup') return t('Calentamiento');
+  if (segment.type === 'runthrough') return t('Pasada completa');
+  if (segment.type === 'tutti') return t('Tutti para juntar');
   if (segment.type === 'common') return blockScoreLabel(segment);
-  return 'Seccional · ' + blockScoreLabel(segment);
+  return t('Seccional · {section}', { section: blockScoreLabel(segment) });
 }
 
 function proposalSections(segment) {
-  if (['warmup', 'tutti', 'runthrough'].includes(segment.type)) return ['Toda la banda'];
+  if (['warmup', 'tutti', 'runthrough'].includes(segment.type)) return [t('Toda la banda')];
   if (segment.type === 'common') return (segment.groups || []).map(rehearsalGroupName);
   return [rehearsalGroupName(segment.group)];
 }
@@ -81,7 +81,7 @@ function proposalSections(segment) {
 // A run-through of the general rehearsal has the colour of the tutti.
 const proposalGroup = segment => (segment.type === 'sectional' ? segment.group || 'other'
   : segment.type === 'runthrough' ? 'tutti' : segment.type);
-const RUNTHROUGH_OBJECTIVE = 'Obra completa en orden de concierto.';
+const runthroughObjective = () => t('Obra completa en orden de concierto.');
 
 // Blocks of the editor, each with its work and measures, within the API's limits.
 export function proposalBlocks(proposal) {
@@ -89,7 +89,7 @@ export function proposalBlocks(proposal) {
     title: proposalTitle(segment), minutes: segment.minutes, group: proposalGroup(segment), parts: segment.parts || [], work_id: segment.work_id || null, work_title: segment.work_title || null,
     measures: (segment.type === 'tutti' ? (segment.measure_ranges || []).join(', ') : segment.measure_range || '').slice(0, 40),
     sections: [...new Set(proposalSections(segment))].slice(0, 20),
-    objective: (segment.type === 'warmup' ? WARMUP_OBJECTIVE : segment.type === 'runthrough' ? RUNTHROUGH_OBJECTIVE
+    objective: (segment.type === 'warmup' ? warmupObjective() : segment.type === 'runthrough' ? runthroughObjective()
       : rehearsalBlockDetail(segment)).slice(0, 500),
   }));
 }
@@ -97,17 +97,18 @@ export function proposalBlocks(proposal) {
 // Type of a block: it colours the agenda calendar with the colours of the rehearsal plan.
 const SECTIONS = ['flutes', 'double_reeds', 'clarinets', 'saxophones', 'high_brass', 'low_voices', 'percussion', 'strings_rhythm'];
 
-export const blockTypeOptions = () => [['warmup', 'Calentamiento · banda completa'], ['common', 'Línea o ritmo común'],
-  ...SECTIONS.map(group => [group, 'Seccional · ' + rehearsalGroupName(group)]), ['tutti', 'Tutti'], ['other', 'Otro']];
+export const blockTypeOptions = () => [['warmup', t('Calentamiento · banda completa')], ['common', t('Línea o ritmo común')],
+  ...SECTIONS.map(group => [group, t('Seccional · {section}', { section: rehearsalGroupName(group) })]), ['tutti', t('Tutti')], ['other', t('Otro')]];
 
-// Words that reveal the type of a block written by hand (accents and case ignored). The warm-up is a
-// whole-band category of its own (decided 2026-10-05).
+// Words that reveal the type of a block written by hand (accents and case ignored), in Spanish or English. The
+// warm-up is a whole-band category of its own (decided 2026-10-05).
 const GROUP_WORDS = [
-  ['warmup', ['calentamiento', 'banda completa']], ['tutti', ['tutti']], ['common', ['comun']],
-  ['flutes', ['flauta', 'flautin']], ['double_reeds', ['doble', 'oboe', 'fagot']], ['clarinets', ['clarinete']],
-  ['saxophones', ['saxo']], ['high_brass', ['metales agudos', 'trompeta', 'trompa', 'fliscorno', 'corneta']],
-  ['low_voices', ['grave', 'trombon', 'bombardino', 'tuba']], ['percussion', ['percusion']],
-  ['strings_rhythm', ['cuerda', 'ritmica', 'contrabajo']],
+  ['warmup', ['calentamiento', 'banda completa', 'warm-up', 'warm up', 'full band']], ['tutti', ['tutti']], ['common', ['comun', 'common']],
+  ['flutes', ['flauta', 'flautin', 'flute', 'piccolo']], ['double_reeds', ['doble', 'oboe', 'fagot', 'bassoon']],
+  ['clarinets', ['clarinete', 'clarinet']], ['saxophones', ['saxo']],
+  ['high_brass', ['metales agudos', 'trompeta', 'trompa', 'fliscorno', 'corneta', 'high brass', 'trumpet', 'horn', 'flugelhorn', 'cornet']],
+  ['low_voices', ['grave', 'trombon', 'bombardino', 'tuba', 'low voices', 'euphonium']], ['percussion', ['percusion', 'percussion']],
+  ['strings_rhythm', ['cuerda', 'ritmica', 'contrabajo', 'string', 'rhythm', 'double bass']],
 ];
 const plain = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -121,9 +122,9 @@ export function blockGroup(block) {
 
 export function agendaCalendarLabel(block) {
   const group = blockGroup(block);
-  if (group === 'warmup') return 'Calentam.';
-  if (group === 'common') return 'Común';
-  if (group === 'tutti') return plain(block.title).startsWith('pasada') ? 'Pasada' : 'Tutti';
+  if (group === 'warmup') return t('Calentam.');
+  if (group === 'common') return t('Común');
+  if (group === 'tutti') return /^(pasada|run-through)/.test(plain(block.title)) ? t('Pasada') : t('Tutti');
   return calendarLabel({ type: 'sectional', group: SECTIONS.includes(group) ? group : 'other' });
 }
 
@@ -133,30 +134,30 @@ export const agendaSchedule = (blocks, start) => rehearsalSchedule(
 
 // The director's review after a rehearsal (decided 2026-10-06): one status and note per block.
 export const reviewStatusOptions = [['resolved', 'Resuelto'], ['improve', 'Mejorable'], ['pending', 'Pendiente'], ['not_done', 'No se hizo']];
-const statusLabel = status => (reviewStatusOptions.find(([value]) => value === status) || [, status])[1];
+const statusLabel = status => t((reviewStatusOptions.find(([value]) => value === status) || [, status])[1]);
 
 // Only a rehearsal held today or before can be reviewed.
 export const canReview = (rehearsal, today = todayIso()) => rehearsal.date <= today;
 
 export const reviewRehearsal = (id, notes, blocks) => apiJson(path(id) + '/review', send('PUT', { notes, blocks }),
-  'No se pudo guardar la revisión.');
-export const listReviewPriorities = async () => (await apiJson('/rehearsals/priorities', {}, 'No se pudieron cargar las prioridades.')).priorities;
+  t('No se pudo guardar la revisión.'));
+export const listReviewPriorities = async () => (await apiJson('/rehearsals/priorities', {}, t('No se pudieron cargar las prioridades.'))).priorities;
 
-const measuresOf = range => (!range ? '—' : (/[-,]/.test(range) ? 'cc. ' : 'c. ') + range.replace(/-/g, '–'));
+const measuresOf = range => (!range ? '—' : t(/[-,]/.test(range) ? 'cc. {range}' : 'c. {range}', { range: range.replace(/-/g, '–') }));
 
 // Rows of «Prioridades por sección»: what the director left pending first, then the analysis.
 export function summaryPriorityRows(reviewItems, analysisItems) {
   return [
-    ...reviewItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.sections.join(', ') || 'Toda la banda',
+    ...reviewItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.sections.map(name => t(name)).join(', ') || t('Toda la banda'),
       family: familyOfSection(item.sections[0]),
       parts: item.parts || [], range: item.measure_range || '',
       detail: item.block, measures: measuresOf(item.measure_range),
-      reason: [statusLabel(item.status), item.note].filter(Boolean).join(' · '), origin: 'Revisión', originTitle: 'Revisión del director' })),
-    ...analysisItems.map(item => ({ work_id: item.work_id, title: item.title, section: item.family_label_es || item.family || 'Otras',
+      reason: [statusLabel(item.status), item.note].filter(Boolean).join(' · '), origin: t('Revisión'), originTitle: t('Revisión del director') })),
+    ...analysisItems.map(item => ({ work_id: item.work_id, title: item.title, section: t(item.family_label_es || item.family || 'Otras'),
       family: item.family || familyOfSection(item.family_label_es),
       parts: item.instrument ? [item.instrument] : [], range: item.measure_range || '',
       detail: item.instrument_label_es || item.instrument, measures: measuresOf(item.measure_range),
-      reason: (item.findings || []).map(findingLabel).join(' · '), origin: 'Análisis', originTitle: 'Análisis de ScoreLint' })),
+      reason: (item.findings || []).map(findingLabel).join(' · '), origin: t('Análisis'), originTitle: t('Análisis de ScoreLint') })),
   ];
 }
 

@@ -2,21 +2,22 @@
 // that prepares each one (decided 2026-10-06).
 import { apiJson } from './api.js';
 import { proposalBlocks, rehearsalDateText } from './rehearsals.js';
+import { t } from './i18n.js';
 
 const send = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const path = id => '/concerts/' + encodeURIComponent(id);
 
-export const listConcerts = async () => (await apiJson('/concerts', {}, 'No se pudieron cargar los conciertos.')).concerts;
-export const createConcert = concert => apiJson('/concerts', send('POST', concert), 'No se pudo guardar el concierto.');
-export const updateConcert = (id, concert) => apiJson(path(id), send('PUT', concert), 'No se pudo guardar el concierto.');
-export const deleteConcert = id => apiJson(path(id), { method: 'DELETE' }, 'No se pudo eliminar el concierto.');
+export const listConcerts = async () => (await apiJson('/concerts', {}, t('No se pudieron cargar los conciertos.'))).concerts;
+export const createConcert = concert => apiJson('/concerts', send('POST', concert), t('No se pudo guardar el concierto.'));
+export const updateConcert = (id, concert) => apiJson(path(id), send('PUT', concert), t('No se pudo guardar el concierto.'));
+export const deleteConcert = id => apiJson(path(id), { method: 'DELETE' }, t('No se pudo eliminar el concierto.'));
 // The series is proposed from the director's day; nothing is saved until it is reviewed.
-export const proposeConcertPlan = (id, today) => apiJson(path(id) + '/plan', send('POST', { today }), 'No se pudo proponer la planificación.');
+export const proposeConcertPlan = (id, today) => apiJson(path(id) + '/plan', send('POST', { today }), t('No se pudo proponer la planificación.'));
 export const saveConcertPlan = (id, today, rehearsals) => apiJson(path(id) + '/rehearsals', send('PUT', { today, rehearsals }),
-  'No se pudo guardar la planificación.');
+  t('No se pudo guardar la planificación.'));
 
-const PHASES = { reading: 'Lectura y pasajes', passages: 'Pasajes e integración', integration: 'Integración', general: 'Ensayo general' };
-export const phaseLabel = phase => PHASES[phase] || 'Ensayo';
+const phases = () => ({ reading: t('Lectura y pasajes'), passages: t('Pasajes e integración'), integration: t('Integración'), general: t('Ensayo general') });
+export const phaseLabel = phase => phases()[phase] || t('Ensayo');
 
 // 0 = Monday … 6 = Sunday, as the API.
 export const weekdayOptions = [[0, 'L', 'lunes'], [1, 'M', 'martes'], [2, 'X', 'miércoles'], [3, 'J', 'jueves'],
@@ -80,9 +81,9 @@ export function nextConcert(concerts, today) {
 // The next concert in the summary's heading: its day, the days left and the rehearsals still to do. On the day
 // itself «Hoy» says it all (reported 2026-10-26: it read «Hoy · hoy · 0 ensayos»).
 export function nextConcertText({ concert, remaining, days }, today) {
-  const plural = (count, one, many) => count + ' ' + (count === 1 ? one : many);
   return [concert.title, rehearsalDateText(concert, today),
-    ...(days === 0 ? [] : [(days === 1 ? 'falta ' : 'faltan ') + plural(days, 'día', 'días'), plural(remaining, 'ensayo', 'ensayos')]),
+    ...(days === 0 ? [] : [t(days === 1 ? 'falta {count} día' : 'faltan {count} días', { count: days }),
+      t(remaining === 1 ? '{count} ensayo' : '{count} ensayos', { count: remaining })]),
   ].join(' · ');
 }
 

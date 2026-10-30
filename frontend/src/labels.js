@@ -1,4 +1,5 @@
 // Spanish presentation of ScoreLint, BandFit and rehearsal results. Pure functions only.
+import { t } from './i18n.js';
 export const bandStatusLabels = {
   ok: 'Compatible',
   warning: 'Requiere revisar la plantilla',
@@ -46,7 +47,7 @@ const rehearsalGroups = {
 };
 const commonKinds = { line: 'Línea común', rhythm: 'Ritmo común' };
 
-export const rehearsalGroupName = group => (rehearsalGroups[group] || rehearsalGroups.other)[0];
+export const rehearsalGroupName = group => t((rehearsalGroups[group] || rehearsalGroups.other)[0]);
 
 function splitPartNumber(instrument) {
   const match = instrument.match(/^(.*)\s+(\d+)$/);
@@ -60,10 +61,11 @@ export function displayInstrumentName(instrument, details = {}) {
 }
 
 export function displayFamilyName(family, details = {}) {
-  return details.label_es || familyLabelsEs[family] || family;
+  // The server names the family in Spanish; the same names translate into the language of the interface.
+  return t(details.label_es || familyLabelsEs[family] || family);
 }
 
-export const findingLabel = code => findingLabels[code] || code;
+export const findingLabel = code => (findingLabels[code] ? t(findingLabels[code]) : code);
 // Step 13: grades 1-6 and index 0-10. An analysis without a declared scale was graded 1-5.
 const CURRENT_SCALE = { grades: 6, indexMax: 10, legacy: false };
 const LEGACY_SCALE = { grades: 5, indexMax: 5, legacy: true };
@@ -77,7 +79,8 @@ export const gradeOf = (details, scale = CURRENT_SCALE) => Math.max(1, Math.min(
 
 export function gradeText(details, scale = CURRENT_SCALE) {
   const grade = gradeOf(details, scale);
-  return scale.legacy ? 'Grado ' + grade + ' de ' + scale.grades + ' (escala anterior)' : 'Grado ' + grade + ' · ' + gradeLabelsEs[grade];
+  return scale.legacy ? t('Grado {grade} de {grades} (escala anterior)', { grade, grades: scale.grades })
+    : t('Grado {grade} · {label}', { grade, label: t(gradeLabelsEs[grade]) });
 }
 
 // Highest grade first; the technical index breaks ties.
@@ -88,8 +91,8 @@ export function byDifficulty(entries, scoreKey) {
 
 export function bandIssueText(issue) {
   const instrument = issue.label_es;
-  if (issue.available === 0) return instrument + ': falta en la plantilla; se necesita ' + issue.required + '.';
-  return instrument + ': hay ' + issue.available + ' músicos y se necesitan ' + issue.required + '.';
+  if (issue.available === 0) return t('{instrument}: falta en la plantilla; se necesita {required}.', { instrument, required: issue.required });
+  return t('{instrument}: hay {available} músicos y se necesitan {required}.', { instrument, available: issue.available, required: issue.required });
 }
 
 const unconfirmedStatuses = {
@@ -98,7 +101,7 @@ const unconfirmedStatuses = {
   conflict: 'El nombre y los datos del archivo no coinciden',
   shared: 'Propuesto: otras cuentas lo confirmaron con este instrumento',
 };
-export const unconfirmedStatusText = item => unconfirmedStatuses[item.status] || unconfirmedStatuses.unknown;
+export const unconfirmedStatusText = item => t(unconfirmedStatuses[item.status] || unconfirmedStatuses.unknown);
 
 // Catalog options for a part to confirm: the proposal and the candidates first, then the rest.
 export function confirmationOptions(item, catalog) {
@@ -108,38 +111,38 @@ export function confirmationOptions(item, catalog) {
   return [...preferred, ...(catalog || []).filter(entry => !first.includes(entry.canonical_id))];
 }
 
-const measures = (...ranges) => 'c. ' + ranges.map(range => String(range).replace('-', '–')).join(', ');
+const measures = (...ranges) => t('c. {range}', { range: ranges.map(range => String(range).replace('-', '–')).join(', ') });
 const partList = parts => (parts || []).map(part => displayInstrumentName(part)).join(', ');
 
 // Ensemble rehearsal: who plays the same thing, then subsections, then a tutti to join them.
 export function rehearsalBlockTitle(block) {
-  if (block.type === 'tutti') return 'Tutti para juntar · ' + measures(...(block.measure_ranges || []));
-  if (block.type === 'common') return (commonKinds[block.kind] || commonKinds.rhythm) + ' · ' + measures(block.measure_range);
-  return 'Seccional · ' + rehearsalGroupName(block.group) + ' · ' + measures(block.measure_range);
+  if (block.type === 'tutti') return t('Tutti para juntar') + ' · ' + measures(...(block.measure_ranges || []));
+  if (block.type === 'common') return t(commonKinds[block.kind] || commonKinds.rhythm) + ' · ' + measures(block.measure_range);
+  return t('Seccional · {section}', { section: rehearsalGroupName(block.group) }) + ' · ' + measures(block.measure_range);
 }
 
 export function rehearsalBlockDetail(block) {
-  const pieces = [block.type === 'tutti' ? 'Toda la banda' : partList(block.parts)];
+  const pieces = [block.type === 'tutti' ? t('Toda la banda') : partList(block.parts)];
   if (block.findings?.length) pieces.push(block.findings.map(findingLabel).join(', '));
   return pieces.join(' · ');
 }
 
 // Label of the block in the score viewer title.
 export function blockScoreLabel(block) {
-  if (block.type === 'tutti') return 'Toda la banda';
-  if (block.type === 'common') return commonKinds[block.kind] || commonKinds.rhythm;
+  if (block.type === 'tutti') return t('Toda la banda');
+  if (block.type === 'common') return t(commonKinds[block.kind] || commonKinds.rhythm);
   return rehearsalGroupName(block.group);
 }
 
 // Short name that fits a narrow calendar slot; the full description stays in the aria-label.
 export function calendarLabel(block) {
-  if (block.type === 'tutti') return 'Tutti';
-  if (block.type === 'common') return block.kind === 'line' ? 'Línea' : 'Ritmo';
-  return (rehearsalGroups[block.group] || rehearsalGroups.other)[1];
+  if (block.type === 'tutti') return t('Tutti');
+  if (block.type === 'common') return block.kind === 'line' ? t('Línea') : t('Ritmo');
+  return t((rehearsalGroups[block.group] || rehearsalGroups.other)[1]);
 }
 
 export function omittedBlockText(block) {
-  return (block.type === 'common' ? 'Común' : rehearsalGroupName(block.group)) + ' · ' + measures(block.measure_range) + ' · ' + partList(block.parts);
+  return (block.type === 'common' ? t('Común') : rehearsalGroupName(block.group)) + ' · ' + measures(block.measure_range) + ' · ' + partList(block.parts);
 }
 
 // Editable band template: one entry per instrument (or percussionists), keyed as BandFit reports it.
@@ -159,9 +162,9 @@ export const familyCountsForWork = details => details?.counts_for_work !== false
 // difficulty-v3 (2026-10-25): the grade follows the publishers' grading guides, and the analysis says which of
 // their criteria sets it.
 export const workGradeDetail = difficulty => difficulty?.rubric
-  ? 'Según las guías de grados de las editoriales · viento y cuerda; la percusión se muestra aparte'
+  ? t('Según las guías de grados de las editoriales · viento y cuerda; la percusión se muestra aparte')
   : difficulty?.algorithm_version
-    ? 'Estimación provisional · viento y cuerda; la percusión y la sección rítmica se muestran aparte'
-    : 'Estimación provisional · percentil 80 por familia';
+    ? t('Estimación provisional · viento y cuerda; la percusión y la sección rítmica se muestran aparte')
+    : t('Estimación provisional · percentil 80 por familia');
 
 export const gradeReasons = difficulty => difficulty?.rubric?.reasons_es || [];
