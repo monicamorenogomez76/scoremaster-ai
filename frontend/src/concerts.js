@@ -2,7 +2,7 @@
 // that prepares each one (decided 2026-10-06).
 import { apiJson } from './api.js';
 import { proposalBlocks, rehearsalDateText } from './rehearsals.js';
-import { t } from './i18n.js';
+import { currentLanguage, dateLocale, t } from './i18n.js';
 
 const send = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const path = id => '/concerts/' + encodeURIComponent(id);
@@ -22,6 +22,12 @@ export const phaseLabel = phase => phases()[phase] || t('Ensayo');
 // 0 = Monday … 6 = Sunday, as the API.
 export const weekdayOptions = [[0, 'L', 'lunes'], [1, 'M', 'martes'], [2, 'X', 'miércoles'], [3, 'J', 'jueves'],
   [4, 'V', 'viernes'], [5, 'S', 'sábado'], [6, 'D', 'domingo']];
+// The same days in the language of the interface (1 January 2024 was a Monday).
+export const weekdays = () => (currentLanguage() === 'es' ? weekdayOptions : weekdayOptions.map(([day]) => {
+  const date = new Date(Date.UTC(2024, 0, 1 + day));
+  const name = style => date.toLocaleDateString(dateLocale(), { weekday: style, timeZone: 'UTC' });
+  return [day, name('narrow'), name('long')];
+}));
 
 // Calendar days as UTC dates, so no time zone moves a day.
 const toDate = iso => { const [year, month, day] = iso.split('-').map(Number); return new Date(Date.UTC(year, month - 1, day)); };
