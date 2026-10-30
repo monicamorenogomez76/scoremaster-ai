@@ -114,10 +114,10 @@ class InstrumentChange(BaseModel):
 def instrument_catalog(user: User = Depends(authenticated_user), store=Depends(get_instrument_store)):
     """The common instruments and, after them, the account's own."""
     own = store.for_account(user.id) if store else []
-    return {"instruments": [{"canonical_id": identity.canonical_id, "label_es": identity.label_es, "section": identity.section}
-                            for identity in catalog_entries()]
-            + [{"canonical_id": item["id"], "label_es": item["label_es"], "section": item["section"], "own": True}
-               for item in own],
+    return {"instruments": [{"canonical_id": identity.canonical_id, "label_es": identity.label_es, "label_en": identity.label_en,
+                             "section": identity.section} for identity in catalog_entries()]
+            + [{"canonical_id": item["id"], "label_es": item["label_es"], "label_en": item["label_en"], "section": item["section"],
+                "own": True} for item in own],
             "percussion_key": PERCUSSION, "sounds": SOUNDS}
 
 

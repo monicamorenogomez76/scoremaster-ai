@@ -1,5 +1,5 @@
 // Spanish presentation of ScoreLint, BandFit and rehearsal results. Pure functions only.
-import { t } from './i18n.js';
+import { currentLanguage, t } from './i18n.js';
 export const bandStatusLabels = {
   ok: 'Compatible',
   warning: 'Requiere revisar la plantilla',
@@ -59,6 +59,9 @@ export function displayInstrumentName(instrument, details = {}) {
   const [base, number] = splitPartNumber(instrument);
   return (instrumentLabelsEs[base] || base) + number;
 }
+
+// A catalog instrument in the language of the interface.
+export const instrumentLabel = entry => (currentLanguage() === 'en' && entry?.label_en) || entry?.label_es || '';
 
 export function displayFamilyName(family, details = {}) {
   // The server names the family in Spanish; the same names translate into the language of the interface.

@@ -149,6 +149,15 @@ try {
   await english.locator('#work-tab-recordings').click();
   await english.locator('#videos-content').getByText('Recordings of').waitFor();
   await audit(english, 'Work › Recordings (English)');
+  await english.locator('[data-view-target=band]').click();
+  await english.locator('#band-manager-title').getByText('Your bands').waitFor();
+  await english.waitForLoadState('networkidle');
+  await audit(english, 'My band (English)');
+  await english.locator('#new-band').click();
+  await english.locator('#band-editor-title').getByText('New band').waitFor();
+  await audit(english, 'My band › New band (English)');
+  await english.locator('#band-editor').getByRole('button', { name: 'Cancel' }).click();
+  await english.locator('[data-view-target=repertoire]').click();
   await english.locator('#back-to-list').click();
   await english.locator('#add-work').click();
   await english.locator('#upload-root').getByText('Add work').first().waitFor();

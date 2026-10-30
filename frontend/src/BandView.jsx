@@ -4,7 +4,8 @@ import { BandManager } from './BandManager.jsx';
 import { View } from './View.jsx';
 import { createOwnInstrument, instrumentGroups, instrumentKeys, instrumentSections, loadInstrumentSuggestions, OTHER_INSTRUMENT,
   ownInstrumentBody, ownInstrumentForm, withSuggestions } from './instrumentCatalog.js';
-import { bandIssueText, bandStatusLabels, confirmationOptions, displayInstrumentName, unconfirmedStatusText } from './labels.js';
+import { bandIssueText, bandStatusLabels, confirmationOptions, displayInstrumentName, instrumentLabel, unconfirmedStatusText } from './labels.js';
+import { t } from './i18n.js';
 
 // Parts without a confirmed instrument: the user picks it from the catalog (step 09) or, when it is not there,
 // creates it for the account with its name, family and key (2026-10-28). What is confirmed is learnt for the next works.
@@ -20,19 +21,19 @@ function OwnInstrumentForm({ part, sounds, onCreated }) {
     catch (failure) { setStatus(failure.message); setSaving(false); }
   };
   return <fieldset className="own-instrument-form">
-    <legend>Nuevo instrumento para «{part}»</legend>
-    <label htmlFor={id + '-name'}>Nombre<input id={id + '-name'} type="text" maxLength={80} {...field('label_es')} /></label>
-    <label htmlFor={id + '-section'}>Familia<select id={id + '-section'} {...field('section')}>
-      {instrumentSections.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-    <label htmlFor={id + '-key'}>Tonalidad<select id={id + '-key'} {...field('transposition')}>
-      {instrumentKeys.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-    <label htmlFor={id + '-sound'}>Suena como<select id={id + '-sound'} {...field('sound')}>
-      <option value="">Sin sonido de altura (percusión)</option>
+    <legend>{t('Nuevo instrumento para «{part}»', { part })}</legend>
+    <label htmlFor={id + '-name'}>{t('Nombre')}<input id={id + '-name'} type="text" maxLength={80} {...field('label_es')} /></label>
+    <label htmlFor={id + '-section'}>{t('Familia')}<select id={id + '-section'} {...field('section')}>
+      {instrumentSections.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
+    <label htmlFor={id + '-key'}>{t('Tonalidad')}<select id={id + '-key'} {...field('transposition')}>
+      {instrumentKeys.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
+    <label htmlFor={id + '-sound'}>{t('Suena como')}<select id={id + '-sound'} {...field('sound')}>
+      <option value="">{t('Sin sonido de altura (percusión)')}</option>
       {sounds.map(sound => <option key={sound} value={sound}>{sound.replaceAll('_', ' ')}</option>)}</select></label>
-    <label htmlFor={id + '-group'}>Grupo de ensayo<select id={id + '-group'} {...field('rehearsal_group')}>
-      {instrumentGroups.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+    <label htmlFor={id + '-group'}>{t('Grupo de ensayo')}<select id={id + '-group'} {...field('rehearsal_group')}>
+      {instrumentGroups.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
     <button type="button" className="secondary-action" disabled={saving || !form.label_es.trim()} onClick={create}>
-      {saving ? 'Creando…' : 'Crear instrumento'}</button>
+      {saving ? t('Creando…') : t('Crear instrumento')}</button>
     {status && <p className="result-supporting" role="alert">{status}</p>}
   </fieldset>;
 }
@@ -68,19 +69,18 @@ function InstrumentConfirmation({ items, onConfirm, busy }) {
     setChosen(previous => ({ ...previous, [part]: instrument.canonical_id }));
   };
   return <section id="instrument-confirmation" className="surface band-confirmation">
-    <h2>Instrumentos por confirmar</h2>
-    <p className="result-supporting">Estas partes no cuentan en la plantilla hasta que confirmes qué instrumento las toca.
-      Lo que confirmes se recordará en tus próximas obras.</p>
+    <h2>{t('Instrumentos por confirmar')}</h2>
+    <p className="result-supporting">{t('Estas partes no cuentan en la plantilla hasta que confirmes qué instrumento las toca. Lo que confirmes se recordará en tus próximas obras.')}</p>
     <div className="band-profile-rows">{shown.map(item =>
       <div key={item.part} className="instrument-confirm-item">
         <label className="band-profile-row">
           <span>{item.part}<small className="result-supporting"> · {unconfirmedStatusText(item)}</small></span>
-          <select value={chosen[item.part] || ''} aria-label={'Instrumento de ' + item.part}
+          <select value={chosen[item.part] || ''} aria-label={t('Instrumento de {part}', { part: item.part })}
             onChange={event => setChosen(previous => ({ ...previous, [item.part]: event.target.value }))}>
-            <option value="">Elige instrumento…</option>
+            <option value="">{t('Elige instrumento…')}</option>
             {confirmationOptions(item, catalog).map(entry =>
-              <option key={entry.canonical_id} value={entry.canonical_id}>{entry.label_es}</option>)}
-            <option value={OTHER_INSTRUMENT}>Otro instrumento…</option>
+              <option key={entry.canonical_id} value={entry.canonical_id}>{instrumentLabel(entry)}</option>)}
+            <option value={OTHER_INSTRUMENT}>{t('Otro instrumento…')}</option>
           </select>
         </label>
         {chosen[item.part] === OTHER_INSTRUMENT &&
@@ -88,7 +88,7 @@ function InstrumentConfirmation({ items, onConfirm, busy }) {
       </div>)}</div>
     <button id="confirm-instruments" className="band-profile-update" type="button"
       disabled={busy || Object.keys(selected).length === 0} onClick={() => onConfirm(selected)}>
-      {busy ? 'Actualizando…' : 'Confirmar instrumentos'}
+      {busy ? t('Actualizando…') : t('Confirmar instrumentos')}
     </button>
   </section>;
 }
@@ -98,41 +98,41 @@ export function BandView({ active, hidden, data, draft, onDraftChange, onUpdate,
   const requirements = bandFit.requirements || [];
   const unconfirmed = bandFit.unconfirmed || [];
   const issues = (bandFit.issues || []).map(bandIssueText);
-  return <View name="band" active={active} eyebrow="BandFit" title="Mi banda"
-    description="Tus bandas con su plantilla fija y, debajo, cómo encaja la obra abierta en la banda activa.">
+  return <View name="band" active={active} eyebrow="BandFit" title={t('Mi banda')}
+    description={t('Tus bandas con su plantilla fija y, debajo, cómo encaja la obra abierta en la banda activa.')}>
     <BandManager visible={!hidden && active === 'band'} onActivated={onBandActivated} />
-    <h2 className="calculated-plan-title">Adecuación de la obra abierta</h2>
+    <h2 className="calculated-plan-title">{t('Adecuación de la obra abierta')}</h2>
     {unconfirmed.length > 0 && <InstrumentConfirmation items={unconfirmed} onConfirm={onConfirm} busy={busy} />}
     <div id="band-profile-editor" className="band-profile-editor surface" hidden={requirements.length === 0}>
       <fieldset>
-        <legend>Plantilla de esta obra</legend>
-        <p className="result-supporting">Empieza con los músicos que pide la obra: uno por voz y los percusionistas en total. Los cambios son temporales en esta demo.</p>
+        <legend>{t('Plantilla de esta obra')}</legend>
+        <p className="result-supporting">{t('Empieza con los músicos que pide la obra: uno por voz y los percusionistas en total. Los cambios son temporales en esta demo.')}</p>
         <div id="band-profile-rows" className="band-profile-rows">{requirements.map(item =>
           <label key={item.key} className="band-profile-row">
-            <span>{item.label_es}<small className="result-supporting"> · la obra pide {item.required}</small></span>
-            <input type="number" min="0" step="1" value={draft[item.key] ?? String(item.required)} aria-label={'Músicos de ' + item.label_es}
+            <span>{t(item.label_es)}<small className="result-supporting"> · {t('la obra pide {count}', { count: item.required })}</small></span>
+            <input type="number" min="0" step="1" value={draft[item.key] ?? String(item.required)} aria-label={t('Músicos de {instrument}', { instrument: t(item.label_es) })}
               title={item.parts.map(part => displayInstrumentName(part)).join(', ')}
               onChange={event => onDraftChange(previous => ({ ...previous, [item.key]: event.target.value }))} />
           </label>)}</div>
         <button id="update-analysis" className="band-profile-update" type="button" disabled={busy} onClick={onUpdate}>
-          {busy ? 'Actualizando…' : 'Actualizar análisis'}
+          {busy ? t('Actualizando…') : t('Actualizar análisis')}
         </button>
       </fieldset>
     </div>
     {data
       ? <div id="band-content" className="view-content">
           <section className="result-section">
-            <h2>Adaptación a la banda</h2>
+            <h2>{t('Adaptación a la banda')}</h2>
             <p className="result-metric">{(bandFit.compatibility_percent ?? 0) + '%'}</p>
-            <p className="result-supporting">{bandStatusLabels[bandFit.status] || 'Estado no disponible'}</p>
+            <p className="result-supporting">{bandStatusLabels[bandFit.status] ? t(bandStatusLabels[bandFit.status]) : t('Estado no disponible')}</p>
             <ul className="result-list">{issues.length === 0
-              ? <li className="result-empty">La plantilla cubre los instrumentos requeridos.</li>
+              ? <li className="result-empty">{t('La plantilla cubre los instrumentos requeridos.')}</li>
               : issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul>
             {unconfirmed.length > 0 && <p className="result-supporting">{unconfirmed.length === 1
-              ? 'Una parte está pendiente de confirmar y no cuenta todavía.'
-              : unconfirmed.length + ' partes están pendientes de confirmar y no cuentan todavía.'}</p>}
+              ? t('Una parte está pendiente de confirmar y no cuenta todavía.')
+              : t('{count} partes están pendientes de confirmar y no cuentan todavía.', { count: unconfirmed.length })}</p>}
           </section>
         </div>
-      : <div id="band-content" className="view-content empty-workspace"><h2>Aún no hay plantilla</h2><p>Analiza una obra para cargar sus instrumentos y asignar músicos.</p></div>}
+      : <div id="band-content" className="view-content empty-workspace"><h2>{t('Aún no hay plantilla')}</h2><p>{t('Analiza una obra para cargar sus instrumentos y asignar músicos.')}</p></div>}
   </View>;
 }

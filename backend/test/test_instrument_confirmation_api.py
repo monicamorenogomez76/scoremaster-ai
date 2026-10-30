@@ -58,7 +58,8 @@ def test_the_catalog_lists_identities_for_the_confirmation_menu():
 
     assert response.status_code == 200
     entries = response.json()["instruments"]
-    assert {"canonical_id": "clarinet.bb", "label_es": "Clarinete en Si bemol", "section": "woodwinds"} in entries
+    # With its English name for the interface in English (2026-10-30).
+    assert {"canonical_id": "clarinet.bb", "label_es": "Clarinete en Si bemol", "label_en": "B♭ Clarinet", "section": "woodwinds"} in entries
     assert response.json()["percussion_key"] == "percussion"
 
 

@@ -1,6 +1,7 @@
 // The instrument catalog in the database (2026-10-28): the administration adds the names an instrument is written
 // with and new common instruments from Configuración. API helpers and pure functions only.
 import { apiJson } from './api.js';
+import { t } from './i18n.js';
 
 export const instrumentSections = [['woodwinds', 'Viento madera'], ['brass', 'Viento metal'], ['percussion', 'Percusión'],
   ['strings', 'Cuerda'], ['keyboard', 'Teclas'], ['rhythm', 'Sección rítmica']];
@@ -34,17 +35,17 @@ export function newInstrumentBody(form) {
 
 const json = body => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-export const loadAdminInstruments = () => apiJson('/admin/instruments', {}, 'No se pudo cargar el catálogo de instrumentos.');
+export const loadAdminInstruments = () => apiJson('/admin/instruments', {}, t('No se pudo cargar el catálogo de instrumentos.'));
 
 export const addInstrumentName = (instrumentId, name) => apiJson(
   '/admin/instruments/' + encodeURIComponent(instrumentId) + '/names', { method: 'POST', ...json({ name }) },
-  'No se pudo añadir el nombre.');
+  t('No se pudo añadir el nombre.'));
 
 export const deleteInstrumentName = nameId => apiJson('/admin/instruments/names/' + nameId, { method: 'DELETE' },
-  'No se pudo quitar el nombre.');
+  t('No se pudo quitar el nombre.'));
 
 export const createInstrument = body => apiJson('/admin/instruments', { method: 'POST', ...json(body) },
-  'No se pudo crear el instrumento.');
+  t('No se pudo crear el instrumento.'));
 
 // «Otro instrumento…» when a part to confirm is not in the catalog (2026-10-28): it is created for this account
 // with its name, family and key, and the part name is learnt for the next works.
@@ -61,7 +62,7 @@ export const ownInstrumentBody = (part, form) => ({
 });
 
 export const createOwnInstrument = body => apiJson('/instruments', { method: 'POST', ...json(body) },
-  'No se pudo crear el instrumento.');
+  t('No se pudo crear el instrumento.'));
 
 // Shared between accounts (2026-10-29): for parts without a proposal, the instrument other accounts confirmed for the
 // same name. It comes chosen in the list but counts only once the part is confirmed; without an answer, nothing changes.
@@ -80,4 +81,4 @@ export const withSuggestions = (items, suggestions) => (items || []).map(item =>
   !item.proposal && suggestions[item.part] ? { ...item, status: 'shared', proposal: suggestions[item.part] } : item);
 
 export const loadLearnedNames = () => apiJson('/admin/instruments/learned', {},
-  'No se pudieron cargar los nombres confirmados por las cuentas.');
+  t('No se pudieron cargar los nombres confirmados por las cuentas.'));
