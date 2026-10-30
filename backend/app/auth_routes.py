@@ -24,6 +24,7 @@ from backend.application.auth import (
 )
 from backend.application.mail import Mailer
 from backend.app.dependencies import SESSION_COOKIE, authenticated_user, get_account_repository, get_mailer, is_admin
+from backend.app.i18n import language, translate
 
 router = APIRouter(prefix="/auth")
 LIMITER = LoginLimiter()
@@ -155,7 +156,19 @@ def config(mailer: Optional[Mailer] = Depends(get_mailer)):
             "password_reset_enabled": mailer is not None}
 
 
-def _send_reset(service: AuthService, mailer: Mailer, email: str, base_url: str, ip: str) -> None:
+# The recovery email in the language of the interface it was asked from.
+RESET_EMAIL = {
+    "es": ("ScoreMaster: elige una contraseña nueva",
+           "Hola, {name}:\n\nPara elegir una contraseña nueva en ScoreMaster abre este enlace:\n\n{link}\n\n"
+           "Caduca en {minutes} minutos y solo sirve una vez. Si no lo has pedido tú, ignora este correo: tu contraseña no cambia.\n"),
+    "en": ("ScoreMaster: choose a new password",
+           "Hello {name},\n\nTo choose a new password in ScoreMaster open this link:\n\n{link}\n\n"
+           "It expires in {minutes} minutes and works only once. If you did not ask for it, ignore this email: your password "
+           "does not change.\n"),
+}
+
+
+def _send_reset(service: AuthService, mailer: Mailer, email: str, base_url: str, ip: str, lang: str = "es") -> None:
     """After the answer, so its timing does not tell whether the account exists. The demo account, whose password
     is public and whose mailbox does not exist, never gets a link."""
     if (email or "").strip().lower() == (os.environ.get("DEMO_USER_EMAIL") or "").lower():
@@ -166,11 +179,9 @@ def _send_reset(service: AuthService, mailer: Mailer, email: str, base_url: str,
     user, token = requested
     # The token goes in the fragment: the browser never sends it to a server, so no log or Referer keeps it.
     link = f"{base_url.rstrip('/')}/#reset={token}"
-    text = (f"Hola, {user.display_name}:\n\nPara elegir una contraseña nueva en ScoreMaster abre este enlace:\n\n{link}\n\n"
-            f"Caduca en {RESET_MINUTES} minutos y solo sirve una vez. Si no lo has pedido tú, ignora este correo: "
-            "tu contraseña no cambia.\n")
+    subject, text = RESET_EMAIL[lang]
     try:
-        mailer.send(user.email, "ScoreMaster: elige una contraseña nueva", text)
+        mailer.send(user.email, subject, text.format(name=user.display_name, link=link, minutes=RESET_MINUTES))
     except Exception:
         logging.getLogger("uvicorn.error").warning("No se pudo enviar el correo de recuperación.", exc_info=True)
 
@@ -182,8 +193,9 @@ def forgot_password(body: ForgotBody, request: Request, tasks: BackgroundTasks,
         raise HTTPException(status_code=404, detail="La recuperación de la contraseña no está disponible.")
     # APP_BASE_URL in production: a link built from the Host header could point to another site.
     base_url = os.environ.get("APP_BASE_URL") or str(request.base_url)
-    tasks.add_task(_send_reset, service, mailer, body.email, base_url, _ip(request))
-    return {"detail": RESET_SENT}
+    lang = language(request.headers.get("accept-language"))
+    tasks.add_task(_send_reset, service, mailer, body.email, base_url, _ip(request), lang)
+    return {"detail": translate(RESET_SENT, lang)}
 
 
 @router.post("/password/reset")

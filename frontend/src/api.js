@@ -1,7 +1,8 @@
-import { t } from './i18n.js';
+import { currentLanguage, t } from './i18n.js';
 
 // Requests to the API with the session cookie. State-changing requests carry the session's CSRF
-// token; a 401 tells the app that the session ended.
+// token; a 401 tells the app that the session ended. Every request names the language of the interface, in which the
+// server answers its messages (2026-10-30).
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 let csrfToken = '';
 const unauthorizedListeners = new Set();
@@ -14,6 +15,7 @@ export function onUnauthorized(listener) {
 export async function apiFetch(url, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const headers = new Headers(options.headers || {});
+  headers.set('Accept-Language', currentLanguage());
   if (!SAFE_METHODS.has(method) && csrfToken) headers.set('X-CSRF-Token', csrfToken);
   const response = await fetch(url, { ...options, headers, credentials: 'same-origin' });
   if (response.status === 401) unauthorizedListeners.forEach(listener => listener());
@@ -34,7 +36,7 @@ export async function apiJson(url, options, fallback) {
 
 async function postJson(url, body, fallback) {
   const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    headers: { 'Content-Type': 'application/json', 'Accept-Language': currentLanguage() }, body: JSON.stringify(body) });
   if (!response.ok) throw new Error(await detail(response, fallback));
   const data = await response.json();
   csrfToken = data.csrf_token || '';
@@ -51,7 +53,7 @@ export const resetTokenFrom = hash => (/^#reset=([\w-]+)$/.exec(hash || '') || [
 
 export async function requestPasswordReset(email) {
   const response = await fetch('/auth/password/forgot', { method: 'POST', credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    headers: { 'Content-Type': 'application/json', 'Accept-Language': currentLanguage() }, body: JSON.stringify({ email }) });
   if (!response.ok) throw new Error(await detail(response, t('No se pudo pedir el enlace.')));
   return (await response.json()).detail;
 }

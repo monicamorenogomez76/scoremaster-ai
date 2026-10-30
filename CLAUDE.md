@@ -73,7 +73,9 @@ only source of musical facts; the LLM only explains or gives an independent opin
 - `frontend/src`: React views (Resumen, Repertorio, Mi banda, Conciertos, Ensayos, Valoraciones,
   Configuración); API helpers and pure functions live in plain `.js` modules so Node tests can import them.
   Interface texts are written in Spanish inside `t('…')` (`i18n.js`); the Spanish text is the key of its English
-  translation in `locales/en.js`, and `i18n.test.mjs` fails on any marked text without one.
+  translation in `locales/en.js`, and `i18n.test.mjs` fails on any marked text without one. Requests carry the chosen
+  language as `Accept-Language`; the server translates its Spanish messages with `backend/app/i18n.py`
+  (`test_server_language.py` requires an English text for each one).
 
 Cross-cutting rules that span many files:
 

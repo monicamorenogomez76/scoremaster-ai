@@ -80,3 +80,16 @@ test('an expired recovery link reports the server message', async () => {
   fakeServer({ '/auth/password/reset': [400, { detail: 'El enlace no es válido o ha caducado. Pide otro.' }] });
   await assert.rejects(resetPassword('abc', 'otra contraseña larga'), { message: 'El enlace no es válido o ha caducado. Pide otro.' });
 });
+
+test('every request tells the server the language of the interface', async () => {
+  const { setLanguage } = await import('../../../frontend/src/i18n.js');
+  const calls = fakeServer({ '/auth/login': [200, { user: { email: 'a@b.org' }, csrf_token: 'x' }], '/works': [200, []],
+    '/auth/password/forgot': [202, { detail: 'Sent.' }] });
+  setLanguage('en');
+  await signIn('a@b.org', 'secreta-larga');
+  await apiFetch('/works');
+  await requestPasswordReset('a@b.org');
+  setLanguage('es');
+  await apiFetch('/works');
+  assert.deepEqual(calls.map(call => call.headers.get('Accept-Language')), ['en', 'en', 'en', 'es']);
+});
