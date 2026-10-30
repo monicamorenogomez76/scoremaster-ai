@@ -913,4 +913,12 @@ export const en = {
   'Respuesta descartada por la validación': 'Answer discarded by the validation',
   'Sin precio configurado: el plan gratuito no cuesta. Con un plan de pago, define GEMINI_PRICE_INPUT_PER_MTOK y GEMINI_PRICE_OUTPUT_PER_MTOK (dólares por millón de tokens).':
     'No price set: the free tier costs nothing. With a paid plan, set GEMINI_PRICE_INPUT_PER_MTOK and GEMINI_PRICE_OUTPUT_PER_MTOK (dollars per million tokens).',
+
+  // Email confirmation
+  'Email confirmado.': 'Email confirmed.',
+  'No se pudo confirmar el email.': 'Could not confirm the email.',
+  'No se pudo enviar otro enlace.': 'Could not send another link.',
+  'Confirma tu email con el enlace que te enviamos a {email}. Hasta entonces no puedes administrar ni valorar campañas.':
+    'Confirm your email with the link we sent to {email}. Until then you cannot manage or rate campaigns.',
+  'Enviar otro enlace': 'Send another link',
 };

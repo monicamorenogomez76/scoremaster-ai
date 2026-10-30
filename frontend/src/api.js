@@ -58,6 +58,19 @@ export async function requestPasswordReset(email) {
   return (await response.json()).detail;
 }
 
+// Email confirmation (2026-10-30): the link in the email is /#verify=<token>; it confirms with or without a session.
+export const verifyTokenFrom = hash => (/^#verify=([\w-]+)$/.exec(hash || '') || [])[1] || '';
+
+export async function verifyEmail(token) {
+  const response = await fetch('/auth/email/verify', { method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'Accept-Language': currentLanguage() }, body: JSON.stringify({ token }) });
+  if (!response.ok) throw new Error(await detail(response, t('No se pudo confirmar el email.')));
+  return (await response.json()).email_verified;
+}
+
+export const resendVerification = async () => (await apiJson('/auth/email/resend', { method: 'POST' },
+  t('No se pudo enviar otro enlace.'))).detail;
+
 export const resetPassword = (token, password) =>
   postJson('/auth/password/reset', { token, password }, t('No se pudo cambiar la contraseña.'));
 

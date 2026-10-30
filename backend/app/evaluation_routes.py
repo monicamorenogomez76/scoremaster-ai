@@ -17,7 +17,7 @@ from backend.application.evaluations import (EXPERIENCE_LEVELS, Campaign, Campai
                                              Rating)
 from backend.application.library import LibraryRepository
 from backend.app.dependencies import (authenticated_user, get_evaluation_repository, get_review_provider,
-                                      get_library_repository, get_score_store, is_admin)
+                                      get_library_repository, get_score_store, invitation_email, is_admin)
 from backend.analyzers.passage_features import FEATURES_VERSION, passage_features
 from backend.application import llm_review_jobs
 from backend.application.llm_review import PROMPT_VERSION as REVIEW_PROMPT_VERSION, review_passage
@@ -153,7 +153,7 @@ def list_campaigns(user: User = Depends(authenticated_user),
                    evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
     admin = is_admin(user)
     return {"owned": [_summary(item, "owner") for item in evaluations.owned(user.id)] if admin else [],
-            "invited": [_summary(item, "evaluator") for item in evaluations.invited(user.email)],
+            "invited": [_summary(item, "evaluator") for item in (evaluations.invited(invitation_email(user)) if invitation_email(user) else [])],
             "can_manage": admin}
 
 
@@ -163,7 +163,7 @@ def get_campaign(campaign_id: str, user: User = Depends(authenticated_user),
     owned = evaluations.for_owner(user.id, _id(campaign_id)) if is_admin(user) else None
     if owned is not None:
         return _owner_view(owned, evaluations.llm_reviews(user.id, owned.id))
-    invited = evaluations.for_evaluator(user.email, _id(campaign_id))
+    invited = evaluations.for_evaluator(invitation_email(user), _id(campaign_id))
     if invited is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return _evaluator_view(invited)
@@ -205,7 +205,7 @@ def set_status(campaign_id: str, body: StatusIn, user: User = Depends(authentica
 @router.put("/evaluations/{campaign_id}/profile")
 def set_profile(campaign_id: str, body: ProfileIn, user: User = Depends(authenticated_user),
                 evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
-    if not evaluations.set_profile(user.email, _id(campaign_id), body.experience_level, body.main_instrument.strip()):
+    if not evaluations.set_profile(invitation_email(user), _id(campaign_id), body.experience_level, body.main_instrument.strip()):
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return {"experience_level": body.experience_level, "main_instrument": body.main_instrument.strip()}
 
@@ -214,7 +214,7 @@ def set_profile(campaign_id: str, body: ProfileIn, user: User = Depends(authenti
 def rate(campaign_id: str, passage_id: str, body: RatingIn, user: User = Depends(authenticated_user),
          evaluations: EvaluationRepository = Depends(get_evaluation_repository)):
     try:
-        saved = evaluations.rate(user.email, _id(campaign_id), _id(passage_id),
+        saved = evaluations.rate(invitation_email(user), _id(campaign_id), _id(passage_id),
                                  Rating(body.difficulty, body.critical, body.priority, body.comment.strip()))
     except CampaignLocked as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from None
@@ -228,7 +228,7 @@ def work_file(campaign_id: str, work_id: str, user: User = Depends(authenticated
               evaluations: EvaluationRepository = Depends(get_evaluation_repository),
               library: LibraryRepository = Depends(get_library_repository)):
     """The whole work (decided): for the owner, from the library; for an invited musician, of a passage."""
-    found = library.work_file(user.id, _id(work_id)) or evaluations.evaluator_work_file(user.email, _id(campaign_id), _id(work_id))
+    found = library.work_file(user.id, _id(work_id)) or evaluations.evaluator_work_file(invitation_email(user), _id(campaign_id), _id(work_id))
     if found is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     content, file_name = found

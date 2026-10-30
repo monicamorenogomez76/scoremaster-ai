@@ -21,6 +21,8 @@ EN = {
     "Si hay una cuenta con ese email, te hemos enviado un enlace para elegir una contraseña nueva. Caduca en {} minutos.":
         "If there is an account with that email, we have sent you a link to choose a new password. It expires in {} minutes.",
     "Google no está configurado.": "Google is not set up.",
+    "La confirmación del email no está disponible.": "Email confirmation is not available.",
+    "Si el email aún no está confirmado, te hemos enviado otro enlace.": "If the email is not confirmed yet, we have sent you another link.",
     "La respuesta de Google no es válida. Vuelve a intentarlo.": "The answer from Google is not valid. Try again.",
     "No se pudo entrar con Google.": "Could not sign in with Google.",
     "La cuenta de Google no tiene el email verificado.": "The Google account does not have a verified email.",

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { currentUser, onUnauthorized, signOut } from './api.js';
-import { addTranslations, onLanguageChange } from './i18n.js';
+import { currentUser, onUnauthorized, signOut, verifyEmail, verifyTokenFrom } from './api.js';
+import { addTranslations, onLanguageChange, t } from './i18n.js';
 import { loadCatalog } from './bands.js';
 import { AppShell } from './AppShell.jsx';
 import { evaluationWorkFile } from './evaluations.js';
@@ -31,6 +31,17 @@ export function App({ session }) {
   const [confirmations, setConfirmations] = useState({});
   const [minutes, setMinutes] = useState('60');
   const fullScore = useRef(null), passage = useRef(null);
+  // A confirmation link opens /#verify=<token>: it confirms the email with or without a session (2026-10-30).
+  const [verifyToken] = useState(() => verifyTokenFrom(window.location.hash));
+  const [notice, setNotice] = useState('');
+  useEffect(() => {
+    if (!verifyToken) return;
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    verifyEmail(verifyToken)
+      .then(() => { setNotice(t('Email confirmado.')); return currentUser(); })
+      .then(found => { if (found) setUser(found); })
+      .catch(failure => setNotice(failure.message));
+  }, [verifyToken]);
   // A new language renders every view again in it.
   const [, setLanguage] = useState('');
   useEffect(() => onLanguageChange(setLanguage), []);
@@ -144,8 +155,8 @@ export function App({ session }) {
   const leave = async () => { await signOut().catch(() => {}); setUser(null); upload.reset(); };
 
   return <>
-    <LoginScreen hidden={signedIn || user === undefined} onSignedIn={enter} />
-    <AppShell hidden={!signedIn} user={user} view={view} onNavigate={navigate} onSignOut={leave}
+    <LoginScreen hidden={signedIn || user === undefined} onSignedIn={enter} notice={notice} />
+    <AppShell hidden={!signedIn} user={user} notice={notice} view={view} onNavigate={navigate} onSignOut={leave}
       upload={upload} analysis={analysis} repertoireMode={repertoireMode} onRepertoireModeChange={setRepertoireMode}
       workTab={workTab} onWorkTabChange={setWorkTab} bandDraft={bandDraft}
       rehearsalEditing={rehearsalEditing} onEditRehearsal={rehearsal => { setRehearsalEditing(rehearsal); navigate('rehearsal'); }}

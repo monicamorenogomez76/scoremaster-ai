@@ -11,6 +11,7 @@ def test_the_demo_user_is_created_once_and_can_sign_in(postgres_engine):
 
     assert seed_demo_user(accounts, "demo@scoremaster.local", "demo-password-123") == "created"
     assert seed_demo_user(accounts, "demo@scoremaster.local", "demo-password-123") == "exists"
+    assert accounts.user_by_email("demo@scoremaster.local").email_verified, "no mailbox: taken as confirmed"
     assert AuthService(accounts).login("demo@scoremaster.local", "demo-password-123", ip="127.0.0.1").user.email == \
         "demo@scoremaster.local"
 

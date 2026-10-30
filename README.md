@@ -142,7 +142,7 @@ dependa de ellas.
 | `YOUTUBE_API_KEY` | Búsqueda de grabaciones dentro de la aplicación (la usa el servidor, nunca el navegador) | Enlace a la búsqueda en YouTube y opción de pegar un enlace |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | «Entrar con Google» | Solo email y contraseña |
 | `DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`, `DEMO_SEED_CONTENT` | Cuenta demo y su contenido de ejemplo (`1`) | Sin cuenta demo |
-| `ADMIN_EMAILS` | Cuentas administradoras, separadas por comas: crean y gestionan campañas de valoración y ven los emails y resultados de los músicos. Registrar antes la cuenta (el registro no verifica el email) | Nadie puede crear campañas; cada cuenta solo valora las campañas a las que la invitan |
+| `ADMIN_EMAILS` | Cuentas administradoras, separadas por comas: crean y gestionan campañas de valoración y ven los emails y resultados de los músicos. En producción, la cuenta tiene que haber confirmado su email con el enlace que recibe al registrarse | Nadie puede crear campañas; cada cuenta solo valora las campañas a las que la invitan |
 | `OMR_GITHUB_REPO`, `OMR_GITHUB_TOKEN` | Lectura de PDF: el repositorio privado del lector y su token *fine-grained* (ver [DEPLOYMENT.md](docs/DEPLOYMENT.md)) | No se ofrece subir PDF |
 | `BREVO_API_KEY`, `MAIL_FROM`, `APP_BASE_URL` | Recuperación de la contraseña por correo con [Brevo](https://www.brevo.com) (plan gratuito): la clave, el remitente verificado en Brevo y la dirección pública a la que apunta el enlace | En local, el enlace sale en la consola del servidor; en producción no se ofrece |
 | `APP_ENV=production` | Cookies `Secure`, HSTS y sin documentación interactiva de la API | Modo desarrollo |

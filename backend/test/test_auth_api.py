@@ -47,7 +47,8 @@ def test_register_signs_in_with_an_httponly_session_cookie(client):
     response = register(client)
 
     assert response.status_code == 201
-    assert response.json()["user"] == {"email": "directora@banda.org", "display_name": "Directora", "is_admin": False}
+    assert response.json()["user"] == {"email": "directora@banda.org", "display_name": "Directora", "is_admin": False,
+                                       "email_verified": False}
     cookie = response.headers["set-cookie"]
     assert "scoremaster_session=" in cookie and "HttpOnly" in cookie and "SameSite=lax" in cookie
     assert "Secure" not in cookie   # local HTTP; production sets it
@@ -146,7 +147,8 @@ def test_the_user_changes_the_name_shown_in_the_app(client):
     assert client.patch("/auth/me", json={"display_name": "Mónica"}).status_code == 403, "the CSRF token is required"
     changed = client.patch("/auth/me", json={"display_name": "  Mónica  "}, headers={"X-CSRF-Token": csrf})
 
-    assert changed.status_code == 200 and changed.json()["user"] == {"email": "directora@banda.org", "display_name": "Mónica", "is_admin": False}
+    assert changed.status_code == 200 and changed.json()["user"] == {"email": "directora@banda.org", "display_name": "Mónica", "is_admin": False,
+                                                                  "email_verified": False}
     assert client.get("/auth/me").json()["user"]["display_name"] == "Mónica"
     for name in ("", "   ", "x" * 101):
         assert client.patch("/auth/me", json={"display_name": name}, headers={"X-CSRF-Token": csrf}).status_code == 422

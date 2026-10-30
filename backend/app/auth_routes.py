@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from backend.application.accounts import AccountRepository, User
 from backend.application.auth import (
-    RESET_MINUTES, SESSION_DAYS, AuthService, InvalidCredentials, InvalidRegistration, InvalidResetLink, LoginLimiter,
+    RESET_MINUTES, SESSION_DAYS, VERIFY_HOURS, AuthService, InvalidCredentials, InvalidRegistration, InvalidResetLink, LoginLimiter,
     SignedIn, TooManyAttempts,
 )
 from backend.application.mail import Mailer
@@ -92,7 +92,7 @@ def _ip(request: Request) -> str:
 
 def _user(user: User, display_name: Optional[str] = None) -> dict:
     return {"email": user.email, "display_name": user.display_name if display_name is None else display_name,
-            "is_admin": is_admin(user)}
+            "is_admin": is_admin(user), "email_verified": user.email_verified}
 
 
 def _public(signed_in: SignedIn) -> dict:
@@ -105,12 +105,49 @@ def _with_session(response: Response, signed_in: SignedIn) -> Response:
     return response
 
 
+# The link that confirms the email, in the language of the interface it was asked from (2026-10-30).
+VERIFY_EMAIL = {
+    "es": ("ScoreMaster: confirma tu email",
+           "Hola, {name}:\n\nPara confirmar el email de tu cuenta de ScoreMaster abre este enlace:\n\n{link}\n\n"
+           "Caduca en {hours} horas y solo sirve una vez. Si no has creado tú la cuenta, ignora este correo.\n"),
+    "en": ("ScoreMaster: confirm your email",
+           "Hello {name},\n\nTo confirm the email of your ScoreMaster account open this link:\n\n{link}\n\n"
+           "It expires in {hours} hours and works only once. If you did not create the account, ignore this email.\n"),
+}
+
+
+class VerifyBody(BaseModel):
+    token: str = Field(max_length=100)
+
+
+def _send_verification(service: AuthService, mailer: Mailer, user: User, base_url: str, ip: str, lang: str) -> None:
+    """After the answer; nothing when the email is confirmed already or three links went this hour."""
+    token = service.request_email_verification(user, ip)
+    if token is None:
+        return
+    subject, text = VERIFY_EMAIL[lang]
+    link = f"{base_url.rstrip('/')}/#verify={token}"   # in the fragment: no server log keeps it
+    try:
+        mailer.send(user.email, subject, text.format(name=user.display_name, link=link, hours=VERIFY_HOURS))
+    except Exception:
+        logging.getLogger("uvicorn.error").warning("No se pudo enviar el correo de confirmación.", exc_info=True)
+
+
+def _base_url(request: Request) -> str:
+    # APP_BASE_URL in production: a link built from the Host header could point to another site.
+    return os.environ.get("APP_BASE_URL") or str(request.base_url)
+
+
 @router.post("/register", status_code=201)
-def register(body: RegisterBody, request: Request, service: AuthService = Depends(_service)):
+def register(body: RegisterBody, request: Request, tasks: BackgroundTasks, service: AuthService = Depends(_service),
+             mailer: Optional[Mailer] = Depends(get_mailer)):
     try:
         signed_in = service.register(body.email, body.password, body.display_name, _ip(request))
     except InvalidRegistration as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
+    if mailer is not None:
+        tasks.add_task(_send_verification, service, mailer, signed_in.user, _base_url(request), _ip(request),
+                       language(request.headers.get("accept-language")))
     return _with_session(JSONResponse(_public(signed_in), status_code=201), signed_in)
 
 
@@ -153,7 +190,9 @@ def update_me(body: ProfileBody, user: User = Depends(authenticated_user),
 @router.get("/config")
 def config(mailer: Optional[Mailer] = Depends(get_mailer)):
     return {"google_enabled": google_enabled(), "demo_email": os.environ.get("DEMO_USER_EMAIL") or None,
-            "password_reset_enabled": mailer is not None}
+            "password_reset_enabled": mailer is not None,
+            # The email must be confirmed where it is asked (production) and can be (with mail).
+            "email_verification": mailer is not None and os.environ.get("APP_ENV") == "production"}
 
 
 # The recovery email in the language of the interface it was asked from.
@@ -186,13 +225,33 @@ def _send_reset(service: AuthService, mailer: Mailer, email: str, base_url: str,
         logging.getLogger("uvicorn.error").warning("No se pudo enviar el correo de recuperación.", exc_info=True)
 
 
+@router.post("/email/verify")
+def verify_email(body: VerifyBody, request: Request, service: AuthService = Depends(_service)):
+    """Opening the link confirms the email, with or without a session."""
+    try:
+        service.verify_email(body.token, _ip(request))
+    except InvalidResetLink as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return {"email_verified": True}
+
+
+@router.post("/email/resend", status_code=202)
+def resend_verification(request: Request, tasks: BackgroundTasks, user: User = Depends(authenticated_user),
+                        service: AuthService = Depends(_service), mailer: Optional[Mailer] = Depends(get_mailer)):
+    if mailer is None:
+        raise HTTPException(status_code=404, detail="La confirmación del email no está disponible.")
+    tasks.add_task(_send_verification, service, mailer, user, _base_url(request), _ip(request),
+                   language(request.headers.get("accept-language")))
+    return {"detail": translate("Si el email aún no está confirmado, te hemos enviado otro enlace.",
+                                language(request.headers.get("accept-language")))}
+
+
 @router.post("/password/forgot", status_code=202)
 def forgot_password(body: ForgotBody, request: Request, tasks: BackgroundTasks,
                     service: AuthService = Depends(_service), mailer: Optional[Mailer] = Depends(get_mailer)):
     if mailer is None:
         raise HTTPException(status_code=404, detail="La recuperación de la contraseña no está disponible.")
-    # APP_BASE_URL in production: a link built from the Host header could point to another site.
-    base_url = os.environ.get("APP_BASE_URL") or str(request.base_url)
+    base_url = _base_url(request)
     lang = language(request.headers.get("accept-language"))
     tasks.add_task(_send_reset, service, mailer, body.email, base_url, _ip(request), lang)
     return {"detail": translate(RESET_SENT, lang)}

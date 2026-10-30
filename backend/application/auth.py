@@ -20,12 +20,14 @@ from uuid import uuid4
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 
-from backend.application.accounts import AccountRepository, DuplicateEmail, PasswordReset, StoredSession, User
+from backend.application.accounts import (AccountRepository, DuplicateEmail, EmailVerification, PasswordReset, StoredSession,
+                                         User)
 
 MIN_PASSWORD = 10
 MAX_PASSWORD = 256
 SESSION_DAYS = 7
 RESET_MINUTES = 30
+VERIFY_HOURS = 24
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
 INVALID_CREDENTIALS = "Email o contraseña incorrectos."
 
@@ -172,7 +174,34 @@ class AuthService:
             raise InvalidResetLink("El enlace no es válido o ha caducado. Pide otro.")
         self.set_password(user, password, ip)
         self.accounts.delete_password_resets(user.id)
+        # The link came to the account's mailbox: the email is confirmed too.
+        if not user.email_verified:
+            self.accounts.mark_email_verified(user.id)
+            user = replace(user, email_verified=True)
         return self._open_session(user, "password_reset", ip)
+
+    def request_email_verification(self, user: User, ip: str) -> Optional[str]:
+        """The token of a link that confirms the email (24 hours, only the last one works), or None: already
+        confirmed, or three links this hour for that email (shared with the recovery links)."""
+        if user.email_verified or self.reset_limiter.blocked(user.email, "verify"):
+            return None
+        self.reset_limiter.failed(user.email, "verify")
+        token = secrets.token_urlsafe(32)
+        self.accounts.add_email_verification(EmailVerification(user.id, token_hash(token),
+                                                               self.clock() + timedelta(hours=VERIFY_HOURS)))
+        self.accounts.record_event(user.id, "email_verification_requested", ip)
+        return token
+
+    def verify_email(self, token: str, ip: str) -> User:
+        verification = self.accounts.email_verification_by_hash(token_hash(token or ""))
+        valid = verification and verification.expires_at > self.clock()
+        user = self.accounts.user_by_id(verification.user_id) if valid else None
+        if user is None:
+            raise InvalidResetLink("El enlace no es válido o ha caducado. Pide otro.")
+        self.accounts.mark_email_verified(user.id)
+        self.accounts.delete_email_verifications(user.id)
+        self.accounts.record_event(user.id, "email_verified", ip)
+        return replace(user, email_verified=True)
 
     def google(self, sub: str, email: str, email_verified: bool, name: str, ip: str) -> SignedIn:
         user = self.accounts.user_by_google_sub(sub)
@@ -183,9 +212,11 @@ class AuthService:
                 if not email_verified:
                     raise InvalidCredentials("La cuenta de Google no tiene el email verificado.")
                 self.accounts.link_google(existing.id, sub)
-                user = replace(existing, google_sub=sub)
+                self.accounts.mark_email_verified(existing.id)
+                user = replace(existing, google_sub=sub, email_verified=True)
             else:
-                user = User(uuid4(), email, (name or email.split("@")[0])[:100], google_sub=sub)
+                # Google says whether it verified the email.
+                user = User(uuid4(), email, (name or email.split("@")[0])[:100], google_sub=sub, email_verified=email_verified)
                 self.accounts.add_user(user)
         return self._open_session(user, "login_google", ip)
 

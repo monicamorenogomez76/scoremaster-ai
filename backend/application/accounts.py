@@ -16,6 +16,7 @@ class User:
     display_name: str
     password_hash: Optional[str] = None
     google_sub: Optional[str] = None
+    email_verified: bool = False
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,14 @@ class StoredSession:
     user_id: UUID
     token_hash: str
     csrf_token: str
+    expires_at: datetime
+
+
+@dataclass(frozen=True)
+class EmailVerification:
+    """A link that confirms the email of an account: the email carries the token, the database only its SHA-256."""
+    user_id: UUID
+    token_hash: str
     expires_at: datetime
 
 
@@ -50,4 +59,8 @@ class AccountRepository(Protocol):
     def add_password_reset(self, reset: PasswordReset) -> None: ...
     def password_reset_by_hash(self, token_hash: str) -> Optional[PasswordReset]: ...
     def delete_password_resets(self, user_id: UUID) -> None: ...
+    def mark_email_verified(self, user_id: UUID) -> None: ...
+    def add_email_verification(self, verification: EmailVerification) -> None: ...
+    def email_verification_by_hash(self, token_hash: str) -> Optional[EmailVerification]: ...
+    def delete_email_verifications(self, user_id: UUID) -> None: ...
     def record_event(self, user_id: Optional[UUID], event: str, ip: str) -> None: ...
