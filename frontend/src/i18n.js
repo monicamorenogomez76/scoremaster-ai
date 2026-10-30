@@ -5,7 +5,8 @@ import { en } from './locales/en.js';
 
 export const languages = [['es', 'Español'], ['en', 'English']];
 const KEY = 'scoremaster.language';
-const dictionaries = { en };
+// The catalog's instruments join the English dictionary: the server names them in Spanish in every analysis.
+const dictionaries = { en: { ...en } };
 const listeners = new Set();
 let language = 'es';
 const deviceStorage = () => { try { return globalThis.localStorage; } catch { return undefined; } };
@@ -42,6 +43,12 @@ export function applyLanguage(code, root = globalThis.document?.documentElement)
   setLanguage(code);
   if (root) root.lang = language;
   listeners.forEach(listener => listener(language));
+}
+
+export function addTranslations(instruments) {
+  for (const { label_es: spanish, label_en: english } of instruments || []) {
+    if (spanish && english && !(spanish in en)) dictionaries.en[spanish] = english;
+  }
 }
 
 export function onLanguageChange(listener) {

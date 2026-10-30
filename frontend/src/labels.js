@@ -55,6 +55,11 @@ function splitPartNumber(instrument) {
 }
 
 export function displayInstrumentName(instrument, details = {}) {
+  // In English, the catalog's English name or else the name the file gives the part (usually English already).
+  if (currentLanguage() === 'en') {
+    const translated = details.instrument_label_es && t(details.instrument_label_es);
+    return translated && translated !== details.instrument_label_es ? translated : instrument;
+  }
   if (details.instrument_label_es) return details.instrument_label_es;
   const [base, number] = splitPartNumber(instrument);
   return (instrumentLabelsEs[base] || base) + number;
@@ -93,7 +98,7 @@ export function byDifficulty(entries, scoreKey) {
 }
 
 export function bandIssueText(issue) {
-  const instrument = issue.label_es;
+  const instrument = t(issue.label_es);
   if (issue.available === 0) return t('{instrument}: falta en la plantilla; se necesita {required}.', { instrument, required: issue.required });
   return t('{instrument}: hay {available} músicos y se necesitan {required}.', { instrument, available: issue.available, required: issue.required });
 }

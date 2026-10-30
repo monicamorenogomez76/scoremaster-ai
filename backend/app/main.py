@@ -10,12 +10,16 @@ from urllib.parse import urlparse
 from threading import Thread
 from zipfile import ZipFile, is_zipfile
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Path as FastAPIPath, Query, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Path as FastAPIPath, Query, Request, UploadFile
+from fastapi.encoders import jsonable_encoder
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.app.auth_routes import router as auth_router
+from backend.app.i18n import language, translate
 from backend.app.library_routes import router as library_router, valid_band_profile
 from backend.app.band_routes import router as band_router
 from backend.app.concert_routes import router as concert_router
@@ -84,6 +88,26 @@ PRODUCTION = os.environ.get("APP_ENV") == "production"
 # Interactive API docs only outside production.
 app = FastAPI(title="ScoreMasterAI API", lifespan=lifespan, docs_url=None if PRODUCTION else "/docs",
               redoc_url=None if PRODUCTION else "/redoc", openapi_url=None if PRODUCTION else "/openapi.json")
+
+
+# Errors answer in the language of the interface, which the app sends as Accept-Language (2026-10-30).
+@app.exception_handler(HTTPException)
+async def translated_http_error(request: Request, exc: HTTPException):
+    exc.detail = translate(exc.detail, language(request.headers.get("accept-language")))
+    return await http_exception_handler(request, exc)
+
+
+@app.exception_handler(RequestValidationError)
+async def translated_validation_error(request: Request, exc: RequestValidationError):
+    lang = language(request.headers.get("accept-language"))
+    errors = jsonable_encoder(exc.errors())
+    for error in errors:
+        message = str(error.get("msg", ""))
+        prefix = "Value error, " if message.startswith("Value error, ") else ""
+        error["msg"] = prefix + translate(message[len(prefix):], lang)
+    return JSONResponse(status_code=422, content={"detail": errors})
+
+
 class _BuiltStatic(StaticFiles):
     """Vite names each built file after its content hash: it never changes, so the browser may keep it."""
 

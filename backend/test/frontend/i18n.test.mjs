@@ -102,3 +102,17 @@ test('the tables of options and labels are translated', async () => {
   ];
   assert.deepEqual(texts.filter(text => !(text in en)), []);
 });
+
+test('the instrument catalog adds the English name of each instrument the server names in Spanish', async () => {
+  const { addTranslations } = await import('../../../frontend/src/i18n.js');
+  const { displayInstrumentName } = await import('../../../frontend/src/labels.js');
+  addTranslations([{ label_es: 'Clarinete en Si bemol', label_en: 'B♭ Clarinet' }, { label_es: 'Gaita', label_en: '' }]);
+  setLanguage('en');
+  assert.equal(t('Clarinete en Si bemol'), 'B♭ Clarinet');
+  assert.equal(t('Gaita'), 'Gaita', 'an instrument without its English name keeps the Spanish one');
+  assert.equal(displayInstrumentName('Clarinet 1', { instrument_label_es: 'Clarinete en Si bemol' }), 'B♭ Clarinet');
+  assert.equal(displayInstrumentName('Clarinet 1'), 'Clarinet 1', 'in English the name in the file is kept');
+  assert.equal(displayInstrumentName('Clarinet', { instrument_label_es: 'Clarinete' }), 'Clarinet', 'also when the catalog has no English name');
+  setLanguage('es');
+  assert.equal(displayInstrumentName('Clarinet 1'), 'Clarinete 1');
+});

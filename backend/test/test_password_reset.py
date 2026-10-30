@@ -179,3 +179,14 @@ def test_the_repository_keeps_only_the_last_link_of_each_account(postgres_engine
     assert accounts.password_reset_by_hash("b" * 64) == PasswordReset(user.id, "b" * 64, expires)
     accounts.delete_password_resets(user.id)
     assert accounts.password_reset_by_hash("b" * 64) is None
+
+
+@pytest.mark.real_auth
+def test_asked_for_in_english_the_answer_and_the_email_are_in_english(client):
+    client.post("/auth/register", json={"email": "conductor@band.org", "password": PASSWORD})
+    client.cookies.clear()
+    response = client.post("/auth/password/forgot", json={"email": "conductor@band.org"}, headers={"Accept-Language": "en"})
+    assert response.json()["detail"].startswith("If there is an account with that email")
+    [(_, subject, text)] = client.outbox.messages
+    assert subject == "ScoreMaster: choose a new password"
+    assert "expires in 30 minutes" in text and "/#reset=" in text

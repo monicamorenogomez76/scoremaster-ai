@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { currentUser, onUnauthorized, signOut } from './api.js';
-import { onLanguageChange } from './i18n.js';
+import { addTranslations, onLanguageChange } from './i18n.js';
+import { loadCatalog } from './bands.js';
 import { AppShell } from './AppShell.jsx';
 import { evaluationWorkFile } from './evaluations.js';
 import { saveBand } from './library.js';
@@ -33,6 +34,12 @@ export function App({ session }) {
   // A new language renders every view again in it.
   const [, setLanguage] = useState('');
   useEffect(() => onLanguageChange(setLanguage), []);
+  // The English names of the catalog's instruments, which the analyses name in Spanish; the views render again with them.
+  const [, setCatalogLoaded] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    loadCatalog().then(instruments => { addTranslations(instruments); setCatalogLoaded(true); }).catch(() => {});
+  }, [user?.email]);
 
   // Score file, notation and audio shared by the upload workflow and both viewers.
   const workspace = useMemo(() => ({

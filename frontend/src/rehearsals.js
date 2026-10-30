@@ -2,7 +2,7 @@
 // each naming the work rehearsed in it (decided 2026-10-05).
 import { familyOfSection } from './dashboard.js';
 import { apiJson } from './api.js';
-import { blockScoreLabel, calendarLabel, findingLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
+import { blockScoreLabel, calendarLabel, displayInstrumentName, findingLabel, rehearsalBlockDetail, rehearsalGroupName } from './labels.js';
 import { rehearsalSchedule } from './schedule.js';
 import { dateLocale, t } from './i18n.js';
 
@@ -156,7 +156,7 @@ export function summaryPriorityRows(reviewItems, analysisItems) {
     ...analysisItems.map(item => ({ work_id: item.work_id, title: item.title, section: t(item.family_label_es || item.family || 'Otras'),
       family: item.family || familyOfSection(item.family_label_es),
       parts: item.instrument ? [item.instrument] : [], range: item.measure_range || '',
-      detail: item.instrument_label_es || item.instrument, measures: measuresOf(item.measure_range),
+      detail: item.instrument ? displayInstrumentName(item.instrument, item) : item.instrument_label_es, measures: measuresOf(item.measure_range),
       reason: (item.findings || []).map(findingLabel).join(' · '), origin: t('Análisis'), originTitle: t('Análisis de ScoreLint') })),
   ];
 }
