@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { preparePlayback, stopPlayback } from './playback.js';
+import { t } from '../i18n.js';
 
 export const clock = seconds => Math.floor(seconds / 60) + ':' + String(Math.floor(seconds % 60)).padStart(2, '0');
 
@@ -24,7 +25,7 @@ export function useTransport({ prepare, onPosition, stoppedMessage }) {
     if (current) { if (playing.current) current.pause(); else await current.play(); return; }
     const token = ++generation.current;
     const isCurrent = () => token === generation.current;
-    setState(previous => ({ ...previous, loading: true, status: 'Cargando sonidos…' }));
+    setState(previous => ({ ...previous, loading: true, status: t('Cargando sonidos…') }));
     try {
       const ready = await latest.current.prepare(message => {
         if (isCurrent()) setState(previous => ({ ...previous, status: message }));
@@ -44,7 +45,7 @@ export function useTransport({ prepare, onPosition, stoppedMessage }) {
       await ready.play();
     } catch (error) {
       if (!isCurrent()) return;
-      reset(error.name === 'AbortError' ? 'El servidor no terminó de preparar la obra a tiempo. Sigue preparándola: vuelve a intentarlo en un momento.' : error.message || 'No se pudo cargar el sonido. Comprueba la conexión a Internet.');
+      reset(error.name === 'AbortError' ? t('El servidor no terminó de preparar la obra a tiempo. Sigue preparándola: vuelve a intentarlo en un momento.') : error.message || t('No se pudo cargar el sonido. Comprueba la conexión a Internet.'));
     } finally {
       if (isCurrent()) setState(previous => ({ ...previous, loading: false }));
     }

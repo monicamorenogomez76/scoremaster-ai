@@ -1,4 +1,5 @@
 import { highlightMeasure } from './playback-guide.js';
+import { t } from '../i18n.js';
 
 export const MEASURES_PER_PAGE = 4;
 const CURSOR = [{ type: 3, color: '#6366f1', alpha: .25, follow: false }];
@@ -10,8 +11,8 @@ export function fitScale(widestPage, containerWidth, zoom) {
 
 export function pageLabel(first, last, pageStart) {
   const end = Math.min(pageStart + MEASURES_PER_PAGE - 1, last);
-  return 'Página ' + (Math.floor((pageStart - first) / MEASURES_PER_PAGE) + 1) + '/' +
-    Math.ceil((last - first + 1) / MEASURES_PER_PAGE) + ' · compases ' + pageStart + '–' + end;
+  return t('Página {page}/{pages} · compases {first}–{last}', { page: Math.floor((pageStart - first) / MEASURES_PER_PAGE) + 1,
+    pages: Math.ceil((last - first + 1) / MEASURES_PER_PAGE), first: pageStart, last: end });
 }
 
 export const pageStartFor = (first, measure) => first + Math.floor((measure - first) / MEASURES_PER_PAGE) * MEASURES_PER_PAGE;
@@ -43,7 +44,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
     if (!score) return;
     const state = score, token = ++rendering;
     const end = Math.min(state.pageStart + MEASURES_PER_PAGE - 1, state.last);
-    publish({ status: 'Cargando partitura · compases ' + state.pageStart + '–' + end + '…', busy: true,
+    publish({ status: t('Cargando partitura · compases {first}–{last}…', { first: state.pageStart, last: end }), busy: true,
       canPrevious: state.pageStart > state.first, canNext: end < state.last, page: pageLabel(state.first, state.last, state.pageStart) });
     await frame();
     if (token !== rendering || state !== score) return;
@@ -65,11 +66,11 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
         .map(svg => ({ svg, width: Number.parseFloat(svg.getAttribute('width')), height: Number.parseFloat(svg.getAttribute('height')) }))
         .filter(item => item.width && item.height);
       container.replaceChildren(staging); container.scrollTop = 0;
-      publish({ status: 'Todas las voces · notación original · compases ' + state.pageStart + '–' + end, busy: false });
+      publish({ status: t('Todas las voces · notación original · compases {first}–{last}', { first: state.pageStart, last: end }), busy: false });
       fit();
       if (state.currentMeasure !== undefined) highlightMeasure(display, state.currentMeasure, container);
     } catch (error) {
-      if (token === rendering) publish({ status: 'No se pudo mostrar esta página: ' + error.message, busy: false });
+      if (token === rendering) publish({ status: t('No se pudo mostrar esta página: {error}', { error: error.message }), busy: false });
     } finally { if (staging.style.visibility === 'hidden') staging.remove(); }
   }
 
@@ -82,7 +83,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
   async function load() {
     clear();
     const version = session.getVersion();
-    publish({ visible: true, status: 'Cargando partitura…', busy: true });
+    publish({ visible: true, status: t('Cargando partitura…'), busy: true });
     try {
       const source = await session.loadSource();
       if (version !== session.getVersion()) return;

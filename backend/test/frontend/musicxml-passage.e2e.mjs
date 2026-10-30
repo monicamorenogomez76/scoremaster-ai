@@ -8,7 +8,9 @@ import assert from 'node:assert/strict';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
-const source = readFileSync(new URL('../../../frontend/src/score/musicxml-passage.js', import.meta.url), 'utf8').replace(/^export /gm, '');
+// Loaded as a plain script: its imports go, and its messages stay in Spanish.
+const source = 'const t = text => text;\n' + readFileSync(new URL('../../../frontend/src/score/musicxml-passage.js', import.meta.url), 'utf8')
+  .replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const note = (staff, step) => `<note><pitch><step>${step}</step><octave>5</octave></pitch><duration>4</duration><voice>${staff}</voice><type>whole</type><staff>${staff}</staff></note>`;
 const backup = '<backup><duration>4</duration></backup>';
 const score = `<?xml version="1.0"?><score-partwise version="4.0"><part-list>

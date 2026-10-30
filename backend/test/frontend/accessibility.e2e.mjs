@@ -142,6 +142,13 @@ try {
   await english.locator('#work-tab-difficulty').click();
   await english.locator('#work-panel-difficulty').getByText('Grade of the work').waitFor();
   await audit(english, 'Work › Difficulty (English)');
+  await english.locator('#work-tab-score').click();
+  await english.locator('#embedded-score').getByRole('heading', { name: 'Full score' }).waitFor();
+  await english.locator('#full-score-status').getByText('All voices').waitFor({ timeout: 60000 });
+  await audit(english, 'Work › Score (English)');
+  await english.locator('#work-tab-recordings').click();
+  await english.locator('#videos-content').getByText('Recordings of').waitFor();
+  await audit(english, 'Work › Recordings (English)');
   await english.locator('#back-to-list').click();
   await english.locator('#add-work').click();
   await english.locator('#upload-root').getByText('Add work').first().waitFor();
