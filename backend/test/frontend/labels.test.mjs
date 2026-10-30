@@ -118,6 +118,11 @@ test('the work grade follows the publishers\' guides and says why (difficulty-v3
   const { gradeReasons, workGradeDetail } = await import('../../../frontend/src/labels.js');
   const reason = 'Tesitura de Tuba hasta Do4 → grado 6, por encima de la tabla (American Band College)';
   assert.deepEqual(gradeReasons({ rubric: { reasons_es: [reason] } }), [reason]);
+  const { setLanguage } = await import('../../../frontend/src/i18n.js');
+  setLanguage('en');
+  assert.deepEqual(gradeReasons({ rubric: { reasons_es: [reason], reasons_en: ['In English'] } }), ['In English']);
+  assert.deepEqual(gradeReasons({ rubric: { reasons_es: [reason] } }), [reason], 'an analysis without them keeps the Spanish ones');
+  setLanguage('es');
   assert.equal(workGradeDetail({ algorithm_version: 'difficulty-v3', rubric: {} }),
     'Según las guías de grados de las editoriales · viento y cuerda; la percusión se muestra aparte');
   assert.deepEqual(gradeReasons({ algorithm_version: 'difficulty-v2' }), [], 'an earlier analysis has no reasons');

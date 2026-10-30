@@ -175,4 +175,4 @@ export const workGradeDetail = difficulty => difficulty?.rubric
     ? t('Estimación provisional · viento y cuerda; la percusión y la sección rítmica se muestran aparte')
     : t('Estimación provisional · percentil 80 por familia');
 
-export const gradeReasons = difficulty => difficulty?.rubric?.reasons_es || [];
+export const gradeReasons = difficulty => (currentLanguage() === 'en' && difficulty?.rubric?.reasons_en) || difficulty?.rubric?.reasons_es || [];

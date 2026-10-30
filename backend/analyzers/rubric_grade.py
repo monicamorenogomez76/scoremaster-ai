@@ -21,6 +21,7 @@ from music21 import pitch as m21pitch
 from backend.analyzers.instrument_difficulty import classify_instrument_family, instrument_label_es
 from backend.analyzers.tempo import estimate_duration
 from backend.domain import grade_rubric as R
+from backend.domain.instrument_catalog import catalog_entries
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 from backend.domain.timing import is_attack, sounding_pitches
@@ -262,7 +263,7 @@ def rubric_grade(score: Score) -> dict:
     result = {"version": RUBRIC_VERSION, "grade": grade, "criteria": work, "by_instrument": by_instrument,
               "by_family": by_family, "deciding": deciding, "sources": R.SOURCES}
     reasons = [reason_es(item, result) for item in deciding[:MAX_REASONS]] if grade > 1 else [GRADE_1_REASON]
-    return {**result, "reasons_es": reasons}
+    return {**result, "reasons_es": reasons, "reasons_en": english_reasons(result)}
 
 
 # --- the reasons, in Spanish, for the director and the explanations -------------------------------------------------
@@ -323,3 +324,68 @@ def reason_es(item: dict, rubric: dict) -> str:
         text = criterion
     grade = "grado 6, por encima de la tabla" if item["grade"] > 5 else "grado {} o más".format(item["grade"])
     return "{} → {} ({})".format(text, grade, SOURCE_NAMES.get(item["source"], item["source"]))
+
+
+# --- the same reasons in English, for the interface in English (2026-10-30) -------------------------------------------
+
+GRADE_1_REASON_EN = "Every criterion is within grade 1 (Galician Band Federation and American Band College)"
+SOURCE_NAMES_EN = {"fgbm": "Galician Band Federation", "abc": "American Band College", "fjh": "FJH"}
+TUPLETS_EN = {2: "Triplets", 3: "Quintuplets or sextuplets"}
+FIGURES_EN = {0.25: "Sixteenth notes", 0.125: "Thirty-second notes", 0.0625: "Sixty-fourth notes"}
+
+
+def _listed_en(items: list[str]) -> str:
+    return "" if not items else items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _instrument_en(instrument: str, rubric: dict) -> str:
+    """The catalog's English name, with the part's number; the part's own name when the catalog does not know it."""
+    label = rubric["by_instrument"].get(instrument, {}).get("label_es") or instrument_label_es(instrument)
+    match = re.match(r"^(.*?)(\s+\d+)?$", label)
+    english = {entry.label_es: entry.label_en for entry in catalog_entries()}.get(match.group(1))
+    return english + (match.group(2) or "") if english else instrument
+
+
+def reason_en(item: dict, rubric: dict) -> str:
+    value, instrument = item["value"], item.get("instrument")
+    where = _instrument_en(instrument, rubric) if instrument else ""
+    criterion = item["criterion"]
+    if criterion == "key":
+        text = "Concert key signature with {} {}".format(abs(value), "♯" if value > 0 else "♭") if value else \
+            "Concert key signature without accidentals"
+    elif criterion in ("key_changes", "meter_changes"):
+        text = "{} {} changes".format(value, "key" if criterion == "key_changes" else "meter")
+    elif criterion == "meter":
+        text = "Meter " + value
+    elif criterion == "tempo":
+        text = "Tempos from {:g} to {:g} beats per minute".format(value["slowest"], value["fastest"])
+    elif criterion == "length":
+        text = "About {} minutes long".format(max(1, round(value / 60)))
+    elif criterion == "dynamics":
+        text = "Dynamics " + _listed_en(value)
+    elif criterion == "range":
+        direction = rubric["by_instrument"].get(instrument, {}).get("criteria", {}).get("range", {}).get("direction")
+        accidental = value[1:-1].replace("-", "♭").replace("#", "♯")
+        text = "Range of {} {} {}".format(where, "down to" if direction == "low" else "up to", value[0] + accidental + value[-1])
+    elif criterion == "note_values":
+        text = "{} in {}".format(FIGURES_EN.get(value, "Very fast note values"), where)
+    elif criterion == "tuplets":
+        text = "{} in {}".format(TUPLETS_EN.get(item["grade"], "Septuplets and other irregular groups"), where)
+    elif criterion == "syncopation":
+        text = "Syncopation in " + where
+    elif criterion in ("articulations", "ornaments"):
+        marks = _listed_en(list(value))
+        text = "{} in {}".format(marks[0].upper() + marks[1:], where)
+    elif criterion == "grace_notes":
+        text = "Groups of {} grace notes in {}".format(value, where)
+    else:
+        text = criterion
+    grade = "grade 6, above the chart" if item["grade"] > 5 else "grade {} or above".format(item["grade"])
+    return "{} → {} ({})".format(text, grade, SOURCE_NAMES_EN.get(item["source"], item["source"]))
+
+
+def english_reasons(rubric: dict) -> list[str]:
+    """From the deciding criteria, also of an analysis saved before the reasons in English existed."""
+    if rubric.get("grade", 1) <= 1:
+        return [GRADE_1_REASON_EN]
+    return [reason_en(item, rubric) for item in rubric.get("deciding", [])[:MAX_REASONS]]
