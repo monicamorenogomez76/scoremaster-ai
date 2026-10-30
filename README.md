@@ -35,7 +35,7 @@ La pantalla de cada obra responde a las tres preguntas del director:
 | **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen |
 | **IA explicativa** | «¿Por qué esta dificultad?» y «¿Por qué este plan?» redactadas por **Gemini** a partir de las evidencias del análisis, con citas comprobadas; sin clave responde un **modo demo identificado** como tal |
 | **Valoraciones** | Campañas en las que músicos invitados valoran pasajes (grado, criticidad y prioridad) sin ver la predicción ni las valoraciones de los demás; solo una cuenta administradora las crea y ve los resultados; valoración independiente con IA (método B); exportación anónima e informe reproducible |
-| **Configuración** | Nombre visible, tamaño del texto y **tema claro, oscuro o automático** |
+| **Configuración** | Nombre visible, **idioma (español o inglés)**, tamaño del texto y **tema claro, oscuro o automático** |
 
 <table>
 <tr><td><img src="docs/img/dificultad.png" alt="Pestaña Dificultad con la explicación en modo demo identificado y los pasajes citados"></td>

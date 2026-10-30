@@ -9,7 +9,9 @@ from typing import Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from backend.application.ai import ExplanationProvider
+from backend.analyzers.rubric_grade import english_reasons
 from backend.application.explanations import InvalidExplanation, evidence_text, replace_terms, run_explanation
+from backend.domain.instrument_catalog import english_label
 
 EVIDENCE_VERSION = "difficulty-evidence-v5"   # v3 (2026-10-25): grade_reasons from the publishers' guides; v4-v5 (2026-10-27): from the Galician table first
 PROMPT_VERSION = "difficulty-explanation-v4"
@@ -28,6 +30,21 @@ GRADE_DESCRIPTIONS = {
 FINDING_LABELS = {"SL002": "Registro agudo", "SL003": "Alta densidad rítmica", "SL004": "Intervalos amplios",
                   "SL005": "Pasaje prolongado sin descanso"}
 
+# The same texts for the interface in English (2026-10-30), with the rubric the musicians read in English.
+GRADE_LABELS_EN = {1: "Very easy", 2: "Easy", 3: "Intermediate", 4: "Upper intermediate", 5: "Advanced", 6: "Professional"}
+GRADE_DESCRIPTIONS_EN = {
+    1: "First year on the instrument: quarter, half and whole notes in simple meters, with a narrow range.",
+    2: "About two years of practice: eighth notes, dots, simple syncopations and triplets, first compound meters.",
+    3: "Three or four years of practice: frequent syncopations, meter changes and a medium or wide range.",
+    4: "Four to six years of practice: demanding rhythms, less common keys and meters, technical passages.",
+    5: "Seven to nine years of practice: very demanding rhythms, changing or asymmetric meters, the full range and virtuosic writing.",
+    6: "Professional level or above: extremely difficult in every respect.",
+}
+FINDING_LABELS_EN = {"SL002": "High register", "SL003": "High rhythmic density", "SL004": "Wide intervals",
+                     "SL005": "Long passage without rest"}
+FAMILY_LABELS_EN = {"woodwinds": "Woodwinds", "brass": "Brass", "strings": "Strings", "percussion": "Percussion",
+                    "keyboard": "Keyboards", "rhythm": "Rhythm section", "other": "Others"}
+
 
 class Factor(BaseModel):
     dimension: Literal["range", "register", "intervals", "density", "endurance", "tempo", "general"]
@@ -42,12 +59,16 @@ class DifficultyExplanation(BaseModel):
     study_tip: str = Field(min_length=1, max_length=400)
 
 
-def _findings(codes) -> list[dict]:
-    return [{"code": code, "label": FINDING_LABELS.get(code, code)} for code in codes or []]
+def _findings(codes, language: str = "es") -> list[dict]:
+    labels = FINDING_LABELS_EN if language == "en" else FINDING_LABELS
+    return [{"code": code, "label": labels.get(code, code)} for code in codes or []]
 
 
-def difficulty_evidence(result: dict) -> dict:
-    """What ScoreLint measured, bounded: the hardest instruments and the critical passages."""
+def difficulty_evidence(result: dict, language: str = "es") -> dict:
+    """What ScoreLint measured, bounded: the hardest instruments and the critical passages. In English (2026-10-30)
+    the labels, grade and reasons are in English and the evidence says so; the Spanish evidence does not change."""
+    if language == "en":
+        return _english_evidence(result, difficulty_evidence(result))
     difficulty = result.get("difficulty") or {}
     scale = difficulty.get("scale") or {}
     grade = int(difficulty.get("grade") or 1)
@@ -82,6 +103,31 @@ def difficulty_evidence(result: dict) -> dict:
     }
 
 
+def _english_evidence(result: dict, evidence: dict) -> dict:
+    difficulty = result.get("difficulty") or {}
+    rubric = difficulty.get("rubric")
+    grade = evidence["grade"]
+    by_instrument = difficulty.get("by_instrument") or {}
+    stored = (difficulty.get("critical_passages") or [])[:MAX_PASSAGES]
+    english = lambda label, name: evidence_text(english_label(label, name))
+    return {
+        **evidence, "language": "en",
+        "title": evidence["title"] if result.get("title") else "Untitled work",
+        "grade_label": GRADE_LABELS_EN.get(grade, ""), "grade_description": GRADE_DESCRIPTIONS_EN.get(grade, ""),
+        "grade_reasons": (rubric.get("reasons_en") or english_reasons(rubric))[:MAX_REASONS] if rubric else [],
+        "families": [{**item, "family": FAMILY_LABELS_EN.get(code, item["family"])} for item, code in
+                     zip(evidence["families"], sorted(difficulty.get("by_family") or {},
+                                                      key=lambda name: -((difficulty["by_family"][name]).get("grade") or 0)))],
+        "instruments": [{**item, "label": english(item["label"], item["name"]),
+                         "family": FAMILY_LABELS_EN.get((by_instrument.get(item["name"]) or {}).get("family"), item["family"]),
+                         "findings": _findings([finding["code"] for finding in item["findings"]], "en")}
+                        for item in evidence["instruments"]],
+        "passages": [{**item, "label": english(item["label"], item["instrument"]),
+                      "findings": _findings([finding["code"] for finding in item["findings"]], "en")}
+                     for item, raw in zip(evidence["passages"], stored)],
+    }
+
+
 def validate_explanation(answer, evidence: dict) -> DifficultyExplanation:
     try:
         explanation = DifficultyExplanation.model_validate(answer)
@@ -100,7 +146,8 @@ def validate_explanation(answer, evidence: dict) -> DifficultyExplanation:
 
 def readable_difficulty(explanation: DifficultyExplanation, evidence: dict) -> DifficultyExplanation:
     """Ids and MusicXML names belong in the citations; the text uses Spanish names and measures."""
-    terms = {item["id"]: "{} (compases {})".format(item["label"], item["measures"]) for item in evidence["passages"]}
+    measures = "measures" if evidence.get("language") == "en" else "compases"
+    terms = {item["id"]: "{} ({} {})".format(item["label"], measures, item["measures"]) for item in evidence["passages"]}
     terms.update({item["name"]: item["label"] for item in evidence["instruments"]})
     fix = lambda text: replace_terms(text, terms)
     return explanation.model_copy(update={
@@ -108,11 +155,13 @@ def readable_difficulty(explanation: DifficultyExplanation, evidence: dict) -> D
         "factors": [factor.model_copy(update={"text": fix(factor.text)}) for factor in explanation.factors]})
 
 
-def explain_difficulty(result: dict, provider: ExplanationProvider, demo: ExplanationProvider, cache=None) -> dict:
+def explain_difficulty(result: dict, provider: ExplanationProvider, demo: ExplanationProvider, cache=None,
+                       language: str = "es") -> dict:
     """The explanation shown to the director, with which provider wrote it and why the demo answered."""
-    evidence = difficulty_evidence(result)
+    evidence = difficulty_evidence(result, language)
+    version = PROMPT_VERSION if language == "es" else PROMPT_VERSION + "-" + language
     shown = run_explanation(evidence, lambda who, data: who.explain_difficulty(data), validate_explanation,
-                            provider, demo, PROMPT_VERSION, readable_difficulty, cache)
+                            provider, demo, version, readable_difficulty, cache)
     # The interface finds each passage by the part's name as stored, not as the AI received it.
     stored = (result.get("difficulty") or {}).get("critical_passages") or []
     return {**shown, "passages": {item["id"]: {"instrument": raw.get("instrument"), "label": item["label"],
