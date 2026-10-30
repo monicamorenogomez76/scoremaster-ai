@@ -4,19 +4,23 @@ import { proposalActivity } from './progress.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { ConcertEditor } from './ConcertEditor.jsx';
 import { concertProgress, daysUntil, listConcerts, monthGrid, phaseLabel, planItemsToSave, proposeConcertPlan,
-  saveConcertPlan } from './concerts.js';
+  saveConcertPlan, weekdays } from './concerts.js';
+import { dateLocale, t } from './i18n.js';
 import { RehearsalReview } from './RehearsalReview.jsx';
 import { canReview, listRehearsals, proposalBlocks, rehearsalDateText, todayIso } from './rehearsals.js';
 import { View } from './View.jsx';
 
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+// «Noviembre de 2026» / «November 2026».
+const monthTitle = (year, month) => {
+  const text = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return text[0].toUpperCase() + text.slice(1);
+};
 
 function daysLeftText(concert, today) {
   const days = daysUntil(concert.date, today);
-  if (days === 0) return 'Hoy';
-  if (days < 0) return 'Celebrado';
-  return days === 1 ? 'Falta 1 día' : 'Faltan ' + days + ' días';
+  if (days === 0) return t('Hoy');
+  if (days < 0) return t('Celebrado');
+  return t(days === 1 ? 'Falta {count} día' : 'Faltan {count} días', { count: days });
 }
 
 // Month at a glance: concerts and the rehearsals that prepare them.
@@ -33,14 +37,14 @@ function MonthCalendar({ concerts, rehearsals }) {
   });
   return <section className="month-calendar surface" aria-labelledby="month-title">
     <div className="summary-card-heading">
-      <button type="button" className="secondary-action" aria-label="Mes anterior" onClick={() => step(-1)}>‹</button>
-      <h2 id="month-title">{MONTHS[shown.month - 1][0].toUpperCase() + MONTHS[shown.month - 1].slice(1)} de {shown.year}</h2>
-      <button type="button" className="secondary-action" aria-label="Mes siguiente" onClick={() => step(1)}>›</button>
+      <button type="button" className="secondary-action" aria-label={t('Mes anterior')} onClick={() => step(-1)}>‹</button>
+      <h2 id="month-title">{monthTitle(shown.year, shown.month)}</h2>
+      <button type="button" className="secondary-action" aria-label={t('Mes siguiente')} onClick={() => step(1)}>›</button>
     </div>
     {/* A table of weeks for screen readers (WCAG 1.3.1); the rows do not affect the layout of the grid. */}
     <div className="month-grid" role="table" aria-labelledby="month-title">
       <div className="month-row" role="row">
-        {DAY_NAMES.map(name => <div key={name} className="month-day-name" role="columnheader">{name}</div>)}
+        {weekdays().map(([day, short, name]) => <div key={day} className="month-day-name" role="columnheader" title={name}>{short}</div>)}
       </div>
       {monthGrid(shown.year, shown.month, events).map((week, row) => <div key={row} className="month-row" role="row">
         {week.map((day, index) => day
@@ -78,37 +82,38 @@ function ConcertPlanning({ concert, series, onChanged, onClose, onOpenBlock }) {
 
   return <section id="concert-planning" className="surface concert-planning" aria-labelledby="concert-planning-title">
     <div className="summary-card-heading">
-      <h2 id="concert-planning-title">Planificación · {concert.title}</h2>
-      <button type="button" className="secondary-action" onClick={onClose}>Cerrar</button>
+      <h2 id="concert-planning-title">{t('Planificación · {title}', { title: concert.title })}</h2>
+      <button type="button" className="secondary-action" onClick={onClose}>{t('Cerrar')}</button>
     </div>
-    <p className="result-supporting">{progress.reviewed} de {progress.total} ensayos revisados · {concert.works.map(work => work.title).join(' · ') || 'Sin programa'}</p>
+    <p className="result-supporting">{t('{reviewed} de {total} ensayos revisados', progress)} · {concert.works.map(work => work.title).join(' · ') || t('Sin programa')}</p>
     {series.length > 0 && <ol className="series-list">{series.map(item => <li key={item.id} className="series-rehearsal">
       <div className="series-heading"><strong>{rehearsalDateText(item)}</strong><span className="status-tag">{phaseLabel(item.phase)}</span>
-        {item.reviewed_at && <span className="status-tag">Revisado</span>}{item.fixed && <span className="status-tag">Fijo</span>}
-        {canReview(item) && <button type="button" className="link-action" onClick={() => { setPreview(null); setReviewing(item); }}>Revisar</button>}</div>
+        {item.reviewed_at && <span className="status-tag">{t('Revisado')}</span>}{item.fixed && <span className="status-tag">{t('Fijo')}</span>}
+        {canReview(item) && <button type="button" className="link-action" onClick={() => { setPreview(null); setReviewing(item); }}>{t('Revisar')}</button>}</div>
       <AgendaCalendar blocks={item.blocks} start={item.time} onOpenBlock={onOpenBlock} />
     </li>)}</ol>}
     {reviewing && <RehearsalReview key={reviewing.id} rehearsal={reviewing}
       onSaved={() => { setReviewing(null); onChanged(); }} onCancel={() => setReviewing(null)} />}
     <div className="editor-actions">
       <button type="button" className="primary-action" disabled={busy} onClick={propose}>
-        {busy && !preview ? 'Calculando…' : series.length ? 'Replanificar los ensayos siguientes' : 'Proponer planificación'}</button>
+        {busy && !preview ? t('Calculando…') : series.length ? t('Replanificar los ensayos siguientes') : t('Proponer planificación')}</button>
     </div>
     <ActivityStatus id="concert-plan-activity" label={busy && !preview ? proposalActivity('concert', (concert.works || []).length) : ''} />
     {error && <p className="result-supporting" role="alert">{error}</p>}
     {preview && <div className="plan-preview">
-      <p className="proposal-note" role="status">Propuesta calculada con el análisis de cada obra{series.length ? ' y tus revisiones' : ''}: revísala antes de guardar.
-        {preview.kept?.length ? ' Se mantienen ' + preview.kept.length + ' ensayos ya revisados, pasados o fijos.' : ''}</p>
-      {preview.rehearsals.length === 0 && <p className="result-supporting">No quedan ensayos que replanificar.</p>}
+      <p className="proposal-note" role="status">{series.length ? t('Propuesta calculada con el análisis de cada obra y tus revisiones: revísala antes de guardar.')
+        : t('Propuesta calculada con el análisis de cada obra: revísala antes de guardar.')}
+        {preview.kept?.length ? ' ' + t('Se mantienen {count} ensayos ya revisados, pasados o fijos.', { count: preview.kept.length }) : ''}</p>
+      {preview.rehearsals.length === 0 && <p className="result-supporting">{t('No quedan ensayos que replanificar.')}</p>}
       <ol className="series-list">{preview.rehearsals.map((item, index) => <li key={item.id || item.date} className="planned-rehearsal">
         <div className="series-heading"><strong>{rehearsalDateText(item)}</strong><span className="status-tag">{phaseLabel(item.phase)}</span>
-          {!item.id && <button type="button" className="link-action" onClick={() => drop(index)}>Quitar</button>}</div>
+          {!item.id && <button type="button" className="link-action" onClick={() => drop(index)}>{t('Quitar')}</button>}</div>
         <AgendaCalendar blocks={proposalBlocks(item)} start={item.time} onOpenBlock={onOpenBlock} />
-        {item.omitted_works.length > 0 && <p className="table-supporting">No caben en este ensayo: {item.omitted_works.length} obra(s); irán las primeras en el siguiente.</p>}
+        {item.omitted_works.length > 0 && <p className="table-supporting">{t('No caben en este ensayo: {count} obra(s); irán las primeras en el siguiente.', { count: item.omitted_works.length })}</p>}
       </li>)}</ol>
       <div className="editor-actions">
-        <button type="button" className="primary-action" disabled={busy || preview.rehearsals.length === 0} onClick={save}>Guardar planificación</button>
-        <button type="button" className="secondary-action" onClick={() => setPreview(null)}>Descartar</button>
+        <button type="button" className="primary-action" disabled={busy || preview.rehearsals.length === 0} onClick={save}>{t('Guardar planificación')}</button>
+        <button type="button" className="secondary-action" onClick={() => setPreview(null)}>{t('Descartar')}</button>
       </div>
     </div>}
   </section>;
@@ -128,7 +133,7 @@ export function ConcertsView({ active, hidden, onOpenBlock }) {
   const today = todayIso();
   const upcoming = concerts.filter(concert => concert.date >= today), past = concerts.filter(concert => concert.date < today).reverse();
   const planned = concerts.find(concert => concert.id === planning);
-  const action = <button id="create-concert" type="button" className="primary-action" onClick={() => { setPlanning(null); setEditing({}); }}>Crear concierto</button>;
+  const action = <button id="create-concert" type="button" className="primary-action" onClick={() => { setPlanning(null); setEditing({}); }}>{t('Crear concierto')}</button>;
 
   const item = concert => {
     const progress = concertProgress(concert);
@@ -136,18 +141,18 @@ export function ConcertsView({ active, hidden, onOpenBlock }) {
       <div className="works-copy">
         <h3 className="works-title">{concert.title}</h3>
         <p className="result-supporting">{[rehearsalDateText(concert), concert.place, daysLeftText(concert, today)].filter(Boolean).join(' · ')}</p>
-        <p className="works-summary">{concert.works.map(work => work.title).join(' · ') || 'Sin programa'}</p>
-        <p className="table-supporting">{progress.total ? progress.reviewed + ' de ' + progress.total + ' ensayos revisados' : 'Sin ensayos planificados'}</p>
+        <p className="works-summary">{concert.works.map(work => work.title).join(' · ') || t('Sin programa')}</p>
+        <p className="table-supporting">{progress.total ? t('{reviewed} de {total} ensayos revisados', progress) : t('Sin ensayos planificados')}</p>
       </div>
       <div className="works-actions">
-        <button type="button" className="primary-action" onClick={() => { setEditing(null); setPlanning(concert.id); }}>Planificación</button>
-        <button type="button" className="secondary-action" onClick={() => { setPlanning(null); setEditing(concert); }}>Editar</button>
+        <button type="button" className="primary-action" onClick={() => { setEditing(null); setPlanning(concert.id); }}>{t('Planificación')}</button>
+        <button type="button" className="secondary-action" onClick={() => { setPlanning(null); setEditing(concert); }}>{t('Editar')}</button>
       </div>
     </li>;
   };
 
-  return <View name="concerts" active={active} eyebrow="Temporada" title="Conciertos"
-    description="Cada concierto con su programa y la serie de ensayos que lo prepara." action={action}>
+  return <View name="concerts" active={active} eyebrow={t('Temporada')} title={t('Conciertos')}
+    description={t('Cada concierto con su programa y la serie de ensayos que lo prepara.')} action={action}>
     {error && <p className="result-supporting" role="alert">{error}</p>}
     {editing && <ConcertEditor key={editing.id || 'new'} concert={editing}
       onSaved={() => { setEditing(null); refresh(); }} onCancel={() => setEditing(null)} />}
@@ -157,12 +162,12 @@ export function ConcertsView({ active, hidden, onOpenBlock }) {
     <div className="concerts-layout">
       <div>
         <section className="rehearsal-list" aria-labelledby="concerts-upcoming-title">
-          <h2 id="concerts-upcoming-title" className="panel-title">Próximos</h2>
-          {upcoming.length === 0 ? <p className="result-supporting">No hay conciertos programados.</p>
+          <h2 id="concerts-upcoming-title" className="panel-title">{t('Próximos')}</h2>
+          {upcoming.length === 0 ? <p className="result-supporting">{t('No hay conciertos programados.')}</p>
             : <ul className="works-list">{upcoming.map(item)}</ul>}
         </section>
         {past.length > 0 && <section className="rehearsal-list" aria-labelledby="concerts-past-title">
-          <h2 id="concerts-past-title" className="panel-title">Celebrados</h2>
+          <h2 id="concerts-past-title" className="panel-title">{t('Celebrados')}</h2>
           <ul className="works-list">{past.map(item)}</ul>
         </section>}
       </div>
