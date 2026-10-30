@@ -30,7 +30,7 @@ async function audit(page, where) {
 const browser = await chromium.launch();
 try {
   for (const scheme of ['light', 'dark']) {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: scheme, reducedMotion: 'reduce', bypassCSP: true });
+    const page = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 900 }, colorScheme: scheme, reducedMotion: 'reduce', bypassCSP: true });
     await page.goto(url);
     await page.locator('#login-screen').waitFor({ state: 'visible' });
     await audit(page, `access screen (${scheme})`);
@@ -66,7 +66,7 @@ try {
     await page.close();
   }
   // Configuración › Instrumentos is shown only to the administration (ADMIN_EMAILS has this account in CI).
-  const admin = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', bypassCSP: true });
+  const admin = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', bypassCSP: true });
   await admin.goto(url);
   const adminEmail = process.env.E2E_A11Y_ADMIN_EMAIL || 'admin-a11y@banda.test';
   for (const mode of ['register', 'sign in']) {   // the account may exist from an earlier run
@@ -115,12 +115,27 @@ try {
   assert.equal(await admin.getByLabel('Instrumento de Melodía 3').inputValue(), 'clarinet.bb');
   await audit(admin, 'Mi banda › nombre propuesto por otras cuentas');
   await admin.close();
-  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
+  const phone = await browser.newPage({ locale: 'es-ES', viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
   await phone.goto(url);
   await login(phone);
   await phone.locator('#mobile-menu-button').click();
   await audit(phone, 'phone with the menu open');
   await phone.close();
+  // The interface in English (2026-10-30): the page declares its language, which stays on this device.
+  const english = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', bypassCSP: true });
+  await english.goto(url);
+  await login(english);
+  await english.locator('[data-view-target=settings]').click();
+  await english.getByLabel('English').check();
+  await english.locator('[data-view-target=summary]').getByText('Overview').waitFor();
+  assert.equal(await english.locator('html').getAttribute('lang'), 'en');
+  await audit(english, 'Settings (English)');
+  await english.locator('#sign-out').click();
+  await english.locator('#login-screen').getByText('Welcome').waitFor();
+  await english.reload();
+  await english.locator('#login-screen').getByText('Welcome').waitFor();
+  await audit(english, 'access screen (English)');
+  await english.close();
 } finally {
   await browser.close();
 }

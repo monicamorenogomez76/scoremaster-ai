@@ -72,6 +72,8 @@ only source of musical facts; the LLM only explains or gives an independent opin
   ScoreMaster's database at every job) from main at every reading. Deployment in `docs/DEPLOYMENT.md`.
 - `frontend/src`: React views (Resumen, Repertorio, Mi banda, Conciertos, Ensayos, Valoraciones,
   Configuración); API helpers and pure functions live in plain `.js` modules so Node tests can import them.
+  Interface texts are written in Spanish inside `t('…')` (`i18n.js`); the Spanish text is the key of its English
+  translation in `locales/en.js`, and `i18n.test.mjs` fails on any marked text without one.
 
 Cross-cutting rules that span many files:
 

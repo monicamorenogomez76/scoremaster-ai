@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const url = process.env.SCOREMASTER_URL || 'http://127.0.0.1:8006';
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
+const page = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 900 }, acceptDownloads: true });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const score = name => readFileSync(new URL('../../../test-scores/' + name, import.meta.url));
@@ -91,7 +91,7 @@ try {
   assert.equal(await detail.getByRole('button', { name: 'Quitar' }).count(), 0, 'passages are fixed once open');
 
   // The invited musician, with an account created with that email.
-  const rater = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const rater = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 900 } });
   rater.on('pageerror', error => errors.push(error.message));
   await rater.goto(url);
   await rater.locator('#login-mode').click();

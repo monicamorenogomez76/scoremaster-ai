@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch();
 try {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ locale: 'es-ES' });
   const urls = {
     module: 'https://unpkg.com/smplr@1.1.0/dist/index.mjs',
     sample: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/clarinet-mp3.js',

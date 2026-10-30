@@ -6,8 +6,10 @@ import '@fontsource-variable/bricolage-grotesque';
 import '@fontsource-variable/outfit';
 import './styles.css';
 import { applyTextSize, applyTheme, loadTextSize, loadTheme } from './settings.js';
+import { applyLanguage, loadLanguage } from './i18n.js';
 
-// The text size and the theme chosen on this device apply from the first paint.
+// The language, text size and theme chosen on this device apply from the first paint.
+applyLanguage(loadLanguage());
 applyTextSize(loadTextSize());
 applyTheme(loadTheme());
 
