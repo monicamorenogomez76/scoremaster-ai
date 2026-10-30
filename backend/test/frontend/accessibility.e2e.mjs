@@ -165,6 +165,14 @@ try {
   await english.locator('#concert-editor-title').getByText('New concert').waitFor();
   await audit(english, 'Concerts › New concert (English)');
   await english.locator('#concert-editor').getByRole('button', { name: 'Cancel' }).click();
+  await english.locator('[data-view-target=rehearsal]').click();
+  await english.locator('#saved-rehearsals-title').getByText('Saved rehearsals').waitFor();
+  await english.waitForLoadState('networkidle');
+  await audit(english, 'Rehearsals (English)');
+  await english.locator('#create-rehearsal').click();
+  await english.locator('#rehearsal-editor-title').getByText('New rehearsal').waitFor();
+  await audit(english, 'Rehearsals › New rehearsal (English)');
+  await english.locator('#rehearsal-editor').getByRole('button', { name: 'Cancel' }).click();
   await english.locator('[data-view-target=repertoire]').click();
   await english.locator('#back-to-list').click();
   await english.locator('#add-work').click();

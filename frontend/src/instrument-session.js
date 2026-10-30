@@ -1,8 +1,9 @@
+import { t } from './i18n.js';
 export const instrumentChoices = [['Flute',74],['Piccolo',73],['Oboe',69],['Clarinet',72],['Bass Clarinet',72],['Bassoon',71],['Alto Saxophone',66],['Tenor Saxophone',67],['Baritone Saxophone',68],['Trumpet',57],['Horn',61],['Trombone',58],['Euphonium',59],['Tuba',59],['Timpani',48],['Glockenspiel',10],['Xylophone',14],['Snare Drum',null],['Bass Drum',null],['Cymbals',null]];
 
 export function inspectInstruments(source) {
   const xml = new DOMParser().parseFromString(source, 'application/xml');
-  if (xml.querySelector('parsererror')) throw new Error('La partitura no es MusicXML válido.');
+  if (xml.querySelector('parsererror')) throw new Error(t('La partitura no es MusicXML válido.'));
   const parts = Array.from(xml.querySelectorAll('score-part'));
   const unidentified = parts.filter(part => /^(voice|part|instrument|voz)(\s+\d+)?$/i.test(part.querySelector('part-name')?.textContent.trim() || ''));
   return { xml, parts: unidentified.map(part => {
