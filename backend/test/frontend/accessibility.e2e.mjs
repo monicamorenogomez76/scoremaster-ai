@@ -173,6 +173,10 @@ try {
   await english.locator('#rehearsal-editor-title').getByText('New rehearsal').waitFor();
   await audit(english, 'Rehearsals › New rehearsal (English)');
   await english.locator('#rehearsal-editor').getByRole('button', { name: 'Cancel' }).click();
+  await english.locator('[data-view-target=evaluation]').click();
+  await english.locator('[data-view=evaluation] h1').getByText('Ratings').waitFor();
+  await english.waitForLoadState('networkidle');
+  await audit(english, 'Ratings (English)');
   await english.locator('[data-view-target=repertoire]').click();
   await english.locator('#back-to-list').click();
   await english.locator('#add-work').click();

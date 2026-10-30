@@ -85,3 +85,20 @@ test('no Spanish text is translated twice', () => {
   const keys = [...source.matchAll(/^ {2}(['"])((?:(?!\1).)+)\1:/gm)].map(match => match[2]);
   assert.equal(keys.length, Object.keys(en).length);
 });
+
+// Tables of options and labels keep their Spanish texts and are translated where they are shown, so the scan above
+// does not see them: each of their texts needs its English one too.
+test('the tables of options and labels are translated', async () => {
+  const src = '../../../frontend/src/';
+  const [ev, lb, ic, lib, rh, st, ex] = await Promise.all(['evaluations', 'labels', 'instrumentCatalog', 'library', 'rehearsals',
+    'settings', 'externalGrades'].map(name => import(src + name + '.js')));
+  const texts = [
+    ...ev.GRADE_RUBRIC.flatMap(item => [item.label, item.description]), ...ev.EXPERIENCE_OPTIONS.map(([, label]) => label),
+    ...Object.values(ev.PRIORITY_LABELS), ...['draft', 'open', 'closed'].map(ev.statusLabel),
+    ...Object.values(lb.findingLabels), ...Object.values(lb.gradeLabelsEs), ...Object.values(lb.bandStatusLabels),
+    ...Object.values(lb.dimensionLabelsEs), ...[ic.instrumentSections, ic.instrumentKeys, ic.instrumentGroups].flat().map(([, label]) => label),
+    ...Object.values(lib.preparationLabelsEs), ...rh.reviewStatusOptions.map(([, label]) => label),
+    ...[st.textSizes, st.themes, ex.scales].flat().map(([, label]) => label),
+  ];
+  assert.deepEqual(texts.filter(text => !(text in en)), []);
+});

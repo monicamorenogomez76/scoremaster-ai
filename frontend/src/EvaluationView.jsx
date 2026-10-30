@@ -9,6 +9,7 @@ import {
 import { listWorks } from './library.js';
 import { displayInstrumentName } from './labels.js';
 import { View } from './View.jsx';
+import { t } from './i18n.js';
 
 // A new campaign: the app proposes the passages of the chosen works from their analysis.
 function CampaignEditor({ onCreated, onCancel }) {
@@ -33,30 +34,29 @@ function CampaignEditor({ onCreated, onCancel }) {
     } catch (failure) { setError(failure.message); } finally { setSaving(false); }
   };
   return <form id="campaign-editor" className="rehearsal-editor surface" onSubmit={save} aria-labelledby="campaign-editor-title">
-    <h2 id="campaign-editor-title" ref={heading} tabIndex={-1}>Nueva campaña de valoración</h2>
-    <label>Título<input type="text" required maxLength={200} value={draft.title} onChange={event => set('title', event.target.value)} /></label>
-    <label className="editor-wide">Instrucciones para los músicos<textarea rows={3} maxLength={2000} value={draft.instructions}
-      placeholder="Por ejemplo: valora cada pasaje pensando en una banda amateur de nivel medio."
+    <h2 id="campaign-editor-title" ref={heading} tabIndex={-1}>{t('Nueva campaña de valoración')}</h2>
+    <label>{t('Título')}<input type="text" required maxLength={200} value={draft.title} onChange={event => set('title', event.target.value)} /></label>
+    <label className="editor-wide">{t('Instrucciones para los músicos')}<textarea rows={3} maxLength={2000} value={draft.instructions}
+      placeholder={t('Por ejemplo: valora cada pasaje pensando en una banda amateur de nivel medio.')}
       onChange={event => set('instructions', event.target.value)} /></label>
     <fieldset className="editor-works">
-      <legend>Obras de las que salen los pasajes</legend>
-      {works.length === 0 && <p className="result-supporting">Analiza obras en Repertorio para proponer sus pasajes.</p>}
+      <legend>{t('Obras de las que salen los pasajes')}</legend>
+      {works.length === 0 && <p className="result-supporting">{t('Analiza obras en Repertorio para proponer sus pasajes.')}</p>}
       {works.map(work => <label key={work.id} className="check-field">
         <input type="checkbox" checked={draft.work_ids.includes(work.id)} onChange={() => toggle(work.id)} />
         {work.title}<span className="table-supporting">{work.file_name}</span>
       </label>)}
     </fieldset>
-    <label>Número de pasajes (entre 10 y 80)<input type="number" min="10" max="80" value={draft.size}
+    <label>{t('Número de pasajes (entre 10 y 80)')}<input type="number" min="10" max="80" value={draft.size}
       onChange={event => set('size', event.target.value)} /></label>
-    <p className="result-supporting">La aplicación propone alrededor de un 40 % de pasajes críticos y un 60 % no críticos, repartidos
-      por obras y grados. Podrás quitar los que no quieras antes de abrir la campaña.</p>
-    <ActivityStatus label={saving ? 'Proponiendo los pasajes con el análisis de ' + draft.work_ids.length
-      + (draft.work_ids.length === 1 ? ' obra' : ' obras') : ''} />
+    <p className="result-supporting">{t('La aplicación propone alrededor de un 40 % de pasajes críticos y un 60 % no críticos, repartidos por obras y grados. Podrás quitar los que no quieras antes de abrir la campaña.')}</p>
+    <ActivityStatus label={saving ? t('Proponiendo los pasajes con el análisis de {works}', {
+      works: t(draft.work_ids.length === 1 ? '{count} obra' : '{count} obras', { count: draft.work_ids.length }) }) : ''} />
     {error && <p className="result-supporting" role="alert">{error}</p>}
     <div className="editor-actions">
       <button type="submit" className="primary-action" disabled={saving || draft.work_ids.length === 0}>
-        {saving ? 'Proponiendo…' : 'Proponer pasajes'}</button>
-      <button type="button" className="secondary-action" onClick={onCancel}>Cancelar</button>
+        {saving ? t('Proponiendo…') : t('Proponer pasajes')}</button>
+      <button type="button" className="secondary-action" onClick={onCancel}>{t('Cancelar')}</button>
     </div>
   </form>;
 }
@@ -75,12 +75,11 @@ function Invitations({ campaign, onChanged }) {
     catch (failure) { setError(failure.message); } finally { setSaving(false); }
   };
   return <section className="campaign-invitations" aria-labelledby="campaign-invitations-title">
-    <h3 id="campaign-invitations-title">Músicos invitados</h3>
-    <p className="result-supporting">Cada músico entra en {window.location.origin} con una cuenta creada con su email y abre
-      Valoraciones. Nunca ve la predicción de ScoreLint.</p>
-    <label>Emails (uno por línea)<textarea id="campaign-emails" rows={4} value={text} onChange={event => setText(event.target.value)} /></label>
+    <h3 id="campaign-invitations-title">{t('Músicos invitados')}</h3>
+    <p className="result-supporting">{t('Cada músico entra en {address} con una cuenta creada con su email y abre Valoraciones. Nunca ve la predicción de ScoreLint.', { address: window.location.origin })}</p>
+    <label>{t('Emails (uno por línea)')}<textarea id="campaign-emails" rows={4} value={text} onChange={event => setText(event.target.value)} /></label>
     <div className="editor-actions">
-      <button type="button" className="secondary-action" disabled={saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar invitaciones'}</button>
+      <button type="button" className="secondary-action" disabled={saving} onClick={save}>{saving ? t('Guardando…') : t('Guardar invitaciones')}</button>
     </div>
     {error && <p className="result-supporting" role="alert">{error}</p>}
     {campaign.invitations.length > 0 && <ul className="invitation-list">{campaign.invitations.map(item => <li key={item.email}>
@@ -109,13 +108,12 @@ function LlmReview({ campaignId, onReviewed }) {
   const complete = status.available && status.total > 0 && status.done >= status.total;
   return <section id="llm-review" className="llm-review" aria-labelledby="llm-review-title">
     <div className="summary-card-heading">
-      <h3 id="llm-review-title">Valoración independiente con IA</h3>
+      <h3 id="llm-review-title">{t('Valoración independiente con IA')}</h3>
       <button type="button" className="secondary-action" disabled={!status.available || status.state === 'running' || complete}
-        onClick={start}>{status.done && !complete ? 'Valorar los pendientes' : 'Valorar con IA'}</button>
+        onClick={start}>{status.done && !complete ? t('Valorar los pendientes') : t('Valorar con IA')}</button>
     </div>
-    <p className="result-supporting">La IA valora cada pasaje con la misma rúbrica que los músicos, a partir de sus medidas y
-      sus notas, sin ver la predicción de ScoreLint. Es el método B de la evaluación: solo lo ves tú.</p>
-    <ActivityStatus label={status.state === 'running' ? 'Valorando con IA: ' + status.done + ' de ' + status.total + ' pasajes' : ''} />
+    <p className="result-supporting">{t('La IA valora cada pasaje con la misma rúbrica que los músicos, a partir de sus medidas y sus notas, sin ver la predicción de ScoreLint. Es el método B de la evaluación: solo lo ves tú.')}</p>
+    <ActivityStatus label={status.state === 'running' ? t('Valorando con IA: {done} de {total} pasajes', status) : ''} />
     {status.state !== 'running' && <p id="llm-review-status" className="table-supporting" role="status">{llmReviewText(status)}</p>}
     {error && <p className="result-supporting" role="alert">{error}</p>}
   </section>;
@@ -141,30 +139,30 @@ function CampaignDetail({ id, notice, onClose, onChanged, onOpenBlock }) {
   return <section id="campaign-detail" className="surface campaign-detail" aria-labelledby="campaign-detail-title">
     <div className="summary-card-heading">
       <h2 id="campaign-detail-title" ref={heading} tabIndex={-1}>{campaign.title} <span className="status-tag">{statusLabel(campaign.status)}</span></h2>
-      <button type="button" className="secondary-action" onClick={onClose}>Cerrar</button>
+      <button type="button" className="secondary-action" onClick={onClose}>{t('Cerrar')}</button>
     </div>
     <p id="campaign-summary" className="result-supporting">{campaignSummary(campaign)}</p>
     {notice && <p id="campaign-notice" className="proposal-note" role="status">{notice}</p>}
     {campaign.instructions && <p className="campaign-instructions">{campaign.instructions}</p>}
     <div className="editor-actions">
       {draft && (confirming
-        ? <><span>Al abrirla, los músicos invitados podrán valorar y ya no podrás quitar pasajes.</span>
-            <button type="button" className="primary-action" onClick={() => status('open')}>Abrir ahora</button>
-            <button type="button" className="secondary-action" onClick={() => setConfirming(false)}>Todavía no</button></>
-        : <button type="button" className="primary-action" disabled={!campaign.passages.length} onClick={() => setConfirming(true)}>Abrir campaña</button>)}
-      {campaign.status === 'open' && <button type="button" className="secondary-action" onClick={() => status('closed')}>Cerrar campaña</button>}
-      <button type="button" className="secondary-action" onClick={() => run(() => exportCampaign(campaign))}>Exportar resultados</button>
+        ? <><span>{t('Al abrirla, los músicos invitados podrán valorar y ya no podrás quitar pasajes.')}</span>
+            <button type="button" className="primary-action" onClick={() => status('open')}>{t('Abrir ahora')}</button>
+            <button type="button" className="secondary-action" onClick={() => setConfirming(false)}>{t('Todavía no')}</button></>
+        : <button type="button" className="primary-action" disabled={!campaign.passages.length} onClick={() => setConfirming(true)}>{t('Abrir campaña')}</button>)}
+      {campaign.status === 'open' && <button type="button" className="secondary-action" onClick={() => status('closed')}>{t('Cerrar campaña')}</button>}
+      <button type="button" className="secondary-action" onClick={() => run(() => exportCampaign(campaign))}>{t('Exportar resultados')}</button>
     </div>
     {error && <p className="result-supporting" role="alert">{error}</p>}
     <LlmReview campaignId={campaign.id} onReviewed={() => getCampaign(campaign.id).then(setCampaign).catch(() => {})} />
     <div className="campaign-body">
       <section className="campaign-passages-panel" aria-labelledby="campaign-passages-title">
-        <h3 id="campaign-passages-title">Pasajes</h3>
-        <p className="result-supporting">La predicción de ScoreLint solo la ves tú.{draft ? ' Quita los que no quieras valorar antes de abrir la campaña.' : ''}</p>
+        <h3 id="campaign-passages-title">{t('Pasajes')}</h3>
+        <p className="result-supporting">{t('La predicción de ScoreLint solo la ves tú.')}{draft ? ' ' + t('Quita los que no quieras valorar antes de abrir la campaña.') : ''}</p>
         <div className="table-scroll">
           <table className="campaign-passages">
-            <thead><tr><th scope="col">#</th><th scope="col">Obra</th><th scope="col">Parte</th><th scope="col">Compases</th>
-              <th scope="col">ScoreLint</th><th scope="col">IA</th><th scope="col"><span className="visually-hidden">Acciones</span></th></tr></thead>
+            <thead><tr><th scope="col">#</th><th scope="col">{t('Obra')}</th><th scope="col">{t('Parte')}</th><th scope="col">{t('Compases')}</th>
+              <th scope="col">ScoreLint</th><th scope="col">{t('IA')}</th><th scope="col"><span className="visually-hidden">{t('Acciones')}</span></th></tr></thead>
             <tbody>{campaign.passages.map((passage, index) => <tr key={passage.id}>
               <td>{index + 1}</td>
               <td>{passage.work_title}</td>
@@ -174,8 +172,8 @@ function CampaignDetail({ id, notice, onClose, onChanged, onOpenBlock }) {
               <td title={passage.llm_review?.reason || ''}>{passage.llm_review ? predictionText(passage.llm_review) : '—'}</td>
               <td><span className="campaign-actions">
                 <button type="button" className="link-action" onClick={() => onOpenBlock({ work_id: passage.work_id, parts: passage.parts,
-                  measures: passage.measure_range, label: passage.label })}>Ver y escuchar</button>
-                {draft && <button type="button" className="link-action" onClick={() => remove(passage)}>Quitar</button>}
+                  measures: passage.measure_range, label: passage.label })}>{t('Ver y escuchar')}</button>
+                {draft && <button type="button" className="link-action" onClick={() => remove(passage)}>{t('Quitar')}</button>}
               </span></td>
             </tr>)}</tbody>
           </table>
@@ -198,16 +196,16 @@ function ProfileForm({ campaign, onSaved }) {
     catch (failure) { setError(failure.message); }
   };
   return <form id="evaluator-profile" className="rehearsal-editor" onSubmit={save} aria-labelledby="evaluator-profile-title">
-    <h3 id="evaluator-profile-title">Antes de empezar</h3>
-    <p className="result-supporting">Solo se guardan tu nivel y tu instrumento; en los resultados apareces como «Evaluador n», sin nombre ni email.</p>
-    <label>Tu experiencia<select required value={level} onChange={event => setLevel(event.target.value)}>
-      <option value="">Elige una opción</option>
-      {EXPERIENCE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+    <h3 id="evaluator-profile-title">{t('Antes de empezar')}</h3>
+    <p className="result-supporting">{t('Solo se guardan tu nivel y tu instrumento; en los resultados apareces como «Evaluador n», sin nombre ni email.')}</p>
+    <label>{t('Tu experiencia')}<select required value={level} onChange={event => setLevel(event.target.value)}>
+      <option value="">{t('Elige una opción')}</option>
+      {EXPERIENCE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
     </select></label>
-    <label>Tu instrumento principal<input type="text" required maxLength={100} value={instrument}
+    <label>{t('Tu instrumento principal')}<input type="text" required maxLength={100} value={instrument}
       onChange={event => setInstrument(event.target.value)} /></label>
     {error && <p className="result-supporting" role="alert">{error}</p>}
-    <div className="editor-actions"><button type="submit" className="primary-action">Empezar a valorar</button></div>
+    <div className="editor-actions"><button type="submit" className="primary-action">{t('Empezar a valorar')}</button></div>
   </form>;
 }
 
@@ -249,7 +247,7 @@ function RatingSession({ id, onClose, onChanged, onOpenPassage }) {
   const save = async event => {
     event.preventDefault();
     const rating = ratingToSend(draft);
-    if (!rating) { setError('Indica la dificultad, si es crítico y la prioridad.'); return; }
+    if (!rating) { setError(t('Indica la dificultad, si es crítico y la prioridad.')); return; }
     setSaving(true); setError('');
     try {
       await saveRating(campaign.id, passage.id, rating);
@@ -264,52 +262,52 @@ function RatingSession({ id, onClose, onChanged, onOpenPassage }) {
   return <section id="rating-session" className="surface campaign-detail" aria-labelledby="rating-session-title">
     <div className="summary-card-heading">
       <h2 id="rating-session-title" ref={heading} tabIndex={-1}>{campaign.title} <span className="status-tag">{statusLabel(campaign.status)}</span></h2>
-      <button type="button" className="secondary-action" onClick={onClose}>Cerrar</button>
+      <button type="button" className="secondary-action" onClick={onClose}>{t('Cerrar')}</button>
     </div>
     {campaign.instructions && <p className="campaign-instructions">{campaign.instructions}</p>}
-    <p id="rating-progress" className="result-supporting">{done} de {total} pasajes valorados{done === total && total ? ' · ¡gracias!' : ''}</p>
+    <p id="rating-progress" className="result-supporting">{t('{done} de {total} pasajes valorados', { done, total })}{done === total && total ? ' · ' + t('¡gracias!') : ''}</p>
     <div className="rating-bar" aria-hidden="true"><span style={{ width: (total ? 100 * done / total : 0) + '%' }} /></div>
-    {!open && <p className="proposal-note" role="status">La campaña está cerrada: puedes ver tus valoraciones, pero ya no cambiarlas.</p>}
+    {!open && <p className="proposal-note" role="status">{t('La campaña está cerrada: puedes ver tus valoraciones, pero ya no cambiarlas.')}</p>}
     {open && profileMissing ? <ProfileForm campaign={campaign}
       onSaved={profile => setCampaign({ ...campaign, profile })} /> : passage && <>
-      <nav className="rating-steps" aria-label="Pasajes">{campaign.passages.map((item, at) =>
+      <nav className="rating-steps" aria-label={t('Pasajes')}>{campaign.passages.map((item, at) =>
         <button key={item.id} type="button" className={'rating-step' + (item.rating ? ' is-rated' : '') + (at === index ? ' is-current' : '')}
-          aria-current={at === index ? 'step' : undefined} aria-label={'Pasaje ' + (at + 1) + (item.rating ? ', valorado' : ', sin valorar')}
+          aria-current={at === index ? 'step' : undefined} aria-label={t(item.rating ? 'Pasaje {number}, valorado' : 'Pasaje {number}, sin valorar', { number: at + 1 })}
           onClick={() => go(at)}>{at + 1}</button>)}</nav>
       <form id="rating-form" className="rating-form" onSubmit={save} aria-labelledby="rating-passage-title">
-        <h3 id="rating-passage-title" ref={passageTitle} tabIndex={-1}>Pasaje {index + 1} de {total}</h3>
-        <p className="rating-passage">{passage.work_title} · {passage.parts.map(displayInstrumentName).join(', ')} · compases {passage.measure_range}</p>
+        <h3 id="rating-passage-title" ref={passageTitle} tabIndex={-1}>{t('Pasaje {number} de {total}', { number: index + 1, total })}</h3>
+        <p className="rating-passage">{passage.work_title} · {passage.parts.map(displayInstrumentName).join(', ')} · {t('compases {range}', { range: passage.measure_range })}</p>
         <div className="editor-actions">
-          <button type="button" className="primary-action" onClick={() => onOpenPassage(campaign.id, passage)}>Ver y escuchar el pasaje</button>
-          <button type="button" className="secondary-action" onClick={() => onOpenPassage(campaign.id, passage, true)}>Ver su parte completa</button>
+          <button type="button" className="primary-action" onClick={() => onOpenPassage(campaign.id, passage)}>{t('Ver y escuchar el pasaje')}</button>
+          <button type="button" className="secondary-action" onClick={() => onOpenPassage(campaign.id, passage, true)}>{t('Ver su parte completa')}</button>
         </div>
         <fieldset disabled={!open}>
-          <legend>Dificultad del pasaje: ¿qué nivel exige?</legend>
+          <legend>{t('Dificultad del pasaje: ¿qué nivel exige?')}</legend>
           <div className="rating-options rating-grades">{GRADE_RUBRIC.map(item =>
             <Choice key={item.grade} name="difficulty" value={String(item.grade)} current={draft.difficulty} onChange={value => set('difficulty', value)}>
-              <strong>{item.grade} · {item.label}</strong><span>{item.standard} · {item.description}</span>
+              <strong>{item.grade} · {t(item.label)}</strong><span>{item.standard} · {t(item.description)}</span>
             </Choice>)}</div>
         </fieldset>
         <fieldset disabled={!open}>
-          <legend>¿Es un pasaje crítico, especialmente problemático, que conviene trabajar aparte?</legend>
+          <legend>{t('¿Es un pasaje crítico, especialmente problemático, que conviene trabajar aparte?')}</legend>
           <div className="rating-options">
-            <Choice name="critical" value="yes" current={draft.critical} onChange={value => set('critical', value)}><strong>Sí</strong></Choice>
-            <Choice name="critical" value="no" current={draft.critical} onChange={value => set('critical', value)}><strong>No</strong></Choice>
+            <Choice name="critical" value="yes" current={draft.critical} onChange={value => set('critical', value)}><strong>{t('Sí')}</strong></Choice>
+            <Choice name="critical" value="no" current={draft.critical} onChange={value => set('critical', value)}><strong>{t('No')}</strong></Choice>
           </div>
         </fieldset>
         <fieldset disabled={!open}>
-          <legend>Prioridad de ensayo</legend>
+          <legend>{t('Prioridad de ensayo')}</legend>
           <div className="rating-options">{[1, 2, 3, 4, 5].map(value =>
             <Choice key={value} name="priority" value={String(value)} current={draft.priority} onChange={choice => set('priority', choice)}>
-              <strong>{value}</strong><span>{PRIORITY_LABELS[value]}</span>
+              <strong>{value}</strong><span>{t(PRIORITY_LABELS[value])}</span>
             </Choice>)}</div>
         </fieldset>
-        <label>Comentario (opcional)<textarea rows={2} maxLength={500} disabled={!open} value={draft.comment}
+        <label>{t('Comentario (opcional)')}<textarea rows={2} maxLength={500} disabled={!open} value={draft.comment}
           onChange={event => set('comment', event.target.value)} /></label>
         {error && <p className="result-supporting" role="alert">{error}</p>}
         {open && <div className="editor-actions">
-          <button type="submit" className="primary-action" disabled={saving}>{saving ? 'Guardando…' : 'Guardar y seguir'}</button>
-          <span className="table-supporting">Cada valoración se guarda al pulsar; puedes seguir otro día.</span>
+          <button type="submit" className="primary-action" disabled={saving}>{saving ? t('Guardando…') : t('Guardar y seguir')}</button>
+          <span className="table-supporting">{t('Cada valoración se guarda al pulsar; puedes seguir otro día.')}</span>
         </div>}
       </form>
     </>}
@@ -328,8 +326,8 @@ export function EvaluationView({ active, hidden, onOpenBlock, onOpenEvaluationPa
   useEffect(() => { if (visible) refresh(); }, [visible]);
   const manages = campaigns.can_manage === true;
   const action = manages ? <button id="create-campaign" type="button" className="primary-action"
-    onClick={() => { setShown(null); setRating(null); setNotice(''); setCreating(true); }}>Crear campaña</button> : null;
-  return <View name="evaluation" active={active} eyebrow="Evaluación" title="Valoraciones"
+    onClick={() => { setShown(null); setRating(null); setNotice(''); setCreating(true); }}>{t('Crear campaña')}</button> : null;
+  return <View name="evaluation" active={active} eyebrow={t('Evaluación')} title={t('Valoraciones')}
     description={evaluationIntro(manages)} action={action}>
     {error && <p className="result-supporting" role="alert">{error}</p>}
     {creating && <CampaignEditor onCreated={(created, shortfall) => { setCreating(false); setNotice(shortfall); setShown(created.id); refresh(); }}
@@ -337,31 +335,31 @@ export function EvaluationView({ active, hidden, onOpenBlock, onOpenEvaluationPa
     {rating && <RatingSession key={rating} id={rating} onClose={() => setRating(null)} onChanged={refresh}
       onOpenPassage={onOpenEvaluationPassage} />}
     {campaigns.invited.length > 0 && <section className="rehearsal-list" aria-labelledby="campaigns-invited-title">
-      <h2 id="campaigns-invited-title" className="panel-title">Te han invitado a valorar</h2>
+      <h2 id="campaigns-invited-title" className="panel-title">{t('Te han invitado a valorar')}</h2>
       <ul className="works-list">{campaigns.invited.map(item => <li key={item.id} className="works-item campaign-item">
         <div className="works-copy">
           <h3 className="works-title">{item.title} <span className="status-tag">{statusLabel(item.status)}</span></h3>
-          <p className="result-supporting">{item.rated} de {item.passages} pasajes valorados</p>
+          <p className="result-supporting">{t('{done} de {total} pasajes valorados', { done: item.rated, total: item.passages })}</p>
         </div>
         <div className="works-actions">
           <button type="button" className="primary-action" onClick={() => { setCreating(false); setShown(null); setRating(item.id); }}>
-            {item.status === 'open' ? (item.rated ? 'Seguir valorando' : 'Empezar') : 'Ver'}</button>
+            {item.status === 'open' ? (item.rated ? t('Seguir valorando') : t('Empezar')) : t('Ver')}</button>
         </div>
       </li>)}</ul>
     </section>}
     {shown && <CampaignDetail key={shown} id={shown} notice={notice} onClose={() => setShown(null)} onChanged={refresh} onOpenBlock={onOpenBlock} />}
     {!manages && campaigns.invited.length === 0 && !error &&
-      <p id="campaigns-none" className="result-supporting">Todavía no te han invitado a ninguna campaña.</p>}
+      <p id="campaigns-none" className="result-supporting">{t('Todavía no te han invitado a ninguna campaña.')}</p>}
     {manages && <section className="rehearsal-list" aria-labelledby="campaigns-owned-title">
-      <h2 id="campaigns-owned-title" className="panel-title">Mis campañas</h2>
-      {campaigns.owned.length === 0 ? <p className="result-supporting">Aún no has creado ninguna campaña.</p>
+      <h2 id="campaigns-owned-title" className="panel-title">{t('Mis campañas')}</h2>
+      {campaigns.owned.length === 0 ? <p className="result-supporting">{t('Aún no has creado ninguna campaña.')}</p>
         : <ul className="works-list">{campaigns.owned.map(item => <li key={item.id} className="works-item campaign-item">
             <div className="works-copy">
               <h3 className="works-title">{item.title} <span className="status-tag">{statusLabel(item.status)}</span></h3>
-              <p className="result-supporting">{item.passages} pasajes · {item.invitations} músicos invitados · {item.rated} valoraciones</p>
+              <p className="result-supporting">{t('{passages} pasajes · {invitations} músicos invitados · {rated} valoraciones', item)}</p>
             </div>
             <div className="works-actions">
-              <button type="button" className="primary-action" onClick={() => { setCreating(false); setRating(null); setNotice(''); setShown(item.id); }}>Abrir</button>
+              <button type="button" className="primary-action" onClick={() => { setCreating(false); setRating(null); setNotice(''); setShown(item.id); }}>{t('Abrir')}</button>
             </div>
           </li>)}</ul>}
     </section>}

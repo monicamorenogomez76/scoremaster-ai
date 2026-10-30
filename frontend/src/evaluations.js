@@ -1,24 +1,25 @@
 // Evaluation campaigns (steps 16-18, decided 2026-10-07): the director proposes passages of
 // her works, invites musicians by the email of their account and exports their ratings.
 import { apiFetch, apiJson } from './api.js';
+import { t } from './i18n.js';
 
 const send = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const path = id => '/evaluations/' + encodeURIComponent(id);
 
-export const listCampaigns = () => apiJson('/evaluations', {}, 'No se pudieron cargar las campañas.');
-export const getCampaign = id => apiJson(path(id), {}, 'No se pudo abrir la campaña.');
-export const createCampaign = campaign => apiJson('/evaluations', send('POST', campaign), 'No se pudo crear la campaña.');
+export const listCampaigns = () => apiJson('/evaluations', {}, t('No se pudieron cargar las campañas.'));
+export const getCampaign = id => apiJson(path(id), {}, t('No se pudo abrir la campaña.'));
+export const createCampaign = campaign => apiJson('/evaluations', send('POST', campaign), t('No se pudo crear la campaña.'));
 export const removePassage = (id, passageId) => apiJson(path(id) + '/passages/' + encodeURIComponent(passageId),
-  { method: 'DELETE' }, 'No se pudo quitar el pasaje.');
+  { method: 'DELETE' }, t('No se pudo quitar el pasaje.'));
 export const setInvitations = (id, emails) => apiJson(path(id) + '/invitations', send('PUT', { emails }),
-  'No se pudieron guardar las invitaciones.');
+  t('No se pudieron guardar las invitaciones.'));
 export const setCampaignStatus = (id, status) => apiJson(path(id) + '/status', send('POST', { status }),
-  'No se pudo cambiar el estado de la campaña.');
+  t('No se pudo cambiar el estado de la campaña.'));
 
 // The results with the prediction and anonymous evaluators, saved as a JSON file for step 19.
 export async function exportCampaign(campaign) {
   const response = await apiFetch(path(campaign.id) + '/export');
-  if (!response.ok) throw new Error('No se pudieron exportar los resultados.');
+  if (!response.ok) throw new Error(t('No se pudieron exportar los resultados.'));
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([JSON.stringify(await response.json(), null, 2)], { type: 'application/json' }));
   link.download = exportFileName(campaign);
@@ -38,30 +39,29 @@ export function parseEmails(text) {
 }
 
 const STATUSES = { draft: 'Borrador', open: 'Abierta', closed: 'Cerrada' };
-export const statusLabel = status => STATUSES[status] || status;
+export const statusLabel = status => (STATUSES[status] ? t(STATUSES[status]) : status);
 
 // What ScoreLint predicted for the passage: only the director sees it, never the musicians.
-export const predictionText = snapshot => 'Grado ' + snapshot.grade + (snapshot.critical ? ' · crítico' : '');
+export const predictionText = snapshot => t('Grado {grade}', { grade: snapshot.grade }) + (snapshot.critical ? ' · ' + t('crítico') : '');
 
 export function invitationProgress(invitation, total) {
-  if (!invitation.rated && !invitation.profile_done) return 'Aún no ha empezado';
-  if (invitation.rated >= total) return 'Ha valorado todos los pasajes';
-  return invitation.rated + ' de ' + total + ' pasajes';
+  if (!invitation.rated && !invitation.profile_done) return t('Aún no ha empezado');
+  if (invitation.rated >= total) return t('Ha valorado todos los pasajes');
+  return t('{rated} de {total} pasajes', { rated: invitation.rated, total });
 }
-
-const count = (value, one, many) => value + ' ' + (value === 1 ? one : many);
 
 export function campaignSummary(campaign) {
   const passages = campaign.passages || [];
-  return [count(passages.length, 'pasaje', 'pasajes'),
-    count(passages.filter(item => item.snapshot?.critical).length, 'crítico', 'críticos') + ' según ScoreLint',
-    count((campaign.invitations || []).length, 'músico invitado', 'músicos invitados')].join(' · ');
+  const critical = passages.filter(item => item.snapshot?.critical).length, invited = (campaign.invitations || []).length;
+  return [t(passages.length === 1 ? '{count} pasaje' : '{count} pasajes', { count: passages.length }),
+    t(critical === 1 ? '{count} crítico según ScoreLint' : '{count} críticos según ScoreLint', { count: critical }),
+    t(invited === 1 ? '{count} músico invitado' : '{count} músicos invitados', { count: invited })].join(' · ');
 }
 
 export function shortfallText(requested, proposed) {
   if (proposed >= requested) return '';
-  return 'Se han propuesto ' + proposed + ' de los ' + requested + ' pasajes pedidos: las obras elegidas no dan para más. '
-    + 'Añade obras si necesitas más.';
+  return t('Se han propuesto {proposed} de los {requested} pasajes pedidos: las obras elegidas no dan para más. Añade obras si necesitas más.',
+    { proposed, requested });
 }
 
 // The musician's side: the same rubric as ScoreLint (docs/DIFFICULTY_CRITICALITY.md), never its prediction.
@@ -79,13 +79,13 @@ export const EXPERIENCE_OPTIONS = [['estudiante', 'Estudiante'], ['amateur', 'M�
 export const PRIORITY_LABELS = { 1: 'Puede esperar', 2: 'Baja', 3: 'Media', 4: 'Alta', 5: 'Ensayarlo cuanto antes' };
 
 export const saveProfile = (id, level, instrument) => apiJson(path(id) + '/profile',
-  send('PUT', { experience_level: level, main_instrument: instrument.trim() }), 'No se pudo guardar tu perfil.');
+  send('PUT', { experience_level: level, main_instrument: instrument.trim() }), t('No se pudo guardar tu perfil.'));
 export const saveRating = (id, passageId, rating) => apiJson(path(id) + '/passages/' + encodeURIComponent(passageId) + '/rating',
-  send('PUT', rating), 'No se pudo guardar la valoración.');
+  send('PUT', rating), t('No se pudo guardar la valoración.'));
 // The whole work of a passage: musicians do not have it in their own repertoire.
 export async function evaluationWorkFile(id, workId) {
   const response = await apiFetch(path(id) + '/works/' + encodeURIComponent(workId) + '/file');
-  if (!response.ok) throw new Error('No se pudo abrir la obra del pasaje.');
+  if (!response.ok) throw new Error(t('No se pudo abrir la obra del pasaje.'));
   const name = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') || '')?.[1] || 'obra.musicxml';
   return new File([await response.blob()], name);
 }
@@ -115,31 +115,32 @@ export function nextToRate(passages, current) {
 }
 
 // Method B (step 22): the LLM rates every passage with the musicians' rubric, never seeing ScoreLint.
-export const getLlmReview = id => apiJson(path(id) + '/llm-review', {}, 'No se pudo consultar la valoración con IA.');
-export const startLlmReview = id => apiJson(path(id) + '/llm-review', { method: 'POST' }, 'No se pudo iniciar la valoración con IA.');
+export const getLlmReview = id => apiJson(path(id) + '/llm-review', {}, t('No se pudo consultar la valoración con IA.'));
+export const startLlmReview = id => apiJson(path(id) + '/llm-review', { method: 'POST' }, t('No se pudo iniciar la valoración con IA.'));
 
-const REVIEW_ERRORS = { timeout: 'la IA no respondió a tiempo', rate_limit: 'la IA alcanzó su límite de uso',
-  invalid: 'la respuesta no seguía la rúbrica', error: 'la IA no estaba disponible' };
+const reviewErrors = () => ({ timeout: t('la IA no respondió a tiempo'), rate_limit: t('la IA alcanzó su límite de uso'),
+  invalid: t('la respuesta no seguía la rúbrica'), error: t('la IA no estaba disponible') });
 
 export function llmReviewText(status) {
-  if (!status.available) return 'Necesita configurar GEMINI_API_KEY en el servidor: sin IA real no hay método B (un sustituto con reglas sería otra heurística).';
+  if (!status.available) return t('Necesita configurar GEMINI_API_KEY en el servidor: sin IA real no hay método B (un sustituto con reglas sería otra heurística).');
   const who = status.provider + ' (' + status.model + ')';
-  if (status.state === 'running') return 'Valorando con IA: ' + status.done + ' de ' + status.total + ' pasajes · ' + who;
+  const values = { done: status.done, total: status.total, failed: status.failed, who };
+  if (status.state === 'running') return t('Valorando con IA: {done} de {total} pasajes · {who}', values);
   if (status.state === 'paused') {
-    return status.done + ' de ' + status.total + ' pasajes valorados. La IA ha agotado su cupo gratuito: vuelve a pulsar más tarde '
-      + '(el cupo diario se renueva cada día) y seguirá donde se quedó.';
+    return t('{done} de {total} pasajes valorados. La IA ha agotado su cupo gratuito: vuelve a pulsar más tarde (el cupo diario se renueva cada día) y seguirá donde se quedó.', values);
   }
   if (status.failed) {
-    return status.done + ' de ' + status.total + ' pasajes valorados. ' + status.failed + ' no se pudieron valorar ('
-      + (REVIEW_ERRORS[status.last_error] || REVIEW_ERRORS.error) + '): vuelve a pulsar para reintentarlos.';
+    const errors = reviewErrors();
+    return t('{done} de {total} pasajes valorados. {failed} no se pudieron valorar ({reason}): vuelve a pulsar para reintentarlos.',
+      { ...values, reason: errors[status.last_error] || errors.error });
   }
-  if (status.done >= status.total && status.total) return 'Los ' + status.total + ' pasajes están valorados por ' + who + '.';
-  if (!status.done) return 'Sin valorar todavía · ' + who + '.';
-  return status.done + ' de ' + status.total + ' pasajes valorados por ' + who + '.';
+  if (status.done >= status.total && status.total) return t('Los {total} pasajes están valorados por {who}.', values);
+  if (!status.done) return t('Sin valorar todavía · {who}.', values);
+  return t('{done} de {total} pasajes valorados por {who}.', values);
 }
 
 // Only an administrator creates and manages campaigns (decided 2026-10-14); any other account
 // only rates the campaigns it is invited to and sees only its own ratings.
 export const evaluationIntro = canManage => canManage
-  ? 'Músicos de confianza valoran pasajes de tus obras para comparar su criterio con el de ScoreLint.'
-  : 'Aquí aparecen las campañas a las que te invitan. Solo ves tus propias valoraciones.';
+  ? t('Músicos de confianza valoran pasajes de tus obras para comparar su criterio con el de ScoreLint.')
+  : t('Aquí aparecen las campañas a las que te invitan. Solo ves tus propias valoraciones.');
