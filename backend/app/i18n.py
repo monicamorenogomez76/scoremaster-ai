@@ -88,6 +88,7 @@ EN = {
     "Las obras leídas de PDF no entran en la evaluación.": "Works read from PDF are not part of the evaluation.",
     "La valoración con IA necesita configurar GEMINI_API_KEY en el servidor.": "The AI rating needs GEMINI_API_KEY set on the server.",
     "La valoración independiente necesita un proveedor de IA real (GEMINI_API_KEY).": "The independent rating needs a real AI provider (GEMINI_API_KEY).",
+    "Solo una cuenta administradora puede ver el uso de la IA.": "Only an administrator account can see the AI usage.",
 }
 
 _TEMPLATES = [(re.compile(re.escape(spanish).replace(r"\{\}", "(.+)")), english) for spanish, english in EN.items() if "{}" in spanish]

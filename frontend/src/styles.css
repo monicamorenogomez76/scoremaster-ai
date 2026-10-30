@@ -549,6 +549,12 @@ button:disabled { opacity: 0.65; cursor: default; }
 .login-google { display: block; margin-top: 10px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; color: inherit; text-align: center; text-decoration: none; transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-base) var(--ease-out); }
 .login-switch { display: block; margin-top: 12px; padding: 6px 0; border: 0; background: none; color: var(--primary); cursor: pointer; }
 .login-switch:hover { text-decoration: underline; }
+.ai-usage-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 16px 0 0; line-height: 1.5; }
+.ai-usage-facts dt { font-weight: 600; }
+.ai-usage-facts dd { margin: 0; }
+.ai-usage { grid-column: 1 / -1; }
+.ai-usage > label { display: grid; gap: 6px; max-width: 260px; margin-top: 12px; font-weight: 600; }
+@media (max-width: 600px) { .ai-usage-facts { grid-template-columns: minmax(0, 1fr); gap: 4px; } .ai-usage-facts dd { margin-bottom: 8px; } }
 
 /* Library of works */
 .works-section { margin-top: 24px; }

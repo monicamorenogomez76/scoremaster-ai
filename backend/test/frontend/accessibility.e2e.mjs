@@ -86,6 +86,10 @@ try {
   await admin.locator('#instrument-learned-title').waitFor({ state: 'visible' });
   assert.match(await admin.locator('.instrument-learned').textContent(), /Melodía → Clarinete en Si bemol/);
   await audit(admin, 'Configuración › Instrumentos');
+  // Configuración › Uso de la IA (M5), also only for the administration.
+  await admin.locator('#settings-ai-usage-title').waitFor({ state: 'visible' });
+  await admin.locator('.ai-usage [role=status]').waitFor({ state: 'detached' });
+  await audit(admin, 'Configuración › Uso de la IA');
   // «Otro instrumento…» for a part the catalog does not know (never confirmed, so it stays unknown in every run).
   const unknownPart = readFileSync(new URL('../../../test-scores/high_register.musicxml', import.meta.url), 'utf8')
     .replace('<part-name>Clarinet</part-name>', '<part-name>Gaita de fole</part-name>');
