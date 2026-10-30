@@ -1,7 +1,8 @@
 // OpenSheetMusicDisplay is loaded by index.html; a missing engine is reported, not thrown silently.
+import { t } from '../i18n.js';
 export function openSheetMusicDisplay(target, options) {
   const Display = window.opensheetmusicdisplay?.OpenSheetMusicDisplay;
-  if (!Display) throw new Error('El motor de notación no está disponible. Comprueba la conexión a Internet.');
+  if (!Display) throw new Error(t('El motor de notación no está disponible. Comprueba la conexión a Internet.'));
   return new Display(target, options);
 }
 

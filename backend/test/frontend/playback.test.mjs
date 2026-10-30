@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { t } from '../../../frontend/src/i18n.js';
 
 function harness() {
   const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [], samplersUsed = [], failRecorded = { value: false }, withRecordings = { value: false }, formFields = [];
@@ -17,7 +18,7 @@ function harness() {
   ] };
   const current = { data, failNext: false, hold: null, queue: [] };
   const apiCalls = [], timers = [];
-  const scope = { exports: {}, withRecordings, window: { AudioContext: function () { return audio; } },
+  const scope = { exports: {}, t, withRecordings, window: { AudioContext: function () { return audio; } },
     FormData: class { append(key, value) { formFields.push([key, value]); } }, AbortController,
     fetch: async () => ({ ok: true, json: async () => current.data }),
     // playback.js calls the API through api.js; the test answers directly.

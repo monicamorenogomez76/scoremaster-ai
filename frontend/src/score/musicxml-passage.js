@@ -1,8 +1,9 @@
 // MusicXML helpers for the viewers: measure ranges and single-part passage extraction.
+import { t } from '../i18n.js';
 export function parseMeasureRange(value) {
   const values = String(value).split('-').map((part) => Number.parseInt(part, 10));
   if (!values.length || values.some((number) => !Number.isFinite(number))) {
-    throw new Error('El rango de compases del pasaje no es válido.');
+    throw new Error(t('El rango de compases del pasaje no es válido.'));
   }
   return [values[0], values[1] || values[0]];
 }
@@ -14,7 +15,7 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
   const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
   const documentXml = new DOMParser().parseFromString(source, 'application/xml');
   if (documentXml.querySelector('parsererror')) {
-    throw new Error('No se pudo interpretar el MusicXML original.');
+    throw new Error(t('No se pudo interpretar el MusicXML original.'));
   }
   const descendants = (parent, name) => Array.from(parent.getElementsByTagName('*'))
     .filter((element) => element.localName === name);
@@ -69,7 +70,7 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
   if (selectedStaffNumber && matchingParts.length === 1) staffSelection.set(matchingParts[0].getAttribute('id'), [selectedStaffNumber]);
   const selectedIds = new Set(matchingParts.map((part) => part.getAttribute('id')));
   if (selectedIds.size === 0) {
-    throw new Error('No se encontró el instrumento dentro del MusicXML.');
+    throw new Error(t('No se encontró el instrumento dentro del MusicXML.'));
   }
 
   scoreParts.forEach((part) => {
@@ -149,7 +150,7 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
     });
   });
   if (retainedMeasures === 0) {
-    throw new Error('El rango solicitado no contiene compases renderizables.');
+    throw new Error(t('El rango solicitado no contiene compases renderizables.'));
   }
   return new XMLSerializer().serializeToString(documentXml);
 }
@@ -159,6 +160,6 @@ export function measureBounds(source) {
   const xml = new DOMParser().parseFromString(source, 'application/xml');
   const numbers = Array.from(xml.getElementsByTagName('*')).filter(item => item.localName === 'measure')
     .map(item => Number.parseInt(item.getAttribute('number'), 10)).filter(Number.isFinite);
-  if (!numbers.length) throw new Error('La partitura no contiene compases.');
+  if (!numbers.length) throw new Error(t('La partitura no contiene compases.'));
   return { first: numbers.reduce((a, b) => Math.min(a, b)), last: numbers.reduce((a, b) => Math.max(a, b)) };
 }

@@ -1,6 +1,7 @@
 // Sampled solo playback. The MusicXML remains on our server/browser only.
 import { apiFetch } from '../api.js';
 import { recordedPreset, voiceGain } from './sample-banks.js';
+import { t } from '../i18n.js';
 
 let context;
 let activeTransport;
@@ -102,10 +103,10 @@ const PASSAGES_KEPT = 8;
 const MAX_PREPARATION_MS = 15 * 60000;
 const POLL_MS = 3000;
 const SLOW_NOTICE_MS = 10000;
-export const SLOW_SERVER_NOTICE = 'El servidor está preparando la obra. La primera vez puede tardar un par de minutos…';
+const slowServerNotice = () => t('El servidor está preparando la obra. La primera vez puede tardar un par de minutos…');
 const elapsedText = seconds => (seconds < 60 ? seconds + ' s'
   : Math.floor(seconds / 60) + ' min' + (seconds % 60 ? ' ' + (seconds % 60) + ' s' : ''));
-const waitingText = seconds => 'El servidor está preparando la obra (solo la primera vez)… ' + elapsedText(seconds);
+const waitingText = seconds => t('El servidor está preparando la obra (solo la primera vez)… {time}', { time: elapsedText(seconds) });
 // Who is waiting for a preparation now: the transport being prepared, to show how long it takes.
 let onWaiting = null;
 
@@ -119,7 +120,7 @@ async function fetchTimeline(body, signal) {
   for (;;) {
     const response = await apiFetch('/playback', { method: 'POST', body, signal });
     if (response.status !== 202) {
-      if (!response.ok) throw new Error('No se pudo preparar la reproducción.');
+      if (!response.ok) throw new Error(t('No se pudo preparar la reproducción.'));
       return response.json();
     }
     const { preparing } = await response.json();
@@ -130,7 +131,7 @@ async function fetchTimeline(body, signal) {
       const progress = await apiFetch('/playback/preparations/' + encodeURIComponent(preparing), { signal });
       status = progress.ok ? (await progress.json()).status : 'failed';
     }
-    if (status === 'failed') throw new Error('No se pudo preparar la reproducción.');
+    if (status === 'failed') throw new Error(t('No se pudo preparar la reproducción.'));
     // ready, or unknown after a restart: the work is sent again.
   }
 }
@@ -168,9 +169,9 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   const token = generation;
   const ctx = audioContext();
   await ctx.resume();
-  onStatus(passage ? 'Preparando audio del pasaje…' : 'Preparando todas las voces…');
+  onStatus(passage ? t('Preparando audio del pasaje…') : t('Preparando todas las voces…'));
   let data;
-  const notice = setTimeout(() => { if (token === generation) onStatus(SLOW_SERVER_NOTICE); }, SLOW_NOTICE_MS);
+  const notice = setTimeout(() => { if (token === generation) onStatus(slowServerNotice()); }, SLOW_NOTICE_MS);
   const waiting = seconds => { clearTimeout(notice); if (token === generation) onStatus(waitingText(seconds)); };
   onWaiting = waiting;
   try {
@@ -189,7 +190,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   if (token !== generation) return null;
   const tracks = data.tracks || [data];
   if (!tracks.some((track) => track.events.length || track.percussion?.length)) {
-    throw new Error('La partitura no contiene notas reproducibles.');
+    throw new Error(t('La partitura no contiene notas reproducibles.'));
   }
   library ||= import(/* @vite-ignore */ SMPLR_URL).catch((error) => { library = null; throw error; });
   const { Soundfont, Sampler } = await library;
@@ -221,7 +222,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   async function ready(player) {
     players.push(player);
     let timeoutId;
-    const timeout = new Promise((_, reject) => { timeoutId = setTimeout(() => reject(new Error('La descarga de sonidos ha tardado demasiado. Comprueba tu conexión.')), 90000); });
+    const timeout = new Promise((_, reject) => { timeoutId = setTimeout(() => reject(new Error(t('La descarga de sonidos ha tardado demasiado. Comprueba tu conexión.'))), 90000); });
     try { await Promise.race([player.ready, timeout]); }
     finally { clearTimeout(timeoutId); }
     return player;
@@ -247,12 +248,12 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
   }
   // A whole band means many instruments to download the first time: say how many are ready.
   let readyCount = 0;
-  onStatus('Cargando sonidos: 0 de ' + instruments.size + ' instrumentos… La primera carga puede tardar.');
+  onStatus(t('Cargando sonidos: 0 de {total} instrumentos… La primera carga puede tardar.', { total: instruments.size }));
   try {
     await Promise.all([...instruments].map(async ([sound, group]) => {
       const loaded = await loadPlayer(sound, group);
       readyCount += 1;
-      if (token === generation) onStatus('Cargando sonidos: ' + readyCount + ' de ' + instruments.size + ' instrumentos…');
+      if (token === generation) onStatus(t('Cargando sonidos: {ready} de {total} instrumentos…', { ready: readyCount, total: instruments.size }));
       if (token === generation) group.events.forEach((event) => timeline.push({ ...event, player: loaded }));
     }));
   } catch (error) {
@@ -283,7 +284,7 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
       event.player.start({ note: event.note, time: Math.max(ctx.currentTime, time),
         duration: Math.max(0, length - release), ampRelease: release, loop: false, velocity: VELOCITY });
     }
-    if (position >= duration) { playing = false; silence(); onStatus('Reproducción finalizada.'); }
+    if (position >= duration) { playing = false; silence(); onStatus(t('Reproducción finalizada.')); }
     tell();
   }
   transport = {
@@ -300,19 +301,20 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
         event.time < position ? { ...event, time: position, duration: event.time + event.duration - position } : event);
       pointer = 0; playing = true; tick();
       if (playing) timer = setInterval(tick, 50);
-      onStatus('Reproduciendo ' + (passage?.instruments ? tracks.length + ' voces del bloque' : passage ? 'instrumento solista' : tracks.length + ' voces') + ' · timbres aproximados' +
-        (data.default_tempo ? ' · negra = 120 por defecto' : '') +
-        (tracks.some((track) => track.skipped_unpitched) ? ' · percusión no identificada omitida' : ''));
+      onStatus((passage?.instruments ? t('Reproduciendo {count} voces del bloque', { count: tracks.length })
+        : passage ? t('Reproduciendo instrumento solista') : t('Reproduciendo {count} voces', { count: tracks.length })) + ' · ' + t('timbres aproximados') +
+        (data.default_tempo ? ' · ' + t('negra = 120 por defecto') : '') +
+        (tracks.some((track) => track.skipped_unpitched) ? ' · ' + t('percusión no identificada omitida') : ''));
     },
-    pause() { if (playing) tick(); playing = false; silence(); tell(); onStatus('En pausa.'); },
-    stop() { playing = false; silence(); position = 0; tell(); onStatus('Detenido.'); },
+    pause() { if (playing) tick(); playing = false; silence(); tell(); onStatus(t('En pausa.')); },
+    stop() { playing = false; silence(); position = 0; tell(); onStatus(t('Detenido.')); },
     seek(value) { const resume = playing; this.pause(); position = Math.max(0, Math.min(duration, value)); tell(); if (resume) this.play(); },
     setSpeed(value) { const resume = playing; this.pause(); speed = Math.max(.25, Math.min(2, value)); if (resume) this.play(); },
     setVolume(value) { master.gain.value = masterLevel(value, tracks.length); },
     dispose() { if (disposed) return; disposed = true; silence(); disposePlayers(); listeners.clear(); }
   };
   activeTransport = transport;
-  onStatus('Lista para reproducir · ' + tracks.length + ' voces.');
+  onStatus(t('Lista para reproducir · {count} voces.', { count: tracks.length }));
   return transport;
 }
 

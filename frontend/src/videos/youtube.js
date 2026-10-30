@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 const YOUTUBE_HOSTS = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'];
 export const MAX_QUERY = 200;
@@ -34,14 +35,13 @@ export function initialVideoQuery(title, composer, fileName = '') {
 }
 
 // What the search found or, with only a link, why (the server logs Google's exact reason).
-const LINK_ONLY = ' Busca en YouTube o pega aquí un enlace.';
-const REASONS = {
-  no_key: 'La búsqueda integrada de YouTube no está configurada en este servidor.',
-  rejected: 'YouTube ha rechazado la búsqueda integrada: hay que revisar la clave del servidor.',
-  unavailable: 'No se pudo contactar con YouTube.',
-};
+const reasons = () => ({
+  no_key: t('La búsqueda integrada de YouTube no está configurada en este servidor.'),
+  rejected: t('YouTube ha rechazado la búsqueda integrada: hay que revisar la clave del servidor.'),
+  unavailable: t('No se pudo contactar con YouTube.'),
+});
 
 export function searchStatus(result, found) {
-  if (found) return 'Reproduciendo la mejor coincidencia. Elige otra versión para cambiarla.';
-  return (REASONS[result?.reason] || 'No hay coincidencias integradas.') + LINK_ONLY;
+  if (found) return t('Reproduciendo la mejor coincidencia. Elige otra versión para cambiarla.');
+  return (reasons()[result?.reason] || t('No hay coincidencias integradas.')) + ' ' + t('Busca en YouTube o pega aquí un enlace.');
 }

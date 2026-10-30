@@ -7,6 +7,7 @@ import { passageTimeline, preparePlayback } from './playback.js';
 import { createScoreSession } from './score-session.js';
 import { Icon, TransportBar } from './TransportBar.jsx';
 import { useTransport } from './useTransport.js';
+import { t } from '../i18n.js';
 
 const ZOOM = { min: .75, max: 1.5, step: .1 };
 // Beyond the last measure of any band work: the range of a whole part.
@@ -15,7 +16,7 @@ const WHOLE_WORK = 99999;
 // One instrument over a measure range: the whole passage is drawn and scrolls inside the dialog.
 export function PassageDialog({ ref, session }) {
   const dialog = useRef(null), frame = useRef(null), container = useRef(null), passage = useRef(null);
-  const [info, setInfo] = useState({ title: 'Partitura del pasaje', status: 'Selecciona un pasaje para abrir la partitura.', range: '', zoom: '100%', position: '' });
+  const [info, setInfo] = useState(() => ({ title: t('Partitura del pasaje'), status: t('Selecciona un pasaje para abrir la partitura.'), range: '', zoom: '100%', position: '' }));
   const show = changes => setInfo(previous => ({ ...previous, ...changes }));
   const sessionOf = state => state?.session || session;
   const transport = useTransport({
@@ -24,7 +25,8 @@ export function PassageDialog({ ref, session }) {
       const state = passage.current;
       if (!state || measure === state.currentMeasure) return;
       state.currentMeasure = measure;
-      show({ position: 'Compás ' + measure + (state.wholePart ? '' : ' de ' + state.firstMeasure + '–' + state.lastMeasure) });
+      show({ position: state.wholePart ? t('Compás {measure}', { measure })
+        : t('Compás {measure} de {first}–{last}', { measure, first: state.firstMeasure, last: state.lastMeasure }) });
       highlightMeasure(state.renderer, measure, container.current);
     },
     stoppedMessage: '',
@@ -41,9 +43,9 @@ export function PassageDialog({ ref, session }) {
   async function render() {
     const state = passage.current;
     const { firstMeasure: first, lastMeasure: last } = state;
-    show({ range: state.wholePart ? 'Parte completa · toda la obra · desplázate para revisarla'
-      : 'Pasaje completo · compases ' + first + '–' + last + ' · ' + (last - first + 1) + ' compases · desplázate para revisarlos',
-      status: 'Cargando el pasaje completo…' });
+    show({ range: state.wholePart ? t('Parte completa · toda la obra · desplázate para revisarla')
+      : t('Pasaje completo · compases {first}–{last} · {count} compases · desplázate para revisarlos', { first, last, count: last - first + 1 }),
+      status: t('Cargando el pasaje completo…') });
     await nextFrame();
     const stale = () => state !== passage.current || !dialog.current.open;
     if (stale()) return;
@@ -65,9 +67,9 @@ export function PassageDialog({ ref, session }) {
     target.scrollTop = 0; target.scrollLeft = 0;
     if (state.currentMeasure !== undefined) highlightMeasure(renderer, state.currentMeasure, target);
     show({ zoom: Math.round(state.zoom * 100) + '%',
-      status: 'Notación original · tonalidad escrita del MusicXML · ' + state.label + ' · audio en sonido real (instrumentos transpositores)' });
+      status: t('Notación original · tonalidad escrita del MusicXML · {label} · audio en sonido real (instrumentos transpositores)', { label: state.label }) });
   }
-  const rerender = () => render().catch(error => show({ status: error.message || 'No se pudo representar este pasaje.' }));
+  const rerender = () => render().catch(error => show({ status: error.message || t('No se pudo representar este pasaje.') }));
 
   useImperativeHandle(ref, () => ({
     // One instrument (a critical passage) or several (a rehearsal block, labelled by its section).
@@ -85,12 +87,13 @@ export function PassageDialog({ ref, session }) {
       passage.current = state;
       // Never show the previous passage while the new one loads.
       container.current.replaceChildren();
-      show({ title: state.label + (wholePart ? ' · toda la obra' : ' · compases ' + measureRange), status: 'Cargando el pasaje completo…', range: '' });
+      show({ title: state.label + ' · ' + (wholePart ? t('toda la obra') : t('compases {range}', { range: measureRange })),
+        status: t('Cargando el pasaje completo…'), range: '' });
       if (!dialog.current.open) dialog.current.showModal();
       try {
         state.source = await sessionOf(state).loadSource();
       } catch (error) {
-        show({ status: error.message || 'No se pudo representar este pasaje.' });
+        show({ status: error.message || t('No se pudo representar este pasaje.') });
         return;
       }
       // The score first, then the audio (2026-10-28): on Render's free plan, preparing the audio kept the server busy
@@ -99,7 +102,7 @@ export function PassageDialog({ ref, session }) {
       try {
         if (state === passage.current) await render();
       } catch (error) {
-        show({ status: error.message || 'No se pudo representar este pasaje.' });
+        show({ status: error.message || t('No se pudo representar este pasaje.') });
       }
     },
     // A passage of another work: the dialog answers at once while the work loads.
@@ -107,7 +110,7 @@ export function PassageDialog({ ref, session }) {
       stop();
       passage.current = null;
       container.current.replaceChildren();
-      show({ title: label, status: 'Cargando la obra…', range: '' });
+      show({ title: label, status: t('Cargando la obra…'), range: '' });
       if (!dialog.current.open) dialog.current.showModal();
     },
     failed: message => show({ status: message }),
@@ -135,7 +138,7 @@ export function PassageDialog({ ref, session }) {
   };
   const fullscreen = async () => {
     try { await toggleFullscreen(frame.current); await render(); }
-    catch { transport.reset('La pantalla completa no está disponible en este navegador.'); }
+    catch { transport.reset(t('La pantalla completa no está disponible en este navegador.')); }
   };
 
   return <dialog id="notation-dialog" ref={dialog} className="score-dialog" aria-labelledby="notation-title">
@@ -145,24 +148,24 @@ export function PassageDialog({ ref, session }) {
           <h2 id="notation-title">{info.title}</h2>
           <p id="notation-status" className="score-dialog-status">{info.status}</p>
         </div>
-        <button id="notation-close" className="score-tool score-close" type="button" aria-label="Cerrar partitura" title="Cerrar partitura"
+        <button id="notation-close" className="score-tool score-close" type="button" aria-label={t('Cerrar partitura')} title={t('Cerrar partitura')}
           onClick={() => dialog.current.close()}><Icon path="m6 4 6 6 6-6 2 2-6 6 6 6-2 2-6-6-6 6-2-2 6-6-6-6z" /></button>
       </div>
-      <TransportBar prefix="passage" group label="Reproducción del pasaje" volumeLabel="Volumen del pasaje" seekLabel="Posición del pasaje"
+      <TransportBar prefix="passage" group label={t('Reproducción del pasaje')} volumeLabel={t('Volumen del pasaje')} seekLabel={t('Posición del pasaje')}
         fullscreenId="passage-fullscreen" transport={transport} onStop={stop} onFullscreen={fullscreen} />
       <div className="passage-progress">
         <output id="passage-position" className="score-page-label" aria-live="polite">{info.position}</output>
         <span id="playback-status" className="loading-status" role="status" aria-live="polite" aria-busy={transport.loading}>{transport.status}</span>
       </div>
       <div id="notation-score" ref={container} className="score-rendering" />
-      <div className="score-toolbar" aria-label="Controles de partitura">
+      <div className="score-toolbar" aria-label={t('Controles de partitura')}>
         <span id="notation-page-label" className="score-page-label">{info.range}</span>
-        <button id="notation-zoom-out" className="score-tool" type="button" aria-label="Reducir zoom" title="Reducir zoom"
+        <button id="notation-zoom-out" className="score-tool" type="button" aria-label={t('Reducir zoom')} title={t('Reducir zoom')}
           onClick={() => zoomTo((passage.current?.zoom ?? 1) - ZOOM.step)}>−</button>
-        <button id="notation-fit" className="score-tool" type="button" aria-label="Ajustar al ancho" title="Ajustar al ancho"
+        <button id="notation-fit" className="score-tool" type="button" aria-label={t('Ajustar al ancho')} title={t('Ajustar al ancho')}
           onClick={() => zoomTo(1)}><Icon path="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z" /></button>
         <output id="notation-zoom-label">{info.zoom}</output>
-        <button id="notation-zoom-in" className="score-tool" type="button" aria-label="Ampliar zoom" title="Ampliar zoom"
+        <button id="notation-zoom-in" className="score-tool" type="button" aria-label={t('Ampliar zoom')} title={t('Ampliar zoom')}
           onClick={() => zoomTo((passage.current?.zoom ?? 1) + ZOOM.step)}>+</button>
       </div>
     </div>
