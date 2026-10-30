@@ -246,3 +246,56 @@ def test_a_range_beyond_the_chart_says_so():
     rubric = {"by_instrument": {"Tuba": {"criteria": {"range": {"direction": "high"}}}}}
     item = {"criterion": "range", "instrument": "Tuba", "grade": 6, "value": "C4", "source": "abc"}
     assert reason_es(item, rubric) == "Tesitura de Tuba hasta Do4 → grado 6, por encima de la tabla (American Band College)"
+
+
+# The reasons in English for the interface in English (2026-10-30): the same criteria, guides and grades.
+@pytest.mark.parametrize("item, text", [
+    ({"criterion": "key", "grade": 3, "value": -5, "source": "fgbm"}, "Concert key signature with 5 ♭ → grade 3 or above (Galician Band Federation)"),
+    ({"criterion": "key", "grade": 1, "value": 0, "source": "fgbm"}, "Concert key signature without accidentals → grade 1 or above (Galician Band Federation)"),
+    ({"criterion": "meter_changes", "grade": 4, "value": 16, "source": "abc"}, "16 meter changes → grade 4 or above (American Band College)"),
+    ({"criterion": "key_changes", "grade": 4, "value": 3, "source": "abc"}, "3 key changes → grade 4 or above (American Band College)"),
+    ({"criterion": "tempo", "grade": 4, "value": {"slowest": 48.0, "fastest": 132.0}, "source": "fgbm"},
+     "Tempos from 48 to 132 beats per minute → grade 4 or above (Galician Band Federation)"),
+    ({"criterion": "length", "grade": 4, "value": 467, "source": "abc"}, "About 8 minutes long → grade 4 or above (American Band College)"),
+    ({"criterion": "dynamics", "grade": 2, "value": ["ff", "pp"], "source": "fgbm"}, "Dynamics ff and pp → grade 2 or above (Galician Band Federation)"),
+    ({"criterion": "meter", "grade": 2, "value": "6/4", "source": "fjh"}, "Meter 6/4 → grade 2 or above (FJH)"),
+    ({"criterion": "note_values", "instrument": "Flute", "grade": 4, "value": 0.0625, "source": "fgbm"},
+     "Sixty-fourth notes in Flute → grade 4 or above (Galician Band Federation)"),
+    ({"criterion": "ornaments", "instrument": "Flute", "grade": 4, "value": ["turn", "trill"], "source": "fgbm"},
+     "Turn and trill in Flute → grade 4 or above (Galician Band Federation)"),
+    ({"criterion": "tuplets", "instrument": "Flute", "grade": 3, "value": 12, "source": "fgbm"},
+     "Quintuplets or sextuplets in Flute → grade 3 or above (Galician Band Federation)"),
+    ({"criterion": "syncopation", "instrument": "Flute", "grade": 3, "value": 4, "source": "abc"},
+     "Syncopation in Flute → grade 3 or above (American Band College)"),
+    ({"criterion": "grace_notes", "instrument": "Flute", "grade": 4, "value": 3, "source": "fgbm"},
+     "Groups of 3 grace notes in Flute → grade 4 or above (Galician Band Federation)"),
+])
+def test_the_english_reasons(item, text):
+    from backend.analyzers.rubric_grade import reason_en
+    assert reason_en(item, {"by_instrument": {}}) == text
+
+
+def test_the_english_reasons_name_the_instrument_in_english_and_go_with_the_spanish_ones():
+    from backend.analyzers.rubric_grade import english_reasons, reason_en
+    rubric = {"by_instrument": {"Tuba": {"label_es": "Tuba", "criteria": {"range": {"direction": "high"}}}}}
+    item = {"criterion": "range", "instrument": "Tuba", "grade": 6, "value": "C4", "source": "abc"}
+    assert reason_en(item, rubric) == "Range of Tuba up to C4 → grade 6, above the chart (American Band College)"
+    trumpet = ScorePart("Trumpet in Bb", bars(40, notes("C6", "D5", "D5", "D5")),
+                        PartMetadata(transposition=PartTransposition(-2, -1, 0)))
+    result = rubric_grade(work(trumpet, tempo=100))
+    assert result["reasons_en"] == ["Range of B♭ Trumpet up to C6 → grade 4 or above (Galician Band Federation)"]
+    stored = {key: value for key, value in result.items() if key != "reasons_en"}
+    assert english_reasons(stored) == result["reasons_en"], "an analysis saved before gets them from its criteria"
+    assert english_reasons({**stored, "grade": 1}) == ["Every criterion is within grade 1 (Galician Band Federation and American Band College)"]
+
+
+def test_a_saved_analysis_is_served_with_its_english_reasons():
+    from backend.app.library_routes import with_english_reasons
+    trumpet = ScorePart("Trumpet in Bb", bars(40, notes("C6", "D5", "D5", "D5")),
+                        PartMetadata(transposition=PartTransposition(-2, -1, 0)))
+    rubric = rubric_grade(work(trumpet, tempo=100))
+    saved = {"title": "Old", "difficulty": {"grade": 4, "rubric": {key: value for key, value in rubric.items() if key != "reasons_en"}}}
+    served = with_english_reasons(saved)
+    assert served["difficulty"]["rubric"]["reasons_en"] == rubric["reasons_en"]
+    assert "reasons_en" not in saved["difficulty"]["rubric"], "the stored result is not changed"
+    assert with_english_reasons({"title": "Legacy", "difficulty": {"grade": 2}}) == {"title": "Legacy", "difficulty": {"grade": 2}}

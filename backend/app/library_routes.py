@@ -13,6 +13,7 @@ from backend.application.library import PREPARATION_STATUSES, ExternalGrade, Lib
 from backend.domain.difficulty_scale import external_grade
 from backend.app.dependencies import (authenticated_user, get_explanation_cache, get_explanation_provider, get_library_repository,
                                       get_playback_store)
+from backend.analyzers.rubric_grade import english_reasons
 from backend.application.difficulty_explanation import explain_difficulty
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.parsers.playback import prepare_playback, preparation_enabled
@@ -117,6 +118,14 @@ def update_work(work_id: str, update: WorkUpdate, user: User = Depends(authentic
     return _public(work)
 
 
+def with_english_reasons(result: dict) -> dict:
+    """An analysis saved before the reasons in English existed (2026-10-30) gets them from its deciding criteria."""
+    rubric = (result.get("difficulty") or {}).get("rubric")
+    if not rubric or "reasons_en" in rubric:
+        return result
+    return {**result, "difficulty": {**result["difficulty"], "rubric": {**rubric, "reasons_en": english_reasons(rubric)}}}
+
+
 @router.get("/works/{work_id}")
 def get_work(work_id: str, user: User = Depends(authenticated_user),
              library: LibraryRepository = Depends(get_library_repository)):
@@ -125,7 +134,7 @@ def get_work(work_id: str, user: User = Depends(authenticated_user),
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     work = library.get_work(user.id, _work_id(work_id))
     # A work read from a PDF says so: its page warns that the grade is provisional (2026-10-27).
-    return {**record.result, "analysis_id": str(record.analysis_id), "work_id": work_id,
+    return {**with_english_reasons(record.result), "analysis_id": str(record.analysis_id), "work_id": work_id,
             "source_format": work.source_format if work else "musicxml"}
 
 
