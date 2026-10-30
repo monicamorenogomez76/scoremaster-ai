@@ -161,7 +161,7 @@ def explain_difficulty(result: dict, provider: ExplanationProvider, demo: Explan
     evidence = difficulty_evidence(result, language)
     version = PROMPT_VERSION if language == "es" else PROMPT_VERSION + "-" + language
     shown = run_explanation(evidence, lambda who, data: who.explain_difficulty(data), validate_explanation,
-                            provider, demo, version, readable_difficulty, cache)
+                            provider, demo, version, readable_difficulty, cache, purpose="difficulty")
     # The interface finds each passage by the part's name as stored, not as the AI received it.
     stored = (result.get("difficulty") or {}).get("critical_passages") or []
     return {**shown, "passages": {item["id"]: {"instrument": raw.get("instrument"), "label": item["label"],

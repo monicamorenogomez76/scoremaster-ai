@@ -24,6 +24,7 @@ from backend.infrastructure.evaluation_repository import PostgresEvaluationRepos
 from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
 from backend.infrastructure.mailer import mailer_from_env
+from backend.infrastructure.ai_usage_repository import PostgresAiUsageRepository
 from backend.infrastructure.omr_dispatcher import configured_dispatcher
 from backend.infrastructure.pdf_import_repository import PostgresPdfImportRepository
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
@@ -49,6 +50,13 @@ def analysis_engine():
 def get_analysis_repository() -> AnalysisRepository:
     try:
         return PostgresAnalysisRepository(analysis_engine())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+
+
+def get_ai_usage_repository() -> PostgresAiUsageRepository:
+    try:
+        return PostgresAiUsageRepository(analysis_engine())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
 

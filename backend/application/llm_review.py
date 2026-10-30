@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
+from backend.application import ai_usage
 from backend.application.explanations import InvalidExplanation
 
 PROMPT_VERSION = "passage-review-v2"
@@ -42,6 +43,11 @@ def review_passage(features: dict, provider) -> dict:
     """The review of one passage with who wrote it; raises ProviderFailure, InvalidReview or NotAvailable."""
     if provider.info.kind != "llm" or not hasattr(provider, "review_passage"):
         raise NotAvailable("La valoración independiente necesita un proveedor de IA real (GEMINI_API_KEY).")
-    review = validate_review(provider.review_passage(features))
+    try:
+        review = validate_review(provider.review_passage(features))
+    except InvalidReview:
+        ai_usage.record(ai_usage.UsageEvent("passage_review", provider.info.model or provider.info.name, PROMPT_VERSION,
+                                            "rejected", "invalid"))
+        raise
     return {**review.model_dump(), "provider": provider.info.name, "model": provider.info.model,
             "prompt_version": PROMPT_VERSION, "features_version": features["version"]}

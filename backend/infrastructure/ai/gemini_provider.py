@@ -6,9 +6,11 @@ retry; any failure becomes ProviderFailure (timeout, rate_limit, error) and the 
 never reaches logs or the browser. LangChain is imported on first use: ~70 MB a keyless server skips."""
 import logging
 import os
+import time
 from threading import Lock
 from typing import Optional
 
+from backend.application import ai_usage
 from backend.application.ai import ProviderFailure, ProviderInfo
 from backend.infrastructure.ai.prompts import DIFFICULTY_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT, human_message, in_language
 
@@ -33,8 +35,22 @@ def _langchain_chat(api_key: str, model: str):
         from langchain_google_genai import ChatGoogleGenerativeAI
         chat = ChatGoogleGenerativeAI(model=model, google_api_key=api_key, temperature=0,
                                       timeout=_timeout(), max_retries=1)
-        return chat.with_structured_output(schema)
+        # With the raw message too: its usage metadata gives the tokens of the call (M5, 2026-10-30).
+        return chat.with_structured_output(schema, include_raw=True)
     return factory
+
+
+# What each answer schema is for, in the usage panel.
+PURPOSES = {"DifficultyExplanation": "difficulty", "RehearsalExplanation": "rehearsal", "PassageReview": "passage_review"}
+
+
+def _structured(answer):
+    """The answer and its tokens: LangChain's include_raw gives {raw, parsed, parsing_error}; a plain answer has none."""
+    if isinstance(answer, dict) and "raw" in answer and "parsed" in answer:
+        usage = getattr(answer["raw"], "usage_metadata", None) or {}
+        parsed = answer["parsed"]
+        return (parsed if parsed is not None else {}), usage.get("input_tokens"), usage.get("output_tokens")
+    return answer, None, None
 
 
 def _reason(error: Exception) -> str:
@@ -61,15 +77,21 @@ class GeminiExplanationProvider:
     def _ask(self, schema, prompt, evidence: dict) -> dict:
         prompt = in_language(prompt, evidence.get("language", "es"))
         messages = [("system", prompt.system), ("human", human_message(evidence))]
+        used = lambda outcome, started, tokens=(None, None): ai_usage.record(ai_usage.UsageEvent(
+            PURPOSES.get(schema.__name__, schema.__name__), self.info.model, prompt.version, "call", outcome,
+            round((time.monotonic() - started) * 1000), *tokens))
+        started = time.monotonic()
         try:
-            answer = self._chat(schema).invoke(messages)
+            answer, *tokens = _structured(self._chat(schema).invoke(messages))
         except Exception as error:
             reason = _reason(error)
+            used(reason, started)
             # Only the kind of failure: the exception text could carry request details.
             logger.warning("Gemini no respondió (%s, %s) con el prompt %s.", reason, type(error).__name__, prompt.version)
             if type(error).__name__ == "NotFound" or "not found" in str(error).lower():
                 logger.warning("Google no encuentra el modelo %s: elige otro disponible con GEMINI_MODEL.", self.info.model)
             raise ProviderFailure(reason) from None
+        used("ok", started, tokens)
         return answer.model_dump() if hasattr(answer, "model_dump") else answer
 
     def explain_difficulty(self, evidence: dict) -> dict:

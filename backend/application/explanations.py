@@ -5,6 +5,7 @@ import json
 import logging
 import re
 
+from backend.application import ai_usage
 from backend.application.ai import ProviderFailure
 from backend.domain.text import MAX_TEXT, evidence_text  # noqa: F401 (used by the explanations)
 
@@ -33,7 +34,8 @@ def _cached(cache, key, evidence, validate):
         return None
 
 
-def run_explanation(evidence: dict, ask, validate, provider, demo, prompt_version: str, polish=None, cache=None) -> dict:
+def run_explanation(evidence: dict, ask, validate, provider, demo, prompt_version: str, polish=None, cache=None,
+                    purpose: str = "explanation") -> dict:
     """ask(provider, evidence) → raw answer; validate(answer, evidence) → model or InvalidExplanation;
     polish(model, evidence) → the same model with a text the director can read. With a cache, a valid
     answer of a real provider is kept and reused (step 23); errors, fallbacks and the demo never are."""
@@ -41,8 +43,11 @@ def run_explanation(evidence: dict, ask, validate, provider, demo, prompt_versio
     llm = provider.info.kind == "llm"
     key = cache_key(evidence, provider, prompt_version) if cache is not None and llm else None
     explanation = _cached(cache, key, evidence, validate) if key else None
+    usage = lambda event, outcome: ai_usage.record(ai_usage.UsageEvent(purpose, provider.info.model or provider.info.name,
+                                                                       prompt_version, event, outcome))
     if explanation is not None:
         cached = True
+        usage("cache_hit", "ok")
     else:
         try:
             explanation = validate(ask(provider, evidence), evidence)
@@ -55,6 +60,8 @@ def run_explanation(evidence: dict, ask, validate, provider, demo, prompt_versio
             fallback_reason = str(failure) if str(failure) in ("timeout", "rate_limit") else "error"
         except InvalidExplanation as invalid:
             fallback_reason = "invalid"
+            if llm:
+                usage("rejected", "invalid")
             logger.warning("Explicación de IA descartada: %s", str(invalid)[:300])
         except Exception:
             fallback_reason = "error"

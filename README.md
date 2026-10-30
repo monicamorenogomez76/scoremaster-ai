@@ -137,6 +137,7 @@ dependa de ellas.
 |---|---|---|
 | `GEMINI_API_KEY` | Explicaciones y valoración independiente con Gemini ([crear clave](https://aistudio.google.com/apikey)) | Responde el modo demo, siempre identificado como «Modo demo · sin IA» |
 | `GEMINI_MODEL`, `GEMINI_REVIEW_MODEL` | Modelo de las explicaciones (por defecto `gemini-3.8-flash`) y, si se quiere, otro con más cupo para «Valorar con IA» | Se usa el modelo por defecto |
+| `GEMINI_PRICE_INPUT_PER_MTOK`, `GEMINI_PRICE_OUTPUT_PER_MTOK` | Precio en dólares por millón de tokens de entrada y de salida, para el coste estimado de Configuración › Uso de la IA | El panel muestra «Sin precio» (el plan gratuito no cuesta) |
 | `GEMINI_REQUESTS_PER_MINUTE`, `GEMINI_TIMEOUT_SECONDS` | Pausa entre peticiones (5 por minuto) y tiempo máximo de respuesta (60 s) | Valores por defecto |
 | `YOUTUBE_API_KEY` | Búsqueda de grabaciones dentro de la aplicación (la usa el servidor, nunca el navegador) | Enlace a la búsqueda en YouTube y opción de pegar un enlace |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | «Entrar con Google» | Solo email y contraseña |

@@ -146,7 +146,7 @@ def explain_rehearsal(rehearsal: dict, analyses: dict, concert: Optional[dict], 
     evidence = rehearsal_evidence(rehearsal, analyses, concert, pending, language)
     version = PROMPT_VERSION if language == "es" else PROMPT_VERSION + "-" + language
     shown = run_explanation(evidence, lambda who, data: who.explain_rehearsal(data), validate_rehearsal_explanation,
-                            provider, demo, version, readable_rehearsal, cache)
+                            provider, demo, version, readable_rehearsal, cache, purpose="rehearsal")
     raw = rehearsal.get("blocks") or []
     return {**shown, "blocks": {block["id"]: {"title": item.get("title"), "work_id": item.get("work_id"),
                                               "work_title": item.get("work_title"), "measures": item.get("measures"),

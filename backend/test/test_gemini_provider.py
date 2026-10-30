@@ -131,12 +131,14 @@ def test_gemini_has_a_minute_and_the_limit_can_be_changed(monkeypatch):
         def __init__(self, **options):
             seen.update(options)
 
-        def with_structured_output(self, schema):
+        def with_structured_output(self, schema, **options):
+            seen["structured"] = options   # with the raw message, for the tokens of the usage panel (M5)
             return self
     monkeypatch.setattr(langchain_google_genai, "ChatGoogleGenerativeAI", Chat)
     monkeypatch.delenv("GEMINI_TIMEOUT_SECONDS", raising=False)
     GeminiExplanationProvider("k", "m")._chat(dict)
     assert seen["timeout"] == 60 and seen["temperature"] == 0 and seen["max_retries"] == 1
+    assert seen["structured"] == {"include_raw": True}
     monkeypatch.setenv("GEMINI_TIMEOUT_SECONDS", "90")
     GeminiExplanationProvider("k", "m")._chat(dict)
     assert seen["timeout"] == 90

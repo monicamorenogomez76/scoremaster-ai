@@ -18,7 +18,10 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
+from backend.app.ai_usage_routes import router as ai_usage_router
 from backend.app.auth_routes import router as auth_router
+from backend.application import ai_usage
+from backend.infrastructure.ai_usage_repository import PostgresAiUsageRepository
 from backend.app.i18n import language, translate
 from backend.app.library_routes import router as library_router, valid_band_profile
 from backend.app.band_routes import router as band_router
@@ -52,8 +55,10 @@ async def lifespan(app):
     # The instrument catalog of the database, before any analysis (2026-10-28).
     try:
         load_instrument_catalog(PostgresInstrumentRepository(analysis_engine()))
+        # What the AI layer spends goes to the administration's panel (M5, 2026-10-30).
+        ai_usage.use_recorder(PostgresAiUsageRepository(analysis_engine()))
     except ValueError:
-        pass   # no database: the seed catalog
+        pass   # no database: the seed catalog, and no usage recorded
     # Works uploaded before are read once in the background, so the first proposal or passage after
     # a deploy does not wait minutes for music21 (Render's free plan, 2026-10-07).
     score_store, playback_store = get_score_store(), get_playback_store()
@@ -62,6 +67,7 @@ async def lifespan(app):
     try:
         yield
     finally:
+        ai_usage.use_recorder(None)
         close_analysis_engine()
 
 
@@ -127,6 +133,7 @@ app.include_router(band_router)
 app.include_router(evaluation_router)
 app.include_router(pdf_router)
 app.include_router(instrument_router)
+app.include_router(ai_usage_router)
 
 # The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
 CONTENT_SECURITY_POLICY = "; ".join([
