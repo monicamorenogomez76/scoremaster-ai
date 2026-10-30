@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { applyInstrumentAssignments, inspectInstruments } from './instrument-session.js';
 import { apiFetch } from './api.js';
 import { loadWork } from './library.js';
+import { t } from './i18n.js';
 
 // options: { minutes, getProfile(), getConfirmations(), onReset(byUser), onAnalysis(data, profile, navigate) }.
 // Read through a ref so changing them never aborts a request in flight.
@@ -31,7 +32,7 @@ export function useScoreAnalysis(workspace, options) {
 
   const selectFile = async selected => {
     const version = invalidate(); file.current = selected; xml.current = null;
-    setState({ busy: Boolean(selected), message: selected ? 'Leyendo los instrumentos del archivo' : '', error: false });
+    setState({ busy: Boolean(selected), message: selected ? t('Leyendo los instrumentos del archivo') : '', error: false });
     try {
       await clearSelection();
       if (!selected || version !== generation.current) return;
@@ -49,10 +50,10 @@ export function useScoreAnalysis(workspace, options) {
   };
 
   const analyze = useCallback(async (selected, profile, navigate = true, confirmations = latest.current.getConfirmations()) => {
-    if (!selected) { setState({ busy: false, message: 'Selecciona un archivo MusicXML.', error: true }); return; }
+    if (!selected) { setState({ busy: false, message: t('Selecciona un archivo MusicXML.'), error: true }); return; }
     const version = invalidate();
     const request = new AbortController(); controller.current = request;
-    setState({ busy: true, message: 'Analizando la partitura', error: false });
+    setState({ busy: true, message: t('Analizando la partitura'), error: false });
     try {
       await workspace.prepareAnalysis();
       if (version !== generation.current) return;
@@ -64,9 +65,9 @@ export function useScoreAnalysis(workspace, options) {
       const response = await apiFetch('/analyze', { method: 'POST', body, signal: request.signal });
       let data;
       try { data = await response.json(); }
-      catch { throw new Error('El servidor devolvió una respuesta no válida. Vuelve a intentarlo.'); }
+      catch { throw new Error(t('El servidor devolvió una respuesta no válida. Vuelve a intentarlo.')); }
       if (version !== generation.current) return;
-      if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'No se pudo analizar la partitura.');
+      if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : t('No se pudo analizar la partitura.'));
       const completedProfile = Object.fromEntries((data.band_fit?.requirements || []).map(item => [item.key, item.available]));
       latest.current.onAnalysis(data, completedProfile, navigate);
       workspace.showScore();
@@ -83,10 +84,10 @@ export function useScoreAnalysis(workspace, options) {
   // navigate false the current view stays (a passage opened from a rehearsal); returns the analysis.
   const openWork = useCallback(async (id, { navigate = true } = {}) => {
     const version = invalidate();
-    setState({ busy: true, message: 'Abriendo la obra: análisis guardado', error: false });
+    setState({ busy: true, message: t('Abriendo la obra: análisis guardado'), error: false });
     try {
       const { data, file: saved } = await loadWork(id, () => {
-        if (version === generation.current) setState({ busy: true, message: 'Abriendo la obra: descargando la partitura', error: false });
+        if (version === generation.current) setState({ busy: true, message: t('Abriendo la obra: descargando la partitura'), error: false });
       });
       if (version !== generation.current) return;
       await clearSelection();

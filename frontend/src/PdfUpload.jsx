@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { checkPdfFiles, pdfAvailable, pdfImportStatus, PDF_POLL_MS, pdfStatusText, remainingSeconds, startPdfImport } from './pdfImport.js';
+import { t } from './i18n.js';
 
 // «Desde un PDF» (decided 2026-10-27): one score, the parts of a work (one PDF per instrument) or, by default (2026-10-28),
 // PDFs with both, which the reader tells apart. Read by
@@ -63,26 +64,25 @@ export function PdfUpload({ visible, minutes, onOpenWork }) {
   const message = error || pdfStatusText(status, remainingSeconds(samples.current, status?.pages_total || 0));
   const failed = Boolean(error) || status?.status === 'failed';
   return <form id="pdf-upload" className="pdf-upload" onSubmit={submit} aria-busy={busy} aria-labelledby={ids + 'title'}>
-    <h3 id={ids + 'title'}>Desde un PDF</h3>
-    <p className="result-supporting">Se lee con reconocimiento óptico de partituras. Funciona mejor con PDF exportados de
-      un editor de partituras. Revisa la obra leída: su grado es provisional y no entra en las valoraciones de los músicos.</p>
+    <h3 id={ids + 'title'}>{t('Desde un PDF')}</h3>
+    <p className="result-supporting">{t('Se lee con reconocimiento óptico de partituras. Funciona mejor con PDF exportados de un editor de partituras. Revisa la obra leída: su grado es provisional y no entra en las valoraciones de los músicos.')}</p>
     <fieldset className="pdf-kind" disabled={busy}>
-      <legend>Qué vas a subir</legend>
+      <legend>{t('Qué vas a subir')}</legend>
       <label><input type="radio" name="pdf-kind" value="auto" checked={kind === 'auto'} onChange={() => setKind('auto')} />
-        Detectar solo: guion, particellas o las dos cosas en el mismo PDF</label>
+        {t('Detectar solo: guion, particellas o las dos cosas en el mismo PDF')}</label>
       <label><input type="radio" name="pdf-kind" value="score" checked={kind === 'score'} onChange={() => setKind('score')} />
-        Solo partitura general (uno o varios PDF, en orden)</label>
+        {t('Solo partitura general (uno o varios PDF, en orden)')}</label>
       <label><input type="radio" name="pdf-kind" value="parts" checked={kind === 'parts'} onChange={() => setKind('parts')} />
-        Solo particellas (un PDF por instrumento, con su nombre en el archivo)</label>
+        {t('Solo particellas (un PDF por instrumento, con su nombre en el archivo)')}</label>
     </fieldset>
-    <label className="file-field" htmlFor={ids + 'files'}>Archivos PDF
+    <label className="file-field" htmlFor={ids + 'files'}>{t('Archivos PDF')}
       <input id={ids + 'files'} ref={input} type="file" accept="application/pdf,.pdf" multiple disabled={busy}
         onChange={event => { setFiles(Array.from(event.target.files || [])); setError(''); setStatus(null); }} />
     </label>
-    <label className="pdf-title" htmlFor={ids + 'name'}>Título de la obra (opcional)
+    <label className="pdf-title" htmlFor={ids + 'name'}>{t('Título de la obra (opcional)')}
       <input id={ids + 'name'} type="text" maxLength={200} value={title} disabled={busy} onChange={event => setTitle(event.target.value)} />
     </label>
-    <button className="primary-action" type="submit" disabled={busy}>{busy ? 'Leyendo…' : 'Leer PDF'}</button>
+    <button className="primary-action" type="submit" disabled={busy}>{busy ? t('Leyendo…') : t('Leer PDF')}</button>
     <p className="analysis-status" role={failed ? 'alert' : 'status'} aria-live="polite" hidden={!message}>{message}</p>
   </form>;
 }

@@ -6,8 +6,9 @@ import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
 import { WorksList } from './WorksView.jsx';
+import { t } from './i18n.js';
 
-const tabs = [['score', 'Partitura'], ['difficulty', 'Dificultad'], ['recordings', 'Grabaciones']];
+const tabs = () => [['score', t('Partitura')], ['difficulty', t('Dificultad')], ['recordings', t('Grabaciones')]];
 
 // Repertoire: the list of works (and the form to add one), or the detail of the open work.
 // The detail stays mounted while hidden: the score viewer keeps its renderer between tabs and modes.
@@ -15,12 +16,12 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
   const data = analysis?.data;
   const detail = mode === 'detail' && Boolean(data);
   const busy = upload.state.busy;
-  const action = <button id="add-work" className="primary-action" type="button" onClick={() => onModeChange('add')}>Añadir obra</button>;
-  return <View name="repertoire" active={active} eyebrow="Biblioteca" title="Repertorio"
-    description="Tus obras, su estado de preparación y su análisis." action={action}>
+  const action = <button id="add-work" className="primary-action" type="button" onClick={() => onModeChange('add')}>{t('Añadir obra')}</button>;
+  return <View name="repertoire" active={active} eyebrow={t('Biblioteca')} title={t('Repertorio')}
+    description={t('Tus obras, su estado de preparación y su análisis.')} action={action}>
     <div id="upload-root" className="surface" hidden={mode !== 'add'}>
-      <h2 className="panel-title">Añadir obra</h2>
-      <p className="result-supporting">Formatos admitidos: MusicXML (.musicxml, .xml) y MusicXML comprimido (.mxl). Al subirla se analiza y se guarda en tu repertorio.</p>
+      <h2 className="panel-title">{t('Añadir obra')}</h2>
+      <p className="result-supporting">{t('Formatos admitidos: MusicXML (.musicxml, .xml) y MusicXML comprimido (.mxl). Al subirla se analiza y se guarda en tu repertorio.')}</p>
       <UploadWorkspace upload={upload} />
       <PdfUpload visible={!hidden && active === 'repertoire' && mode === 'add'} minutes={minutes} onOpenWork={onOpenWork} />
     </div>
@@ -34,15 +35,14 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
     <section id="work-detail" className="work-detail" hidden={!detail} aria-labelledby="work-detail-title">
       <div className="work-detail-heading">
         <div>
-          <h2 id="work-detail-title">{data?.title || 'Partitura sin título'}</h2>
-          <p className="result-supporting">{data?.composer || 'Compositor no indicado en el MusicXML'}</p>
-          {data?.source_format === 'pdf' && <p className="pdf-provisional" role="note">Leída de PDF · grado provisional: revisa
-            en la partitura las notas más agudas y graves, y confirma los instrumentos en Mi banda.</p>}
+          <h2 id="work-detail-title">{data?.title || t('Partitura sin título')}</h2>
+          <p className="result-supporting">{data?.composer || t('Compositor no indicado en el MusicXML')}</p>
+          {data?.source_format === 'pdf' && <p className="pdf-provisional" role="note">{t('Leída de PDF · grado provisional: revisa en la partitura las notas más agudas y graves, y confirma los instrumentos en Mi banda.')}</p>}
         </div>
-        <button id="back-to-list" className="secondary-action" type="button" onClick={() => onModeChange('list')}>Volver al repertorio</button>
+        <button id="back-to-list" className="secondary-action" type="button" onClick={() => onModeChange('list')}>{t('Volver al repertorio')}</button>
       </div>
-      <div className="work-tabs" role="tablist" aria-label="Secciones de la obra">
-        {tabs.map(([name, label]) => <button key={name} id={'work-tab-' + name} type="button" role="tab"
+      <div className="work-tabs" role="tablist" aria-label={t('Secciones de la obra')}>
+        {tabs().map(([name, label]) => <button key={name} id={'work-tab-' + name} type="button" role="tab"
           aria-selected={tab === name} aria-controls={'work-panel-' + name} onClick={() => onTabChange(name)}>{label}</button>)}
       </div>
       <div id="work-panel-score" role="tabpanel" aria-labelledby="work-tab-score" hidden={tab !== 'score'}>{scoreViewer}</div>
@@ -57,7 +57,7 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
       <div id="work-panel-recordings" role="tabpanel" aria-labelledby="work-tab-recordings" hidden={tab !== 'recordings'}>
         {data && <div id="videos-content" className="view-content">
           <section className="result-section result-section--wide">
-            <h2>Grabaciones de {data.title || 'la obra'}</h2>
+            <h2>{t('Grabaciones de {title}', { title: data.title || t('la obra') })}</h2>
             <VideoSearch key={analysis.fileName} title={data.title || ''} composer={data.composer || ''} fileName={analysis.fileName} />
           </section>
         </div>}
