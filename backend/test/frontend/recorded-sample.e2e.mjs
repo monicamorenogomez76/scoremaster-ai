@@ -9,7 +9,7 @@ const banks = readFileSync(new URL('../../../frontend/src/score/sample-banks.js'
 const browser = await chromium.launch();
 try {
   // The sample check injects a script, which the application's CSP rightly forbids.
-  const page = await browser.newPage({ bypassCSP: true });
+  const page = await browser.newPage({ locale: 'es-ES', bypassCSP: true });
   await page.goto(process.env.SCOREMASTER_URL || 'http://127.0.0.1:8006');
   await page.addScriptTag({ content: banks + '\nwindow.recordedPreset = recordedPreset;' });
   const level = await page.evaluate(async () => {

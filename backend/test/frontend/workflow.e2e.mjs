@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+const page = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 1000 } });
 await page.route('https://unpkg.com/smplr@1.1.0/dist/index.mjs', route => route.fulfill({ contentType: 'text/javascript', body: 'export function Soundfont() { return { ready: Promise.resolve(), start() {}, stop() {}, dispose() {} }; }' }));
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));

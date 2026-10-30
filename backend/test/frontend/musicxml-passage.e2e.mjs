@@ -29,7 +29,7 @@ const score = `<?xml version="1.0"?><score-partwise version="4.0"><part-list>
 
 const browser = await chromium.launch();
 try {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ locale: 'es-ES' });
   await page.goto('about:blank');
   await page.addScriptTag({ content: source + '\nwindow.filterMusicXmlPassage = filterMusicXmlPassage;' });
   // Parts, staves and the pitches of each staff that the filtered passage keeps.
