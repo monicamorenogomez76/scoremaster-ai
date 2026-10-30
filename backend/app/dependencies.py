@@ -12,6 +12,7 @@ from backend.application.concerts import ConcertRepository
 from backend.application.evaluations import EvaluationRepository
 from backend.application.instruments import InstrumentRepository
 from backend.application.library import LibraryRepository
+from backend.application.mail import Mailer
 from backend.application.pdf_imports import OmrDispatcher, PdfImportRepository
 from backend.application.rehearsals import RehearsalRepository
 from backend.application.auth import AuthService
@@ -22,6 +23,7 @@ from backend.infrastructure.concert_repository import PostgresConcertRepository
 from backend.infrastructure.evaluation_repository import PostgresEvaluationRepository
 from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
 from backend.infrastructure.library_repository import PostgresLibraryRepository
+from backend.infrastructure.mailer import mailer_from_env
 from backend.infrastructure.omr_dispatcher import configured_dispatcher
 from backend.infrastructure.pdf_import_repository import PostgresPdfImportRepository
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
@@ -49,6 +51,11 @@ def get_analysis_repository() -> AnalysisRepository:
         return PostgresAnalysisRepository(analysis_engine())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE) from exc
+
+
+def get_mailer() -> Optional[Mailer]:
+    """None when password recovery is off (production without a mail service)."""
+    return mailer_from_env()
 
 
 def get_account_repository() -> AccountRepository:

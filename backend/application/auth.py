@@ -1,9 +1,10 @@
-"""Registration, login and sessions (plan phase 1).
+"""Registration, login, sessions (plan phase 1) and password recovery by email (2026-10-29).
 
 Passwords are hashed with Argon2id. A session is a random token held by the browser in an HttpOnly
 cookie; the database keeps only its SHA-256, so a leaked table does not open sessions. Unknown
 emails and wrong passwords fail the same way, and repeated failures from one address for one email
-are throttled. Every session carries its own CSRF token for state-changing requests.
+are throttled. Every session carries its own CSRF token for state-changing requests. A recovery link is a one-time
+token kept, like sessions, only as its SHA-256; it expires in 30 minutes and only the last one of an account works.
 """
 from __future__ import annotations
 
@@ -19,11 +20,12 @@ from uuid import uuid4
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 
-from backend.application.accounts import AccountRepository, DuplicateEmail, StoredSession, User
+from backend.application.accounts import AccountRepository, DuplicateEmail, PasswordReset, StoredSession, User
 
 MIN_PASSWORD = 10
 MAX_PASSWORD = 256
 SESSION_DAYS = 7
+RESET_MINUTES = 30
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
 INVALID_CREDENTIALS = "Email o contraseña incorrectos."
 
@@ -37,6 +39,10 @@ class InvalidRegistration(Exception):
 
 
 class TooManyAttempts(Exception):
+    pass
+
+
+class InvalidResetLink(Exception):
     pass
 
 
@@ -85,9 +91,11 @@ class LoginLimiter:
 
 class AuthService:
     def __init__(self, accounts: AccountRepository, clock: Callable[[], datetime] = utcnow,
-                 limiter: Optional[LoginLimiter] = None, hasher: Optional[PasswordHasher] = None):
+                 limiter: Optional[LoginLimiter] = None, hasher: Optional[PasswordHasher] = None,
+                 reset_limiter: Optional[LoginLimiter] = None):
         self.accounts, self.clock = accounts, clock
         self.limiter = limiter or LoginLimiter(clock=clock)
+        self.reset_limiter = reset_limiter or LoginLimiter(3, timedelta(hours=1), clock=clock)
         self.hasher = hasher or PasswordHasher()
 
     def _open_session(self, user: User, event: str, ip: str) -> SignedIn:
@@ -140,6 +148,31 @@ class AuthService:
             raise InvalidCredentials(INVALID_CREDENTIALS) from None
         self.limiter.succeeded(email, ip)
         return self._open_session(user, "login", ip)
+
+    def request_password_reset(self, email: str, ip: str) -> Optional[tuple[User, str]]:
+        """The account and the link's token, or None (unknown email, or three links this hour for that email);
+        the caller answers the same either way."""
+        email = (email or "").strip().lower()
+        if self.reset_limiter.blocked(email, ""):
+            return None
+        self.reset_limiter.failed(email, "")
+        user = self.accounts.user_by_email(email)
+        if user is None:
+            return None
+        token = secrets.token_urlsafe(32)
+        self.accounts.add_password_reset(PasswordReset(user.id, token_hash(token),
+                                                       self.clock() + timedelta(minutes=RESET_MINUTES)))
+        self.accounts.record_event(user.id, "password_reset_requested", ip)
+        return user, token
+
+    def reset_password(self, token: str, password: str, ip: str) -> SignedIn:
+        reset = self.accounts.password_reset_by_hash(token_hash(token or ""))
+        user = self.accounts.user_by_id(reset.user_id) if reset and reset.expires_at > self.clock() else None
+        if user is None:
+            raise InvalidResetLink("El enlace no es válido o ha caducado. Pide otro.")
+        self.set_password(user, password, ip)
+        self.accounts.delete_password_resets(user.id)
+        return self._open_session(user, "password_reset", ip)
 
     def google(self, sub: str, email: str, email_verified: bool, name: str, ip: str) -> SignedIn:
         user = self.accounts.user_by_google_sub(sub)

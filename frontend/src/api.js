@@ -44,6 +44,19 @@ export const signIn = (email, password) => postJson('/auth/login', { email, pass
 export const register = (email, password, displayName) =>
   postJson('/auth/register', { email, password, display_name: displayName }, 'No se pudo crear la cuenta.');
 
+// Password recovery: the link in the email is /#reset=<token>; the fragment never reaches a server.
+export const resetTokenFrom = hash => (/^#reset=([\w-]+)$/.exec(hash || '') || [])[1] || '';
+
+export async function requestPasswordReset(email) {
+  const response = await fetch('/auth/password/forgot', { method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+  if (!response.ok) throw new Error(await detail(response, 'No se pudo pedir el enlace.'));
+  return (await response.json()).detail;
+}
+
+export const resetPassword = (token, password) =>
+  postJson('/auth/password/reset', { token, password }, 'No se pudo cambiar la contraseña.');
+
 export async function currentUser() {
   const response = await fetch('/auth/me', { credentials: 'same-origin' });
   if (!response.ok) { csrfToken = ''; return null; }

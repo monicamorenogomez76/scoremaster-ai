@@ -4,25 +4,32 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
+import logging
 import secrets
+from datetime import timedelta
 from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
 from authlib.jose import JsonWebKey, jwt
 from authlib.jose.errors import JoseError
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field, field_validator
 
 from backend.application.accounts import AccountRepository, User
 from backend.application.auth import (
-    SESSION_DAYS, AuthService, InvalidCredentials, InvalidRegistration, LoginLimiter, SignedIn, TooManyAttempts,
+    RESET_MINUTES, SESSION_DAYS, AuthService, InvalidCredentials, InvalidRegistration, InvalidResetLink, LoginLimiter,
+    SignedIn, TooManyAttempts,
 )
-from backend.app.dependencies import SESSION_COOKIE, authenticated_user, get_account_repository, is_admin
+from backend.application.mail import Mailer
+from backend.app.dependencies import SESSION_COOKIE, authenticated_user, get_account_repository, get_mailer, is_admin
 
 router = APIRouter(prefix="/auth")
 LIMITER = LoginLimiter()
+RESET_LIMITER = LoginLimiter(3, timedelta(hours=1))
+RESET_SENT = ("Si hay una cuenta con ese email, te hemos enviado un enlace para elegir una contraseña nueva. "
+              f"Caduca en {RESET_MINUTES} minutos.")
 OAUTH_COOKIE = "scoremaster_oauth"
 GOOGLE_AUTHORIZE = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
@@ -48,6 +55,15 @@ class ProfileBody(BaseModel):
         return value
 
 
+class ForgotBody(BaseModel):
+    email: str = Field(max_length=254)
+
+
+class ResetBody(BaseModel):
+    token: str = Field(max_length=100)
+    password: str = Field(max_length=256)
+
+
 class LoginBody(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=256)
@@ -66,7 +82,7 @@ def google_enabled() -> bool:
 
 
 def _service(accounts: AccountRepository = Depends(get_account_repository)) -> AuthService:
-    return AuthService(accounts, limiter=LIMITER)
+    return AuthService(accounts, limiter=LIMITER, reset_limiter=RESET_LIMITER)
 
 
 def _ip(request: Request) -> str:
@@ -134,8 +150,49 @@ def update_me(body: ProfileBody, user: User = Depends(authenticated_user),
 
 
 @router.get("/config")
-def config():
-    return {"google_enabled": google_enabled(), "demo_email": os.environ.get("DEMO_USER_EMAIL") or None}
+def config(mailer: Optional[Mailer] = Depends(get_mailer)):
+    return {"google_enabled": google_enabled(), "demo_email": os.environ.get("DEMO_USER_EMAIL") or None,
+            "password_reset_enabled": mailer is not None}
+
+
+def _send_reset(service: AuthService, mailer: Mailer, email: str, base_url: str, ip: str) -> None:
+    """After the answer, so its timing does not tell whether the account exists. The demo account, whose password
+    is public and whose mailbox does not exist, never gets a link."""
+    if (email or "").strip().lower() == (os.environ.get("DEMO_USER_EMAIL") or "").lower():
+        return
+    requested = service.request_password_reset(email, ip)
+    if requested is None:
+        return
+    user, token = requested
+    # The token goes in the fragment: the browser never sends it to a server, so no log or Referer keeps it.
+    link = f"{base_url.rstrip('/')}/#reset={token}"
+    text = (f"Hola, {user.display_name}:\n\nPara elegir una contraseña nueva en ScoreMaster abre este enlace:\n\n{link}\n\n"
+            f"Caduca en {RESET_MINUTES} minutos y solo sirve una vez. Si no lo has pedido tú, ignora este correo: "
+            "tu contraseña no cambia.\n")
+    try:
+        mailer.send(user.email, "ScoreMaster: elige una contraseña nueva", text)
+    except Exception:
+        logging.getLogger("uvicorn.error").warning("No se pudo enviar el correo de recuperación.", exc_info=True)
+
+
+@router.post("/password/forgot", status_code=202)
+def forgot_password(body: ForgotBody, request: Request, tasks: BackgroundTasks,
+                    service: AuthService = Depends(_service), mailer: Optional[Mailer] = Depends(get_mailer)):
+    if mailer is None:
+        raise HTTPException(status_code=404, detail="La recuperación de la contraseña no está disponible.")
+    # APP_BASE_URL in production: a link built from the Host header could point to another site.
+    base_url = os.environ.get("APP_BASE_URL") or str(request.base_url)
+    tasks.add_task(_send_reset, service, mailer, body.email, base_url, _ip(request))
+    return {"detail": RESET_SENT}
+
+
+@router.post("/password/reset")
+def reset_password(body: ResetBody, request: Request, service: AuthService = Depends(_service)):
+    try:
+        signed_in = service.reset_password(body.token, body.password, _ip(request))
+    except (InvalidResetLink, InvalidRegistration) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return _with_session(JSONResponse(_public(signed_in)), signed_in)
 
 
 def _redirect_uri(request: Request) -> str:

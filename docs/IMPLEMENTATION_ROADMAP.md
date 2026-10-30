@@ -138,7 +138,7 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 | Obras leídas de PDF: copista escribe las notas en la tonalidad de cada instrumento pero sin `<transpose>`; ScoreMaster añade la transposición, ajusta cada compás a su compás y toma de la banda la armadura que el lector no vio. Las obras ya guardadas se reparan al arrancar, sin volver a leer el PDF (2026-10-29) | Integrado: PR #142 (transposición), PR #143 (obras guardadas), PR #144 (compases) y PR #145 (armaduras) |
 | En las particellas, copista se salta los silencios de varios compases y cada parte empieza en un sitio distinto. Solución acordada: leer también la partitura general y alinear cada particella con su pentagrama, insertando los compases que faltan (2026-10-29) | Aparcado hasta que vuelvan los minutos de GitHub Actions del repositorio privado del lector |
 | El repositorio de ScoreMaster es público: la CI no gasta minutos de Actions y el lector ya no necesita `SCOREMASTER_READ_TOKEN` (2026-10-29) | Hecho |
-| Recuperación de la contraseña por correo (enlace de un solo uso; necesita un servicio de correo como Resend o Brevo) | Pendiente |
+| Recuperación de la contraseña por correo: enlace de un solo uso que caduca en 30 minutos, enviado con Brevo (plan gratuito, remitente verificado sin dominio propio); en local, el enlace sale en la consola (2026-10-29) | Integrado: PR #149 |
 | Python 3.14 | Después del cierre (2026-10-28) |
 | Alojar la aplicación en Vercel | Aplazado a después de la entrega (ver [DEPLOYMENT.md](DEPLOYMENT.md)) |
 | Modelos de Hugging Face para la dificultad o bancos de sonido | Descartados: los de dificultad son de piano y no explicables; no hay bancos de viento con licencia clara |

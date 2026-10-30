@@ -50,3 +50,9 @@ services:
         sync: false
       - key: GOOGLE_REDIRECT_URI
         sync: false
+      - key: BREVO_API_KEY
+        sync: false          # optional: password recovery by email stays off while it, MAIL_FROM or APP_BASE_URL is empty
+      - key: MAIL_FROM
+        sync: false          # the sender verified in Brevo, e.g. "ScoreMaster <you@example.org>"
+      - key: APP_BASE_URL
+        sync: false          # the public address the recovery links point to (https://….onrender.com)

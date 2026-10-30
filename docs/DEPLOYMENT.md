@@ -27,6 +27,16 @@ la base gratuita de Render caducaba a los 30 días (ver «Base de datos en Neon�
      la de desarrollo; compartirla solo con el tribunal o los evaluadores.
    - `YOUTUBE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`:
      opcionales; vacíos desactivan esas funciones.
+   - `BREVO_API_KEY`, `MAIL_FROM`, `APP_BASE_URL` (opcionales, las tres o ninguna): recuperación de la
+     contraseña por correo. Pasos:
+     1. Crear una cuenta gratuita en https://www.brevo.com (300 correos al día).
+     2. En *Senders*, añadir y verificar el email remitente. No hace falta tener un dominio propio.
+     3. En *SMTP & API › API keys*, crear una clave y ponerla en `BREVO_API_KEY`.
+     4. Poner en `MAIL_FROM` el remitente, por ejemplo `ScoreMaster <correo@ejemplo.org>`.
+     5. Poner en `APP_BASE_URL` la dirección pública, `https://scoremaster-iz4j.onrender.com`.
+
+     El enlace se construye con `APP_BASE_URL`, nunca con la cabecera `Host`: una petición manipulada podría hacerlo
+     apuntar a otro sitio. Sin las tres variables, la pantalla de acceso no ofrece «¿Has olvidado la contraseña?».
    - `GEMINI_API_KEY` (opcional): las explicaciones «¿Por qué esta dificultad?» y «¿Por qué este plan?»
      las redacta Gemini; sin ella responde la demo identificada. Se crea gratis en
      https://aistudio.google.com/apikey. `GEMINI_MODEL` cambia el modelo (por defecto `gemini-3.8-flash`).
