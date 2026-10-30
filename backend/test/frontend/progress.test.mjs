@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { activityText, proposalActivity, SLOW_NOTICE } from '../../../frontend/src/progress.js';
+import { activityText, proposalActivity, slowNotice } from '../../../frontend/src/progress.js';
+
+const SLOW_NOTICE = slowNotice();
 
 // 2026-10-07: on Render's free plan analysing or planning took minutes with a fixed message,
 // and it looked as if nothing was happening.

@@ -67,6 +67,10 @@ test('every text of the interface marked for translation is translated', () => {
   const keys = new Map();
   for (const [name, text] of sources(new URL('../../../frontend/src/', import.meta.url))) {
     for (const [, , key] of text.matchAll(/\bt\((['"])((?:(?!\1)[^\\]|\\.)*)\1/g)) keys.set(key.replace(/\\(.)/g, '$1'), name);
+    // t(count === 1 ? 'one' : 'many', …): both texts.
+    for (const [, , one, , many] of text.matchAll(/\bt\([^'"()?]*\?\s*(['"])([^'"]*)\1\s*:\s*(['"])([^'"]*)\3/g)) {
+      keys.set(one, name); keys.set(many, name);
+    }
   }
   assert.ok(keys.size > 50, 'the interface is marked');
   const missing = [...keys].filter(([key]) => !(key in en)).map(([key, name]) => `${name}: ${key}`);
@@ -74,4 +78,10 @@ test('every text of the interface marked for translation is translated', () => {
   const placeholders = text => [...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort().join();
   const mismatched = Object.entries(en).filter(([key, value]) => placeholders(key) !== placeholders(value));
   assert.deepEqual(mismatched, []);
+});
+
+test('no Spanish text is translated twice', () => {
+  const source = readFileSync(new URL('../../../frontend/src/locales/en.js', import.meta.url), 'utf8');
+  const keys = [...source.matchAll(/^ {2}(['"])((?:(?!\1).)+)\1:/gm)].map(match => match[2]);
+  assert.equal(keys.length, Object.keys(en).length);
 });

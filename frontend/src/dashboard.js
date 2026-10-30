@@ -1,8 +1,9 @@
 // Director's dashboard (2026-10-26): «Dónde trabajar» shows which sections need work, counted from the
 // priorities. Plain functions so the Node tests can import them.
+import { t } from './i18n.js';
 
 export const PLAN_FAMILIES = ['woodwinds', 'brass', 'percussion', 'strings'];
-const PLAN_LABELS = { woodwinds: 'viento madera', brass: 'viento metal', percussion: 'percusión', strings: 'cuerda' };
+const planLabels = () => ({ woodwinds: t('viento madera'), brass: t('viento metal'), percussion: t('percusión'), strings: t('cuerda') });
 
 // Section names of the rehearsal groups and of the analysis families, to the family they sit with in the band.
 const SECTION_FAMILIES = {
@@ -26,11 +27,13 @@ export function planCounts(rows) {
 // One sentence on top of the bars, so the director does not have to read the chart (2026-10-26).
 export function workHeadline(counts) {
   const top = Math.max(...PLAN_FAMILIES.map(family => counts[family] || 0));
-  if (!top) return 'Sin prioridades por ahora.';
-  const leaders = PLAN_FAMILIES.filter(family => counts[family] === top).map(family => PLAN_LABELS[family]);
-  const names = leaders.length === 1 ? leaders[0] : leaders.slice(0, -1).join(', ') + ' y ' + leaders[leaders.length - 1];
-  const passages = top + (top === 1 ? ' pasaje' : ' pasajes');
-  return 'Más trabajo en ' + names + ': ' + passages + (leaders.length > 1 ? ' cada una' : '') + '.';
+  if (!top) return t('Sin prioridades por ahora.');
+  const labels = planLabels();
+  const leaders = PLAN_FAMILIES.filter(family => counts[family] === top).map(family => labels[family]);
+  const names = leaders.length === 1 ? leaders[0] : t('{list} y {last}', { list: leaders.slice(0, -1).join(', '), last: leaders[leaders.length - 1] });
+  const passages = t(top === 1 ? '{count} pasaje' : '{count} pasajes', { count: top });
+  return leaders.length > 1 ? t('Más trabajo en {names}: {passages} cada una.', { names, passages })
+    : t('Más trabajo en {names}: {passages}.', { names, passages });
 }
 
 // «Cobertura hasta el concierto» (requested 2026-10-26), over the series of the next concert: rehearsals

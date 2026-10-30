@@ -130,6 +130,10 @@ try {
   await english.locator('[data-view-target=summary]').getByText('Overview').waitFor();
   assert.equal(await english.locator('html').getAttribute('lang'), 'en');
   await audit(english, 'Settings (English)');
+  await english.locator('[data-view-target=summary]').click();
+  await english.locator('#summary-priorities-title').getByText('Priorities by section').waitFor();
+  await english.waitForLoadState('networkidle');
+  await audit(english, 'Overview (English)');
   await english.locator('#sign-out').click();
   await english.locator('#login-screen').getByText('Welcome').waitFor();
   await english.reload();
