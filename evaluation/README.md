@@ -54,7 +54,13 @@ Protocolo, fijado antes de ver resultados:
 - Los pasajes con menos valoraciones que `--min-ratings` (1 por defecto) quedan fuera y se cuentan.
   `--level` limita el informe a evaluadores con esa experiencia.
 - El desacuerdo se informa (diferencia media entre dos evaluadores, rango medio y criticidad unánime)
-  en lugar de ocultarlo con la mediana. Los desgloses por obra permiten ver si una sola obra domina.
+  en lugar de ocultarlo con la mediana. La concordancia más allá del azar se mide con el alfa de
+  Krippendorff, que admite cualquier número de evaluadores por pasaje: ordinal para el grado y nominal
+  para la criticidad. Con α ≥ 0.80 la referencia es fiable; entre 0.67 y 0.80, provisional.
+- Cada método se mide también como un evaluador más: su alfa con los músicos junto al de los músicos
+  solos, en los mismos pasajes (dos o más valoraciones y predicción del método).
+- El alfa, el MAE y el Spearman de cada método llevan un intervalo de confianza del 95 % por bootstrap
+  de pasajes (1000 remuestreos, percentiles, semilla 19), de modo que el informe sigue siendo reproducible. Los desgloses por obra permiten ver si una sola obra domina.
 - Una métrica sin denominador, o Spearman con menos de tres pasajes o sin variación, aparece como «—».
 - El informe registra su versión, el sha256 de la exportación y las versiones de escala, detector y
   muestra de las predicciones. Con la misma exportación produce siempre el mismo resultado.
