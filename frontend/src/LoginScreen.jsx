@@ -8,7 +8,7 @@ const titles = () => ({
 });
 const submitLabels = () => ({ login: t('Entrar'), register: t('Crear cuenta'), forgot: t('Enviar el enlace'), reset: t('Guardar y entrar') });
 
-export function LoginScreen({ hidden, onSignedIn }) {
+export function LoginScreen({ hidden, onSignedIn, notice }) {
   // A recovery link opens /#reset=<token>: the token is kept and taken out of the address bar and the history.
   const [token] = useState(() => resetTokenFrom(window.location.hash));
   const [mode, setMode] = useState(token ? 'reset' : 'login');
@@ -62,6 +62,7 @@ export function LoginScreen({ hidden, onSignedIn }) {
       <form className="login-card" onSubmit={submit} noValidate>
         <p className="eyebrow">{titles()[mode][0]}</p>
         <h2>{titles()[mode][1]}</h2>
+        {notice && <p id="login-verified" className="login-note" role="status">{notice}</p>}
         {mode === 'forgot' && <p className="result-supporting">{t('Escribe el email de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.')}</p>}
         {creating && <label className="login-field">{t('Nombre')}
           <input id="login-name" autoComplete="name" maxLength={100} value={form.name} onChange={update('name')} /></label>}

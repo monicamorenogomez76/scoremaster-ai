@@ -48,6 +48,12 @@ try {
     if (new URL(page.url()).hash) throw new Error('the recovery token stays in the address bar');
     await audit(page, `new password (${scheme})`);
     await page.locator('#login-mode').click();
+    // A confirmation link that is no longer valid says so on the access screen (2026-10-30).
+    await page.goto('about:blank');
+    await page.goto(url + '/#verify=not-a-valid-link');
+    await page.locator('#login-verified').waitFor();
+    if (new URL(page.url()).hash) throw new Error('the confirmation token stays in the address bar');
+    await audit(page, `email confirmation (${scheme})`);
     await login(page);
     await page.waitForLoadState('networkidle');
     for (const [view, name] of [['summary', 'Resumen'], ['repertoire', 'Repertorio'], ['band', 'Mi banda'],

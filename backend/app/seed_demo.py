@@ -14,6 +14,8 @@ def seed_demo_user(accounts: AccountRepository, email: str, password: str) -> st
         return "skipped"
     existing = accounts.user_by_email(email.strip().lower())
     if existing is not None:
+        # The demo's email has no mailbox: it is taken as confirmed, so it sees its example campaign (2026-10-30).
+        accounts.mark_email_verified(existing.id)
         # The password follows DEMO_USER_PASSWORD on every start (2026-10-14: on Render the account kept an
         # earlier one and the variable's did not work).
         service = AuthService(accounts)
@@ -25,9 +27,10 @@ def seed_demo_user(accounts: AccountRepository, email: str, password: str) -> st
             raise ValueError("DEMO_USER_PASSWORD debe tener al menos 10 caracteres.") from exc
         return "updated"
     try:
-        AuthService(accounts).register(email, password, "Usuario demo", ip="seed")
+        created = AuthService(accounts).register(email, password, "Usuario demo", ip="seed")
     except InvalidRegistration as exc:
         raise ValueError("DEMO_USER_PASSWORD debe tener al menos 10 caracteres.") from exc
+    accounts.mark_email_verified(created.user.id)
     return "created"
 
 

@@ -20,8 +20,9 @@ la base gratuita de Render caducaba a los 30 días (ver «Base de datos en Neon�
      que ya tiene obras no se toca, con una excepción: si todas sus obras son versiones anteriores de las de
      `demo/` y nadie ha valorado aún su campaña, se vacía y se crea de nuevo con las actuales.
    - `ADMIN_EMAILS`: email de las cuentas administradoras, separados por comas. Solo ellas
-     crean campañas de valoración y ven los emails y resultados de los músicos. Registrar antes la cuenta: el
-     registro no verifica el email. Nunca la cuenta demo.
+     crean campañas de valoración y ven los emails y resultados de los músicos. En producción, la cuenta tiene que
+     haber confirmado su email: al registrarse recibe un enlace, y las cuentas anteriores al 2026-10-30 se dan por
+     confirmadas. Nunca la cuenta demo.
    - `DEMO_USER_PASSWORD`: contraseña del usuario demo. En cada arranque la cuenta demo toma esta contraseña
      (si cambió, se actualiza y se cierran sus sesiones abiertas): para cambiarla basta con editar la variable. Mínimo 10 caracteres. **No** reutilizar
      la de desarrollo; compartirla solo con el tribunal o los evaluadores.

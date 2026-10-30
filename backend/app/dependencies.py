@@ -187,7 +187,18 @@ def is_admin(user: User) -> bool:
     musicians' emails and results; any other account only rates what it is invited to (decided
     2026-10-14). Read on every request, so changing the variable needs no restart of the code."""
     admins = {item.strip().lower() for item in os.environ.get("ADMIN_EMAILS", "").split(",") if item.strip()}
-    return user.email.strip().lower() in admins
+    return user.email.strip().lower() in admins and _email_confirmed(user)
+
+
+def _email_confirmed(user: User) -> bool:
+    """In production the email decides only once confirmed (2026-10-30): registration did not prove it, and anyone
+    could register the administration's email first. Locally and in CI it is not asked."""
+    return user.email_verified or os.environ.get("APP_ENV") != "production"
+
+
+def invitation_email(user: User) -> Optional[str]:
+    """The email an account is invited by to rate campaigns: none until it is confirmed (in production)."""
+    return user.email if _email_confirmed(user) else None
 
 
 def close_analysis_engine():

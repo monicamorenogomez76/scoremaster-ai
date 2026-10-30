@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from backend.application.accounts import DuplicateEmail, PasswordReset, StoredSession, User
+from backend.application.accounts import DuplicateEmail, EmailVerification, PasswordReset, StoredSession, User
 from backend.infrastructure.analysis_repository import Base
 
 
@@ -19,6 +19,16 @@ class StoredUser(Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     google_sub: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    email_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class EmailVerificationRow(Base):
+    __tablename__ = 'email_verifications'
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'),
+                                          nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -54,7 +64,7 @@ class AuditEvent(Base):
 def _user(row: Optional[StoredUser]) -> Optional[User]:
     if row is None:
         return None
-    return User(row.id, row.email, row.display_name, row.password_hash, row.google_sub)
+    return User(row.id, row.email, row.display_name, row.password_hash, row.google_sub, row.email_verified_at is not None)
 
 
 class PostgresAccountRepository:
@@ -65,7 +75,8 @@ class PostgresAccountRepository:
         try:
             with Session(self.engine) as session, session.begin():
                 session.add(StoredUser(id=user.id, email=user.email, display_name=user.display_name,
-                                       password_hash=user.password_hash, google_sub=user.google_sub))
+                                       password_hash=user.password_hash, google_sub=user.google_sub,
+                                       email_verified_at=func.now() if user.email_verified else None))
         except IntegrityError as exc:
             raise DuplicateEmail(user.email) from exc
 
@@ -126,6 +137,27 @@ class PostgresAccountRepository:
     def delete_password_resets(self, user_id: UUID) -> None:
         with Session(self.engine) as session, session.begin():
             session.execute(delete(PasswordResetRow).where(PasswordResetRow.user_id == user_id))
+
+    def mark_email_verified(self, user_id: UUID) -> None:
+        with Session(self.engine) as session, session.begin():
+            session.execute(update(StoredUser).where(StoredUser.id == user_id, StoredUser.email_verified_at.is_(None))
+                            .values(email_verified_at=func.now()))
+
+    def add_email_verification(self, verification: EmailVerification) -> None:
+        """Only the last link of an account works."""
+        with Session(self.engine) as session, session.begin():
+            session.execute(delete(EmailVerificationRow).where(EmailVerificationRow.user_id == verification.user_id))
+            session.add(EmailVerificationRow(token_hash=verification.token_hash, user_id=verification.user_id,
+                                             expires_at=verification.expires_at))
+
+    def email_verification_by_hash(self, token_hash: str) -> Optional[EmailVerification]:
+        with Session(self.engine) as session:
+            row = session.get(EmailVerificationRow, token_hash)
+            return EmailVerification(row.user_id, row.token_hash, row.expires_at) if row else None
+
+    def delete_email_verifications(self, user_id: UUID) -> None:
+        with Session(self.engine) as session, session.begin():
+            session.execute(delete(EmailVerificationRow).where(EmailVerificationRow.user_id == user_id))
 
     def record_event(self, user_id: Optional[UUID], event: str, ip: str) -> None:
         with Session(self.engine) as session, session.begin():

@@ -141,7 +141,8 @@ def test_over_http_the_answer_is_the_same_for_any_email_and_the_link_signs_in(cl
     demo = client.post("/auth/password/forgot", json={"email": "demo@scoremaster.local"})
     assert known.status_code == unknown.status_code == demo.status_code == 202
     assert known.json() == unknown.json() == demo.json()
-    [(to, subject, text)] = client.outbox.messages
+    # Registering also sent its confirmation email (2026-10-30): only the recovery one counts here.
+    [(to, subject, text)] = [message for message in client.outbox.messages if "#reset=" in message[2]]
     assert to == "directora@banda.org" and "contraseña" in subject.lower()
     link = _link(text)
     assert link.startswith("https://scoremaster.example/#reset="), "the token goes in the fragment, never to a server log"
@@ -187,6 +188,6 @@ def test_asked_for_in_english_the_answer_and_the_email_are_in_english(client):
     client.cookies.clear()
     response = client.post("/auth/password/forgot", json={"email": "conductor@band.org"}, headers={"Accept-Language": "en"})
     assert response.json()["detail"].startswith("If there is an account with that email")
-    [(_, subject, text)] = client.outbox.messages
+    [(_, subject, text)] = [message for message in client.outbox.messages if "#reset=" in message[2]]
     assert subject == "ScoreMaster: choose a new password"
     assert "expires in 30 minutes" in text and "/#reset=" in text

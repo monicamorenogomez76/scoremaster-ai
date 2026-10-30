@@ -6,7 +6,7 @@ from backend.application.accounts import DuplicateEmail
 
 class InMemoryAccounts:
     def __init__(self):
-        self.users, self.sessions, self.events, self.resets = {}, {}, [], {}
+        self.users, self.sessions, self.events, self.resets, self.verifications = {}, {}, [], {}, {}
 
     def add_user(self, user):
         if any(existing.email == user.email for existing in self.users.values()):
@@ -52,6 +52,19 @@ class InMemoryAccounts:
 
     def delete_password_resets(self, user_id):
         self.resets = {key: item for key, item in self.resets.items() if item.user_id != user_id}
+
+    def mark_email_verified(self, user_id):
+        self.users[user_id] = replace(self.users[user_id], email_verified=True)
+
+    def add_email_verification(self, verification):
+        self.delete_email_verifications(verification.user_id)
+        self.verifications[verification.token_hash] = verification
+
+    def email_verification_by_hash(self, token_hash):
+        return self.verifications.get(token_hash)
+
+    def delete_email_verifications(self, user_id):
+        self.verifications = {key: item for key, item in self.verifications.items() if item.user_id != user_id}
 
     def record_event(self, user_id, event, ip):
         self.events.append((user_id, event, ip))

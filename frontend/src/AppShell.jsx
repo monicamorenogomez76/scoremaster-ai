@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityStatus } from './ActivityStatus.jsx';
+import { EmailNotice } from './EmailNotice.jsx';
 import { BandView } from './BandView.jsx';
 import { ConcertsView } from './ConcertsView.jsx';
 import { EvaluationView } from './EvaluationView.jsx';
@@ -18,7 +19,7 @@ const views = () => [
   ['evaluation', t('Valoraciones'), 'M9 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-3M9 5a3 3 0 0 1 6 0v1H9zM9 13l2 2 4-4'],
 ];
 
-export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, analysis, repertoireMode, onRepertoireModeChange, workTab, onWorkTabChange, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onUpdateBand, onConfirmInstruments, onBandActivated, onOpenWork, onOpenPassage, scoreViewer, rehearsalEditing, onEditRehearsal, onCloseRehearsal, onOpenBlock, onOpenEvaluationPassage,
+export function AppShell({ hidden, user, notice, view, onNavigate, onSignOut, upload, analysis, repertoireMode, onRepertoireModeChange, workTab, onWorkTabChange, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onUpdateBand, onConfirmInstruments, onBandActivated, onOpenWork, onOpenPassage, scoreViewer, rehearsalEditing, onEditRehearsal, onCloseRehearsal, onOpenBlock, onOpenEvaluationPassage,
   rehearsalReviewing, onReviewRehearsal, onCloseReview, onUserChanged }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = analysis?.data;
@@ -50,6 +51,7 @@ export function AppShell({ hidden, user, view, onNavigate, onSignOut, upload, an
       <ActivityStatus id="app-activity" className="topbar-activity" label={busy ? upload.state.message : ''} />
     </header>
     <main className="workspace">
+        <EmailNotice user={user} notice={notice} />
         <SummaryView active={view} user={user} hidden={hidden} onNavigate={go} onOpenWork={onOpenWork} onOpenBlock={onOpenBlock} busy={busy}
           onPlanRehearsal={() => onEditRehearsal({})} onEditRehearsal={onEditRehearsal}
           onReviewRehearsal={onReviewRehearsal} />

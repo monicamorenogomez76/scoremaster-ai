@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  apiFetch, currentUser, onUnauthorized, requestPasswordReset, resetPassword, resetTokenFrom, signIn, signOut,
+  apiFetch, currentUser, onUnauthorized, requestPasswordReset, resendVerification, resetPassword, resetTokenFrom, signIn, signOut,
+  verifyEmail, verifyTokenFrom,
 } from '../../../frontend/src/api.js';
 
 function fakeServer(routes) {
@@ -92,4 +93,24 @@ test('every request tells the server the language of the interface', async () =>
   setLanguage('es');
   await apiFetch('/works');
   assert.deepEqual(calls.map(call => call.headers.get('Accept-Language')), ['en', 'en', 'en', 'es']);
+});
+
+test('a confirmation link carries its token in the fragment, and asking for another needs the session', async () => {
+  assert.equal(verifyTokenFrom('#verify=abc_DEF-123'), 'abc_DEF-123');
+  assert.equal(verifyTokenFrom('#reset=abc'), '');
+  const calls = fakeServer({
+    '/auth/email/verify': [200, { email_verified: true }],
+    '/auth/login': [200, { user: { email: 'a@b.org' }, csrf_token: 'token-5' }],
+    '/auth/email/resend': [202, { detail: 'Si el email aún no está confirmado, te hemos enviado otro enlace.' }],
+  });
+  assert.equal(await verifyEmail('abc'), true);
+  assert.deepEqual(JSON.parse(calls[0].body), { token: 'abc' });
+  await signIn('a@b.org', 'secreta-larga');
+  assert.equal(await resendVerification(), 'Si el email aún no está confirmado, te hemos enviado otro enlace.');
+  assert.equal(calls[2].headers.get('X-CSRF-Token'), 'token-5');
+});
+
+test('an expired confirmation link reports the server message', async () => {
+  fakeServer({ '/auth/email/verify': [400, { detail: 'El enlace no es válido o ha caducado. Pide otro.' }] });
+  await assert.rejects(verifyEmail('abc'), { message: 'El enlace no es válido o ha caducado. Pide otro.' });
 });
