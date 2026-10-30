@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 // Requests to the API with the session cookie. State-changing requests carry the session's CSRF
 // token; a 401 tells the app that the session ended.
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -39,10 +41,10 @@ async function postJson(url, body, fallback) {
   return data.user;
 }
 
-export const signIn = (email, password) => postJson('/auth/login', { email, password }, 'No se pudo iniciar sesión.');
+export const signIn = (email, password) => postJson('/auth/login', { email, password }, t('No se pudo iniciar sesión.'));
 
 export const register = (email, password, displayName) =>
-  postJson('/auth/register', { email, password, display_name: displayName }, 'No se pudo crear la cuenta.');
+  postJson('/auth/register', { email, password, display_name: displayName }, t('No se pudo crear la cuenta.'));
 
 // Password recovery: the link in the email is /#reset=<token>; the fragment never reaches a server.
 export const resetTokenFrom = hash => (/^#reset=([\w-]+)$/.exec(hash || '') || [])[1] || '';
@@ -50,12 +52,12 @@ export const resetTokenFrom = hash => (/^#reset=([\w-]+)$/.exec(hash || '') || [
 export async function requestPasswordReset(email) {
   const response = await fetch('/auth/password/forgot', { method: 'POST', credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-  if (!response.ok) throw new Error(await detail(response, 'No se pudo pedir el enlace.'));
+  if (!response.ok) throw new Error(await detail(response, t('No se pudo pedir el enlace.')));
   return (await response.json()).detail;
 }
 
 export const resetPassword = (token, password) =>
-  postJson('/auth/password/reset', { token, password }, 'No se pudo cambiar la contraseña.');
+  postJson('/auth/password/reset', { token, password }, t('No se pudo cambiar la contraseña.'));
 
 export async function currentUser() {
   const response = await fetch('/auth/me', { credentials: 'same-origin' });

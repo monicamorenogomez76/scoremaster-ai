@@ -113,7 +113,7 @@ Entrega prevista el 7 de noviembre; desde el 2026-10-28 no hay plazo fijo y se e
 | 4 | Demo lista para el tribunal | Recomendable | Integrado: PR #93 y #95; obras reescritas con reglas de armonía (PR #97, #104) y pasodoble para subir en directo (PR #106) |
 | 5 | Grados de editoriales por obra | Recomendable | Integrado: PR #105 |
 | 6 | Pregunta libre a la IA | Opcional | Pendiente, solo si queda tiempo |
-| 7 | Interfaz en inglés | Opcional | Pendiente, solo si queda tiempo |
+| 7 | Interfaz en inglés: selector en Configuración (o el idioma del navegador), guardado en el dispositivo; el texto en español es la clave de su traducción (2026-10-30) | Opcional | En curso: PR #150 (base, acceso, menú y Configuración); siguen las vistas y los textos del servidor |
 | 8 | Documentación de entrega | Imprescindible | Integrado: PR #107 (README, guía para el tribunal, seguridad, estados y licencia MIT) |
 
 Mejoras integradas durante el cierre: lectura del título de `<movement-title>` (PR #92), base de estilos única (PR #98), tipografía Inter (PR #99; sustituida por Bricolage Grotesque y Outfit en la PR #118), modo oscuro (PR #100), sombras, transiciones y Resumen en cuadrícula (PR #101), equilibrio de volumen entre instrumentos (PR #102) y pentagramas del pasaje en partes de varios pentagramas (PR #103).

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { currentUser, onUnauthorized, signOut } from './api.js';
+import { onLanguageChange } from './i18n.js';
 import { AppShell } from './AppShell.jsx';
 import { evaluationWorkFile } from './evaluations.js';
 import { saveBand } from './library.js';
@@ -29,6 +30,9 @@ export function App({ session }) {
   const [confirmations, setConfirmations] = useState({});
   const [minutes, setMinutes] = useState('60');
   const fullScore = useRef(null), passage = useRef(null);
+  // A new language renders every view again in it.
+  const [, setLanguage] = useState('');
+  useEffect(() => onLanguageChange(setLanguage), []);
 
   // Score file, notation and audio shared by the upload workflow and both viewers.
   const workspace = useMemo(() => ({

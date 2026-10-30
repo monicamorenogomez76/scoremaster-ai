@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { authConfig, register, requestPasswordReset, resetPassword, resetTokenFrom, signIn } from './api.js';
+import { t } from './i18n.js';
 
-const TITLES = {
-  login: ['Acceso', 'Bienvenida'], register: ['Nueva cuenta', 'Crea tu cuenta'],
-  forgot: ['Recuperar el acceso', '¿Has olvidado la contraseña?'], reset: ['Recuperar el acceso', 'Elige una contraseña nueva'],
-};
-const SUBMIT = { login: 'Entrar', register: 'Crear cuenta', forgot: 'Enviar el enlace', reset: 'Guardar y entrar' };
+const titles = () => ({
+  login: [t('Acceso'), t('Bienvenida')], register: [t('Nueva cuenta'), t('Crea tu cuenta')],
+  forgot: [t('Recuperar el acceso'), t('¿Has olvidado la contraseña?')], reset: [t('Recuperar el acceso'), t('Elige una contraseña nueva')],
+});
+const submitLabels = () => ({ login: t('Entrar'), register: t('Crear cuenta'), forgot: t('Enviar el enlace'), reset: t('Guardar y entrar') });
 
 export function LoginScreen({ hidden, onSignedIn }) {
   // A recovery link opens /#reset=<token>: the token is kept and taken out of the address bar and the history.
@@ -51,36 +52,36 @@ export function LoginScreen({ hidden, onSignedIn }) {
         <path d="M168 220 A52 52 0 0 1 220 168" className="login-arc login-arc--strings" />
       </svg>
       <div className="login-brand-copy">
-        <p className="eyebrow">Análisis de repertorio</p>
-        <h1>Un espacio de trabajo para tu banda.</h1>
-        <p>Evalúa partituras, encuentra los pasajes que requieren atención y organiza el ensayo desde una sola aplicación.</p>
+        <p className="eyebrow">{t('Análisis de repertorio')}</p>
+        <h1>{t('Un espacio de trabajo para tu banda.')}</h1>
+        <p>{t('Evalúa partituras, encuentra los pasajes que requieren atención y organiza el ensayo desde una sola aplicación.')}</p>
       </div>
       <div className="login-brand-meta"><span>ScoreLint</span><span>BandFit</span><span>RehearsalAI</span></div>
     </div>
     <div className="login-panel">
       <form className="login-card" onSubmit={submit} noValidate>
-        <p className="eyebrow">{TITLES[mode][0]}</p>
-        <h2>{TITLES[mode][1]}</h2>
-        {mode === 'forgot' && <p className="result-supporting">Escribe el email de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.</p>}
-        {creating && <label className="login-field">Nombre
+        <p className="eyebrow">{titles()[mode][0]}</p>
+        <h2>{titles()[mode][1]}</h2>
+        {mode === 'forgot' && <p className="result-supporting">{t('Escribe el email de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.')}</p>}
+        {creating && <label className="login-field">{t('Nombre')}
           <input id="login-name" autoComplete="name" maxLength={100} value={form.name} onChange={update('name')} /></label>}
         {mode !== 'reset' && <label className="login-field">Email
           <input id="login-email" type="email" autoComplete="email" required maxLength={254} value={form.email} onChange={update('email')} /></label>}
-        {mode !== 'forgot' && <label className="login-field">{mode === 'reset' ? 'Contraseña nueva' : 'Contraseña'}
+        {mode !== 'forgot' && <label className="login-field">{mode === 'reset' ? t('Contraseña nueva') : t('Contraseña')}
           <input id="login-password" type="password" required minLength={newPassword ? 10 : undefined} maxLength={256}
             autoComplete={newPassword ? 'new-password' : 'current-password'} value={form.password} onChange={update('password')} /></label>}
-        {newPassword && <p className="result-supporting">Al menos 10 caracteres.</p>}
+        {newPassword && <p className="result-supporting">{t('Al menos 10 caracteres.')}</p>}
         {state.error && <p id="login-error" className="login-error" role="alert">{state.error}</p>}
         <div role="status">{state.notice && <p id="login-notice" className="login-note">{state.notice}</p>}</div>
         <button id="login-submit" className="login-demo-button" type="submit" disabled={state.busy}>
-          {state.busy ? 'Un momento…' : SUBMIT[mode]}</button>
-        {mode === 'login' && config.google_enabled && <a id="login-google" className="login-google" href="/auth/google/start">Entrar con Google</a>}
+          {state.busy ? t('Un momento…') : submitLabels()[mode]}</button>
+        {mode === 'login' && config.google_enabled && <a id="login-google" className="login-google" href="/auth/google/start">{t('Entrar con Google')}</a>}
         {mode === 'login' && config.password_reset_enabled && <button id="login-forgot" className="login-switch" type="button"
-          onClick={() => switchTo('forgot')}>¿Has olvidado la contraseña?</button>}
+          onClick={() => switchTo('forgot')}>{t('¿Has olvidado la contraseña?')}</button>}
         <button id="login-mode" className="login-switch" type="button"
           onClick={() => switchTo(mode === 'login' ? 'register' : 'login')}>
-          {mode === 'login' ? 'Crear una cuenta' : creating ? 'Ya tengo cuenta' : 'Volver a entrar'}</button>
-        {mode === 'login' && config.demo_email && <div className="login-note">Usuario de prueba: <strong>{config.demo_email}</strong>. La contraseña está en el README.</div>}
+          {mode === 'login' ? t('Crear una cuenta') : creating ? t('Ya tengo cuenta') : t('Volver a entrar')}</button>
+        {mode === 'login' && config.demo_email && <div className="login-note">{t('Usuario de prueba:')} <strong>{config.demo_email}</strong>. {t('La contraseña está en el README.')}</div>}
       </form>
     </div>
   </section>;

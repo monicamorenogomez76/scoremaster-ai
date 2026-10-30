@@ -121,6 +121,21 @@ try {
   await phone.locator('#mobile-menu-button').click();
   await audit(phone, 'phone with the menu open');
   await phone.close();
+  // The interface in English (2026-10-30): the page declares its language, which stays on this device.
+  const english = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', bypassCSP: true });
+  await english.goto(url);
+  await login(english);
+  await english.locator('[data-view-target=settings]').click();
+  await english.getByLabel('English').check();
+  await english.locator('[data-view-target=summary]').getByText('Overview').waitFor();
+  assert.equal(await english.locator('html').getAttribute('lang'), 'en');
+  await audit(english, 'Settings (English)');
+  await english.locator('#sign-out').click();
+  await english.locator('#login-screen').getByText('Welcome').waitFor();
+  await english.reload();
+  await english.locator('#login-screen').getByText('Welcome').waitFor();
+  await audit(english, 'access screen (English)');
+  await english.close();
 } finally {
   await browser.close();
 }
