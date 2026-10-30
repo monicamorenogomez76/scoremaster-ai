@@ -1,6 +1,7 @@
 // PDF scores (decided 2026-10-27): the server keeps the PDFs and starts the reader in GitHub Actions; the
 // browser follows the reading until the work is analysed. Plain functions, so the Node tests can import them.
 import { apiFetch, apiJson } from './api.js';
+import { t } from './i18n.js';
 
 const MAX_FILES = 40;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -14,12 +15,12 @@ export async function pdfAvailable() {
 // An error in Spanish, or '' when the files can be sent.
 export function checkPdfFiles(files) {
   const list = Array.from(files || []);
-  if (!list.length) return 'Elige al menos un PDF.';
-  if (list.length > MAX_FILES) return `Sube como mucho ${MAX_FILES} PDF.`;
+  if (!list.length) return t('Elige al menos un PDF.');
+  if (list.length > MAX_FILES) return t('Sube como mucho {count} PDF.', { count: MAX_FILES });
   const notPdf = list.find(file => !/\.pdf$/i.test(file.name));
-  if (notPdf) return 'Solo se aceptan archivos PDF: ' + notPdf.name + '.';
+  if (notPdf) return t('Solo se aceptan archivos PDF: {name}.', { name: notPdf.name });
   const large = list.find(file => file.size > MAX_FILE_BYTES);
-  if (large) return 'Cada PDF puede tener hasta 20 MB: ' + large.name + '.';
+  if (large) return t('Cada PDF puede tener hasta 20 MB: {name}.', { name: large.name });
   return '';
 }
 
@@ -33,12 +34,12 @@ export async function startPdfImport(files, kind, title, minutes) {
   const response = await apiFetch('/pdf-imports', { method: 'POST', body });
   let data = {};
   try { data = await response.json(); } catch { /* the message below */ }
-  if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'No se pudo enviar el PDF.');
+  if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : t('No se pudo enviar el PDF.'));
   return data.id;
 }
 
 export const pdfImportStatus = id => apiJson('/pdf-imports/' + encodeURIComponent(id), {},
-  'No se pudo consultar la lectura del PDF.');
+  t('No se pudo consultar la lectura del PDF.'));
 
 // Seconds left, from the polls' samples ({at: ms, done: pages}) since the first page read (the first one also loads
 // copista); null until there are two of them.
@@ -50,19 +51,20 @@ export function remainingSeconds(samples, total) {
   return rate > 0 ? Math.round((total - last.done) / rate) : null;
 }
 
-const leftText = seconds => (seconds == null ? '' : seconds < 60 ? ' · falta menos de un minuto'
-  : seconds <= 90 ? ' · queda un minuto' : ` · quedan unos ${Math.ceil(seconds / 60)} minutos`);
+const leftText = seconds => (seconds == null ? '' : ' · ' + (seconds < 60 ? t('falta menos de un minuto')
+  : seconds <= 90 ? t('queda un minuto') : t('quedan unos {minutes} minutos', { minutes: Math.ceil(seconds / 60) })));
 
 // Each step of the reading in words (2026-10-28: the wait had no news), with the time left while reading.
 export function pdfStatusText(status, remaining = null) {
   switch (status?.status) {
-    case 'queued': return 'En cola en GitHub: el lector arranca en un minuto o dos…';
-    case 'preparing': return 'Preparando el lector (copista)…';
+    case 'queued': return t('En cola en GitHub: el lector arranca en un minuto o dos…');
+    case 'preparing': return t('Preparando el lector (copista)…');
     case 'reading': return status.pages_total
-      ? `Leyendo la página ${status.pages_done} de ${status.pages_total}${leftText(remaining)}…` : 'Preparando la lectura…';
-    case 'analysing': return 'Analizando la obra leída…';
-    case 'done': return 'Obra leída y analizada.';
-    case 'failed': return status.error || 'No se pudo leer el PDF.';
+      ? t('Leyendo la página {done} de {total}{left}…', { done: status.pages_done, total: status.pages_total, left: leftText(remaining) })
+      : t('Preparando la lectura…');
+    case 'analysing': return t('Analizando la obra leída…');
+    case 'done': return t('Obra leída y analizada.');
+    case 'failed': return status.error || t('No se pudo leer el PDF.');
     default: return '';
   }
 }

@@ -1,26 +1,27 @@
 import React, { useRef } from 'react';
 import { instrumentChoices } from './instrument-session.js';
 import { displayInstrumentName } from './labels.js';
+import { t } from './i18n.js';
 
 export function UploadWorkspace({ upload }) {
   const input = useRef(null);
   const { state, parts, assignments } = upload;
   return <>
     <form id="upload-form" onSubmit={event => { event.preventDefault(); upload.submit(); }} aria-busy={state.busy}>
-      <label className="file-field" htmlFor="file">Archivo de partitura
+      <label className="file-field" htmlFor="file">{t('Archivo de partitura')}
         <input id="file" ref={input} type="file" accept=".musicxml,.mxl,.xml" required
           onChange={event => upload.selectFile(event.target.files[0] || null)} />
       </label>
-      <button type="submit" disabled={state.busy}>{state.busy ? 'Cargando…' : 'Subir y analizar'}</button>
+      <button type="submit" disabled={state.busy}>{state.busy ? t('Cargando…') : t('Subir y analizar')}</button>
       <button id="new-score" type="button" className="score-tool" onClick={() => {
         input.current.value = ''; upload.reset(); input.current.focus();
-      }}>Nueva partitura</button>
+      }}>{t('Nueva partitura')}</button>
       <div id="instrument-assignment" className="instrument-assignment" hidden={!parts.length}>
-        {parts.length > 0 && <p>El archivo no identifica estos instrumentos. Asígnalos para analizar y escuchar sus sonidos correctos.</p>}
-        {parts.map(part => <label key={part.id}>Parte {part.number}{' '}
+        {parts.length > 0 && <p>{t('El archivo no identifica estos instrumentos. Asígnalos para analizar y escuchar sus sonidos correctos.')}</p>}
+        {parts.map(part => <label key={part.id}>{t('Parte {number}', { number: part.number })}{' '}
           <select data-part-id={part.id} value={assignments[part.id] || ''} disabled={state.busy}
             onChange={event => upload.setAssignments(previous => ({ ...previous, [part.id]: event.target.value }))}>
-            <option value="">Sin identificar</option>
+            <option value="">{t('Sin identificar')}</option>
             {instrumentChoices.map(([name]) => <option key={name} value={name}>{displayInstrumentName(name)}</option>)}
           </select>
         </label>)}
