@@ -21,7 +21,7 @@ from music21 import pitch as m21pitch
 from backend.analyzers.instrument_difficulty import classify_instrument_family, instrument_label_es
 from backend.analyzers.tempo import estimate_duration
 from backend.domain import grade_rubric as R
-from backend.domain.instrument_catalog import catalog_entries
+from backend.domain.instrument_catalog import english_label
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 from backend.domain.timing import is_attack, sounding_pitches
@@ -340,10 +340,7 @@ def _listed_en(items: list[str]) -> str:
 
 def _instrument_en(instrument: str, rubric: dict) -> str:
     """The catalog's English name, with the part's number; the part's own name when the catalog does not know it."""
-    label = rubric["by_instrument"].get(instrument, {}).get("label_es") or instrument_label_es(instrument)
-    match = re.match(r"^(.*?)(\s+\d+)?$", label)
-    english = {entry.label_es: entry.label_en for entry in catalog_entries()}.get(match.group(1))
-    return english + (match.group(2) or "") if english else instrument
+    return english_label(rubric["by_instrument"].get(instrument, {}).get("label_es") or instrument_label_es(instrument), instrument)
 
 
 def reason_en(item: dict, rubric: dict) -> str:

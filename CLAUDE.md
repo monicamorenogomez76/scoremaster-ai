@@ -92,7 +92,8 @@ Cross-cutting rules that span many files:
   every cited id (`P1…` passages, `B1…` blocks, instrument names) is checked against the evidence; on any
   failure the deterministic demo answers and the UI says why. The demo is never presented as AI. Prompts,
   evidence and passage features are versioned (bump the version when the meaning changes) and valid answers
-  are cached (`ai_explanations`). Gemini is used only with `GEMINI_API_KEY` (`GEMINI_MODEL`,
+  are cached (`ai_explanations`). In English the evidence carries `"language": "en"` and English labels, the demo writes
+  in English and Gemini gets `in_language(prompt)` (version `…-en`); the Spanish evidence and prompts never change. Gemini is used only with `GEMINI_API_KEY` (`GEMINI_MODEL`,
   `GEMINI_REVIEW_MODEL`, `GEMINI_REQUESTS_PER_MINUTE`); tests use fakes and never call Google.
 - **Evaluation** (`evaluation/`, `docs/EVALUATION_AND_FEEDBACK.md`): campaign passages store ScoreLint's
   prediction (method A); the LLM's independent review (method B) must never receive ScoreLint's grade, index,

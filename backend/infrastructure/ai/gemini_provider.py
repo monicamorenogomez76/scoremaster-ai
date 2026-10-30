@@ -10,7 +10,7 @@ from threading import Lock
 from typing import Optional
 
 from backend.application.ai import ProviderFailure, ProviderInfo
-from backend.infrastructure.ai.prompts import DIFFICULTY_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT, human_message
+from backend.infrastructure.ai.prompts import DIFFICULTY_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT, human_message, in_language
 
 # 2026-10-13: gemini-2.5-flash answered NotFound for a new key (Google keeps it only for accounts that
 # used it before); 3.8 Flash is free on the standard tier.
@@ -59,6 +59,7 @@ class GeminiExplanationProvider:
             return self._chats[schema]
 
     def _ask(self, schema, prompt, evidence: dict) -> dict:
+        prompt = in_language(prompt, evidence.get("language", "es"))
         messages = [("system", prompt.system), ("human", human_message(evidence))]
         try:
             answer = self._chat(schema).invoke(messages)

@@ -5,7 +5,7 @@ from typing import Optional
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.application.accounts import User
@@ -14,6 +14,7 @@ from backend.domain.difficulty_scale import external_grade
 from backend.app.dependencies import (authenticated_user, get_explanation_cache, get_explanation_provider, get_library_repository,
                                       get_playback_store)
 from backend.analyzers.rubric_grade import english_reasons
+from backend.app.i18n import language
 from backend.application.difficulty_explanation import explain_difficulty
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.parsers.playback import prepare_playback, preparation_enabled
@@ -141,12 +142,13 @@ def get_work(work_id: str, user: User = Depends(authenticated_user),
 @router.get("/works/{work_id}/explanation")
 def work_explanation(work_id: str, user: User = Depends(authenticated_user),
                      library: LibraryRepository = Depends(get_library_repository),
-                     provider=Depends(get_explanation_provider), cache=Depends(get_explanation_cache)):
-    """Why the work has its difficulty, written only from its latest analysis (step 20)."""
+                     provider=Depends(get_explanation_provider), cache=Depends(get_explanation_cache),
+                     accept_language: Optional[str] = Header(None)):
+    """Why the work has its difficulty, written only from its latest analysis (step 20), in the language of the interface."""
     record = library.latest_analysis(user.id, _work_id(work_id))
     if record is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
-    return explain_difficulty(record.result, provider, DemoExplanationProvider(), cache)
+    return explain_difficulty(record.result, provider, DemoExplanationProvider(), cache, language(accept_language))
 
 
 @router.get("/works/{work_id}/file")

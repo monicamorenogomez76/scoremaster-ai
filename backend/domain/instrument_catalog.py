@@ -256,3 +256,11 @@ def match_instrument_name(name: str) -> CatalogMatch:
     if identity is None:
         return CatalogMatch(name, None, (), None, UNKNOWN)
     return CatalogMatch(name, identity, part_numbers, alias, ALIAS)
+
+
+def english_label(label: str, fallback: str = "") -> str:
+    """The catalog's English name for its Spanish one, keeping a part number (Clarinete en Si bemol 1 → B♭ Clarinet 1);
+    the fallback, or the name itself, when the catalog does not know it (2026-10-30)."""
+    match = re.match(r"^(.*?)(\s+\d+)?$", label or "")
+    english = {entry.label_es: entry.label_en for entry in catalog_entries()}.get(match.group(1))
+    return english + (match.group(2) or "") if english else (fallback or label)

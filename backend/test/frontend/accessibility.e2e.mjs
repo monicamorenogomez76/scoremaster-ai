@@ -142,6 +142,10 @@ try {
   await english.locator('#work-tab-difficulty').click();
   await english.locator('#work-panel-difficulty').getByText('Grade of the work').waitFor();
   await audit(english, 'Work › Difficulty (English)');
+  // The explanation in English too: CI has no AI key, so the demo writes it (2026-10-30).
+  await english.locator('#work-explanation').getByRole('button', { name: 'Explain the difficulty' }).click();
+  await english.locator('#work-explanation .explanation-summary').getByText(/ is grade \d/).waitFor();
+  await audit(english, 'Work › Difficulty › explanation (English)');
   await english.locator('#work-tab-score').click();
   await english.locator('#embedded-score').getByRole('heading', { name: 'Full score' }).waitFor();
   await english.locator('#full-score-status').getByText('All voices').waitFor({ timeout: 60000 });
