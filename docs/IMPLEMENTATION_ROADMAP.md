@@ -141,6 +141,7 @@ Opcional después de la entrega: búsqueda automática del grado publicado de un
 | Recuperación de la contraseña por correo: enlace de un solo uso que caduca en 30 minutos, enviado con Brevo (plan gratuito, remitente verificado sin dominio propio); en local, el enlace sale en la consola (2026-10-29) | Integrado: PR #149 |
 | Verificación del email al registrarse: en producción, la administración y las invitaciones exigen el email confirmado (2026-10-30) | Integrado: PR #162 |
 | Concordancia en el informe de la campaña: alfa de Krippendorff entre los músicos (ordinal para el grado, nominal para la criticidad), cada método como un evaluador más e intervalos bootstrap al 95 % con semilla fija (2026-10-30) | Integrado: PR #163 |
+| Hoja de cada ensayo guardado para imprimir o guardar en PDF desde el navegador: fecha, horario, lugar, obras, objetivos, agenda con la hora de cada bloque y la revisión si ya se hizo; sin dependencias ni carga en el servidor (2026-10-31) | Integrado: PR #164 |
 | Python 3.14 | Después del cierre (2026-10-28) |
 | Alojar la aplicación en Vercel | Aplazado a después de la entrega (ver [DEPLOYMENT.md](DEPLOYMENT.md)) |
 | Modelos de Hugging Face para la dificultad o bancos de sonido | Descartados: los de dificultad son de piano y no explicables; no hay bancos de viento con licencia clara |

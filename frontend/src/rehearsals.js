@@ -168,3 +168,27 @@ export function passageRange(measures) {
   const first = Math.min(...bounds), last = Math.max(...bounds);
   return first === last ? String(first) : first + '-' + last;
 }
+
+// The printable sheet of a rehearsal (requested 2026-10-30): saved as PDF from the browser's print dialog.
+// Without a start time the blocks get no clock time rather than an invented one.
+export function rehearsalSheet(rehearsal, today = todayIso()) {
+  const blocks = rehearsal.blocks || [];
+  const session = rehearsal.time ? rehearsalSchedule([{ minutes: rehearsal.duration_minutes }], rehearsal.time)[0] : null;
+  const times = agendaSchedule(blocks, rehearsal.time);
+  const works = (rehearsal.works || []).map(work => work.title).join(', ') || t('Sin obras');
+  return {
+    title: t('Ensayo') + ' · ' + rehearsalDateText(rehearsal, today),
+    fileName: t('Ensayo') + ' ' + rehearsal.date,
+    facts: [[session && session.start + '–' + session.end, t('{minutes} minutos', { minutes: rehearsal.duration_minutes })].filter(Boolean).join(' · '),
+      rehearsal.place, t('Obras: {works}', { works })].filter(Boolean),
+    objectives: rehearsal.objectives || '',
+    rows: blocks.map((block, index) => ({
+      time: rehearsal.time ? times[index].start + '–' + times[index].end : '', title: block.title, minutes: Number(block.minutes) || 0,
+      work: blockWorkText(block), sections: (block.sections || []).map(name => t(name)).join(', ') || t('Toda la banda'),
+      objective: block.objective || '',
+      review: block.review ? [statusLabel(block.review.status), block.review.note].filter(Boolean).join(' · ') : '',
+    })),
+    unassigned: agendaTime(blocks, rehearsal.duration_minutes).remaining,
+    notes: rehearsal.review_notes || '',
+  };
+}

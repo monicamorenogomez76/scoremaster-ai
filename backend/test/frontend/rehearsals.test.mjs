@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   agendaCalendarLabel, agendaSchedule, blockGroup, canReview, listReviewPriorities, reviewRehearsal, reviewStatusOptions,
   passageRange, summaryPriorityRows, agendaTime, blockTypeOptions, blockWorkText, createRehearsal, deleteRehearsal, duplicateBlock, listRehearsals, moveBlock,
-  nextRehearsal, proposalBlocks, proposeRehearsal, rehearsalDateText, splitRehearsals, updateRehearsal,
+  nextRehearsal, proposalBlocks, proposeRehearsal, rehearsalDateText, rehearsalSheet, splitRehearsals, updateRehearsal,
 } from '../../../frontend/src/rehearsals.js';
 
 function fakeServer(routes) {
@@ -158,4 +158,33 @@ test('the measures of a block become the passage the score viewer opens', () => 
   assert.equal(passageRange('9'), '9');
   assert.equal(passageRange('1-4, 9-16'), '1-16', 'a tutti over several passages opens from the first to the last');
   assert.equal(passageRange(''), null, 'without measures the work itself is opened');
+});
+
+test('the printable sheet of a rehearsal: its facts, every block with its clock time and the review', () => {
+  const rehearsal = {
+    id: 'r1', date: '2026-11-03', time: '19:30', duration_minutes: 90, place: 'Casa de la Música', objectives: 'Preparar el concierto',
+    works: [{ id: 'w1', title: 'Persis' }, { id: 'w2', title: 'Coral' }],
+    blocks: [
+      { title: 'Calentamiento', minutes: 15, objective: 'Afinación', work_id: null, work_title: null, measures: '', sections: ['Toda la banda'], group: 'warmup' },
+      { title: 'Seccional · Clarinetes', minutes: 30, objective: 'Entradas', work_id: 'w1', work_title: 'Persis', measures: '12-28', sections: ['Clarinetes'],
+        group: 'clarinets', review: { status: 'pending', note: 'Siguen justas' } },
+      { title: 'Tutti', minutes: 30, objective: '', work_id: 'w2', work_title: 'Coral', measures: '1-40', sections: [], group: 'tutti', review: { status: 'resolved', note: '' } },
+    ],
+    review_notes: 'Buen ensayo.', reviewed_at: '2026-11-03T22:00:00+00:00',
+  };
+  const sheet = rehearsalSheet(rehearsal, '2026-10-31');
+  assert.equal(sheet.title, 'Ensayo · ' + rehearsalDateText(rehearsal, '2026-10-31'));
+  assert.equal(sheet.fileName, 'Ensayo 2026-11-03', 'the name the browser offers for the PDF');
+  assert.deepEqual(sheet.facts, ['19:30–21:00 · 90 minutos', 'Casa de la Música', 'Obras: Persis, Coral']);
+  assert.equal(sheet.objectives, 'Preparar el concierto');
+  assert.deepEqual(sheet.rows.map(row => [row.time, row.title, row.minutes, row.work, row.sections, row.objective, row.review]), [
+    ['19:30–19:45', 'Calentamiento', 15, 'Toda la banda · sin obra concreta', 'Toda la banda', 'Afinación', ''],
+    ['19:45–20:15', 'Seccional · Clarinetes', 30, 'Persis · cc. 12–28', 'Clarinetes', 'Entradas', 'Pendiente · Siguen justas'],
+    ['20:15–20:45', 'Tutti', 30, 'Coral · cc. 1–40', 'Toda la banda', '', 'Resuelto'],
+  ]);
+  assert.equal(sheet.unassigned, 15, 'minutes of the session without a block');
+  assert.equal(sheet.notes, 'Buen ensayo.');
+  const bare = rehearsalSheet({ id: 'r2', date: '2026-11-05', time: '', duration_minutes: 60, place: '', works: [], blocks: [] }, '2026-10-31');
+  assert.deepEqual(bare.facts, ['60 minutos', 'Obras: Sin obras']);
+  assert.deepEqual([bare.rows, bare.unassigned, bare.notes, bare.objectives], [[], 60, '', '']);
 });

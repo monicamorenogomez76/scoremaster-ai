@@ -133,6 +133,26 @@ try {
   assert.ok(await calendar.locator('.event-rehearsal').count() >= 1, 'the month calendar shows the rehearsals');
   await page.locator('[data-view-target=rehearsal]').click();
   await page.waitForFunction(count => document.querySelectorAll('#rehearsals-upcoming .works-item').length >= count, preview);
+
+  // Today's reviewed rehearsal prints alone, or is saved as PDF from the browser's dialog.
+  await page.evaluate(() => { window.printed = 0; window.print = () => { window.printed += 1; }; });
+  const appTitle = await page.title();
+  await page.locator('#rehearsals-upcoming .works-item').first().getByRole('button', { name: 'Imprimir o PDF' }).click();
+  await page.waitForFunction(() => window.printed === 1);
+  const sheet = page.locator('.rehearsal-sheet');
+  assert.match(await page.title(), /^Ensayo \d{4}-\d{2}-\d{2}$/, 'the document title names the PDF');
+  await page.emulateMedia({ media: 'print' });
+  assert.ok(await sheet.isVisible(), 'the sheet is printed');
+  assert.equal(await page.locator('#root').isVisible(), false, 'the app is not');
+  const printed = await sheet.textContent();
+  assert.match(printed, /Agenda del ensayo/);
+  assert.match(printed, /Pendiente · Entradas de clarinetes/, 'with the review of each block');
+  assert.ok((await page.pdf()).length > 1000);
+  await page.emulateMedia({ media: 'screen' });
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await sheet.waitFor({ state: 'detached' });
+  assert.equal(await page.title(), appTitle);
+  console.log('PASS: a saved rehearsal is printed or saved as PDF with its agenda and review');
   await page.locator('[data-view-target=summary]').click();
   await page.locator('#next-concert').getByText('Concierto de otoño').waitFor();
   assert.match(await page.locator('#next-concert').textContent(), new RegExp('faltan 16 días · ' + (preview - 1) + ' ensayos'));
