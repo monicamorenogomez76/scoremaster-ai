@@ -1,5 +1,4 @@
-"""Content of the demo account, so the examiners and the video never start from an empty app (PR 4 of the
-closing plan, 2026-10-14): the three generated works of demo/, a band, a concert with its series of
+"""Content of the demo account, so a visitor never starts from an empty app (2026-10-14): the three generated works of demo/, a band, a concert with its series of
 rehearsals up to the general rehearsal, and an evaluation campaign.
 
 The demo is not an administrator (its password is in the README; 2026-10-14): it never sees the musicians'

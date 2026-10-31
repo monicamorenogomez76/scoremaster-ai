@@ -1,11 +1,11 @@
-# Guía para el tribunal
+# Recorrido por la demo
 
 Recorrido de unos cinco minutos por ScoreMasterAI y qué mirar en cada paso.
 
 ## Acceso
 
 - **Demo publicada:** https://scoremaster-iz4j.onrender.com
-- **Cuenta:** `demo@scoremaster.local`. La contraseña se entrega aparte y no está en el repositorio.
+- **Cuenta:** `demo@scoremaster.local`. La contraseña de la demo publicada no está en el repositorio.
 - **Primer acceso:** el plan gratuito de Render duerme el servicio sin uso, así que puede tardar alrededor
   de un minuto. Conviene abrirlo un rato antes.
 - **Sin Internet o sin la demo publicada:** `docker compose up --build` levanta lo mismo en
@@ -30,7 +30,7 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
 | 9 | **Repertorio → Añadir obra** | Subir [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](../demo/para-subir/pasodoble-de-las-fiestas.mxl) | El recorrido completo con una obra nueva. En el plan gratuito, leerla puede tardar uno o dos minutos la primera vez |
 | 10 | **Configuración → Tema** | Elegir «Oscuro» | Paleta propia en los dos temas; la partitura conserva el papel blanco |
 
-## Qué se defiende
+## Ideas clave
 
 - **Datos → algoritmos → reglas → IA.** La dificultad la calcula ScoreLint de forma determinista: el mismo
   archivo da siempre el mismo resultado. La IA solo explica, con evidencias acotadas, salida validada y
@@ -40,7 +40,7 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
   ([evaluation/README.md](../evaluation/README.md)).
 - **Seguridad.** Medidas de OWASP aplicadas desde el diseño ([SECURITY.md](SECURITY.md)): cada dato
   pertenece a su usuario y una obra ajena responde 404.
-- **Calidad.** TDD, unas 720 pruebas Python con PostgreSQL real, pruebas de Node, recorridos Playwright y
+- **Calidad.** TDD, más de 1.200 pruebas Python con PostgreSQL real, pruebas de Node, recorridos Playwright y
   auditoría de dependencias en cada pull request.
 
 ## Si algo no va como se espera

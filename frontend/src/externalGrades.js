@@ -1,4 +1,4 @@
-// Grades publishers give a work (PR 5 of the closing plan, 2026-10-14): typed in by the director with
+// Grades publishers give a work (2026-10-14): typed in by the director with
 // their source and compared with ScoreLint's grade. Equivalences in docs/DIFFICULTY_CRITICALITY.md.
 import { apiFetch, apiJson } from './api.js';
 import { dateLocale, t } from './i18n.js';

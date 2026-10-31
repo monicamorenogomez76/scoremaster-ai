@@ -8,9 +8,8 @@ __pycache__/
 frontend/node_modules/
 backend/app/static/frontend/
 
-# Partituras comerciales y documentos privados para pruebas manuales
+# Partituras comerciales para pruebas manuales
 test-scores/local/
-Documentacion-TFM*.pdf
 
 # Exportaciones de campañas con valoraciones reales (paso 19)
 evaluation/exports/

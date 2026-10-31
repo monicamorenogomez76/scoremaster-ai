@@ -52,7 +52,7 @@ y verificado.
 - No dar por conocidos macOS, VS Code, Python, Node.js ni Docker.
 - Alternar tareas guiadas hechas a mano con tareas delegadas al asistente.
 - Reservar oportunidades para comprender el código, escribir pruebas y revisar PRs.
-- Documentar las decisiones y sus motivos para preparar la defensa del TFM.
+- Documentar las decisiones y sus motivos.
 
 ## Cambios en el análisis musical
 
