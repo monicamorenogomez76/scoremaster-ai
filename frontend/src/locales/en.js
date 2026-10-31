@@ -930,4 +930,17 @@ export const en = {
   'Obra y compases': 'Work and measures',
   'Sin bloques en la agenda.': 'No blocks in the agenda.',
   'Sin asignar: {minutes} min': 'Unassigned: {minutes} min',
+  'La IA no pudo proponer los instrumentos ahora. Vuelve a intentarlo más tarde o elígelos tú.':
+    'The AI could not propose the instruments now. Try again later or choose them yourself.',
+  'Propuesto por la IA: revísalo antes de confirmar': 'Proposed by the AI: check it before confirming',
+  'confianza alta': 'high confidence',
+  'confianza media': 'medium confidence',
+  'confianza baja': 'low confidence',
+  'IA, {confidence}: {reason}': 'AI, {confidence}: {reason}',
+  'La IA no ha podido proponer ningún instrumento con seguridad.': 'The AI could not propose any instrument with confidence.',
+  'La IA propone el instrumento de {count} parte. Revísalo antes de confirmar.': 'The AI proposes the instrument of {count} part. Check it before confirming.',
+  'La IA propone el instrumento de {count} partes. Revísalos antes de confirmar.': 'The AI proposes the instrument of {count} parts. Check them before confirming.',
+  'Consultando a la IA…': 'Asking the AI…',
+  'Proponer con IA': 'Propose with AI',
+  'Propuesta de instrumentos': 'Instrument proposal',
 };

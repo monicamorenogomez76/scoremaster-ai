@@ -108,6 +108,7 @@ const unconfirmedStatuses = {
   review: 'Propuesta por los datos del archivo',
   conflict: 'El nombre y los datos del archivo no coinciden',
   shared: 'Propuesto: otras cuentas lo confirmaron con este instrumento',
+  ai: 'Propuesto por la IA: revísalo antes de confirmar',
 };
 export const unconfirmedStatusText = item => t(unconfirmedStatuses[item.status] || unconfirmedStatuses.unknown);
 

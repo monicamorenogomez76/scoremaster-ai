@@ -89,6 +89,10 @@ EN = {
     "La obra del pasaje ya no está en el repertorio.": "The work of the passage is no longer in the repertoire.",
     "Las obras leídas de PDF no entran en la evaluación.": "Works read from PDF are not part of the evaluation.",
     "La valoración con IA necesita configurar GEMINI_API_KEY en el servidor.": "The AI rating needs GEMINI_API_KEY set on the server.",
+    "La propuesta de instrumentos necesita la IA: configura GEMINI_API_KEY en el servidor.":
+        "Proposing instruments needs the AI: set GEMINI_API_KEY on the server.",
+    "La IA no pudo proponer los instrumentos ahora. Vuelve a intentarlo más tarde o elígelos tú.":
+        "The AI could not propose the instruments now. Try again later or choose them yourself.",
     "La valoración independiente necesita un proveedor de IA real (GEMINI_API_KEY).": "The independent rating needs a real AI provider (GEMINI_API_KEY).",
     "Solo una cuenta administradora puede ver el uso de la IA.": "Only an administrator account can see the AI usage.",
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { addInstrumentName, createInstrument, createOwnInstrument, deleteInstrumentName, filterInstruments, instrumentKeys, loadAdminInstruments,
   loadInstrumentSuggestions, loadLearnedNames, newInstrumentBody, OTHER_INSTRUMENT, ownInstrumentBody, ownInstrumentForm,
-  withSuggestions } from '../../../frontend/src/instrumentCatalog.js';
+  aiConfidence, proposeInstruments, withAiProposals, withSuggestions } from '../../../frontend/src/instrumentCatalog.js';
 
 // The instrument catalog in the database (2026-10-28): the administration adds the names an instrument is written
 // with and new common instruments from Configuración.
@@ -89,4 +89,23 @@ test('the administration reads the names the accounts confirmed', async () => {
   fakeServer({ 'GET /admin/instruments/learned': [200, { names: [{ name: 'Fiscornio', canonical_id: 'flugelhorn.bb',
     label_es: 'Fliscorno', accounts: 2 }] }] });
   assert.equal((await loadLearnedNames()).names[0].accounts, 2);
+});
+
+// The AI proposes the instrument of the parts the catalog does not know (2026-10-31): it comes chosen with its reason
+// where nothing was chosen yet, and the part counts only once it is confirmed.
+test('the AI proposals fill the parts nothing was chosen for and say why', async () => {
+  const calls = fakeServer({ 'POST /works/w%201/instrument-proposals': [200, { proposals: {
+    'Fiscorn 1': { instrument: 'flugelhorn.bb', confidence: 0.9, reason: 'Fiscorn es el fliscorno en catalán.' },
+    'Clarinete': { instrument: 'clarinet.eb', confidence: 0.4, reason: 'Quizá el requinto.' } }, rejected: 1 }] });
+  const answer = await proposeInstruments('w 1');
+  assert.equal(calls[0].method, 'POST');
+  const items = [{ part: 'Fiscorn 1', status: 'unknown' }, { part: 'Clarinete', status: 'review', proposal: 'clarinet.bb' },
+    { part: 'Dulzaina', status: 'unknown' }];
+  assert.deepEqual(withAiProposals(items, answer.proposals), [
+    { part: 'Fiscorn 1', status: 'ai', proposal: 'flugelhorn.bb', ai: answer.proposals['Fiscorn 1'] },
+    { part: 'Clarinete', status: 'review', proposal: 'clarinet.bb', ai: answer.proposals.Clarinete },
+    { part: 'Dulzaina', status: 'unknown' }]);
+  assert.deepEqual([aiConfidence(0.9), aiConfidence(0.6), aiConfidence(0.2)], ['alta', 'media', 'baja']);
+  fakeServer({ 'POST /works/w/instrument-proposals': [409, { detail: 'La propuesta de instrumentos necesita la IA.' }] });
+  await assert.rejects(proposeInstruments('w'), { message: 'La propuesta de instrumentos necesita la IA.' });
 });

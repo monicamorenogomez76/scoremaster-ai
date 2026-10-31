@@ -192,6 +192,10 @@ try {
   await confirmation.waitFor();
   assert.match(await confirmation.textContent(), new RegExp(melody + ' 1 · Sin identificar'));
   assert.equal(await page.locator('#band-profile-editor').isHidden(), true, 'nothing counts before confirming');
+  // Without GEMINI_API_KEY (as in CI) the AI proposes nothing and the panel says why.
+  await page.locator('#propose-instruments').click();
+  await confirmation.getByRole('alert').getByText(/necesita la IA/).waitFor();
+  console.log('PASS: without a real AI, «Proponer con IA» says why and nothing changes');
   await page.getByLabel('Instrumento de ' + melody + ' 1').selectOption({ label: 'Clarinete en Si bemol' });
   await page.locator('#confirm-instruments').click();
   await page.getByLabel('Músicos de Clarinete en Si bemol').waitFor();

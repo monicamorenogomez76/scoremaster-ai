@@ -77,10 +77,32 @@ def _transposition(part: ScorePart) -> int:
 
 # --- part criteria -------------------------------------------------------------------------------------------------
 
-def _range(part: ScorePart, row: str) -> dict:
+def _played(part: ScorePart, row: str) -> list[int]:
     shift = _transposition(part) if row in R.CONCERT_PITCH_ROWS else 0
-    played = [_midi(name) + shift for measure in part.measures for event in _attacks(measure)
-              for name in sounding_pitches(event)]
+    return [_midi(name) + shift for measure in part.measures for event in _attacks(measure)
+            for name in sounding_pitches(event)]
+
+
+# How far beyond the grade 5 range an instrument can still be proposed for a part (2026-10-31): grade 6 parts and a
+# note misread from a PDF go a little further.
+REACH_MARGIN = 4
+
+
+def playable_range(canonical_id: str, part: ScorePart, margin: int = REACH_MARGIN) -> bool | None:
+    """Whether the instrument reaches every written note of the part (its grade 5 range, plus a margin); None when the
+    guides have no range for it (percussion, keyboards, strings) and it cannot be judged."""
+    row = R.RANGE_ROW_BY_INSTRUMENT.get(canonical_id)
+    if row is None:
+        return None
+    played = _played(part, row)
+    if not played:
+        return True
+    (low, high), _ = R.RANGES[row][5]
+    return _midi(low) - margin <= min(played) and max(played) <= _midi(high) + margin
+
+
+def _range(part: ScorePart, row: str) -> dict:
+    played = _played(part, row)
     if not played:
         return {"grade": 1, "value": None, "source": "fgbm"}
     low, high = min(played), max(played)

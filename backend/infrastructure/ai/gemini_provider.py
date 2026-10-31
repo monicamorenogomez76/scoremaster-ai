@@ -12,7 +12,8 @@ from typing import Optional
 
 from backend.application import ai_usage
 from backend.application.ai import ProviderFailure, ProviderInfo
-from backend.infrastructure.ai.prompts import DIFFICULTY_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT, human_message, in_language
+from backend.infrastructure.ai.prompts import (DIFFICULTY_PROMPT, INSTRUMENT_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT,
+                                              human_message, in_language)
 
 # 2026-10-13: gemini-2.5-flash answered NotFound for a new key (Google keeps it only for accounts that
 # used it before); 3.8 Flash is free on the standard tier.
@@ -41,7 +42,8 @@ def _langchain_chat(api_key: str, model: str):
 
 
 # What each answer schema is for, in the usage panel.
-PURPOSES = {"DifficultyExplanation": "difficulty", "RehearsalExplanation": "rehearsal", "PassageReview": "passage_review"}
+PURPOSES = {"DifficultyExplanation": "difficulty", "RehearsalExplanation": "rehearsal", "PassageReview": "passage_review",
+            "InstrumentProposals": "instrument_proposal"}
 
 
 def _structured(answer):
@@ -105,6 +107,10 @@ class GeminiExplanationProvider:
     def review_passage(self, features: dict) -> dict:
         from backend.application.llm_review import PassageReview
         return self._ask(PassageReview, PASSAGE_REVIEW_PROMPT, features)
+
+    def propose_instruments(self, evidence: dict) -> dict:
+        from backend.application.instrument_proposals import InstrumentProposals
+        return self._ask(InstrumentProposals, INSTRUMENT_PROMPT, evidence)
 
 
 _shared: Optional[GeminiExplanationProvider] = None

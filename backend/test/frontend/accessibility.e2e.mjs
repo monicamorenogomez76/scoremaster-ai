@@ -124,6 +124,14 @@ try {
   await admin.locator('#instrument-confirmation').getByText('Propuesto: otras cuentas lo confirmaron').waitFor();
   assert.equal(await admin.getByLabel('Instrumento de Melodía 3').inputValue(), 'clarinet.bb');
   await audit(admin, 'Mi banda › nombre propuesto por otras cuentas');
+  // The AI proposes the instrument (2026-10-31): Google is never called, its answer is faked at the browser.
+  await admin.route('**/instrument-proposals', route => route.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify({ proposals: { 'Melodía 3': { instrument: 'flute', confidence: 0.6, reason: 'Tesitura de flauta.' } },
+      rejected: 0 }) }));
+  await admin.locator('#propose-instruments').click();
+  await admin.locator('#instrument-confirmation').getByText('IA, confianza media: Tesitura de flauta.').waitFor();
+  assert.equal(await admin.getByLabel('Instrumento de Melodía 3').inputValue(), 'clarinet.bb', 'what was chosen is kept');
+  await audit(admin, 'Mi banda › propuesta de la IA');
   await admin.close();
   const phone = await browser.newPage({ locale: 'es-ES', viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
   await phone.goto(url);

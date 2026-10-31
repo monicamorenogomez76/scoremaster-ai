@@ -30,7 +30,7 @@ La pantalla de cada obra responde a las tres preguntas del director:
 |---|---|
 | **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`) o de **PDF** (partitura general, particellas o las dos cosas en el mismo PDF, que se separan solas; leídas con copista-2m en GitHub Actions; grado provisional y fuera de la evaluación), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio, búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
 | **Dificultad (ScoreLint)** | **Grado según las tablas de grados** (Federación Galega de Bandas de Música, American Band College y FJH): armadura, compás, tempo, duración, dinámicas y, por instrumento, tesitura, figuras, grupos irregulares, síncopas, articulaciones y adornos, con el criterio que fija el grado. Índice técnico con seis dimensiones (densidad rítmica, tempo, tesitura, registro, intervalos y resistencia), reglas SL002 registro agudo, SL003 alta densidad rítmica, SL004 intervalos amplios y SL005 pasaje prolongado sin descanso, y detector de **pasajes críticos** (puede no haber ninguno). Árbol de familia a instrumento y «Ver pasaje» con la notación y el audio de esa parte |
-| **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos |
+| **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos, con la propuesta de la IA para las partes que el catálogo no reconoce |
 | **Conciertos** | Programa, patrón semanal y propuesta de la serie de ensayos por fases (lectura y pasajes, integración y ensayo general); calendario mensual; en el Resumen, cobertura de la serie: ensayos hechos y, por obra, tiempo ensayado y pasajes resueltos |
 | **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen; hoja de cada ensayo para imprimir o guardar en PDF |
 | **IA explicativa** | «¿Por qué esta dificultad?» y «¿Por qué este plan?» redactadas por **Gemini** a partir de las evidencias del análisis, con citas comprobadas; sin clave responde un **modo demo identificado** como tal |
@@ -133,7 +133,7 @@ dependa de ellas.
 
 | Variable | Para qué | Sin ella |
 |---|---|---|
-| `GEMINI_API_KEY` | Explicaciones y valoración independiente con Gemini ([crear clave](https://aistudio.google.com/apikey)) | Responde el modo demo, siempre identificado como «Modo demo · sin IA» |
+| `GEMINI_API_KEY` | Explicaciones, valoración independiente y propuesta de instrumentos con Gemini ([crear clave](https://aistudio.google.com/apikey)) | Responde el modo demo, siempre identificado como «Modo demo · sin IA» |
 | `GEMINI_MODEL`, `GEMINI_REVIEW_MODEL` | Modelo de las explicaciones (por defecto `gemini-3.8-flash`) y, si se quiere, otro con más cupo para «Valorar con IA» | Se usa el modelo por defecto |
 | `GEMINI_PRICE_INPUT_PER_MTOK`, `GEMINI_PRICE_OUTPUT_PER_MTOK` | Precio en dólares por millón de tokens de entrada y de salida, para el coste estimado de Configuración › Uso de la IA | El panel muestra «Sin precio» (el plan gratuito no cuesta) |
 | `GEMINI_REQUESTS_PER_MINUTE`, `GEMINI_TIMEOUT_SECONDS` | Pausa entre peticiones (5 por minuto) y tiempo máximo de respuesta (60 s) | Valores por defecto |
@@ -146,7 +146,9 @@ dependa de ellas.
 | `APP_ENV=production` | Cookies `Secure`, HSTS y sin documentación interactiva de la API | Modo desarrollo |
 
 A la IA solo llegan datos derivados del análisis (grados, dimensiones, compases, bloques), nunca la
-partitura, emails ni nombres. Las respuestas válidas se guardan para no gastar cupo dos veces.
+partitura, emails ni nombres. Para proponer el instrumento de una parte que el catálogo no reconoce recibe su
+nombre en el archivo, su transposición declarada y su nota más grave y más aguda; solo puede nombrar un instrumento
+del catálogo, se descarta si la tesitura no le cabe y la parte no cuenta hasta que se confirma. Las respuestas válidas se guardan para no gastar cupo dos veces.
 
 ## Evaluación experimental
 
