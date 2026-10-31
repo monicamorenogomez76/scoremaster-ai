@@ -1,15 +1,6 @@
 # Render Blueprint (https://render.com/docs/blueprint-spec): the same Docker image as `docker compose up`.
-# Free plan, chosen on 2026-10-07: the service sleeps after 15 minutes without use. The data lives
-# in Neon's free PostgreSQL since 2026-10-25, because Render's free database expires after 30 days; the
-# Render database below stays only until the move is checked (see docs/DEPLOYMENT.md).
-databases:
-  - name: scoremaster-db
-    plan: free
-    region: frankfurt
-    databaseName: scoremaster
-    user: scoremaster
-    postgresMajorVersion: "17"
-    ipAllowList: []          # only Render services reach it
+# Free plan: the service sleeps after 15 minutes without use. The data lives in Neon's free PostgreSQL
+# (DATABASE_URL, a secret); see docs/DEPLOYMENT.md.
 
 services:
   - type: web
