@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { apiFetch } from './api.js';
 import { BandManager } from './BandManager.jsx';
 import { View } from './View.jsx';
-import { createOwnInstrument, instrumentGroups, instrumentKeys, instrumentSections, loadInstrumentSuggestions, OTHER_INSTRUMENT,
+import { aiConfidence, createOwnInstrument, instrumentGroups, instrumentKeys, instrumentSections, loadInstrumentSuggestions, OTHER_INSTRUMENT,
+  proposeInstruments, withAiProposals,
   ownInstrumentBody, ownInstrumentForm, withSuggestions } from './instrumentCatalog.js';
 import { bandIssueText, bandStatusLabels, confirmationOptions, displayInstrumentName, instrumentLabel, unconfirmedStatusText } from './labels.js';
 import { t } from './i18n.js';
@@ -38,7 +39,12 @@ function OwnInstrumentForm({ part, sounds, onCreated }) {
   </fieldset>;
 }
 
-function InstrumentConfirmation({ items, onConfirm, busy }) {
+const confidenceText = value => {
+  const level = aiConfidence(value);
+  return level === 'alta' ? t('confianza alta') : level === 'media' ? t('confianza media') : t('confianza baja');
+};
+
+function InstrumentConfirmation({ items, workId, onConfirm, busy }) {
   const [catalog, setCatalog] = useState([]);
   const [sounds, setSounds] = useState([]);
   const [chosen, setChosen] = useState({});
@@ -63,6 +69,24 @@ function InstrumentConfirmation({ items, onConfirm, busy }) {
     });
     return () => { current = false; };
   }, [items]);
+  // The AI proposes the parts nothing was chosen for (2026-10-31); it is asked on demand, so viewing spends no quota.
+  const [asking, setAsking] = useState({ state: 'idle', message: '' });
+  useEffect(() => { setAsking({ state: 'idle', message: '' }); }, [items]);
+  const ask = async () => {
+    setAsking({ state: 'loading', message: '' });
+    try {
+      const { proposals } = await proposeInstruments(workId);
+      const count = Object.keys(proposals).length;
+      setShown(current => withAiProposals(current, proposals));
+      setChosen(previous => Object.fromEntries(Object.entries(previous).map(([part, identity]) =>
+        [part, identity || proposals[part]?.instrument || ''])));
+      setAsking({ state: 'done', message: count === 0 ? t('La IA no ha podido proponer ningún instrumento con seguridad.')
+        : t(count === 1 ? 'La IA propone el instrumento de {count} parte. Revísalo antes de confirmar.'
+          : 'La IA propone el instrumento de {count} partes. Revísalos antes de confirmar.', { count }) });
+    } catch (failure) {
+      setAsking({ state: 'error', message: failure.message });
+    }
+  };
   const selected = Object.fromEntries(Object.entries(chosen).filter(([, identity]) => identity && identity !== OTHER_INSTRUMENT));
   const created = (part, instrument) => {
     setCatalog(current => [...current, instrument]);
@@ -83,13 +107,22 @@ function InstrumentConfirmation({ items, onConfirm, busy }) {
             <option value={OTHER_INSTRUMENT}>{t('Otro instrumento…')}</option>
           </select>
         </label>
+        {item.ai && <p className="result-supporting instrument-ai-reason">
+          {t('IA, {confidence}: {reason}', { confidence: confidenceText(item.ai.confidence), reason: item.ai.reason })}</p>}
         {chosen[item.part] === OTHER_INSTRUMENT &&
           <OwnInstrumentForm part={item.part} sounds={sounds} onCreated={instrument => created(item.part, instrument)} />}
       </div>)}</div>
-    <button id="confirm-instruments" className="band-profile-update" type="button"
-      disabled={busy || Object.keys(selected).length === 0} onClick={() => onConfirm(selected)}>
-      {busy ? t('Actualizando…') : t('Confirmar instrumentos')}
-    </button>
+    <div className="editor-actions">
+      <button id="confirm-instruments" className="band-profile-update" type="button"
+        disabled={busy || Object.keys(selected).length === 0} onClick={() => onConfirm(selected)}>
+        {busy ? t('Actualizando…') : t('Confirmar instrumentos')}
+      </button>
+      {workId && <button id="propose-instruments" className="secondary-action" type="button"
+        disabled={asking.state === 'loading'} onClick={ask}>
+        {asking.state === 'loading' ? t('Consultando a la IA…') : t('Proponer con IA')}
+      </button>}
+    </div>
+    <p className="result-supporting" role={asking.state === 'error' ? 'alert' : 'status'}>{asking.message}</p>
   </section>;
 }
 
@@ -102,7 +135,7 @@ export function BandView({ active, hidden, data, draft, onDraftChange, onUpdate,
     description={t('Tus bandas con su plantilla fija y, debajo, cómo encaja la obra abierta en la banda activa.')}>
     <BandManager visible={!hidden && active === 'band'} onActivated={onBandActivated} />
     <h2 className="calculated-plan-title">{t('Adecuación de la obra abierta')}</h2>
-    {unconfirmed.length > 0 && <InstrumentConfirmation items={unconfirmed} onConfirm={onConfirm} busy={busy} />}
+    {unconfirmed.length > 0 && <InstrumentConfirmation items={unconfirmed} workId={data?.work_id} onConfirm={onConfirm} busy={busy} />}
     <div id="band-profile-editor" className="band-profile-editor surface" hidden={requirements.length === 0}>
       <fieldset>
         <legend>{t('Plantilla de esta obra')}</legend>

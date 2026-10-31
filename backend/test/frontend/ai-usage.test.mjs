@@ -37,8 +37,8 @@ test('latency and cost read well, also when they are missing', () => {
 
 test('purposes and outcomes are named in the language of the interface', () => {
   setLanguage('es');
-  assert.deepEqual(['difficulty', 'rehearsal', 'passage_review', 'other'].map(purposeLabel),
-    ['Explicación de la dificultad', 'Explicación del ensayo', 'Valoración con IA (método B)', 'other']);
+  assert.deepEqual(['difficulty', 'rehearsal', 'passage_review', 'instrument_proposal', 'other'].map(purposeLabel),
+    ['Explicación de la dificultad', 'Explicación del ensayo', 'Valoración con IA (método B)', 'Propuesta de instrumentos', 'other']);
   assert.deepEqual(['timeout', 'rate_limit', 'error', 'invalid'].map(outcomeLabel),
     ['Sin respuesta a tiempo', 'Límite de uso alcanzado', 'Error del proveedor', 'Respuesta descartada por la validación']);
   setLanguage('en');

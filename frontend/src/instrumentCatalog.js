@@ -80,5 +80,18 @@ export async function loadInstrumentSuggestions(items) {
 export const withSuggestions = (items, suggestions) => (items || []).map(item =>
   !item.proposal && suggestions[item.part] ? { ...item, status: 'shared', proposal: suggestions[item.part] } : item);
 
+// The AI's proposal for the parts still waiting (2026-10-31): only catalog instruments the part's range fits. The one
+// it proposes comes chosen where nothing was; another proposal (from the file or other accounts) is kept.
+export const proposeInstruments = workId => apiJson('/works/' + encodeURIComponent(workId) + '/instrument-proposals',
+  { method: 'POST' }, t('La IA no pudo proponer los instrumentos ahora. Vuelve a intentarlo más tarde o elígelos tú.'));
+
+export const withAiProposals = (items, proposals) => (items || []).map(item => {
+  const ai = (proposals || {})[item.part];
+  if (!ai) return item;
+  return item.proposal ? { ...item, ai } : { ...item, status: 'ai', proposal: ai.instrument, ai };
+});
+
+export const aiConfidence = value => (value >= 0.8 ? 'alta' : value >= 0.5 ? 'media' : 'baja');
+
 export const loadLearnedNames = () => apiJson('/admin/instruments/learned', {},
   t('No se pudieron cargar los nombres confirmados por las cuentas.'));

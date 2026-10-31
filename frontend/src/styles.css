@@ -748,6 +748,7 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .settings-card .primary-action { justify-self: start; }
 .instrument-confirm-item { display: grid; gap: 8px; }
 .instrument-confirm-item .band-profile-row { grid-template-columns: minmax(0, 1fr) minmax(160px, 220px); }
+.instrument-ai-reason { margin: 0; font-size: .875rem; line-height: 1.5; }
 .own-instrument-form { display: grid; gap: 8px; margin: 0; padding: 12px 16px 16px; border: 1px solid var(--line); border-radius: 12px; }
 .own-instrument-form legend { padding: 0 4px; font-weight: 600; }
 .own-instrument-form label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
