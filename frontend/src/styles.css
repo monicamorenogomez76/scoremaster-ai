@@ -915,3 +915,22 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .pdf-kind input[type=radio] { flex: none; width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; accent-color: var(--primary); }
 .pdf-title { display: grid; gap: 4px; max-width: 32rem; }
 .pdf-provisional { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid var(--warning); background: var(--warning-soft); }
+
+/* Printable sheet of a rehearsal: hidden on screen; when printing it is the only thing on the page. */
+.rehearsal-sheet { display: none; }
+@media print {
+  body.printing-sheet { background: #fff; }
+  body.printing-sheet > :not(.rehearsal-sheet) { display: none !important; }
+  body.printing-sheet .rehearsal-sheet { display: block; color: #000; font-size: 10.5pt; line-height: 1.5; }
+  .rehearsal-sheet h1 { margin: 0 0 4pt; font-size: 16pt; }
+  .rehearsal-sheet p { margin: 0 0 6pt; color: #000; }
+  .rehearsal-sheet .rehearsal-sheet-brand { color: #444; font-size: 9pt; letter-spacing: .04em; text-transform: uppercase; }
+  .rehearsal-sheet table { width: 99.5%; margin: 8pt 0; border-collapse: collapse; table-layout: fixed; }
+  .rehearsal-sheet .rehearsal-sheet-time { width: 15%; overflow-wrap: normal; white-space: nowrap; }
+  .rehearsal-sheet .rehearsal-sheet-minutes { width: 8%; overflow-wrap: normal; }
+  .rehearsal-sheet caption { padding-bottom: 4pt; font-weight: 600; text-align: left; }
+  .rehearsal-sheet th, .rehearsal-sheet td { padding: 4pt 6pt; overflow-wrap: anywhere; border: 1px solid #888; text-align: left; vertical-align: top; }
+  .rehearsal-sheet thead th { background: #eee; }
+  .rehearsal-sheet tr { break-inside: avoid; }
+  @page { margin: 15mm; }
+}

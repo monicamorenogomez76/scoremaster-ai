@@ -74,8 +74,9 @@ test('the interface uses the fonts that main.jsx loads, form controls included',
 });
 
 // Colours that mean something by themselves keep their value in both themes: the sections of the
-// rehearsal calendar, the concert/rehearsal events, the sign-in illustration and the video frame.
-const FIXED_COLOURS = /calendar-slot--|\.event-|\.login-brand|\.video-player/;
+// rehearsal calendar, the concert/rehearsal events, the sign-in illustration and the video frame; the printed
+// rehearsal sheet is black on white paper whatever the theme.
+const FIXED_COLOURS = /calendar-slot--|\.event-|\.login-brand|\.video-player|\.rehearsal-sheet|\.printing-sheet/;
 
 test('the interface colours come from the tokens, so the dark theme reaches every component', () => {
   const literal = /#[0-9a-f]{3,8}\b|rgba?\(|\b(white|black)\b/i;

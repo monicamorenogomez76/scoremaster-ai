@@ -921,4 +921,13 @@ export const en = {
   'Confirma tu email con el enlace que te enviamos a {email}. Hasta entonces no puedes administrar ni valorar campañas.':
     'Confirm your email with the link we sent to {email}. Until then you cannot manage or rate campaigns.',
   'Enviar otro enlace': 'Send another link',
+  'Imprimir o PDF': 'Print or PDF',
+  'Obras: {works}': 'Works: {works}',
+  'Objetivos:': 'Goals:',
+  'Agenda del ensayo': 'Rehearsal agenda',
+  'Bloque': 'Block',
+  'Min': 'Min',
+  'Obra y compases': 'Work and measures',
+  'Sin bloques en la agenda.': 'No blocks in the agenda.',
+  'Sin asignar: {minutes} min': 'Unassigned: {minutes} min',
 };

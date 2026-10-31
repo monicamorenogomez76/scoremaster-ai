@@ -7,6 +7,7 @@ import { rehearsalSchedule } from './schedule.js';
 import { AgendaCalendar } from './AgendaCalendar.jsx';
 import { RehearsalEditor } from './RehearsalEditor.jsx';
 import { RehearsalReview } from './RehearsalReview.jsx';
+import { RehearsalSheet } from './RehearsalSheet.jsx';
 import { canReview, listRehearsals, rehearsalDateText, splitRehearsals } from './rehearsals.js';
 import { t } from './i18n.js';
 
@@ -79,7 +80,7 @@ function RehearsalWhy({ rehearsal, onOpenBlock }) {
   </div>;
 }
 
-function RehearsalList({ id, title, items, empty, onEdit, onReview, onOpenBlock }) {
+function RehearsalList({ id, title, items, empty, onEdit, onReview, onOpenBlock, onPrint }) {
   return <section id={id} className="rehearsal-list" aria-labelledby={id + '-title'}>
     <h3 id={id + '-title'}>{title}</h3>
     {items.length === 0 ? <p className="result-supporting">{empty}</p>
@@ -95,6 +96,7 @@ function RehearsalList({ id, title, items, empty, onEdit, onReview, onOpenBlock 
           <div className="works-actions">
             {canReview(item) && <button type="button" className="primary-action" onClick={() => onReview(item)}>{item.reviewed_at ? t('Ver revisión') : t('Revisar')}</button>}
             <button type="button" className="secondary-action" onClick={() => onEdit(item)}>{t('Editar')}</button>
+            <button type="button" className="secondary-action" onClick={() => onPrint(item)}>{t('Imprimir o PDF')}</button>
           </div>
         </li>)}</ul>}
   </section>;
@@ -104,6 +106,7 @@ function RehearsalList({ id, title, items, empty, onEdit, onReview, onOpenBlock 
 function SavedRehearsals({ visible, editing, onEdit, onCloseEditor, onOpenBlock, reviewing, onReview, onCloseReview }) {
   const [rehearsals, setRehearsals] = useState([]);
   const [error, setError] = useState('');
+  const [printing, setPrinting] = useState(null);
   const refresh = () => listRehearsals().then(found => { setRehearsals(found); setError(''); }).catch(failure => setError(failure.message));
   useEffect(() => { if (visible) refresh(); }, [visible]);
   const { upcoming, past } = splitRehearsals(rehearsals);
@@ -117,8 +120,9 @@ function SavedRehearsals({ visible, editing, onEdit, onCloseEditor, onOpenBlock,
       onSaved={() => { onCloseEditor(); refresh(); }} onCancel={onCloseEditor} />}
     {reviewing && <RehearsalReview key={reviewing.id} rehearsal={reviewing}
       onSaved={() => { onCloseReview(); refresh(); }} onCancel={onCloseReview} />}
-    <RehearsalList id="rehearsals-upcoming" title={t('Próximos')} items={upcoming} empty={t('No hay ensayos programados.')} onEdit={onEdit} onReview={onReview} onOpenBlock={onOpenBlock} />
-    <RehearsalList id="rehearsals-past" title={t('Realizados')} items={past} empty={t('Aún no hay ensayos realizados.')} onEdit={onEdit} onReview={onReview} onOpenBlock={onOpenBlock} />
+    {printing && <RehearsalSheet key={printing.id} rehearsal={printing} onDone={() => setPrinting(null)} />}
+    <RehearsalList id="rehearsals-upcoming" title={t('Próximos')} items={upcoming} empty={t('No hay ensayos programados.')} onEdit={onEdit} onReview={onReview} onOpenBlock={onOpenBlock} onPrint={setPrinting} />
+    <RehearsalList id="rehearsals-past" title={t('Realizados')} items={past} empty={t('Aún no hay ensayos realizados.')} onEdit={onEdit} onReview={onReview} onOpenBlock={onOpenBlock} onPrint={setPrinting} />
   </section>;
 }
 
