@@ -8,7 +8,8 @@ Protocol, documented in evaluation/README.md:
 - the expert difficulty of a passage is the median of its ratings (grades 1-6, same rubric);
 - a passage is critical when most of its raters say so; a tie is left undecided and counted apart;
 - passages with fewer ratings than --min-ratings are left out and counted;
-- disagreement between raters is reported, never hidden behind the median.
+- disagreement between raters is reported, never hidden behind the median, with Krippendorff's alpha
+  (ordinal for the grades, nominal for «critical») and 95 % bootstrap intervals over passages (fixed seed).
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ import argparse
 import hashlib
 import json
 import math
+import random
 import sys
 from collections import defaultdict
 from itertools import combinations
@@ -25,7 +27,9 @@ from typing import Iterable, Optional
 
 from backend.application.evaluations import EXPERIENCE_LEVELS
 
-REPORT_VERSION = "campaign-report-v3"
+REPORT_VERSION = "campaign-report-v4"
+# Bootstrap over passages: the seed is fixed so the same export always gives the same intervals.
+BOOTSTRAP = {"resamples": 1000, "seed": 19, "level": 0.95}
 HEURISTIC = "Heurística (ScoreLint)"
 # Method C, preregistered before any musician's rating: never tuned on the data.
 HYBRID_RULE = ("Regla del híbrido, fijada el 2026-10-13 antes de recibir valoraciones: grado = media de ScoreLint y "
@@ -72,6 +76,61 @@ def spearman(left: list[float], right: list[float]) -> Optional[float]:
     if spread_a == 0 or spread_b == 0:
         return None
     return sum((x - mean_a) * (y - mean_b) for x, y in zip(a, b)) / math.sqrt(spread_a * spread_b)
+
+
+def krippendorff_alpha(units: list[list], metric: str = "nominal") -> Optional[float]:
+    """Krippendorff's alpha from the values each unit received (any number of raters, missing ones allowed).
+    Units with fewer than two values cannot be compared and are left out; undefined without variation."""
+    pairable = [values for values in units if len(values) >= 2]
+    coincidences = defaultdict(float)
+    for values in pairable:
+        weight = 1 / (len(values) - 1)
+        for i, left in enumerate(values):
+            for j, right in enumerate(values):
+                if i != j:
+                    coincidences[(left, right)] += weight
+    totals = defaultdict(float)
+    for (left, _), count in coincidences.items():
+        totals[left] += count
+    n = sum(totals.values())
+    categories = sorted(totals)
+    if n <= 1 or len(categories) < 2:
+        return None
+    position = {value: index for index, value in enumerate(categories)}
+
+    def distance(left, right) -> float:
+        if metric == "nominal":
+            return 0.0 if left == right else 1.0
+        low, high = sorted((position[left], position[right]))
+        # Ordinal: how many values lie between the two, counting each end as half.
+        return (sum(totals[categories[k]] for k in range(low, high + 1)) - (totals[left] + totals[right]) / 2) ** 2
+
+    observed = sum(count * distance(left, right) for (left, right), count in coincidences.items())
+    expected = sum(totals[left] * totals[right] * distance(left, right) for left in categories for right in categories)
+    if expected == 0:
+        return None
+    return 1 - (n - 1) * observed / expected
+
+
+def _percentile(ordered: list[float], share: float) -> float:
+    place = share * (len(ordered) - 1)
+    low = math.floor(place)
+    high = min(low + 1, len(ordered) - 1)
+    return ordered[low] + (ordered[high] - ordered[low]) * (place - low)
+
+
+def bootstrap(items: list, statistic) -> dict:
+    """The statistic and its percentile interval resampling the items (passages) with replacement."""
+    value = statistic(items) if items else None
+    if value is None:
+        return {"value": None, "interval": None}
+    draw = random.Random(BOOTSTRAP["seed"])
+    samples = sorted(result for result in (statistic([draw.choice(items) for _ in items])
+                                           for _ in range(BOOTSTRAP["resamples"])) if result is not None)
+    if not samples:
+        return {"value": value, "interval": None}
+    tail = (1 - BOOTSTRAP["level"]) / 2
+    return {"value": value, "interval": [_percentile(samples, tail), _percentile(samples, 1 - tail)]}
 
 
 def _ratio(numerator: int, denominator: int) -> Optional[float]:
@@ -128,6 +187,7 @@ def aggregate(export: dict, min_ratings: int = 1, levels: Optional[Iterable[str]
             "expert_critical": None if yes == no else yes > no,
             "expert_priority": mean(r["priority"] for r in ratings) if all(r.get("priority") for r in ratings) else None,
             "grades": grades,
+            "criticals": [bool(r["critical"]) for r in ratings],
         })
         predicted = rows[-1]["predicted"]
         for label in llm:
@@ -183,11 +243,39 @@ def agreement(rows: list[dict]) -> dict:
     """How much the musicians agree among themselves, on passages rated by two or more."""
     shared = [r for r in rows if r["ratings"] >= 2]
     if not shared:
-        return {"passages": 0, "mean_spread": None, "mean_pairwise_difference": None, "critical_unanimous": None}
+        return {"passages": 0, "mean_spread": None, "mean_pairwise_difference": None, "critical_unanimous": None,
+                "alpha": _alphas([])}
     differences = [abs(a - b) for r in shared for a, b in combinations(r["grades"], 2)]
     unanimous = [r for r in shared if 0 in (r["critical_votes"]["yes"], r["critical_votes"]["no"])]
     return {"passages": len(shared), "mean_spread": mean(r["grade_spread"] for r in shared),
-            "mean_pairwise_difference": mean(differences), "critical_unanimous": len(unanimous) / len(shared)}
+            "mean_pairwise_difference": mean(differences), "critical_unanimous": len(unanimous) / len(shared),
+            "alpha": _alphas(shared)}
+
+
+def _alphas(rows: list[dict]) -> dict:
+    return {"difficulty": bootstrap(rows, lambda sample: krippendorff_alpha([r["grades"] for r in sample], "ordinal")),
+            "critical": bootstrap(rows, lambda sample: krippendorff_alpha([r["criticals"] for r in sample], "nominal"))}
+
+
+def concordance(rows: list[dict], method: str) -> dict:
+    """The method as one more rater: its alpha with the musicians next to theirs alone, on the same passages
+    (two or more ratings and a prediction of the method). Close or higher: it agrees like one more musician."""
+    shared = [r for r in rows if r["ratings"] >= 2 and r["predicted"][method]["grade"] is not None]
+    with_method = lambda sample: krippendorff_alpha(
+        [r["grades"] + [r["predicted"][method]["grade"]] for r in sample], "ordinal")
+    return {"passages": len(shared),
+            "musicians": krippendorff_alpha([r["grades"] for r in shared], "ordinal"),
+            "with_method": bootstrap(shared, with_method)}
+
+
+def _intervals(rows: list[dict], method: str, metrics: dict) -> dict:
+    """Top-level figures of a method with their bootstrap intervals (not the breakdowns: too few passages)."""
+    graded = [(r["predicted"][method]["grade"], r["expert_grade"]) for r in rows
+              if r["predicted"][method]["grade"] is not None]
+    for name in ("mae", "spearman"):
+        metrics["difficulty"][name + "_interval"] = bootstrap(
+            graded, lambda sample: difficulty_metrics(sample)[name])["interval"]
+    return metrics
 
 
 def _versions(export: dict) -> dict:
@@ -242,7 +330,8 @@ def build_report(export: dict, min_ratings: int = 1, levels: Optional[Iterable[s
         "report_version": REPORT_VERSION,
         "campaign": export.get("campaign", {}),
         "source_sha256": source_sha256,
-        "settings": {"min_ratings": min_ratings, "experience_levels": sorted(levels) if levels else "todos"},
+        "settings": {"min_ratings": min_ratings, "experience_levels": sorted(levels) if levels else "todos",
+                     "bootstrap": dict(BOOTSTRAP)},
         "prediction_versions": _versions(export),
         "passages": {"proposed": len(export.get("passages", [])), "evaluated": len(rows),
                      "left_out": aggregated["skipped"], "works": len({r["work_title"] for r in rows}),
@@ -252,7 +341,8 @@ def build_report(export: dict, min_ratings: int = 1, levels: Optional[Iterable[s
         # The fair comparison: only the passages every method predicted.
         "same_passages": _same_passages(rows, methods),
         "methods": {method: {
-            **_method_metrics(rows, method),
+            **_intervals(rows, method, _method_metrics(rows, method)),
+            "concordance": concordance(rows, method),
             "by_family": _breakdown(rows, method, lambda r: r["family"]),
             "by_expert_grade": _breakdown(rows, method, lambda r: round(r["expert_grade"])),
             "by_work": _breakdown(rows, method, lambda r: r["work_title"]),
@@ -281,6 +371,29 @@ def _table(title: str, groups: dict) -> list[str]:
         d, c = metrics["difficulty"], metrics["critical"]
         lines.append(f"| {name} | {d['n']} | {_fmt(d['mae'])} | {_fmt(d['bias'])} | {_fmt(d['spearman'])} | "
                      f"{_pct(c['precision'])} | {_pct(c['recall'])} | {_fmt(c['f05'])} |")
+    return lines + [""]
+
+
+def _interval(bounds) -> str:
+    return "—" if bounds is None else f"[{_fmt(bounds[0])}, {_fmt(bounds[1])}]"
+
+
+def _estimate(result: dict) -> str:
+    return _fmt(result["value"]) + ("" if result["interval"] is None else " " + _interval(result["interval"]))
+
+
+def _concordance(methods: dict) -> list[str]:
+    lines = ["## Concordancia de cada método con los músicos", "",
+             "El método cuenta como un evaluador más, en los pasajes con dos o más valoraciones y predicción del método. "
+             "Si el alfa con el método se acerca al de los músicos solos, el método concuerda con ellos como uno más. "
+             "IC 95 % por bootstrap de pasajes, con semilla fija.", "",
+             "| Método | Pasajes | α músicos | α con el método | IC 95 % | MAE | IC 95 % MAE | Spearman | IC 95 % Spearman |",
+             "|---|---|---|---|---|---|---|---|---|"]
+    for name, metrics in methods.items():
+        c, d = metrics["concordance"], metrics["difficulty"]
+        lines.append(f"| {name} | {c['passages']} | {_fmt(c['musicians'])} | {_fmt(c['with_method']['value'])} | "
+                     f"{_interval(c['with_method']['interval'])} | {_fmt(d['mae'])} | {_interval(d['mae_interval'])} | "
+                     f"{_fmt(d['spearman'])} | {_interval(d['spearman_interval'])} |")
     return lines + [""]
 
 
@@ -329,12 +442,17 @@ def to_markdown(report: dict) -> str:
                   "quedan fuera. Sesgo positivo: el método puntúa más difícil que los músicos.", ""]
     lines += ["## Acuerdo entre evaluadores", ""]
     if a["passages"]:
-        lines.append(f"En {a['passages']} pasajes con dos o más valoraciones: diferencia media entre dos evaluadores "
-                     f"{_fmt(a['mean_pairwise_difference'])} grados, rango medio {_fmt(a['mean_spread'])} y "
-                     f"criticidad unánime en el {_pct(a['critical_unanimous'])}.")
+        alpha = a["alpha"]
+        lines += [f"En {a['passages']} pasajes con dos o más valoraciones: diferencia media entre dos evaluadores "
+                  f"{_fmt(a['mean_pairwise_difference'])} grados, rango medio {_fmt(a['mean_spread'])} y "
+                  f"criticidad unánime en el {_pct(a['critical_unanimous'])}.", "",
+                  f"Concordancia más allá del azar (alfa de Krippendorff, IC 95 % por bootstrap de pasajes): grado "
+                  f"(ordinal) {_estimate(alpha['difficulty'])} y criticidad (nominal) {_estimate(alpha['critical'])}. "
+                  "Con α ≥ 0.80 la referencia es fiable; entre 0.67 y 0.80 solo permite conclusiones provisionales."]
     else:
         lines.append("Ningún pasaje tiene dos valoraciones: no se puede medir el acuerdo.")
     lines.append("")
+    lines += _concordance(report["methods"])
     for name, metrics in report["methods"].items():
         lines += _table(f"{name} por familia", metrics["by_family"])
         lines += _table(f"{name} por grado de los músicos", metrics["by_expert_grade"])

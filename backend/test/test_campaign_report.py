@@ -186,3 +186,60 @@ def test_without_published_grades_the_report_says_so():
     export = {"campaign": {"title": "x"}, "passages": [], "ratings": [], "llm_reviews": []}
     assert build_report(export)["publishers"]["n"] == 0
     assert "Ninguna obra de la campaña tiene un grado publicado registrado." in to_markdown(build_report(export))
+
+
+# Krippendorff (2011), «Computing Krippendorff's Alpha-Reliability»: 4 observers, 12 units, values 1-5.
+KRIPPENDORFF_UNITS = [[1, 1, 1], [2, 2, 3, 2], [3, 3, 3, 3], [3, 3, 3, 3], [2, 2, 2, 2], [1, 2, 3, 4], [4, 4, 4, 4],
+                      [1, 1, 2, 1], [2, 2, 2, 2], [5, 5, 5], [1, 1], [3]]
+
+
+def test_krippendorff_alpha_matches_the_published_example():
+    """Concordance among the musicians beyond chance (2026-10-30): ordinal for the grades, nominal for «critical»."""
+    from evaluation.campaign_report import krippendorff_alpha
+    assert krippendorff_alpha(KRIPPENDORFF_UNITS, "nominal") == pytest.approx(0.743, abs=0.001)
+    assert krippendorff_alpha(KRIPPENDORFF_UNITS, "ordinal") == pytest.approx(0.815, abs=0.001)
+    assert krippendorff_alpha([[2, 2], [5, 5], [1, 1]], "ordinal") == 1.0
+    assert krippendorff_alpha([[3, 3], [3, 3]], "ordinal") is None, "no variation: chance agreement is undefined"
+    assert krippendorff_alpha([[1], [2]], "nominal") is None, "a unit needs two values to be compared"
+
+
+def test_the_report_gives_the_musicians_alpha_with_a_reproducible_bootstrap_interval():
+    report = build_report(EXPORT)
+    alpha = report["agreement"]["alpha"]
+    # p1 (1, 3), p2 (4, 5), p3 (3, 4), p4 (3, 3)
+    from evaluation.campaign_report import krippendorff_alpha
+    assert alpha["difficulty"]["value"] == pytest.approx(krippendorff_alpha([[1, 3], [4, 5], [3, 4], [3, 3]], "ordinal"))
+    assert alpha["critical"]["value"] == pytest.approx(
+        krippendorff_alpha([[False, False], [True, True], [False, True], [True, True]], "nominal"))
+    low, high = alpha["difficulty"]["interval"]
+    assert low <= alpha["difficulty"]["value"] <= high
+    assert build_report(EXPORT)["agreement"]["alpha"] == alpha, "fixed seed: the same export, the same interval"
+    assert report["settings"]["bootstrap"] == {"resamples": 1000, "seed": 19, "level": 0.95}
+
+
+def test_each_method_is_also_measured_as_one_more_rater_with_intervals():
+    """Does the method agree with the musicians as much as they agree among themselves? Same passages for both alphas."""
+    from evaluation.campaign_report import krippendorff_alpha
+    export = {**EXPORT, "llm_reviews": [_review("p1", 2, False), _review("p2", 5, True), _review("p3", 4, False)]}
+    report = build_report(export)
+    heuristic = report["methods"][HEURISTIC]["concordance"]
+    assert heuristic["passages"] == 4
+    assert heuristic["musicians"] == pytest.approx(krippendorff_alpha([[1, 3], [4, 5], [3, 4], [3, 3]], "ordinal"))
+    assert heuristic["with_method"]["value"] == pytest.approx(
+        krippendorff_alpha([[1, 3, 2], [4, 5, 4], [3, 4, 5], [3, 3, 3]], "ordinal"))
+    llm = report["methods"]["LLM (gemini · gemini-3.8-flash · passage-review-v1)"]["concordance"]
+    assert llm["passages"] == 3 and llm["musicians"] == pytest.approx(
+        krippendorff_alpha([[1, 3], [4, 5], [3, 4]], "ordinal")), "only where the method predicted"
+    mae = report["methods"][HEURISTIC]["difficulty"]
+    low, high = mae["mae_interval"]
+    assert low <= mae["mae"] <= high
+    text = to_markdown(report)
+    assert "alfa de Krippendorff" in text and "IC 95 %" in text
+    assert "| " + HEURISTIC + " | 4 | " in text
+
+
+def test_without_two_ratings_there_is_no_alpha_and_no_interval():
+    report = build_report({"campaign": {"title": "Vacía"}, "passages": [], "ratings": []})
+    assert report["agreement"]["alpha"]["difficulty"] == {"value": None, "interval": None}
+    assert report["methods"][HEURISTIC]["difficulty"]["mae_interval"] is None
+    assert report["methods"][HEURISTIC]["concordance"]["with_method"] == {"value": None, "interval": None}
