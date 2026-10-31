@@ -1,4 +1,4 @@
-"""Independent review of a passage by the LLM (step 22, method B of docs/EVALUATION_AND_FEEDBACK.md).
+"""Independent review of a passage by the LLM (step 22, method B of evaluation/README.md).
 
 The LLM rates the passage from its measurements and notes (backend/analyzers/passage_features.py) with
 the same rubric and critical question as the musicians, never seeing ScoreLint's prediction. There is no

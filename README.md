@@ -71,9 +71,7 @@ flowchart LR
 - **Cada obra se lee una sola vez**: music21 es lento con una partitura de banda (minutos en el plan
   gratuito), así que el modelo leído y la línea de tiempo del audio se guardan por el hash del archivo.
 
-Detalles: [dificultad y criticidad](docs/DIFFICULTY_CRITICALITY.md), [identidad de instrumentos](docs/INSTRUMENT_RESOLUTION.md),
-[capa de IA](docs/LLM_LANGCHAIN_ARCHITECTURE.md), [visor de partituras](docs/SCORE_VIEWER.md),
-[audio](docs/REALISTIC_AUDIO.md) y [plan aprobado con su estado](docs/IMPLEMENTATION_ROADMAP.md).
+Cómo se calculan el grado y los pasajes críticos: [docs/DIFICULTAD.md](docs/DIFICULTAD.md).
 
 ## Stack
 
@@ -170,15 +168,14 @@ comparación de los métodos sobre los mismos pasajes y el grado de cada obra fr
 python -m evaluation.campaign_report exportacion.json --markdown informe.md
 ```
 
-Protocolo y métricas en [evaluation/README.md](evaluation/README.md) y
-[docs/EVALUATION_AND_FEEDBACK.md](docs/EVALUATION_AND_FEEDBACK.md). `python -m evaluation.baseline`
+Protocolo y métricas en [evaluation/README.md](evaluation/README.md). `python -m evaluation.baseline`
 comprueba que el comportamiento heredado sigue siendo el capturado.
 
 ## Pruebas e integración continua
 
 ```sh
 export TEST_DATABASE_URL=$(grep ^DATABASE_URL .env | cut -d= -f2-)
-.venv/bin/python -m pytest -q backend/test        # unas 720 pruebas, con PostgreSQL real
+.venv/bin/python -m pytest -q backend/test        # más de 1.200 pruebas, con PostgreSQL real
 node --test backend/test/frontend/*.test.mjs       # módulos del frontend
 ```
 
@@ -190,8 +187,8 @@ pytest, las pruebas de Node, la construcción de la imagen Docker y la auditorí
 ## Despliegue
 
 Render con la misma imagen Docker y la base en el PostgreSQL gratuito de Neon, que no caduca:
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), con los pasos, el paso de los datos a Neon, las limitaciones del plan
-gratuito, los scripts probados de copia y restauración y por qué Vercel queda para más adelante.
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), con los pasos, las limitaciones del plan gratuito y los scripts probados
+de copia y restauración.
 
 ## Seguridad
 
@@ -217,7 +214,7 @@ migrations/        migraciones Alembic
 evaluation/        baseline e informe de las campañas
 demo/              obras originales CC0 de la demo y la obra para subir en directo
 scripts/           generador de las obras de la demo y copia de la base
-docs/              especificaciones, guías y decisiones
+docs/              recorrido por la demo, despliegue, dificultad y seguridad
 ```
 
 Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](AGENTS.md) orienta al
@@ -240,8 +237,8 @@ asistente de IA usado durante el desarrollo.
   partituras generales (prueba con PDF digitales, 2026-10-27), pero una sola nota extrema mal leída puede subir el
   grado. Por eso la obra leída de PDF lleva el grado como provisional y no entra en la evaluación. Sin OCR, las partes
   de una partitura general llegan sin nombre de instrumento y se confirman en «Mi banda». Cada lectura tarda 1–2
-  minutos en arrancar. La interfaz está en castellano.
-- **Pendiente u opcional**: pregunta libre a la IA, interfaz en inglés, sustitutos de instrumento,
+  minutos en arrancar.
+- **Pendiente u opcional**: pregunta libre a la IA, sustitutos de instrumento,
   búsqueda automática del grado publicado de una obra y segunda opinión con un modelo de pesos abiertos.
 
 ## Créditos

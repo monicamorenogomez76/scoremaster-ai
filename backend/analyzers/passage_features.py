@@ -2,7 +2,7 @@
 
 Objective measurements of the fragment and its notes, so that the LLM reads the music as the musicians
 do; never ScoreLint's grade, technical index, dimensions or findings (no anchoring, method B of
-docs/EVALUATION_AND_FEEDBACK.md). Pitches are written, as in the part; the transposition is given."""
+evaluation/README.md). Pitches are written, as in the part; the transposition is given."""
 from __future__ import annotations
 
 from typing import Optional

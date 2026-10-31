@@ -13,7 +13,7 @@ Sources, in order of precedence (difficulty-v4, 2026-10-27):
 - UIL Texas band sight-reading criteria (2022) only confirmed the progression of keys, meters and rhythms; its
   levels are for sight-reading and are not grades, so no threshold comes from it.
 The documents belong to their publishers: only the criteria are written here. The ranges were read from the ABC
-chart and reviewed note by note (2026-10-25); see docs/DIFFICULTY_CRITICALITY.md.
+chart and reviewed note by note (2026-10-25); see docs/DIFICULTAD.md.
 """
 from __future__ import annotations
 

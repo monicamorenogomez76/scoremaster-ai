@@ -1,4 +1,4 @@
-# Guía de desarrollo
+# Cómo contribuir
 
 ## Flujo de trabajo
 
@@ -43,16 +43,6 @@
 Actualizar la documentación junto con cada cambio de comportamiento,
 configuración o arquitectura. Distinguir lo previsto de lo implementado
 y verificado.
-
-## Desarrollo guiado
-
-- Explicar el objetivo de cada paso y los comandos antes de ejecutarlos.
-- Indicar la herramienta, la carpeta de trabajo y el resultado esperado.
-- Aprovechar la experiencia en C#/.NET, Java y SQL para explicar conceptos nuevos.
-- No dar por conocidos macOS, VS Code, Python, Node.js ni Docker.
-- Alternar tareas guiadas hechas a mano con tareas delegadas al asistente.
-- Reservar oportunidades para comprender el código, escribir pruebas y revisar PRs.
-- Documentar las decisiones y sus motivos.
 
 ## Cambios en el análisis musical
 
