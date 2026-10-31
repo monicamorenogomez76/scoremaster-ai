@@ -220,8 +220,8 @@ scripts/           generador de las obras de la demo y copia de la base
 docs/              especificaciones, guías y decisiones
 ```
 
-Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](AGENTS.md) y
-[CLAUDE.md](CLAUDE.md) orientan al asistente de IA usado durante el desarrollo.
+Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](AGENTS.md) orienta al
+asistente de IA usado durante el desarrollo.
 
 ## Limitaciones conocidas
 

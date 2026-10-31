@@ -1,7 +1,7 @@
 # Seguridad (OWASP)
 
-Medidas aplicadas en el MVP y ampliaciones pendientes. Referencias: OWASP Top 10 y las guías de
-la skill `security-best-practices` para FastAPI y React.
+Medidas aplicadas en el MVP y ampliaciones pendientes. Referencias: OWASP Top 10, OWASP Top 10 para
+aplicaciones con LLM y las guías de seguridad de FastAPI y React.
 
 ## Aplicadas
 
