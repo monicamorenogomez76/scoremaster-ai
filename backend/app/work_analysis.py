@@ -1,5 +1,5 @@
 """Analysing a work and keeping it in its owner's library: what POST /analyze does once the upload is
-validated, shared with the demo account's seed (PR 4 of the closing plan, 2026-10-14)."""
+validated, shared with the demo account's seed (2026-10-14)."""
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path

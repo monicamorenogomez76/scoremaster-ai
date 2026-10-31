@@ -322,7 +322,7 @@ final de curso del grado 1):
 | March of the Toys (arr. Cao Ziyi) | 5 | 5 | Flautas hasta Si6 y fagot hasta Si4 |
 | Oregon Trail II | 5 | 5 | Modulación a 5 ♯ y corneta hasta Si5 |
 
-### Grados publicados de una obra (PR 5 del plan de cierre, 2026-10-14)
+### Grados publicados de una obra (2026-10-14)
 
 En la pestaña Dificultad, la directora puede **registrar a mano** el grado que publica una editorial o un
 catálogo, con su fuente y, si quiere, el enlace y la fecha de consulta. La aplicación no lo busca ni se lo
@@ -677,7 +677,7 @@ Si es viable:
 - calcular internamente con beats o segundos;
 - presentar externamente medidas/compases.
 
-No reescribir todo el pipeline si el coste supera el beneficio del TFM.
+No reescribir todo el pipeline si el coste supera el beneficio.
 
 ---
 

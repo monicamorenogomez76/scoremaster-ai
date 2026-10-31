@@ -13,7 +13,7 @@ db_url() {
   printf '%s' "$url"
 }
 
-# Rows of the tables that hold the work of the TFM: compare them before and after a restore.
+# Rows of the main tables: compare them before and after a restore.
 COUNTS_SQL="select 'users' as tabla, count(*) from users
 union all select 'works', count(*) from works
 union all select 'analyses', count(*) from analyses

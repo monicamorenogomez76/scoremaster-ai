@@ -1,4 +1,4 @@
-"""Band works for the demo account and the TFM video (PR 4 of the closing plan; rewritten 2026-10-14 so
+"""Band works for the demo account (rewritten 2026-10-14 so
 they follow the rules of harmony, voice leading and band scoring, as requested).
 
 Original works of this repository (CC0), composed deterministically:

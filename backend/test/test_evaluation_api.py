@@ -255,7 +255,7 @@ def test_invited_musicians_never_see_the_llm_review(clients, reviewer):
 
 
 def test_the_export_carries_each_work_with_its_scorelint_and_published_grades(clients):
-    """PR 5 of the closing plan: the report compares ScoreLint's grade of each work with the publishers'."""
+    """The report compares ScoreLint's grade of each work with the publishers'."""
     ana, _ = clients
     body = campaign(ana).json()
     work_ids = sorted({item["work_id"] for item in body["passages"]})

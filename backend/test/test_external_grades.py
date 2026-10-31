@@ -1,4 +1,4 @@
-"""Publisher grades of a work (PR 5 of the closing plan, 2026-10-14): typed in by the director with their
+"""Publisher grades of a work (2026-10-14): typed in by the director with their
 source, never extracted or asked to an LLM, which could invent them. Each keeps its original label and
 its value on the app's 1-6 scale (docs/DIFFICULTY_CRITICALITY.md): Grade N is grade N with its halves,
 and Pepper's letters VE, E, ME, M, MA and A are grades 1 to 6."""

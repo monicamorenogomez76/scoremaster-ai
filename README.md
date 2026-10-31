@@ -5,11 +5,11 @@ la plantilla real de la banda y ayuda a planificar los ensayos hasta el conciert
 calcula un motor **determinista y reproducible** (ScoreLint); la IA generativa solo **explica** esos
 resultados y nunca sustituye los datos musicales.
 
-Trabajo Fin de Máster del Máster de Desarrollo con IA de BigSchool · Licencia [MIT](LICENSE).
+Licencia [MIT](LICENSE).
 
 **Demo publicada:** https://scoremaster-iz4j.onrender.com (plan gratuito de Render: el primer acceso puede
-tardar alrededor de un minuto). La contraseña de la cuenta demo se entrega aparte; la
-[guía para el tribunal](docs/TRIBUNAL.md) propone un recorrido de cinco minutos.
+tardar alrededor de un minuto). La contraseña de esa cuenta demo no está publicada; para probarla
+sin ella, `docker compose up --build` la levanta en local. El [recorrido por la demo](docs/DEMO.md) dura unos cinco minutos.
 
 ![Resumen: próximo concierto con su programa, ensayo de hoy con su agenda por bloques, dónde trabajar, cobertura de los ensayos hasta el concierto, prioridades por sección y obras en preparación](docs/img/resumen.png)
 
@@ -152,7 +152,7 @@ partitura, emails ni nombres. Las respuestas válidas se guardan para no gastar 
 
 ## Evaluación experimental
 
-La pregunta del TFM: ¿puede un sistema híbrido de análisis determinista e IA generativa asistir a un
+La pregunta del proyecto: ¿puede un sistema híbrido de análisis determinista e IA generativa asistir a un
 director en la evaluación de la dificultad, la adecuación del repertorio y la planificación del ensayo?
 
 | Método | Qué es |

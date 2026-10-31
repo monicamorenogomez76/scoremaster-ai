@@ -1,4 +1,4 @@
-"""The demo account is ready for the examiners and the video (PR 4 of the closing plan, 2026-10-14): three
+"""The demo account is ready for a first visit (2026-10-14): three
 band works already analysed, a band, a concert with its series of rehearsals and a draft campaign, created
 through the real API so they pass the same validation as the director's own. Running it again adds nothing."""
 from datetime import date

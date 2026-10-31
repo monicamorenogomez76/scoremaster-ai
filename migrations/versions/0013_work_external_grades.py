@@ -1,4 +1,4 @@
-"""Publisher grades of a work, typed in by its owner with their source (PR 5 of the closing plan,
+"""Publisher grades of a work, typed in by its owner with their source (
 2026-10-14): the original label, its value on the 1-6 scale, the source, an optional link and the date
 it was consulted. Deleted with the work or the account."""
 from alembic import op

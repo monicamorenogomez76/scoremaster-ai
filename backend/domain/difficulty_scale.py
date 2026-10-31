@@ -18,7 +18,7 @@ def grade_from_index(index: float) -> int:
     return 1 + min(5, int(index * 6 / 10))
 
 
-# Publisher grades typed in by the director (PR 5 of the closing plan, 2026-10-14). Equivalences in
+# Publisher grades typed in by the director (2026-10-14). Equivalences in
 # docs/DIFFICULTY_CRITICALITY.md: Grade N is grade N with its halves (Grade 0.5 counts as 1) and the
 # letters of J.W. Pepper are grades 1-6. Never extracted automatically nor asked to an LLM.
 EXTERNAL_SCALES = ("grade", "pepper")

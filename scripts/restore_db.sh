@@ -1,5 +1,5 @@
 #!/bin/sh
-# Restores a copy made with backup_db.sh into an empty database (a new one in Render, or a local one).
+# Restores a copy made with backup_db.sh into an empty database (a new one in Neon, or a local one).
 # Usage: scripts/restore_db.sh backups/<file>.dump   (asks for the URL of the database to restore into)
 set -eu
 cd "$(dirname "$0")/.."

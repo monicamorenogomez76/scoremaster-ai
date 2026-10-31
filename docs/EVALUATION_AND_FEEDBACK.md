@@ -303,7 +303,7 @@ Puede contener:
 
 ---
 
-# 13. Informe TFM
+# 13. Informe
 
 Generar tabla:
 

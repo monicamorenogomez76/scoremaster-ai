@@ -304,7 +304,7 @@ def _results(lines: list[str], methods: dict) -> None:
 
 
 def publishers(export: dict) -> dict:
-    """ScoreLint's grade of each work against the grades publishers give it (PR 5 of the closing plan).
+    """ScoreLint's grade of each work against the grades publishers give it.
     Several sources of one work are averaged; works without a published grade are listed apart."""
     rows, without = [], []
     for work in export.get("works", []):

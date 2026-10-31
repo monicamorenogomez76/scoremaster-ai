@@ -31,9 +31,9 @@ def test_the_demo_password_follows_the_variable_and_old_sessions_are_closed(post
     seed_demo_user(accounts, "demo@scoremaster.local", "contraseña-antigua")
     old_session = AuthService(accounts).login("demo@scoremaster.local", "contraseña-antigua", ip="127.0.0.1")
 
-    assert seed_demo_user(accounts, "demo@scoremaster.local", "contraseña-nueva-del-tribunal") == "updated"
+    assert seed_demo_user(accounts, "demo@scoremaster.local", "contraseña-nueva-de-la-demo") == "updated"
 
-    assert AuthService(accounts).login("demo@scoremaster.local", "contraseña-nueva-del-tribunal", ip="127.0.0.1")
+    assert AuthService(accounts).login("demo@scoremaster.local", "contraseña-nueva-de-la-demo", ip="127.0.0.1")
     with pytest.raises(InvalidCredentials):
         AuthService(accounts).login("demo@scoremaster.local", "contraseña-antigua", ip="127.0.0.2")
     assert AuthService(accounts).current(old_session.token) is None, "sessions opened with the old password end"

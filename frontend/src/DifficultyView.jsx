@@ -116,7 +116,7 @@ export function WorkExplanation({ workId, onOpenPassage }) {
   </section>;
 }
 
-// Grades publishers give the work (PR 5 of the closing plan): typed in from the publisher's page, never
+// Grades publishers give the work: typed in from the publisher's page, never
 // looked up nor asked to the AI, and compared with ScoreLint's grade.
 const DEFAULT_VALUE = { grade: '3', pepper: 'ME' };
 

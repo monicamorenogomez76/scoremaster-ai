@@ -13,7 +13,7 @@ Las pautas de trabajo están en [CONTRIBUTING](../CONTRIBUTING.md) y la distribu
 
 ## Guías operativas
 
-- [Guía para el tribunal](TRIBUNAL.md)
+- [Recorrido por la demo](DEMO.md)
 - [Despliegue en Render, base en Neon y copias de seguridad](DEPLOYMENT.md)
 - [Seguridad (OWASP)](SECURITY.md)
 - [Contribuir al proyecto](../CONTRIBUTING.md)
