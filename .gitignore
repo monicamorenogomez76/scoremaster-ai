@@ -18,3 +18,7 @@ evaluation/exports/
 
 # Database copies (scripts/backup_db.sh): personal data, never in the repository.
 backups/
+
+# Kept only locally: the original briefs of the project and the AI assistant's guide.
+docs/archive/
+CLAUDE.md

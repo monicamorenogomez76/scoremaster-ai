@@ -17,8 +17,6 @@ Las rutas son relativas a la carpeta que contiene este `AGENTS.md`.
 | API, datos e infraestructura de ejecución | [scoremaster-api-persistence](skills/scoremaster-api-persistence/SKILL.md) | Contratos HTTP, uploads, repositorios, transacciones, PostgreSQL, Alembic y Docker. |
 | Evaluación y evidencia para el TFM | [scoremaster-evaluation](skills/scoremaster-evaluation/SKILL.md) | Baseline, benchmark, protocolo de feedback, métricas, comparación de métodos y resultados reproducibles. |
 | Revisión del criterio musical | [scoremaster-musical-reviewer](skills/scoremaster-musical-reviewer/SKILL.md) | Validez musical de reglas y resultados, contexto instrumental y recomendaciones con evidencias por parte y compás. No constituye validación humana del benchmark. |
-| Revisión de seguridad y desarrollo seguro solicitados | [security-best-practices](skills/security-best-practices/SKILL.md) | Buenas prácticas y hallazgos de seguridad para Python/FastAPI y JavaScript. Usar cuando se solicite expresamente seguridad, auditoría o ayuda para programar de forma segura. |
-| Modelado de amenazas solicitado | [security-threat-model](skills/security-threat-model/SKILL.md) | Activos, límites de confianza, capacidades del atacante, vías de abuso y mitigaciones basadas en el repositorio. Usar cuando se solicite expresamente modelar amenazas o enumerar amenazas y abusos. |
 
 ## Cómo aplicar esta distribución
 
