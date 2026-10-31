@@ -2,7 +2,7 @@
 
 Decided on 2026-10-05: the index is twice the previous 0-5 score, an explicit transform
 that keeps the order between parts, and six equal bands of the index give the grade until the
-evaluation with musicians calibrates them. The rubric (docs/DIFFICULTY_CRITICALITY.md) describes
+evaluation with musicians calibrates them. The rubric (docs/DIFICULTAD.md) describes
 the band that can play each grade; it is not an official certification.
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ def grade_from_index(index: float) -> int:
 
 
 # Publisher grades typed in by the director (2026-10-14). Equivalences in
-# docs/DIFFICULTY_CRITICALITY.md: Grade N is grade N with its halves (Grade 0.5 counts as 1) and the
+# docs/DIFICULTAD.md: Grade N is grade N with its halves (Grade 0.5 counts as 1) and the
 # letters of J.W. Pepper are grades 1-6. Never extracted automatically nor asked to an LLM.
 EXTERNAL_SCALES = ("grade", "pepper")
 PEPPER_LEVELS = {"VE": 1, "E": 2, "ME": 3, "M": 4, "MA": 5, "A": 6}

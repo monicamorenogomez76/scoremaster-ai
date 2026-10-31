@@ -64,7 +64,7 @@ export function shortfallText(requested, proposed) {
     { proposed, requested });
 }
 
-// The musician's side: the same rubric as ScoreLint (docs/DIFFICULTY_CRITICALITY.md), never its prediction.
+// The musician's side: the same rubric as ScoreLint (docs/DIFICULTAD.md), never its prediction.
 // Aligned with the Grade 1-6 scale of band publishers (decided 2026-10-13).
 export const GRADE_RUBRIC = [
   { grade: 1, label: 'Muy fácil', standard: 'Grade 1', description: 'Primer año de instrumento: negras, blancas y redondas en compases simples, con tesitura reducida.' },

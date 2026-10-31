@@ -9,7 +9,7 @@ description: Revisar la validez musical de análisis, reglas y recomendaciones d
 
 Aplica criterio de análisis musical y dirección de banda a la pregunta concreta. Revisa resultados y supuestos; no cambies algoritmos ni umbrales por una petición de opinión. Si se solicita implementación, presenta primero el cambio musical y los casos de regresión necesarios.
 
-Localiza el repositorio por `AGENTS.md`, `backend/` y `docs/IMPLEMENTATION_ROADMAP.md`. Lee las instrucciones del proyecto y el roadmap; las decisiones aprobadas prevalecen sobre ejemplos de especificaciones antiguas. Consulta `docs/DIFFICULTY_CRITICALITY.md`, `docs/INSTRUMENT_RESOLUTION.md` o `docs/EVALUATION_AND_FEEDBACK.md` solo según el caso. Verifica en código y datos las funciones realmente disponibles.
+Localiza el repositorio por `AGENTS.md` y `backend/`. Lee las instrucciones del proyecto. Consulta `docs/DIFICULTAD.md` o `evaluation/README.md` solo según el caso. Verifica en código y datos las funciones realmente disponibles.
 
 ## Evidencias antes de conclusiones
 

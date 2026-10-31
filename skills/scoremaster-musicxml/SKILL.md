@@ -7,13 +7,13 @@ description: Modificar el parser MusicXML/MXL y la identificación instrumental 
 
 ## Contexto y alcance
 
-Localiza la raíz de ScoreMasterAI por `AGENTS.md`, `backend/` y `docs/IMPLEMENTATION_ROADMAP.md`. Todas las rutas siguientes parten de esa raíz. Lee `AGENTS.md`, `CONTRIBUTING.md` y el plan aprobado; este último resuelve las discrepancias entre especificaciones de evolución. Comprueba el código actual: los documentos de propuesta no prueban que una función exista.
+Localiza la raíz de ScoreMasterAI por `AGENTS.md` y `backend/`. Todas las rutas siguientes parten de esa raíz. Lee `AGENTS.md` y `CONTRIBUTING.md`. Comprueba el código actual: los documentos de propuesta no prueban que una función exista.
 
 Trabaja únicamente en la petición activa. Antes de cambiar comportamiento, presenta objetivo, criterios de aceptación y un mapa breve de módulo, archivo, componente y cambio. Conserva los cambios locales ajenos. Explica las decisiones relevantes y actualiza solo la documentación afectada. Estas instrucciones no autorizan publicar, desplegar ni integrar cambios por sí solas.
 
 ## Archivos de referencia
 
-Inspecciona `backend/parsers/musicxml_parser.py`, `backend/domain/models.py`, `backend/parsers/playback.py` y `docs/INSTRUMENT_RESOLUTION.md`. Sigue los consumidores en BandFit, dificultad y audio antes de alterar el modelo.
+Inspecciona `backend/parsers/musicxml_parser.py`, `backend/domain/models.py`, `backend/parsers/playback.py` y `backend/domain/instrument_catalog.py`. Sigue los consumidores en BandFit, dificultad y audio antes de alterar el modelo.
 
 ## Procedimiento
 
@@ -21,7 +21,7 @@ Inspecciona `backend/parsers/musicxml_parser.py`, `backend/domain/models.py`, `b
 - Prioriza metadatos estructurados disponibles y aliases específicos. Evita coincidencias por substring: English Horn no es Horn; Bass Clarinet no es clarinete soprano. No borres tokens de afinación al normalizar.
 - Conserva UNKNOWN ante datos insuficientes. Una parte Voice no justifica adivinar su instrumento. La confirmación humana modifica la copia de sesión y no el archivo original.
 - Distingue altura escrita y de concierto; documenta cuál utiliza cada consumidor. Preserva voces, acordes, silencios, ligaduras, offsets y unidad de pulso al extraer tiempos. Un acorde no equivale a varios ataques sucesivos.
-- Implementa primero el resolver determinista previsto en el roadmap. Embeddings y fallback LLM son fases posteriores; no añadas estos servicios para resolver un alias sencillo.
+- El resolver de instrumentos es determinista: no añadas embeddings ni un fallback LLM para resolver un alias sencillo.
 - En entradas XML/MXL, revisa entidades externas, rutas de ZIP y límites de tamaño comprimido y expandido; conserva los límites vigentes y respuestas controladas ante archivos inválidos.
 
 ## Verificación

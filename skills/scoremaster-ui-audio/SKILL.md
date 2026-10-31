@@ -7,13 +7,13 @@ description: Editar la interfaz, el visor de partituras y la reproducción de Sc
 
 ## Contexto y alcance
 
-Localiza la raíz de ScoreMasterAI por `AGENTS.md`, `backend/` y `docs/IMPLEMENTATION_ROADMAP.md`. Todas las rutas siguientes parten de esa raíz. Lee `AGENTS.md`, `CONTRIBUTING.md` y el plan aprobado; este último resuelve las discrepancias entre especificaciones de evolución. Comprueba el código actual: los documentos de propuesta no prueban que una función exista.
+Localiza la raíz de ScoreMasterAI por `AGENTS.md` y `backend/`. Todas las rutas siguientes parten de esa raíz. Lee `AGENTS.md` y `CONTRIBUTING.md`. Comprueba el código actual: los documentos de propuesta no prueban que una función exista.
 
 Trabaja únicamente en la petición activa. Antes de cambiar comportamiento, presenta objetivo, criterios de aceptación y un mapa breve de módulo, archivo, componente y cambio. Conserva los cambios locales ajenos. Explica las decisiones relevantes y actualiza solo la documentación afectada. Estas instrucciones no autorizan publicar, desplegar ni integrar cambios por sí solas.
 
 ## Archivos de referencia
 
-Revisa `frontend/README.md`, `frontend/src/` (visores y audio en `frontend/src/score/`, vídeos en `frontend/src/videos/`); `backend/parsers/playback.py`, `README.md`, `docs/SCORE_VIEWER.md` y `docs/REALISTIC_AUDIO.md` según el cambio.
+Revisa `frontend/src/` (visores y audio en `frontend/src/score/`, vídeos en `frontend/src/videos/`), `backend/parsers/playback.py` y `README.md` según el cambio.
 
 ## Procedimiento
 

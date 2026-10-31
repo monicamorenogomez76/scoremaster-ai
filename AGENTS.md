@@ -36,8 +36,7 @@ Las rutas son relativas a la carpeta que contiene este `AGENTS.md`.
 - Mantén los controles de seguridad aplicables en cualquier implementación
   (ver `docs/SECURITY.md`).
 - Las instrucciones del usuario prevalecen sobre las guías de las skills.
-  Consulta `CONTRIBUTING.md` y `docs/IMPLEMENTATION_ROADMAP.md` para el flujo de
-  trabajo y las decisiones aprobadas. Una skill no autoriza por sí misma publicar,
+  Consulta `CONTRIBUTING.md` para el flujo de trabajo. Una skill no autoriza por sí misma publicar,
   desplegar, integrar cambios o contactar servicios externos.
 - Ejecuta las comprobaciones pertinentes de las skills seleccionadas y comunica
   lo modificado, lo verificado y las limitaciones. En cambios exclusivamente

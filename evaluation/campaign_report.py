@@ -406,7 +406,7 @@ def _publishers(section: dict) -> list[str]:
     if not section["works"]:
         return lines + ["Ninguna obra de la campaña tiene un grado publicado registrado.", ""]
     lines += ["Grados que publican editoriales y catálogos, registrados a mano por la directora con su fuente "
-              "(equivalencias en docs/DIFFICULTY_CRITICALITY.md). Diferencia positiva: ScoreLint puntúa más difícil.", "",
+              "(equivalencias en docs/DIFICULTAD.md). Diferencia positiva: ScoreLint puntúa más difícil.", "",
               "| Obra | ScoreLint | Editoriales | Diferencia | Fuentes |", "|---|---|---|---|---|"]
     for row in section["works"]:
         lines.append(f"| {row['title']} | {row['scorelint']} | {_fmt(float(row['published']), 1)} | "
