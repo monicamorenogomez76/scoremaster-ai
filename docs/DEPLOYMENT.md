@@ -150,7 +150,7 @@ el repositorio privado `scoremaster-omr`, en máquinas de 7 GB.
 
 **Límites**
 
-- Hasta 20 MB por PDF, 40 archivos y 80 páginas por obra.
+- Hasta 20 MB por PDF, 40 archivos y 160 páginas por obra (unos 30 minutos de lectura en el peor caso; el trabajo tiene 60).
 - Una lectura a la vez; la siguiente espera.
 - Cada lectura tarda 1–2 minutos en arrancar la máquina, más unos segundos por página.
 - El registro de cada lectura (pestaña **Actions** del repositorio del lector) no muestra el token ni las partituras.
