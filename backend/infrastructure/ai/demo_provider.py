@@ -58,6 +58,12 @@ TEXTS = {
         "runthrough": "La pasada completa toca cada obra seguida y en orden, como en el concierto.",
         "tutti": "Los tutti juntan lo trabajado por secciones y comprueban el equilibrio de la banda.",
         "order": "Los bloques siguen el orden en que la directora los ha planificado.",
+        "substitutes": "{} sin músico en la plantilla: se propone para cada una un instrumento con músicos libres que alcanza su "
+                       "tesitura, empezando por los sustitutos habituales.",
+        "parts": ("Una parte", "{} partes"), "no_substitutes": "Ninguna parte necesita sustituto.",
+        "usual": "{} es un sustituto habitual, tiene músicos libres y alcanza la tesitura de la parte.",
+        "fits": "{} tiene músicos libres y alcanza la tesitura de la parte.",
+        "nothing_fits": "Ningún instrumento con músicos libres en la plantilla alcanza su tesitura.",
     },
     "en": {
         "and": " and ",
@@ -105,6 +111,12 @@ TEXTS = {
         "runthrough": "The full run-through plays each work straight through and in order, as in the concert.",
         "tutti": "The tutti put together what was worked on by sections and check the balance of the band.",
         "order": "The blocks follow the order in which the conductor planned them.",
+        "substitutes": "{} without a musician in the template: for each one, an instrument with musicians to spare that reaches "
+                       "its range is proposed, the usual substitutes first.",
+        "parts": ("One part", "{} parts"), "no_substitutes": "No part needs a substitute.",
+        "usual": "{} is a usual substitute, has musicians to spare and reaches the range of the part.",
+        "fits": "{} has musicians to spare and reaches the range of the part.",
+        "nothing_fits": "No instrument with musicians to spare in the template reaches its range.",
     },
 }
 
@@ -215,3 +227,21 @@ class DemoExplanationProvider:
             reasons.append({"blocks": ids(blocks), "text": say["order"]})
         advice = say["phase_advice"]
         return {"summary": summary, "reasons": reasons[:6], "advice": advice.get(rehearsal["phase"], advice[None])}
+
+    def explain_substitutes(self, evidence: dict) -> dict:
+        """Each part takes its first candidate with a musician still free (the usual substitutes come first)."""
+        texts = _texts(evidence)
+        free = {candidate["id"]: candidate["spare"] for item in evidence["missing"] for candidate in item["candidates"]}
+        substitutes = []
+        for item in evidence["missing"]:
+            chosen = next((candidate for candidate in item["candidates"] if free[candidate["id"]] > 0), None)
+            if chosen is None:
+                substitutes.append({"missing": item["id"], "instrument": None, "reason": texts["nothing_fits"]})
+                continue
+            free[chosen["id"]] -= 1
+            substitutes.append({"missing": item["id"], "instrument": chosen["id"],
+                                "reason": texts["usual" if chosen["usual"] else "fits"].format(chosen["label"])})
+        count = len(evidence["missing"])
+        one, many = texts["parts"]
+        summary = texts["substitutes"].format(one if count == 1 else many.format(count)) if count else texts["no_substitutes"]
+        return {"summary": summary, "substitutes": substitutes}

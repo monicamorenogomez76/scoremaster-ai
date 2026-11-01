@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { apiFetch } from './api.js';
 import { BandManager } from './BandManager.jsx';
 import { View } from './View.jsx';
+import { Substitutes } from './Substitutes.jsx';
+import { needsSubstitutes } from './substitutes.js';
 import { aiConfidence, createOwnInstrument, instrumentGroups, instrumentKeys, instrumentSections, loadInstrumentSuggestions, OTHER_INSTRUMENT,
   proposeInstruments, withAiProposals,
   ownInstrumentBody, ownInstrumentForm, withSuggestions } from './instrumentCatalog.js';
@@ -161,6 +163,7 @@ export function BandView({ active, hidden, data, draft, onDraftChange, onUpdate,
             <ul className="result-list">{issues.length === 0
               ? <li className="result-empty">{t('La plantilla cubre los instrumentos requeridos.')}</li>
               : issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul>
+            {data.work_id && needsSubstitutes(bandFit) && <Substitutes workId={data.work_id} />}
             {unconfirmed.length > 0 && <p className="result-supporting">{unconfirmed.length === 1
               ? t('Una parte está pendiente de confirmar y no cuenta todavía.')
               : t('{count} partes están pendientes de confirmar y no cuentan todavía.', { count: unconfirmed.length })}</p>}
