@@ -350,3 +350,9 @@ def test_the_work_takes_the_tempo_written_on_its_pages(scoremaster):
     assert (mark.measure_number, mark.beats_per_minute, mark.beat_unit_quarters) == (1, 50, 1.0)
     run_pages(scoremaster, [(1, "Flauta"), (1, "Tuba")])
     assert "<sound tempo" not in scoremaster["result"]["musicxml"], "without a tempo written, none is made up"
+
+
+def test_a_band_pdf_with_its_score_and_every_part_fits():
+    """«Arabian Dances» (2026-11-01): score and parts in one PDF of 112 pages were refused at 80. At about 10 s a page
+    on GitHub's machines, 160 pages stay well within the job's 60 minutes."""
+    assert worker.MAX_PAGES == 160

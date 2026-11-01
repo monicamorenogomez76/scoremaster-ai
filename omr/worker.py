@@ -30,7 +30,7 @@ except ImportError:
 
 MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_FILES = 40
-MAX_PAGES = 80
+MAX_PAGES = 160
 PAGE_TIMEOUT_SECONDS = 300
 # copisteria finds its weights in models/ of its own folder (the workflow prepares it).
 COPISTERIA_DIR = Path(os.environ.get("COPISTERIA_DIR", "copisteria"))
