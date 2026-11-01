@@ -6,8 +6,8 @@ Recorrido de unos cinco minutos por ScoreMasterAI y qué mirar en cada paso.
 
 - **Demo publicada:** https://scoremaster-iz4j.onrender.com
 - **Cuenta:** `demo@scoremaster.local`. La contraseña de la demo publicada no está en el repositorio.
-- **Primer acceso:** el plan gratuito de Render duerme el servicio sin uso, así que puede tardar alrededor
-  de un minuto. Conviene abrirlo un rato antes.
+- **Primer acceso:** el plan gratuito de Render duerme el servicio sin uso; un aviso cada 10 minutos lo mantiene
+  despierto. Si aun así tarda, espera un minuto y recarga.
 - **Sin Internet o sin la demo publicada:** `docker compose up --build` levanta lo mismo en
   http://127.0.0.1:8000 con la contraseña `scoremaster-demo` (ver el [README](../README.md)).
 
@@ -45,7 +45,7 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
 
 ## Si algo no va como se espera
 
-- **Tarda mucho en abrir:** el servicio estaba dormido. Esperar un minuto y recargar.
+- **Tarda mucho en abrir:** el servicio se había dormido. Esperar un minuto y recargar.
 - **Un pasaje tarda en sonar la primera vez:** el servidor está preparando el audio de la obra, y la
   pantalla dice cuánto lleva.
 - **En Safari avanza el tiempo pero no se oye nada:** cerrar Safari con ⌘Q y volver a abrirlo.

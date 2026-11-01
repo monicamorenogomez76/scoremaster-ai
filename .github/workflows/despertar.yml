@@ -1,0 +1,21 @@
+# Render's free plan puts the service to sleep after 15 minutes without use; the first visit then waits about a
+# minute. Asking /health every ten minutes keeps it awake (the free plan's 750 hours a month cover one service always
+# on). This repository is public, so the job spends no Actions minutes. GitHub may run a schedule a few minutes late and
+# turns it off after 60 days without activity in the repository.
+name: Despertar Render
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  despertar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Pedir /health
+        # A sleeping service takes about a minute to answer: two minutes per try, three tries.
+        run: curl --fail --silent --show-error --max-time 120 --retry 2 --retry-delay 10 --retry-all-errors https://scoremaster-iz4j.onrender.com/health
