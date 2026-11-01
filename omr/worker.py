@@ -37,7 +37,12 @@ COPISTERIA_DIR = Path(os.environ.get("COPISTERIA_DIR", "copisteria"))
 
 
 class Refused(Exception):
-    """A reason to tell ScoreMaster, in Spanish."""
+    """A reason to tell ScoreMaster, in Spanish. The reader's repository is public (2026-11-01), so the log gets its own
+    text when the reason names a file: anyone can read the log, and it never says which work was read."""
+
+    def __init__(self, reason: str, logged: str | None = None):
+        super().__init__(reason)
+        self.logged = logged or reason
 
 
 class PageFailed(Exception):
@@ -108,9 +113,10 @@ def _download(client: httpx.Client, folder: str, files: list[dict]) -> list[tupl
         name = os.path.basename(item["name"]) or f"{index + 1}.pdf"
         content = client.get(item["url"]).raise_for_status().content
         if len(content) > MAX_FILE_BYTES:
-            raise Refused(f"{name} supera {MAX_FILE_BYTES // (1024 * 1024)} MB.")
+            raise Refused(f"{name} supera {MAX_FILE_BYTES // (1024 * 1024)} MB.",
+                          f"El archivo {index + 1} supera {MAX_FILE_BYTES // (1024 * 1024)} MB.")
         if not content.startswith(b"%PDF"):
-            raise Refused(f"{name} no es un PDF.")
+            raise Refused(f"{name} no es un PDF.", f"El archivo {index + 1} no es un PDF.")
         path = os.path.join(folder, f"{index:02d}.pdf")
         Path(path).write_bytes(content)
         saved.append((name, path))
@@ -290,9 +296,9 @@ def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: st
         # Parts of different lengths: copista skipped multi-measure rests (2026-10-29); the score keeps every measure.
         if len({measure_count(xml) for _, xml in files}) > 1 and score_pages():
             files = fill_lost_rests(files, _score(score_pages(), title)[0])
-        summary = ", ".join(f"{name} ({len(found)} {'página' if len(found) == 1 else 'páginas'})"
-                            for name, found, _ in groups if found)
-        print(f"La obra se saca de las particellas: {summary}.", flush=True)
+        read_pages = sum(len(found) for _, found, _ in groups)
+        print(f"La obra se saca de {len(files)} particellas ({read_pages} {'página' if read_pages == 1 else 'páginas'}).",
+              flush=True)
         return combine_parts(files, title), "parts", False
     print(f"La obra se saca de la partitura general: {len(score)} páginas.", flush=True)
     return _score(score, title)[0], "score", any(at_concert_pitch(text) for _, text in score)
@@ -310,10 +316,10 @@ def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, s
         else:
             index = order.index(name) if count == len(order) else None
         if joined is None or index is None:
-            print(f"No se pudo completar {name}: ninguna página suya se leyó y la partitura general no dice qué "
+            print(f"No se pudo completar la parte {order.index(name) + 1}: ninguna página suya se leyó y la partitura general no dice qué "
                   "pentagrama es el suyo.", flush=True)
             continue
-        print(f"{name} sale de la partitura general (pentagrama {index + 1}).", flush=True)
+        print(f"La parte {order.index(name) + 1} sale de la partitura general (pentagrama {index + 1}).", flush=True)
         found[name] = staff_of(joined, index)
     return found
 
@@ -344,13 +350,15 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         done, read, by_file, failed = 0, [], {}, {}
         client.post(callback + "/progress", json={"pages_done": 0, "pages_total": len(plan)})
         out_dirs = {path: tempfile.mkdtemp(dir=folder) for _, path in saved}
+        # The log numbers the files: it never says which work was read (2026-11-01).
+        numbered = {path: number for number, (_, path) in enumerate(saved, 1)}
         for name, path, number in plan:
             try:
                 xml = read_page(path, number, out_dirs[path])
                 by_file.setdefault((name, path), []).append((number, xml, texts[(path, number)]))
             except Exception as error:
                 # A cover or a text page: skipped. Why copista failed goes to the log, never the PDF nor the token.
-                print(f"{name}, página {number} sin música, se salta:\n{error}", flush=True)
+                print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{error}", flush=True)
                 failed.setdefault((name, path), []).append((number, None, texts[(path, number)]))
             done += 1
             client.post(callback + "/progress", json={"pages_done": done, "pages_total": len(plan)})
@@ -365,7 +373,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                 try:
                     found.append((read_page(path, number, out_dirs[path]), texts[(path, number)]))
                 except Exception as error:
-                    print(f"{name}, página {number} sin música, se salta:\n{error}", flush=True)
+                    print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{error}", flush=True)
                 done += 1
                 client.post(callback + "/progress", json={"pages_done": done, "pages_total": len(plan) + len(set_apart)})
             return found
@@ -388,7 +396,9 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                                          data["title"])
         except Exception:
             import traceback
-            print("\n".join(traceback.format_exc().strip().splitlines()[-8:]), flush=True)
+            # Where it failed and the kind of error, without its message (it may carry a part's name).
+            kind, _, stack = sys.exc_info()
+            print("".join(traceback.format_tb(stack)[-3:]) + kind.__name__, flush=True)
             raise Refused("No se pudo unir lo leído en una obra.") from None
         # copista reads no tempo: the first one written in the pages' text, at the start of the work (2026-11-01).
         tempo = next((found for found in (tempo_from_text(texts[(path, number)]) for _, path, number in plan) if found), None)
@@ -402,7 +412,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         return 0
     except Refused as reason:
         client.post(callback + "/result", json={"error": str(reason)})
-        print(str(reason), flush=True)
+        print(reason.logged, flush=True)
         return 1
     finally:
         catalog = Catalog()
