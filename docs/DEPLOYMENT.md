@@ -157,6 +157,11 @@ el repositorio privado `scoremaster-omr`, en máquinas de 7 GB.
 
 **Correcciones al recibir la lectura**
 
+- **Silencios de varios compases:** copista se salta los silencios de varios compases de las particellas, así que cada
+  una empezaba antes que las demás. Si las particellas salen con distinto número de compases, el lector lee también las
+  páginas de la partitura general, alinea cada particella compás a compás con el pentagrama de ritmo más parecido
+  (`omr/merge.py`, `fill_lost_rests`) y convierte en silencio los compases que perdió. Lo que leyó de la particella no se
+  cambia ni se quita; una particella completa o que no se parece a ningún pentagrama se queda como se leyó.
 - **Instrumentos:** las particellas y los pentagramas de la partitura general se nombran con el catálogo. Si una
   particella no se puede leer, toma su pentagrama de la partitura general.
 - **Transposición:** copista lee las notas tal como están impresas, pero no escribe `<transpose>`. ScoreMaster añade

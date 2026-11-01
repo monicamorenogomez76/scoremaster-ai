@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import copy
 
-from music21 import clef, converter, duration, instrument, key, metadata, note, stream, meter
+from music21 import chord, clef, converter, duration, instrument, key, metadata, note, stream, meter
 from music21.musicxml.m21ToXml import GeneralObjectExporter
 from music21.musicxml.xmlObjects import MusicXMLExportException
 
@@ -167,3 +167,98 @@ def staff_of(xml: bytes, index: int) -> bytes:
     """One staff of a joined score as a work of its own, for a part copista could not read (2026-10-28)."""
     staff = _staves(xml)[index]
     return _write("", [_part(staff.partName or f"Parte {index + 1}", _measures(staff))])
+
+
+# --- multi-measure rests ---------------------------------------------------------------------------------------------
+# copista skips the multi-measure rests of the parts (2026-10-29, «Paco el barba»: the flute's opening rest of eight
+# measures was lost, so every part started a different number of measures early). When the PDF also brings the score,
+# whose staves keep every measure, each part is aligned measure by measure with the staff whose rhythm it shares, and
+# the measures it lost become rests. Rhythm, not pitch: a part and its staff may be in different keys.
+
+# Alignment scores: a measure where both rest or attack at the same points matches; a rest the part lost costs nothing;
+# a measure with notes the part lacks costs, and a measure only the part has costs more (it is kept all the same).
+LOST_REST, LOST_NOTES, ONLY_IN_PART = 0.0, -0.8, -1.5
+# How alike a part and its staff must be to be aligned, on average over the measures they share (-1 to 1). 0.4 lets
+# in the snare drum of «Paco el barba» (0.44, a noisy reading) and keeps out a part unlike every staff (0.33).
+SAME_STAFF = 0.4
+
+
+def _onsets(measure: stream.Measure) -> frozenset:
+    """Where the measure attacks, in twelfths of a quarter; empty when it only rests."""
+    return frozenset(round(float(element.getOffsetInHierarchy(measure)) * 12) for element in measure.recurse().notes
+                     if isinstance(element, (note.Note, chord.Chord))
+                     and not (element.tie and element.tie.type in ("continue", "stop")))
+
+
+def _alike(left: frozenset, right: frozenset) -> float:
+    if not left and not right:
+        return 1.0
+    if not left or not right:
+        return -1.0
+    return 4 * len(left & right) / (len(left) + len(right)) - 1
+
+
+def _matched(part: list[frozenset], staff: list[frozenset]) -> tuple[float, list[tuple[int | None, int | None]]]:
+    """The best alignment (Needleman-Wunsch) as (part measure, staff measure) pairs, and how alike the pairs are."""
+    rows, cols = len(part), len(staff)
+    lost = [LOST_REST if not measure else LOST_NOTES for measure in staff]
+    best = [[0.0] * (cols + 1) for _ in range(rows + 1)]
+    for j in range(1, cols + 1):
+        best[0][j] = best[0][j - 1] + lost[j - 1]
+    for i in range(1, rows + 1):
+        best[i][0] = best[i - 1][0] + ONLY_IN_PART
+        for j in range(1, cols + 1):
+            best[i][j] = max(best[i - 1][j - 1] + _alike(part[i - 1], staff[j - 1]),
+                             best[i][j - 1] + lost[j - 1], best[i - 1][j] + ONLY_IN_PART)
+    pairs, i, j = [], rows, cols
+    while i or j:
+        if i and j and best[i][j] == best[i - 1][j - 1] + _alike(part[i - 1], staff[j - 1]):
+            pairs.append((i - 1, j - 1))
+            i, j = i - 1, j - 1
+        elif j and best[i][j] == best[i][j - 1] + lost[j - 1]:
+            pairs.append((None, j - 1))
+            j -= 1
+        else:
+            pairs.append((i - 1, None))
+            i -= 1
+    pairs.reverse()
+    shared = [_alike(part[a], staff[b]) for a, b in pairs if a is not None and b is not None]
+    return (sum(shared) / len(shared) if shared else -1.0), pairs
+
+
+def _lost_rest(model: stream.Measure) -> stream.Measure:
+    """A rest for a measure the part lost, with the meter of the score when it changes there."""
+    rest = _rest(model)
+    if model.timeSignature is not None:
+        rest.insert(0, copy.deepcopy(model.timeSignature))
+    return rest
+
+
+def fill_lost_rests(files: list[tuple[str, bytes]], score: bytes) -> list[tuple[str, bytes]]:
+    """Each part (name, MusicXML of one staff) with the rests copista skipped put back, from the score's staves. A part
+    with every measure, with several staves or unlike every staff is left as read."""
+    staves = [_measures(staff) for staff in _staves(score)]
+    rhythms = [[_onsets(measure) for measure in staff] for staff in staves]
+    fixed = []
+    for name, xml in files:
+        found = _staves(xml)
+        measures = _measures(found[0]) if len(found) == 1 else []
+        rhythm = [_onsets(measure) for measure in measures]
+        candidates = [(index, *_matched(rhythm, staff)) for index, staff in enumerate(rhythms) if len(staff) > len(rhythm)]
+        index, alike, pairs = max(candidates, key=lambda item: item[1], default=(None, -1.0, []))
+        if not measures or index is None or alike < SAME_STAFF:
+            fixed.append((name, xml))
+            continue
+        aligned = [measures[a] if a is not None else _lost_rest(staves[index][b]) for a, b in pairs]
+        lost = sum(1 for a, _ in pairs if a is None)
+        print(f"{name}: {lost} compases de silencio recuperados de la partitura general (pentagrama {index + 1}).",
+              flush=True)
+        part = _part(name, aligned)
+        _first_attributes(part, measures[0])
+        fixed.append((name, _write(name, [part])))
+    return fixed
+
+
+def measure_count(xml: bytes) -> int:
+    """Measures of the longest staff of a part."""
+    return max((len(_measures(staff)) for staff in _staves(xml)), default=0)

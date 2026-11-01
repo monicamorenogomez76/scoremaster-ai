@@ -300,3 +300,26 @@ def test_a_page_in_c_is_told_by_its_text():
         assert worker.at_concert_pitch(text), text
     for text in ("Transposed score", "Trumpet in C", "Fl.\nCl. en Do", ""):
         assert not worker.at_concert_pitch(text), text
+
+
+# copista skips the multi-measure rests of the parts (2026-10-29, «Paco el barba»). Parts of different lengths are the
+# sign: the score's pages are read too, and each part gets back its rests from its staff.
+def test_parts_of_different_lengths_get_back_their_rests_from_the_score(scoremaster, capsys):
+    from backend.test.test_omr_merge import contents, work
+    catalog_server(scoremaster)
+    score = work(list("rrrrqhqhe"), list("hhhhqqqqh"), list("qqqqqqqqq"), list("eeeeeeeee"))
+    pages = {1: (score, "Flauta\nClarinete\nTrompeta 1\nTuba"), 2: (work(list("rqhqhe")), "Flauta"),
+             3: (work(list("hhhhqqqqh")), "Tuba")}
+    read = []
+
+    def read_page(pdf_path, number, out_dir):
+        read.append(number)
+        return pages[number][0]
+
+    worker.run(payload("auto"), client=scoremaster["client"], read_page=read_page, count_pages=lambda path: len(pages),
+               page_text=lambda path, number: pages[number][1])
+    assert read == [2, 3, 1], "the score is read after the parts, because they differ in length"
+    musicxml = scoremaster["result"]["musicxml"].encode()
+    from omr.merge import staff_of
+    assert contents(staff_of(musicxml, 0)) == list("rrrrqhqhe") and contents(staff_of(musicxml, 1)) == list("hhhhqqqqh")
+    assert "Flauta: 3 compases de silencio recuperados" in capsys.readouterr().out

@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from omr.merge import combine_parts, join_pages, staff_of
+from omr.merge import combine_parts, fill_lost_rests, join_pages, measure_count, staff_of
 
 try:
     # ScoreMaster's instrument catalog (2026-10-28), checked out with the reader; an older workflow brings only omr/.
@@ -261,10 +261,21 @@ def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: st
         # A cover or a page of notes before the named parts is no part (2026-10-28).
         groups = [group for group in groups if not group[0].startswith("Parte ")]
     if groups and (named or not score):
+        read_pages = []
+
+        def score_pages() -> list[tuple[bytes, str]]:
+            """The score's pages, the ones set apart read only once."""
+            if not read_pages:
+                read_pages.append(score + read_score())
+            return read_pages[0]
+
         missing = [name for name, found, _ in groups if not found]
-        from_score = _from_score(missing, [name for name, _, _ in groups], score + read_score(), title) if missing else {}
+        from_score = _from_score(missing, [name for name, _, _ in groups], score_pages(), title) if missing else {}
         files = [(name, join_pages(found, name) if found else from_score[name]) for name, found, _ in groups
                  if found or name in from_score]
+        # Parts of different lengths: copista skipped multi-measure rests (2026-10-29); the score keeps every measure.
+        if len({measure_count(xml) for _, xml in files}) > 1 and score_pages():
+            files = fill_lost_rests(files, _score(score_pages(), title)[0])
         summary = ", ".join(f"{name} ({len(found)} {'página' if len(found) == 1 else 'páginas'})"
                             for name, found, _ in groups if found)
         print(f"La obra se saca de las particellas: {summary}.", flush=True)
