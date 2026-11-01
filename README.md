@@ -7,8 +7,8 @@ resultados y nunca sustituye los datos musicales.
 
 Licencia [MIT](LICENSE).
 
-**Demo publicada:** https://scoremaster-iz4j.onrender.com (plan gratuito de Render: el primer acceso puede
-tardar alrededor de un minuto). La contraseña de esa cuenta demo no está publicada; para probarla
+**Demo publicada:** https://scoremaster-iz4j.onrender.com (plan gratuito de Render, que se mantiene despierto con
+un aviso cada 10 minutos). La contraseña de esa cuenta demo no está publicada; para probarla
 sin ella, `docker compose up --build` la levanta en local. El [recorrido por la demo](docs/DEMO.md) dura unos cinco minutos.
 
 ![Resumen: próximo concierto con su programa, ensayo de hoy con su agenda por bloques, dónde trabajar, cobertura de los ensayos hasta el concierto, prioridades por sección y obras en preparación](docs/img/resumen.png)
@@ -233,7 +233,7 @@ asistente de IA usado durante el desarrollo.
 - **Audio aproximado**: muestras reales para los instrumentos principales y General MIDI para el resto,
   sin expresión ni repeticiones. Si en Safari avanza el tiempo pero no se oye nada, cerrar Safari con ⌘Q y
   volver a abrirlo suele resolverlo.
-- **Plan gratuito de Render**: el servicio se duerme sin uso y la CPU es lenta (una obra grande tarda unos
+- **Plan gratuito de Render**: la CPU es lenta (una obra grande tarda unos
   minutos en leerse la primera vez). La base de Neon se suspende tras 5 minutos sin uso y despierta sola.
 - **PDF con reconocimiento óptico**: copista-2m acierta el 87–99 % de las notas en particellas y el 73–91 % en
   partituras generales (prueba con PDF digitales, 2026-10-27), pero una sola nota extrema mal leída puede subir el
