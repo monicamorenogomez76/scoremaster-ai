@@ -464,7 +464,7 @@ export const en = {
   'Velocidad': 'Speed',
   'Volumen': 'Volume',
   'Pantalla completa': 'Full screen',
-  'Página {page}/{pages} · compases {first}–{last}': 'Page {page}/{pages} · measures {first}–{last}',
+  'Compases {first}–{last} de {total}': 'Measures {first}–{last} of {total}',
   'Cargando partitura · compases {first}–{last}…': 'Loading score · measures {first}–{last}…',
   'Todas las voces · notación original · compases {first}–{last}': 'All voices · original notation · measures {first}–{last}',
   'No se pudo mostrar esta página: {error}': 'Could not show this page: {error}',

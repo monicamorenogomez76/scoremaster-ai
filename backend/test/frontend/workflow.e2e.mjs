@@ -163,11 +163,11 @@ try {
   await page.locator('#notation-close').click();
   await page.locator('#work-tab-score').click();
   await page.evaluate(async () => window.scoremasterWorkspace.loadScore());
-  assert.match(await page.locator('#score-page').textContent(), /Página 1\/12/);
+  assert.match(await page.locator('#score-page').textContent(), /Compases 70–73 de 45/);
   await page.locator('#ensemble-play').click();
   await page.waitForFunction(() => !document.querySelector('#ensemble-seek').disabled);
   await page.locator('#ensemble-seek').evaluate(input => { input.value = '20'; input.dispatchEvent(new Event('change')); });
-  await page.waitForFunction(() => document.querySelector('#score-page').textContent.includes('Página 3/12') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false');
+  await page.waitForFunction(() => document.querySelector('#score-page').textContent.includes('Compases 78–81') && document.querySelector('#full-score-status').getAttribute('aria-busy') === 'false');
   assert.match(await page.locator('#score-page').textContent(), /78–81/);
   await page.locator('#ensemble-stop').click();
   console.log('PASS: full score automatically turns to the page playing after a seek');

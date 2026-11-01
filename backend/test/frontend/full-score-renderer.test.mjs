@@ -34,7 +34,7 @@ test('fits ensemble width without shrinking all staves to viewport height', asyn
   await state.renderer.load();
   const svg = state.container.children[0].children[0];
   assert.equal(svg.style.height, '1536px'); assert.equal(svg.style.width, '768px');
-  assert.equal(state.view().page, 'Página 1/2 · compases 1–4');
+  assert.equal(state.view().page, 'Compases 1–4 de 5');
   assert.equal(state.view().busy, false);
   assert.equal(state.view().canNext, true);
   state.container.clientHeight = 400; state.renderer.fit();
@@ -66,12 +66,45 @@ test('playback turns to the page that contains the sounding measure', async () =
   state.renderer.follow(22, true);
   await new Promise(done => setImmediate(done));
   assert.deepEqual(state.pages, ['1-4', '21-24']);
-  assert.equal(state.view().page, 'Página 6/12 · compases 21–24');
+  assert.equal(state.view().page, 'Compases 21–24 de 48');
 });
 
 test('page arithmetic keeps four-measure pages aligned to the first measure', () => {
   assert.equal(pageStartFor(70, 80), 78);
-  assert.equal(pageLabel(70, 114, 78), 'Página 3/12 · compases 78–81');
+  assert.equal(pageLabel(70, 114, 78), 'Compases 78–81 de 45');
+  assert.equal(pageLabel(70, 114, 78, 80), 'Compases 78–80 de 45');
   assert.equal(fitScale(1000, 432, 1), .75);
   assert.equal(fitScale(1000, 1032, 1.2), 1.2);
+});
+
+// «Paco el barba» (2026-11-01): its dense snare drum could not fit four measures in the width of the page, so the fourth
+// went down to a second line and the page was twice as tall. A page shows the measures that fit in one line.
+test('a page shows only the measures that fit in one line, and the next one starts after them', async () => {
+  const pages = [];
+  const container = new Element();
+  let view;
+  const renderer = createFullScoreRenderer({
+    container, session: { getVersion: () => 0, loadSource: async () => '<score/>' }, nextFrame: async () => {},
+    filter: (_, instrument, range) => { pages.push(range); return '<page/>'; }, bounds: () => ({ first: 1, last: 9 }),
+    createDisplay: target => {
+      const asked = pages[pages.length - 1].split('-').map(Number);
+      const count = asked[1] - asked[0] + 1;
+      // Three measures fit in a line.
+      const lines = count > 3 ? [3, count - 3] : [count];
+      return { async load() {}, GraphicSheet: { MusicPages: [{ MusicSystems: lines.map(n => ({ GraphicalMeasures: Array(n) })) }] },
+        render() { const svg = new Element(); svg.attributes = { width: '1000', height: '500' }; target.append(svg); } };
+    },
+    onChange: snapshot => { view = snapshot; },
+  });
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  await renderer.load();
+  assert.deepEqual(pages, ['1-4', '1-3'], 'drawn again with the three that fit');
+  assert.equal(view.page, 'Compases 1–3 de 9');
+  renderer.next(); await settle();
+  assert.deepEqual(pages.slice(2), ['4-7', '4-6'], 'the next page starts after the last measure shown');
+  renderer.next(); await settle();
+  assert.equal(view.page, 'Compases 7–9 de 9');
+  assert.equal(view.canNext, false);
+  renderer.previous(); await settle();
+  assert.equal(view.page, 'Compases 4–6 de 9', 'back to where it was');
 });
