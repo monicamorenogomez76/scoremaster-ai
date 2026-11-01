@@ -4,7 +4,7 @@
 |---|---|---|
 | Aplicación (FastAPI + React) | [Render](https://render.com), servicio web `scoremaster` en Frankfurt, con la misma imagen Docker que `docker compose up`. Configuración en [`render.yaml`](../render.yaml) | Gratuito |
 | Base de datos | PostgreSQL 17 en [Neon](https://neon.com), AWS Europe Central 1 (Frankfurt) | Gratuito |
-| Lector de PDF | GitHub Actions en el repositorio privado `scoremaster-omr` | Gratuito (2.000 minutos al mes) |
+| Lector de PDF | GitHub Actions en el repositorio público `scoremaster-omr` | Gratuito (sin tope de minutos en un repositorio público) |
 | Correo (recuperación de contraseña y confirmación del email) | [Brevo](https://www.brevo.com), API transaccional | Gratuito (300 correos al día) |
 | IA | Gemini (Google AI Studio) | Gratuito |
 
@@ -122,7 +122,14 @@ Los scripts usan la imagen `postgres:17` de Docker: no hay que instalar PostgreS
 ## Lector de PDF
 
 Render no puede leer PDF: copista-2m necesita 2–4,5 GB de memoria. El lector (`omr/`) corre en **GitHub Actions**, en
-el repositorio privado `scoremaster-omr`, en máquinas de 7 GB.
+el repositorio público `scoremaster-omr`, en las máquinas estándar de GitHub para repositorios públicos (4 CPU y 16 GB), que no
+gastan minutos.
+
+**Qué se ve en público.** Solo el *workflow*, sin secretos, y el registro de cada lectura. El registro nunca dice qué obra se
+leyó: numera los archivos y las partes («Archivo 1, página 3 sin música», «Parte 15: 19 compases de silencio recuperados») y,
+si algo falla, da dónde y de qué tipo fue el error, sin su mensaje. Los nombres de archivos y partes, el título y los motivos de
+error solo llegan a ScoreMaster. Los PDF no se guardan como artefactos ni pasan por el registro, y el token de un solo uso va
+enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo lo envía el token de Render.
 
 **Cómo funciona**
 
@@ -136,7 +143,7 @@ el repositorio privado `scoremaster-omr`, en máquinas de 7 GB.
 
 **Crear el repositorio del lector** (una vez)
 
-1. En GitHub, **New repository** → `scoremaster-omr`, **Private**, sin README.
+1. En GitHub, **New repository** → `scoremaster-omr`, **Public**, sin README.
 2. Desde ScoreMaster, con `gh` autenticado: `scripts/deploy_omr_worker.sh <usuario>/scoremaster-omr`. Copia solo el
    *workflow*, sin secretos. Solo hay que repetirlo si cambia `omr/workflow/read-pdf.yml`.
 3. **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**:

@@ -71,7 +71,7 @@ def test_a_page_without_music_is_skipped_and_nothing_is_kept(scoremaster, capsys
     """Covers and text pages are common (2026-10-28): the page is skipped and said in the log, the rest is the work."""
     assert run(scoremaster, payload("parts", ("Flauta 1.pdf",)), fail_on=2) == 0
     assert "<part-name>Flauta 1</part-name>" in scoremaster["result"]["musicxml"]
-    assert "Flauta 1.pdf, página 2 sin música" in capsys.readouterr().out
+    assert "Archivo 1, página 2 sin música" in capsys.readouterr().out
     assert not any(os.path.exists(folder) for folder in scoremaster["folders"])
 
 
@@ -142,7 +142,7 @@ def test_a_pdf_with_score_and_parts_gives_the_work_of_its_parts(scoremaster, cap
     assert run_auto(scoremaster, pages) == 0
     assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta 1", "Trombón 1"]
     log = capsys.readouterr().out
-    assert "particellas: Flauta 1 (2 páginas), Trombón 1 (1 página)" in log
+    assert "La obra se saca de 2 particellas (3 páginas)." in log
     assert "página 1 sin música" in log
 
 
@@ -271,7 +271,7 @@ def test_a_part_copista_cannot_read_comes_from_its_staff_in_the_score(scoremaste
     read = run_pages(scoremaster, pages)
     assert read == [2, 3, 4, 5, 1], "the score is read only when a part is missing"
     assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Trompeta 1", "Tuba"]
-    assert "Trompeta 1 sale de la partitura general" in capsys.readouterr().out
+    assert "La parte 3 sale de la partitura general" in capsys.readouterr().out
 
 
 def test_an_unnamed_score_completes_a_part_only_with_one_staff_per_part(scoremaster, capsys):
@@ -282,7 +282,7 @@ def test_an_unnamed_score_completes_a_part_only_with_one_staff_per_part(scoremas
     pages = [(5, ""), (1, "Flauta"), (1, "Clarinete"), (0, "Trompeta 1"), (1, "Tuba")]
     run_pages(scoremaster, pages)
     assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Tuba"]
-    assert "No se pudo completar Trompeta 1" in capsys.readouterr().out
+    assert "No se pudo completar la parte 3" in capsys.readouterr().out
 
 
 # A score may be printed in C (2026-10-29): ScoreMaster transposes the parts, never a score whose page says it is in C.
@@ -322,7 +322,7 @@ def test_parts_of_different_lengths_get_back_their_rests_from_the_score(scoremas
     musicxml = scoremaster["result"]["musicxml"].encode()
     from omr.merge import staff_of
     assert contents(staff_of(musicxml, 0)) == list("rrrrqhqhe") and contents(staff_of(musicxml, 1)) == list("hhhhqqqqh")
-    assert "Flauta: 3 compases de silencio recuperados" in capsys.readouterr().out
+    assert "Parte 1: 3 compases de silencio recuperados" in capsys.readouterr().out
 
 
 # copista reads no tempo (2026-11-01, «Paco el barba», a moorish march at crotchet = 50, sounded at the default 120).
@@ -356,3 +356,36 @@ def test_a_band_pdf_with_its_score_and_every_part_fits():
     """«Arabian Dances» (2026-11-01): score and parts in one PDF of 112 pages were refused at 80. At about 10 s a page
     on GitHub's machines, 160 pages stay well within the job's 60 minutes."""
     assert worker.MAX_PAGES == 160
+
+
+# The reader's repository is public (2026-11-01): anyone can read the log of a reading, so it says what happened and never
+# which work it was. ScoreMaster still gets the names of the files and parts; only the log goes without them.
+def test_the_log_names_no_file_nor_part(scoremaster, capsys):
+    from backend.test.test_omr_merge import work
+    catalog_server(scoremaster)
+    score = work(list("rrrrqhqhe"), list("hhhhqqqqh"), list("qqqqqqqqq"), list("eeeeeeeee"))
+    pages = {1: (None, "Mi obra secreta\nFlauta\nClarinete\nTrompeta 1\nTuba"), 2: (score, "Flauta\nClarinete\nTrompeta 1\nTuba"),
+             3: (work(list("rqhqhe")), "Flauta"), 4: (None, "Trompeta 1"), 5: (work(list("hhhhqqqqh")), "Tuba")}
+
+    def read_page(pdf_path, number, out_dir):
+        if pages[number][0] is None:
+            raise worker.PageFailed("ValueError: no staves found on the page")
+        return pages[number][0]
+
+    data = payload("auto", ("Mi obra secreta (Score-parts).pdf",))
+    data["title"] = "Mi obra secreta"
+    worker.run(data, client=scoremaster["client"], read_page=read_page, count_pages=lambda path: len(pages),
+               page_text=lambda path, number: pages[number][1])
+    log = capsys.readouterr().out
+    for name in ("Mi obra secreta", "Score-parts", "Flauta", "Clarinete", "Trompeta", "Tuba"):
+        assert name not in log, name
+    assert "Archivo 1, página 1 sin música" in log and "Parte 1: 3 compases de silencio recuperados" in log
+    assert sorted(part_names(scoremaster["result"]["musicxml"])) == ["Flauta", "Trompeta 1", "Tuba"], "ScoreMaster gets the names"
+
+
+def test_a_refused_file_is_named_to_scoremaster_and_numbered_in_the_log(scoremaster, capsys):
+    scoremaster["files"]["/omr/imports/7/files/0"] = b"<score-partwise/>"
+    run(scoremaster, payload("parts", ("Mi obra secreta.pdf",)))
+    assert scoremaster["result"] == {"error": "Mi obra secreta.pdf no es un PDF."}
+    log = capsys.readouterr().out
+    assert "Mi obra secreta" not in log and "El archivo 1 no es un PDF." in log

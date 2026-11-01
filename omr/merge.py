@@ -264,7 +264,7 @@ def fill_lost_rests(files: list[tuple[str, bytes]], score: bytes) -> list[tuple[
     staves = [_measures(staff) for staff in _staves(score)]
     rhythms = [[_onsets(measure) for measure in staff] for staff in staves]
     fixed = []
-    for name, xml in files:
+    for position, (name, xml) in enumerate(files, 1):
         found = _staves(xml)
         measures = _measures(found[0]) if len(found) == 1 else []
         rhythm = [_onsets(measure) for measure in measures]
@@ -278,7 +278,8 @@ def fill_lost_rests(files: list[tuple[str, bytes]], score: bytes) -> list[tuple[
             fixed.append((index, name, xml))
             continue
         aligned = [measures[a] if a is not None else _lost_rest(staves[index][b]) for a, b in pairs]
-        print(f"{name}: {lost} compases de silencio recuperados de la partitura general (pentagrama {index + 1}).",
+        # The log of the public reader numbers the part: it never says which work was read (2026-11-01).
+        print(f"Parte {position}: {lost} compases de silencio recuperados de la partitura general (pentagrama {index + 1}).",
               flush=True)
         part = _part(name, aligned)
         _first_attributes(part, measures[0])
