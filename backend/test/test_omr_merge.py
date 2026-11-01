@@ -161,3 +161,31 @@ def test_a_measure_only_the_part_has_is_kept():
     from omr.merge import fill_lost_rests
     [(_, fixed)] = fill_lost_rests([("Flauta", work(list("rqhqhee")))], SCORE)
     assert contents(fixed).count("e") == 2 and contents(fixed)[:4] == list("rrrr")
+
+
+def test_a_meter_key_or_clef_repeated_in_every_measure_is_written_once():
+    """copista writes the time signature again in most measures (2026-11-01, «Paco el barba»): every measure then
+    showed its 2/4 and the score viewer could not fit four measures in a line."""
+    from omr.merge import combine_parts
+    repeated = work(list("hqhq")).replace(b"<note>", b"<attributes><time><beats>2</beats><beat-type>4</beat-type></time>"
+                                          b"<clef><sign>G</sign><line>2</line></clef></attributes><note>")
+    _, _, [measures] = parts_of(combine_parts([("Flauta", repeated)], "Obra"))
+    assert [len(bar.findall("attributes/time")) for bar in measures] == [1, 0, 0, 0]
+    assert [len(bar.findall("attributes/clef")) for bar in measures] == [1, 0, 0, 0]
+
+
+def test_the_work_names_no_composer_it_does_not_know():
+    from omr.merge import combine_parts
+    assert b"Music21" not in combine_parts([("Flauta", work(list("hq")))], "Obra")
+
+
+def test_the_parts_aligned_with_the_score_follow_its_order():
+    """The parts come in the order of the PDF (2026-11-01: «Paco el barba» put the tuba on top); the score's staves
+    give the order of the band."""
+    from omr.merge import fill_lost_rests
+    files = [("Tuba", work(list("hhhhqqqqh"))), ("Flauta", work(list("rqhqhe")))]
+    assert [name for name, _ in fill_lost_rests(files, SCORE)] == ["Flauta", "Tuba"]
+    assert [name for name, _ in fill_lost_rests([("Otra", work(list("eeeeeee"))), *files], SCORE)] == \
+        ["Flauta", "Tuba", "Otra"], "a part like no staff goes after the others"
+    trumpets = [(f"Trompeta {n}", work(list("hhhhqqqqh"))) for n in (3, 2, 1)]
+    assert [name for name, _ in fill_lost_rests(trumpets, SCORE)] == ["Trompeta 1", "Trompeta 2", "Trompeta 3"]

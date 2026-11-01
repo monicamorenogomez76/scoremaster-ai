@@ -9,6 +9,7 @@ after their files. The staves of a score take the instrument names written besid
 from __future__ import annotations
 
 import copy
+import re
 
 from music21 import chord, clef, converter, duration, instrument, key, metadata, note, stream, meter
 from music21.musicxml.m21ToXml import GeneralObjectExporter
@@ -65,13 +66,31 @@ def _part(name: str, measures: list[stream.Measure]) -> stream.Part:
     named = instrument.Instrument()
     named.partName = name
     part.insert(0, named)
+    in_force = {}
     for number, measure in enumerate(measures, 1):
         measure = copy.deepcopy(measure)
         for old in list(measure.recurse().getElementsByClass(instrument.Instrument)):
             old.activeSite.remove(old)
+        _drop_repeated(measure, in_force)
         measure.number = number
         part.append(measure)
     return part
+
+
+# What a signature says, to tell when a measure only repeats the one in force.
+_SIGNATURES = {meter.TimeSignature: lambda item: item.ratioString, key.KeySignature: lambda item: item.sharps,
+               clef.Clef: lambda item: (item.sign, item.line, item.octaveChange)}
+
+
+def _drop_repeated(measure: stream.Measure, in_force: dict) -> None:
+    """copista writes the time signature again in most measures (2026-11-01, «Paco el barba»): each measure then
+    showed its 2/4. A meter, key or clef equal to the one in force is left out."""
+    for kind, said in _SIGNATURES.items():
+        for element in list(measure.recurse().getElementsByClass(kind)):
+            if in_force.get(kind) == said(element):
+                element.activeSite.remove(element)
+            else:
+                in_force[kind] = said(element)
 
 
 def _first_attributes(part: stream.Part, model: stream.Measure) -> None:
@@ -118,7 +137,7 @@ def _write(title: str, parts: list[stream.Part]) -> bytes:
     for part in parts:
         score.insert(0, part)
     try:
-        return GeneralObjectExporter(score).parse()
+        return _without_made_up_composer(GeneralObjectExporter(score).parse())
     except MusicXMLExportException:
         # music21 retouching the notation copista wrote may make up a 2048th (2026-10-28, «Paco el barba»): the
         # notation is written as read, with only the impossible types fixed.
@@ -126,7 +145,12 @@ def _write(title: str, parts: list[stream.Part]) -> bytes:
             _fix_unwritable(part)
         exporter = GeneralObjectExporter(score)
         exporter.makeNotation = False
-        return exporter.parse()
+        return _without_made_up_composer(exporter.parse())
+
+
+def _without_made_up_composer(xml: bytes) -> bytes:
+    """music21 names itself the composer of a work without one; the viewer showed «Music21» on the page."""
+    return xml.replace(b'<creator type="composer">Music21</creator>', b"")
 
 
 def join_pages(pages: list[bytes], title: str, names: list[str] | None = None) -> bytes:
@@ -244,19 +268,26 @@ def fill_lost_rests(files: list[tuple[str, bytes]], score: bytes) -> list[tuple[
         found = _staves(xml)
         measures = _measures(found[0]) if len(found) == 1 else []
         rhythm = [_onsets(measure) for measure in measures]
-        candidates = [(index, *_matched(rhythm, staff)) for index, staff in enumerate(rhythms) if len(staff) > len(rhythm)]
+        candidates = [(index, *_matched(rhythm, staff)) for index, staff in enumerate(rhythms) if len(staff) >= len(rhythm)]
         index, alike, pairs = max(candidates, key=lambda item: item[1], default=(None, -1.0, []))
         if not measures or index is None or alike < SAME_STAFF:
-            fixed.append((name, xml))
+            fixed.append((None, name, xml))
+            continue
+        lost = sum(1 for a, _ in pairs if a is None)
+        if lost == 0:
+            fixed.append((index, name, xml))
             continue
         aligned = [measures[a] if a is not None else _lost_rest(staves[index][b]) for a, b in pairs]
-        lost = sum(1 for a, _ in pairs if a is None)
         print(f"{name}: {lost} compases de silencio recuperados de la partitura general (pentagrama {index + 1}).",
               flush=True)
         part = _part(name, aligned)
         _first_attributes(part, measures[0])
-        fixed.append((name, _write(name, [part])))
-    return fixed
+        fixed.append((index, name, _write(name, [part])))
+    # In the order of the score's staves (the PDF may bring the parts in any order), the parts of one staff by their
+    # number (Trompeta 1, 2, 3); a part like no staff goes last.
+    numbered = lambda name: [int(piece) if piece.isdigit() else piece for piece in re.split(r"(\d+)", name)]
+    ordered = sorted(fixed, key=lambda item: (item[0] is None, item[0] or 0, numbered(item[1]) if item[0] is not None else []))
+    return [(name, xml) for _, name, xml in ordered]
 
 
 def measure_count(xml: bytes) -> int:
