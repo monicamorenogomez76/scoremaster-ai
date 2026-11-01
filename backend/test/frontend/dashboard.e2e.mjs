@@ -203,6 +203,10 @@ try {
   assert.equal(await page.getByLabel('Músicos de Clarinete en Si bemol').inputValue(), '0', 'the saved band applies to the next work');
   await page.locator('#band-content').getByText('Clarinete en Si bemol: falta en la plantilla; se necesita 1.').waitFor();
   console.log('PASS: an unknown part is confirmed from the catalog and the saved band applies to it');
+  await page.locator('#band-substitutes').getByRole('button', { name: 'Proponer sustitutos' }).click();
+  await page.locator('#band-substitutes').getByText(/Modo demo/).waitFor();
+  assert.match(await page.locator('#band-substitutes').textContent(), new RegExp(melody + ' 1 \\(Clarinete en Si bemol\\)'));
+  console.log('PASS: the demo proposes who plays what the band lacks, and says it is not AI');
 
   await upload(melody + ' 2', 'melodia-2.musicxml');
   await page.getByLabel('Músicos de Clarinete en Si bemol').waitFor();

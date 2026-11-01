@@ -23,6 +23,7 @@ from backend.analyzers.tempo import estimate_duration
 from backend.domain import grade_rubric as R
 from backend.domain.instrument_catalog import english_label
 from backend.domain.instrument_resolver import resolve_part
+from backend.domain.instrument_transposition import instrument_shift
 from backend.domain.models import Score, ScorePart
 from backend.domain.timing import is_attack, sounding_pitches
 
@@ -99,6 +100,17 @@ def playable_range(canonical_id: str, part: ScorePart, margin: int = REACH_MARGI
         return True
     (low, high), _ = R.RANGES[row][5]
     return _midi(low) - margin <= min(played) and max(played) <= _midi(high) + margin
+
+
+def reaches_sounding(canonical_id: str, lowest: str, highest: str, margin: int = REACH_MARGIN) -> bool | None:
+    """Whether the instrument reaches a range of sounding pitches once written in its own key (a substitute reading
+    another instrument's part); None when the guides have no range for it."""
+    row = R.RANGE_ROW_BY_INSTRUMENT.get(canonical_id)
+    if row is None:
+        return None
+    shift = 0 if row in R.CONCERT_PITCH_ROWS else instrument_shift(canonical_id)
+    (low, high), _ = R.RANGES[row][5]
+    return _midi(low) - margin <= _midi(lowest) - shift and _midi(highest) - shift <= _midi(high) + margin
 
 
 def _range(part: ScorePart, row: str) -> dict:

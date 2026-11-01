@@ -132,6 +132,16 @@ try {
   await admin.locator('#instrument-confirmation').getByText('IA, confianza media: Tesitura de flauta.').waitFor();
   assert.equal(await admin.getByLabel('Instrumento de Melodía 3').inputValue(), 'clarinet.bb', 'what was chosen is kept');
   await audit(admin, 'Mi banda › propuesta de la IA');
+  // Substitutes for what the band lacks (2026-10-31): without a key the demo chooses, and says so.
+  await admin.locator('#confirm-instruments').click();
+  await admin.getByLabel('Músicos de Clarinete en Si bemol').fill('0');
+  await admin.locator('#update-analysis').click();
+  const substitutes = admin.locator('#band-substitutes');
+  await substitutes.waitFor();
+  await substitutes.getByRole('button', { name: 'Proponer sustitutos' }).click();
+  await substitutes.getByText(/Modo demo/).waitFor();
+  assert.match(await substitutes.textContent(), /Melodía 3 \(Clarinete en Si bemol\)/);
+  await audit(admin, 'Mi banda › sustitutos');
   await admin.close();
   const phone = await browser.newPage({ locale: 'es-ES', viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
   await phone.goto(url);

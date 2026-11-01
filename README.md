@@ -30,7 +30,7 @@ La pantalla de cada obra responde a las tres preguntas del director:
 |---|---|
 | **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`) o de **PDF** (partitura general, particellas o las dos cosas en el mismo PDF, que se separan solas; leídas con copista-2m en GitHub Actions; grado provisional y fuera de la evaluación), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio, búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
 | **Dificultad (ScoreLint)** | **Grado según las tablas de grados** (Federación Galega de Bandas de Música, American Band College y FJH): armadura, compás, tempo, duración, dinámicas y, por instrumento, tesitura, figuras, grupos irregulares, síncopas, articulaciones y adornos, con el criterio que fija el grado. Índice técnico con seis dimensiones (densidad rítmica, tempo, tesitura, registro, intervalos y resistencia), reglas SL002 registro agudo, SL003 alta densidad rítmica, SL004 intervalos amplios y SL005 pasaje prolongado sin descanso, y detector de **pasajes críticos** (puede no haber ninguno). Árbol de familia a instrumento y «Ver pasaje» con la notación y el audio de esa parte |
-| **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos, con la propuesta de la IA para las partes que el catálogo no reconoce |
+| **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos, con la propuesta de la IA para las partes que el catálogo no reconoce; sustitutos para las partes sin músico: ScoreLint busca en la plantilla los instrumentos con músicos libres que alcanzan su tesitura y la IA (o, sin ella, la demo) elige y explica cómo adaptar la parte |
 | **Conciertos** | Programa, patrón semanal y propuesta de la serie de ensayos por fases (lectura y pasajes, integración y ensayo general); calendario mensual; en el Resumen, cobertura de la serie: ensayos hechos y, por obra, tiempo ensayado y pasajes resueltos |
 | **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen; hoja de cada ensayo para imprimir o guardar en PDF |
 | **IA explicativa** | «¿Por qué esta dificultad?» y «¿Por qué este plan?» redactadas por **Gemini** a partir de las evidencias del análisis, con citas comprobadas; sin clave responde un **modo demo identificado** como tal |
@@ -240,7 +240,7 @@ asistente de IA usado durante el desarrollo.
   grado. Por eso la obra leída de PDF lleva el grado como provisional y no entra en la evaluación. Sin OCR, las partes
   de una partitura general llegan sin nombre de instrumento y se confirman en «Mi banda». Cada lectura tarda 1–2
   minutos en arrancar.
-- **Pendiente u opcional**: pregunta libre a la IA, sustitutos de instrumento,
+- **Pendiente u opcional**: pregunta libre a la IA,
   búsqueda automática del grado publicado de una obra y segunda opinión con un modelo de pesos abiertos.
 
 ## Créditos

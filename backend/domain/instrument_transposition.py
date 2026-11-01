@@ -39,3 +39,9 @@ def written_to_sounding(canonical_id: str, clef_sign: str | None = None) -> tupl
     if canonical_id in _IN_B_FLAT_IN_TREBLE_CLEF:
         return (-2, -1, -1) if clef_sign == "G" else None
     return _WRITTEN_TO_SOUNDING.get(canonical_id)
+
+
+def instrument_shift(canonical_id: str, clef_sign: str | None = None) -> int:
+    """Written to sounding pitch in semitones (a B-flat clarinet, -2; a bass clarinet, -14); 0 when it sounds as written."""
+    interval = written_to_sounding(canonical_id, clef_sign)
+    return interval[0] + 12 * interval[2] if interval else 0

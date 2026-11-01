@@ -19,6 +19,8 @@ from backend.app.i18n import language, translate
 from backend.app.stored_scores import stored_score
 from backend.application.ai import ProviderFailure
 from backend.application.instrument_proposals import InvalidProposals, NotAvailable, propose_instruments
+from backend.application.substitutes_explanation import explain_substitutes
+from backend.analyzers.substitutes import substitute_candidates
 from backend.application.difficulty_explanation import explain_difficulty
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.parsers.playback import prepare_playback, preparation_enabled
@@ -179,6 +181,23 @@ def instrument_proposals(work_id: str, user: User = Depends(authenticated_user),
     except (ProviderFailure, InvalidProposals) as failure:
         reason = str(failure) if isinstance(failure, ProviderFailure) else "invalid"
         return JSONResponse(status_code=503, content={"detail": translate(PROPOSAL_FAILED, lang), "reason": reason})
+
+
+@router.get("/works/{work_id}/substitutes")
+def work_substitutes(work_id: str, user: User = Depends(authenticated_user),
+                     library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store),
+                     provider=Depends(get_explanation_provider), cache=Depends(get_explanation_cache),
+                     accept_language: Optional[str] = Header(None)):
+    """Who can play the parts the band has no musician for (2026-10-31), with the template of the latest analysis."""
+    record = library.latest_analysis(user.id, _work_id(work_id))
+    if record is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    found = stored_score(library, user.id, _work_id(work_id), score_store)
+    if found is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    profile = (record.configuration or {}).get("band_profile") or {}
+    missing = substitute_candidates(found[1], record.result.get("band_fit") or {}, profile)
+    return explain_substitutes(missing, provider, DemoExplanationProvider(), cache, language(accept_language))
 
 
 @router.get("/works/{work_id}/file")
