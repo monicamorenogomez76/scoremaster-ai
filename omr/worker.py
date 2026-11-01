@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from omr.merge import combine_parts, join_pages, staff_of
+from omr.merge import add_tempo, combine_parts, fill_lost_rests, join_pages, measure_count, staff_of
 
 try:
     # ScoreMaster's instrument catalog (2026-10-28), checked out with the reader; an older workflow brings only omr/.
@@ -209,6 +209,20 @@ def at_concert_pitch(text: str) -> bool:
     return bool(CONCERT_PITCH.search(text or ""))
 
 
+# A tempo as the music fonts of Finale and Sibelius write it in a PDF's text (2026-11-01): «q = 50» is crotchet = 50
+# (h minim, e quaver, a dot after the note dotted); or with the Unicode notes.
+_TEMPO = re.compile(r"(?<![\w.])([qhe\u2669\u266a])(\.?)\s*=\s*(\d{2,3})(?!\d)")
+_TEMPO_BEATS = {"q": 1.0, "\u2669": 1.0, "h": 2.0, "e": 0.5, "\u266a": 0.5}
+
+
+def tempo_from_text(text: str) -> tuple[int, float] | None:
+    """(beats per minute, beat in quarters) of the first tempo written in the text, or None."""
+    found = _TEMPO.search(text or "")
+    if not found or not 20 <= int(found.group(3)) <= 300:
+        return None
+    return int(found.group(3)), _TEMPO_BEATS[found.group(1)] * (1.5 if found.group(2) else 1)
+
+
 def staves(xml: bytes) -> int:
     """Staves of a page as copista wrote it: each part with its own count of staves."""
     from xml.etree import ElementTree as ET
@@ -261,10 +275,21 @@ def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: st
         # A cover or a page of notes before the named parts is no part (2026-10-28).
         groups = [group for group in groups if not group[0].startswith("Parte ")]
     if groups and (named or not score):
+        read_pages = []
+
+        def score_pages() -> list[tuple[bytes, str]]:
+            """The score's pages, the ones set apart read only once."""
+            if not read_pages:
+                read_pages.append(score + read_score())
+            return read_pages[0]
+
         missing = [name for name, found, _ in groups if not found]
-        from_score = _from_score(missing, [name for name, _, _ in groups], score + read_score(), title) if missing else {}
+        from_score = _from_score(missing, [name for name, _, _ in groups], score_pages(), title) if missing else {}
         files = [(name, join_pages(found, name) if found else from_score[name]) for name, found, _ in groups
                  if found or name in from_score]
+        # Parts of different lengths: copista skipped multi-measure rests (2026-10-29); the score keeps every measure.
+        if len({measure_count(xml) for _, xml in files}) > 1 and score_pages():
+            files = fill_lost_rests(files, _score(score_pages(), title)[0])
         summary = ", ".join(f"{name} ({len(found)} {'página' if len(found) == 1 else 'páginas'})"
                             for name, found, _ in groups if found)
         print(f"La obra se saca de las particellas: {summary}.", flush=True)
@@ -365,6 +390,11 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             import traceback
             print("\n".join(traceback.format_exc().strip().splitlines()[-8:]), flush=True)
             raise Refused("No se pudo unir lo leído en una obra.") from None
+        # copista reads no tempo: the first one written in the pages' text, at the start of the work (2026-11-01).
+        tempo = next((found for found in (tempo_from_text(texts[(path, number)]) for _, path, number in plan) if found), None)
+        if tempo:
+            musicxml = add_tempo(musicxml, *tempo)
+            print(f"Tempo leído del texto del PDF: {tempo[0]} por minuto.", flush=True)
         # ScoreMaster adds the transposition of each instrument, never to a score in C (2026-10-29).
         client.post(callback + "/result", json={"musicxml": musicxml.decode("utf-8"), "source": source,
                                                 "concert_pitch": concert_pitch}).raise_for_status()

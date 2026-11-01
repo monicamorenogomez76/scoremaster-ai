@@ -98,3 +98,94 @@ def test_a_note_too_short_to_write_does_not_spoil_the_work():
     root, _, measures = parts_of(join_pages([tiny], title="Obra"))
     assert measures[0][0].findtext("note/pitch/step") == "C"
     assert all(note.findtext("type") != "2048th" for note in measures[0][0].findall("note"))
+
+
+def work(*staves: list[str]) -> bytes:
+    """A work in 2/4: each staff a list of measures, «r» a whole-measure rest, «h» a half note, «q» two quarters."""
+    part_list = "".join(f'<score-part id="P{n}"><part-name>Part {n}</part-name></score-part>' for n in range(1, len(staves) + 1))
+    notes = {"r": '<note><rest measure="yes"/><duration>4</duration></note>',
+             "h": "<note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>half</type></note>",
+             "q": "<note><pitch><step>D</step><octave>5</octave></pitch><duration>2</duration><type>quarter</type></note>" * 2,
+             "e": "<note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>eighth</type></note>" * 4}
+    body = ""
+    for n, measures in enumerate(staves, 1):
+        bars = ""
+        for number, content in enumerate(measures, 1):
+            attributes = ("<attributes><divisions>2</divisions><key><fifths>0</fifths></key><time><beats>2</beats>"
+                          "<beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>"
+                          if number == 1 else "")
+            bars += f'<measure number="{number}">{attributes}{notes[content]}</measure>'
+        body += f'<part id="P{n}">{bars}</part>'
+    return (f'<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"><part-list>{part_list}</part-list>'
+            f"{body}</score-partwise>").encode()
+
+
+def contents(xml: bytes) -> list[str]:
+    _, _, [measures] = parts_of(xml)
+    kinds = []
+    for bar in measures:
+        found = bar.findall("note")
+        kinds.append("r" if all(item.find("rest") is not None for item in found)
+                     else {1: "h", 2: "q", 4: "e"}.get(len(found), "?"))
+    return kinds
+
+
+# The score of «Paco el barba» (2026-10-29): copista skips the multi-measure rests of the parts, so each part started a
+# different number of measures early. Each part is aligned measure by measure with its score staff.
+SCORE = work(list("rrrrqhqhe"), list("hhhhqqqqh"))
+
+
+def test_a_part_gets_back_the_rests_copista_skipped():
+    from omr.merge import fill_lost_rests
+    [(name, fixed)] = fill_lost_rests([("Flauta", work(list("rqhqhe")))], SCORE)
+    assert name == "Flauta"
+    assert contents(fixed) == list("rrrrqhqhe"), "the opening rest of four measures, read as one"
+
+
+def test_a_rest_lost_in_the_middle_is_put_back_where_it_was():
+    from omr.merge import fill_lost_rests
+    score = work(list("qhrrrqhe"))
+    [(_, fixed)] = fill_lost_rests([("Oboe", work(list("qhrqhe")))], score)
+    assert contents(fixed) == list("qhrrrqhe")
+
+
+def test_a_complete_part_or_one_unlike_every_staff_is_left_as_read():
+    from omr.merge import fill_lost_rests
+    complete = work(list("hhhhqqqqh"))
+    unlike = work(list("eeeeeee"))
+    assert fill_lost_rests([("Tuba", complete), ("Otra", unlike)], SCORE) == [("Tuba", complete), ("Otra", unlike)]
+
+
+def test_a_measure_only_the_part_has_is_kept():
+    """Nothing the part read is thrown away: only rests are added."""
+    from omr.merge import fill_lost_rests
+    [(_, fixed)] = fill_lost_rests([("Flauta", work(list("rqhqhee")))], SCORE)
+    assert contents(fixed).count("e") == 2 and contents(fixed)[:4] == list("rrrr")
+
+
+def test_a_meter_key_or_clef_repeated_in_every_measure_is_written_once():
+    """copista writes the time signature again in most measures (2026-11-01, «Paco el barba»): every measure then
+    showed its 2/4 and the score viewer could not fit four measures in a line."""
+    from omr.merge import combine_parts
+    repeated = work(list("hqhq")).replace(b"<note>", b"<attributes><time><beats>2</beats><beat-type>4</beat-type></time>"
+                                          b"<clef><sign>G</sign><line>2</line></clef></attributes><note>")
+    _, _, [measures] = parts_of(combine_parts([("Flauta", repeated)], "Obra"))
+    assert [len(bar.findall("attributes/time")) for bar in measures] == [1, 0, 0, 0]
+    assert [len(bar.findall("attributes/clef")) for bar in measures] == [1, 0, 0, 0]
+
+
+def test_the_work_names_no_composer_it_does_not_know():
+    from omr.merge import combine_parts
+    assert b"Music21" not in combine_parts([("Flauta", work(list("hq")))], "Obra")
+
+
+def test_the_parts_aligned_with_the_score_follow_its_order():
+    """The parts come in the order of the PDF (2026-11-01: «Paco el barba» put the tuba on top); the score's staves
+    give the order of the band."""
+    from omr.merge import fill_lost_rests
+    files = [("Tuba", work(list("hhhhqqqqh"))), ("Flauta", work(list("rqhqhe")))]
+    assert [name for name, _ in fill_lost_rests(files, SCORE)] == ["Flauta", "Tuba"]
+    assert [name for name, _ in fill_lost_rests([("Otra", work(list("eeeeeee"))), *files], SCORE)] == \
+        ["Flauta", "Tuba", "Otra"], "a part like no staff goes after the others"
+    trumpets = [(f"Trompeta {n}", work(list("hhhhqqqqh"))) for n in (3, 2, 1)]
+    assert [name for name, _ in fill_lost_rests(trumpets, SCORE)] == ["Trompeta 1", "Trompeta 2", "Trompeta 3"]
