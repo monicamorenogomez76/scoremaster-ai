@@ -35,6 +35,23 @@ def _drum_note(hit, part, name):
     return drum
 
 
+# General MIDI key of each unpitched percussion instrument of the catalog (2026-11-01): copista writes them as pitched
+# notes in treble clef, and without a drum the browser played them on its fallback piano.
+DRUM_KEYS = {'snare_drum': 38, 'bass_drum': 35, 'crash_cymbals': 49, 'suspended_cymbal': 51, 'tambourine': 54,
+             'triangle': 81}
+# A drum set written with pitches, by the usual positions of drum notation: bass drum F4, snare C5, hi-hat G5, crash A5.
+DRUM_SET_KEYS = {65: 36, 64: 36, 72: 38, 71: 38, 79: 42, 81: 49, 76: 45, 74: 47, 77: 43}
+
+
+def _unpitched_key(identity, midi: float) -> int | None:
+    """The drum a pitched note of an unpitched percussion part plays; None for any other part."""
+    if identity is None or identity.section != 'percussion' or identity.sound is not None:
+        return None
+    if identity.canonical_id == 'drum_set':
+        return DRUM_SET_KEYS.get(int(midi), 38)
+    return DRUM_KEYS.get(identity.canonical_id, 38)
+
+
 def _identity(part, name, declared):
     return resolve_part(ScorePart(name, (), metadata_for_part(part, declared))).identity
 
@@ -54,7 +71,7 @@ def _scores_kept() -> int:
 # Beyond this the work is too large to keep (the whole-score playback already stops at 150 000 events).
 MAX_PREPARED_NOTES = 1_000_000
 # Stored timelines of another version are prepared again.
-TIMELINE_VERSION = 'playback-timeline-v1'
+TIMELINE_VERSION = 'playback-timeline-v2'   # v2 (2026-11-01): pitched notes of unpitched percussion are drums
 # A small work is answered in the same request; a longer one answers 202 and the browser follows its
 # preparation, so no request stays open for minutes (2026-10-07: Persis took ~3 min on Render).
 WAIT_SECONDS = 20.0
@@ -285,7 +302,9 @@ def _read_timeline(content: bytes) -> _Timeline:
                 notes.append(_Note(onset, release, drums=tuple(_drum_note(hit, part, name) for hit in hits)))
             else:
                 pitches = event.pitches if isinstance(event, chord.Chord) else (event.pitch,)
-                notes.append(_Note(onset, release, pitches=tuple(float(pitch.midi) for pitch in pitches)))
+                drums = tuple(key for key in (_unpitched_key(identity, pitch.midi) for pitch in pitches) if key is not None)
+                notes.append(_Note(onset, release, drums=drums) if drums
+                             else _Note(onset, release, pitches=tuple(float(pitch.midi) for pitch in pitches)))
         total += len(notes)
         if total > MAX_PREPARED_NOTES:
             raise ValueError('La partitura es demasiado larga para reproducirla.')

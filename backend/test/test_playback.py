@@ -203,3 +203,25 @@ def test_endpoint_accepts_several_instruments(tmp_path):
 
     assert response.status_code == 200
     assert [track['instrument'] for track in response.json()['tracks']] == ['Clarinet']
+
+
+def test_percussion_written_with_pitches_still_sounds_as_its_drum(tmp_path):
+    """copista writes the snare drum, the bass drum and the cymbals as notes in treble clef (2026-11-01, «Paco el
+    barba»): they had no drum and the browser played them on its fallback piano. A part of unpitched percussion plays
+    its drum whatever pitch it is written at; the timpani keep their pitches."""
+    score = stream.Score()
+    for name, written in (('Caja', 'C5'), ('Bombo', 'F4'), ('Platos', 'G5'), ('Timpani', 'F2')):
+        part = stream.Part()
+        part.partName = name
+        measure = stream.Measure(number=1)
+        measure.append(meter.TimeSignature('2/4'))
+        measure.append(note.Note(written, quarterLength=1))
+        measure.append(note.Note(written, quarterLength=1))
+        part.append(measure)
+        score.insert(0, part)
+    path = tmp_path / 'percusion.musicxml'
+    score.write('musicxml', fp=path)
+    tracks = {track['instrument']: track for track in build_playback(path, '', 0, 999999)['tracks']}
+    assert [hit['note'] for hit in tracks['Caja']['percussion']] == [38, 38] and tracks['Caja']['events'] == []
+    assert tracks['Bombo']['percussion'][0]['note'] == 35 and tracks['Platos']['percussion'][0]['note'] == 49
+    assert tracks['Timpani']['percussion'] == [] and len(tracks['Timpani']['events']) == 2
