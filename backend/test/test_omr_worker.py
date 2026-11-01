@@ -323,3 +323,30 @@ def test_parts_of_different_lengths_get_back_their_rests_from_the_score(scoremas
     from omr.merge import staff_of
     assert contents(staff_of(musicxml, 0)) == list("rrrrqhqhe") and contents(staff_of(musicxml, 1)) == list("hhhhqqqqh")
     assert "Flauta: 3 compases de silencio recuperados" in capsys.readouterr().out
+
+
+# copista reads no tempo (2026-11-01, «Paco el barba», a moorish march at crotchet = 50, sounded at the default 120).
+# A digital PDF writes it as text: «q = 50» in the music fonts of Finale and Sibelius (q crotchet, h minim, e quaver).
+def test_the_tempo_is_read_from_the_page_text():
+    assert worker.tempo_from_text("Paco el barba\n      Marxa Mora q = 50\n Piccolo") == (50, 1.0)
+    assert worker.tempo_from_text("Allegro ♩= 120") == (120, 1.0)
+    assert worker.tempo_from_text("Lento h = 60") == (60, 2.0)
+    assert worker.tempo_from_text("q. = 80") == (80, 1.5)
+    assert worker.tempo_from_text("e=144") == (144, 0.5)
+    for text in ("Capitanía 2011 Filá Ibn Al Abbar", "Tempo = 50", "q = 5", "", "Clarinete 1 = 2"):
+        assert worker.tempo_from_text(text) is None, text
+
+
+def test_the_work_takes_the_tempo_written_on_its_pages(scoremaster):
+    from backend.parsers.musicxml_parser import parse_musicxml
+    run_pages(scoremaster, [(1, "Paco el barba\nMarxa Mora q = 50\nFlauta"), (1, "Marxa Mora q = 50\nTuba")])
+    musicxml = scoremaster["result"]["musicxml"]
+    assert musicxml.count('<sound tempo="50"') == 1, "once, at the start of the work"
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".musicxml") as file:
+        file.write(musicxml.encode())
+        file.flush()
+        [mark] = parse_musicxml(file.name).tempo_marks
+    assert (mark.measure_number, mark.beats_per_minute, mark.beat_unit_quarters) == (1, 50, 1.0)
+    run_pages(scoremaster, [(1, "Flauta"), (1, "Tuba")])
+    assert "<sound tempo" not in scoremaster["result"]["musicxml"], "without a tempo written, none is made up"

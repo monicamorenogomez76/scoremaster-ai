@@ -157,6 +157,9 @@ el repositorio privado `scoremaster-omr`, en máquinas de 7 GB.
 
 **Correcciones al recibir la lectura**
 
+- **Tempo:** copista no lee las indicaciones de tempo, y sin ellas la obra sonaba a negra = 120. El lector toma la
+  primera que encuentra en el texto del PDF («Marxa Mora q = 50»: en las fuentes de Finale y Sibelius, q es la negra,
+  h la blanca y e la corchea) y la escribe al principio de la obra. Sin tempo escrito, no inventa ninguno.
 - **Silencios de varios compases:** copista se salta los silencios de varios compases de las particellas, así que cada
   una empezaba antes que las demás. Si las particellas salen con distinto número de compases, el lector lee también las
   páginas de la partitura general, alinea cada particella compás a compás con el pentagrama de ritmo más parecido
