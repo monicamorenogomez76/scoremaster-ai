@@ -189,3 +189,84 @@ def test_the_parts_aligned_with_the_score_follow_its_order():
         ["Flauta", "Tuba", "Otra"], "a part like no staff goes after the others"
     trumpets = [(f"Trompeta {n}", work(list("hhhhqqqqh"))) for n in (3, 2, 1)]
     assert [name for name, _ in fill_lost_rests(trumpets, SCORE)] == ["Trompeta 1", "Trompeta 2", "Trompeta 3"]
+
+
+def staves_with_clefs(*staves: tuple[list[str], list[str]]) -> bytes:
+    """A work whose staves have a clef per measure: «G», «F» or «percussion»."""
+    xml = work(*[measures for _, measures in staves]).decode()
+    for number, (clefs, _) in enumerate(staves, 1):
+        part = xml[xml.index(f'<part id="P{number}">'):]
+        part = part[:part.index("</part>")]
+        changed = part.replace("<clef><sign>G</sign><line>2</line></clef>", "", 1)
+        for index, sign in enumerate(clefs):
+            line = {"G": 2, "F": 4}.get(sign)
+            clef_xml = f"<clef><sign>{sign}</sign>{f'<line>{line}</line>' if line else ''}</clef>"
+            marker = f'<measure number="{index + 1}">'
+            at = changed.index(marker) + len(marker)
+            changed = changed[:at] + f"<attributes>{clef_xml}</attributes>" + changed[at:] if index else \
+                changed.replace("</time></attributes>", "</time>" + clef_xml + "</attributes>", 1)
+        xml = xml.replace(part, changed)
+    return xml.encode()
+
+
+# «Arabian Dances» (2026-11-02): the percussion section of its score is printed alone, four systems of timpani and
+# percussion 1–4 a page. Joined by clef and key, those five staves went to the first staves with a bass clef (bassoon,
+# trombones), because copista reads a percussion clef as a bass clef. The names beside the staves place them.
+def test_a_page_with_fewer_staves_is_placed_by_the_names_beside_them():
+    from omr.merge import join_pages
+    full = staves_with_clefs((["G", "G"], list("hh")), (["F", "F"], list("hh")), (["F", "F"], list("hh")))
+    percussion = staves_with_clefs((["F", "F"], list("ee")))
+    labels = [["Fl.", "Tuba", "Perc. 1"], ["Perc. 1"]]
+    _, _, measures = parts_of(join_pages([full, percussion], "Obra", labels=labels, same=lambda a, b: a == b))
+    notes = [[len(bar.findall("note")) if bar.find("note/rest") is None else 0 for bar in staff][2:] for staff in measures]
+    assert notes == [[0, 0], [0, 0], [4, 4]], "on the percussion's staff, not on the tuba's"
+    _, _, measures = parts_of(join_pages([full, percussion], "Obra"))
+    assert [len(bar.findall("note")) for bar in measures[1]][2:] == [4, 4], "without names, by clef as before"
+
+
+def test_a_percussion_part_is_aligned_only_with_a_percussion_staff():
+    from omr.merge import fill_lost_rests
+    score = staves_with_clefs((["G"] * 6, list("rrqqqq")), (["F", "F", "percussion", "F", "F", "F"], list("qqqqrr")))
+    part = staves_with_clefs((["F", "percussion", "F", "F"], list("qqqq")))
+    [(_, fixed)] = fill_lost_rests([("Percussion 1", part)], score)
+    assert contents(fixed) == list("qqqqrr"), "its rests where the percussion staff rests, not the flute's"
+    flute = staves_with_clefs((["G"] * 4, list("qqqq")))
+    [(_, fixed)] = fill_lost_rests([("Flauta", flute)], score)
+    assert contents(fixed) == list("rrqqqq"), "and a pitched part never with the percussion staff"
+    timpani = staves_with_clefs((["F"] * 4, list("qqqq")))
+    assert len(contents(fill_lost_rests([("Timpani", timpani)], score)[0][1])) == 6, "the timpani, with a clef, with either"
+
+
+def test_a_part_follows_the_staff_of_its_name_before_its_rhythm():
+    """Between staves of percussion the rhythms are too alike (2026-11-02: «Percussion 2» and «Percussion 4» of «Arabian
+    Dances» swapped staves): the joined score keeps the names beside its staves, and a part with the same name is aligned
+    with that staff."""
+    from omr.merge import fill_lost_rests, join_pages
+    full = staves_with_clefs((["percussion"] * 6, list("qqqqrr")), (["percussion"] * 6, list("rrqqqq")))
+    score = join_pages([full], "Obra", labels=[["Perc. 1", "Perc. 2"]], same=lambda a, b: a == b)
+    assert parts_of(score)[1] == ["Perc. 1", "Perc. 2"], "the staves keep their names"
+    part = staves_with_clefs((["percussion"] * 4, list("qqqq")))
+    same = lambda part_name, staff_name: part_name.endswith(staff_name[-1])
+    [(_, fixed)] = fill_lost_rests([("Percussion 2", part)], score, same)
+    assert contents(fixed) == list("rrqqqq"), "with «Perc. 2», though «Perc. 1» starts with the same rhythm"
+
+
+def test_a_part_of_its_staff_s_name_is_aligned_even_when_its_rhythm_was_read_unlike():
+    from omr.merge import fill_lost_rests, join_pages
+    full = staves_with_clefs((["percussion"] * 6, list("eeeerr")), (["percussion"] * 6, list("rrqqqq")))
+    score = join_pages([full], "Obra", labels=[["Perc. 1", "Perc. 4"]], same=lambda a, b: a == b)
+    part = staves_with_clefs((["percussion"] * 4, list("hhhh")))
+    same = lambda part_name, staff_name: part_name[-1] == staff_name[-1]
+    [(_, fixed)] = fill_lost_rests([("Percussion 4", part)], score, same)
+    assert len(contents(fixed)) == 6, "its staff by name, though no measure of it was read alike"
+    [(_, unchanged)] = fill_lost_rests([("Percussion 4", part)], score)
+    assert len(contents(unchanged)) == 4, "without names, unlike every staff, it is left as read"
+
+
+def test_the_staff_of_its_name_wins_over_the_clefs():
+    from omr.merge import fill_lost_rests, join_pages
+    full = staves_with_clefs((["G"] * 6, list("qqqqrr")), (["percussion"] * 6, list("rrqqqq")))
+    score = join_pages([full], "Obra", labels=[["Flauta", "Platos"]], same=lambda a, b: a == b)
+    part = staves_with_clefs((["G"] * 4, list("qqqq")))
+    [(_, fixed)] = fill_lost_rests([("Platos", part)], score, lambda a, b: a == b)
+    assert contents(fixed) == list("rrqqqq"), "the cymbals in treble clef follow their percussion staff"

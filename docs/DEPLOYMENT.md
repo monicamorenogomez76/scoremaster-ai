@@ -172,6 +172,12 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   páginas de la partitura general, alinea cada particella compás a compás con el pentagrama de ritmo más parecido
   (`omr/merge.py`, `fill_lost_rests`) y convierte en silencio los compases que perdió. Lo que leyó de la particella no se
   cambia ni se quita; una particella completa o que no se parece a ningún pentagrama se queda como se leyó.
+- **Páginas de la partitura con menos pentagramas:** cada pentagrama de la partitura toma el nombre impreso a su lado
+  en el margen («Perc. 2»), que se lee junto a su clave en el texto del PDF. Una página con menos pentagramas que la
+  completa, como la sección de percusión impresa sola de «Arabian Dances», se coloca por esos nombres; si no los trae,
+  por la clave y la armadura, como antes. La partitura conserva los nombres, y cada particella se alinea primero con el
+  pentagrama de su nombre («Percussion 2» con «Perc. 2») y, si no hay ninguno, por el ritmo. Una particella en clave de
+  percusión solo se alinea con pentagramas de percusión.
 - **Percusión de varios instrumentos:** si el PDF trae la página de plantilla («Instrumentation»), el lector toma qué
   instrumentos toca cada particella de percusión («Percussion 1: Marimba, Low Tom…») y cuántos músicos necesita
   («Percussion 2 — 2 players»), y los escribe en la obra: un `<score-instrument>` por instrumento y un `<player>` por
