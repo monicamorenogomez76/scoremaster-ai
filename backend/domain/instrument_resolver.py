@@ -19,8 +19,9 @@ AGREEMENT_CONFIDENCE = 0.97
 METADATA_ONLY_CONFIDENCE = 0.75
 
 # Bump when the resolution rules or confidences change.
-RESOLVER_VERSION = "instrument-resolver-v2"   # v2 (2026-10-28): keys read in any spelling
+RESOLVER_VERSION = "instrument-resolver-v3"   # v3 (2026-11-02): a percussion part agrees with the percussion it declares
 RESOLVED, REVIEW, CONFLICT, UNKNOWN = "resolved", "review", "conflict", "unknown"
+GENERIC_PERCUSSION = "percussion"
 SOURCE_ALIAS, SOURCE_MUSICXML, SOURCE_UNKNOWN, SOURCE_USER = "ALIAS", "MUSICXML", "UNKNOWN", "USER"
 
 
@@ -80,6 +81,9 @@ def resolve_part(part: ScorePart) -> InstrumentResolution:
         return InstrumentResolution(part.name, confirmed, SOURCE_USER, 1.0, RESOLVED, part_numbers,
                                     ("confirmed by the user → {}".format(confirmed.canonical_id),))
 
+    # A part named «Percussion» plays several instruments: the one it declares is one of them, not a disagreement.
+    if named and declared and named.canonical_id == GENERIC_PERCUSSION and declared.section == "percussion":
+        declared = named
     if named and declared and named.canonical_id != declared.canonical_id:
         return InstrumentResolution(part.name, None, SOURCE_UNKNOWN, 0.0, CONFLICT, part_numbers,
                                     name_evidence + metadata_evidence, (named, declared))

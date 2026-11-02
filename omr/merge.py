@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import re
+from xml.sax.saxutils import escape
 
 from music21 import chord, clef, converter, duration, instrument, key, metadata, note, stream, meter
 from music21.musicxml.m21ToXml import GeneralObjectExporter
@@ -317,3 +318,26 @@ def add_tempo(xml: bytes, beats_per_minute: int, beat_quarters: float) -> bytes:
     next_measure = xml.find(b"</measure>", opened)
     at = attributes + len(b"</attributes>") if 0 <= attributes < next_measure else opened
     return xml[:at] + direction + xml[at:]
+
+
+# --- percussion of several instruments -----------------------------------------------------------------------------------
+def add_instrumentation(xml: bytes, plan: dict[str, dict], same_part) -> bytes:
+    """Each percussion part of the plan declares its instruments and players (2026-11-02): a <score-instrument> each and
+    a <player> each (MusicXML 4.0), after the ones music21 wrote and before its MIDI elements."""
+    def declared(match: re.Match) -> bytes:
+        block = match.group(0).decode("utf-8")
+        name = re.search(r"<part-name>([^<]*)</part-name>", block)
+        key = next((key for key in plan if name and same_part(name.group(1), key)), None)
+        if key is None:
+            return match.group(0)
+        part_id = re.search(r'id="([^"]+)"', block).group(1)
+        written = set(re.findall(r"<instrument-name>([^<]*)</instrument-name>", block))
+        added = "".join(f'<score-instrument id="{part_id}-X{number}"><instrument-name>{escape(instrument)}</instrument-name>'
+                        "</score-instrument>"
+                        for number, instrument in enumerate(plan[key]["instruments"], 1) if instrument not in written)
+        added += "".join(f'<player id="{part_id}-M{number}"><player-name>{escape(key)} ({number})</player-name></player>'
+                         for number in range(1, (plan[key]["players"] or 0) + 1))
+        midi = re.search(r"<midi-(device|instrument)", block)
+        at = midi.start() if midi else block.rindex("</score-part>")
+        return (block[:at] + added + block[at:]).encode("utf-8")
+    return re.sub(rb"<score-part\b.*?</score-part>", declared, xml, flags=re.S)

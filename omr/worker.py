@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from omr.merge import add_tempo, combine_parts, fill_lost_rests, join_pages, measure_count, staff_of
+from omr.merge import add_instrumentation, add_tempo, combine_parts, fill_lost_rests, join_pages, measure_count, staff_of
 
 try:
     # ScoreMaster's instrument catalog (2026-10-28), checked out with the reader; an older workflow brings only omr/.
@@ -289,6 +289,44 @@ def _first_word_shortens(short: list[str], full: list[str]) -> bool:
     return True
 
 
+# The instrumentation page of a band PDF (2026-11-02, «Arabian Dances»): «2 - Percussion 1» and, indented below it in its
+# column, «Marimba», «Low Tom»…; elsewhere «Percussion 2 — 2 players».
+_INSTRUMENTATION = re.compile(r"(?im)^\s*(instrumentation|instrumentaci[oó]n|instrumentaci[oó]|plantilla)\s*$")
+_ENTRY = re.compile(r"^\d+\s*[-–—]\s+(\S.*)$")
+_PLAYERS = re.compile(r"(?im)^\s*(\S[^—–\n]*?)\s*[—–]\s*(\d+)\s+(?:players?|m[uú]sicos?|percusionistas?|int[eé]rpretes?)\b")
+_PERCUSSION = re.compile(r"perc|timp|drum|bater|schlag", re.IGNORECASE)
+
+
+def percussion_plan(texts: list[str]) -> dict[str, dict]:
+    """What each percussion part plays and how many players it needs, as the PDF's text says; {} when it does not."""
+    plan: dict[str, dict] = {}
+    for text in texts:
+        if not _INSTRUMENTATION.search(text or ""):
+            continue
+        entries: list[tuple[int, str, list[str]]] = []
+        for line in text.splitlines():
+            for found in re.finditer(r"\S(?:.*?\S)?(?=\s{3,}|$)", line):
+                at, piece = found.start(), found.group()
+                entry = _ENTRY.match(piece)
+                if entry:
+                    entries.append((at, _flats(entry.group(1).strip()), []))
+                    continue
+                # An item belongs to the last entry of its column: the one further right among those it is indented from.
+                owners = [index for index, (start, _, _) in enumerate(entries) if start < at]
+                if owners:
+                    entries[max(owners, key=lambda index: (entries[index][0], index))][2].append(piece)
+        for _, name, items in entries:
+            if _PERCUSSION.search(name):
+                plan[name] = {"instruments": items or [part.strip() for part in name.split("/") if part.strip()],
+                              "players": None}
+    for text in texts:
+        for name, players in _PLAYERS.findall(text or ""):
+            name = _flats(name.strip())
+            if _PERCUSSION.search(name):
+                plan.setdefault(name, {"instruments": [], "players": None})["players"] = int(players)
+    return plan
+
+
 def score_names(text: str) -> list[str]:
     """The instruments written beside the staves of a score's page, top to bottom."""
     return [piece for piece in _pieces(text) if len(piece) <= 40 and catalog.names(piece)]
@@ -499,6 +537,11 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             kind, _, stack = sys.exc_info()
             print("".join(traceback.format_tb(stack)[-3:]) + kind.__name__, flush=True)
             raise Refused("No se pudo unir lo leído en una obra.") from None
+        # What each percussion part plays and its players, from the PDF's instrumentation page (2026-11-02).
+        percussion = percussion_plan(list(texts.values()))
+        if percussion:
+            musicxml = add_instrumentation(musicxml, percussion, same_part)
+            print(f"Percusión leída de la plantilla del PDF: {len(percussion)} particellas.", flush=True)
         # copista reads no tempo: the first one written in the pages' text, at the start of the work (2026-11-01).
         tempo = next((found for found in (tempo_from_text(texts[(path, number)]) for _, path, number in plan) if found), None)
         if tempo:
