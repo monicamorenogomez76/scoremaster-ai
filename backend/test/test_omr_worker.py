@@ -389,3 +389,71 @@ def test_a_refused_file_is_named_to_scoremaster_and_numbered_in_the_log(scoremas
     assert scoremaster["result"] == {"error": "Mi obra secreta.pdf no es un PDF."}
     log = capsys.readouterr().out
     assert "Mi obra secreta" not in log and "El archivo 1 no es un PDF." in log
+
+
+# «Arabian Dances» (2026-11-01): the first page of each part says «Flute 1» and the next ones carry the header «Arabian
+# Dances - Fl. 1», with cues of other instruments («Hn.», «B. Sax.») among the staves. The reader took 65 parts for 33
+# and the score pages padded each half with hundreds of rests.
+MUSIC = "\n".join("     œ œ œ œ   ˙   w    " for _ in range(10))
+
+
+def test_the_name_of_a_part_is_in_its_header_without_the_title_before_it():
+    assert worker.instrument_name("Arabian Dances - Fl. 1\n" + MUSIC) == "Fl. 1"
+    assert worker.instrument_name("Arabian Dances- Perc. 2\n" + MUSIC) == "Perc. 2"
+    assert worker.instrument_name("Arabian Dances - B. Cl.\n" + MUSIC + "\n       Hn.") == "B. Cl.", "a cue is no name"
+    assert worker.instrument_name("Flute 1\n\n        ARABIAN DANCES\n     BRIAN BALMAGES\n" + MUSIC) == "Flute 1"
+
+
+def test_the_pages_of_a_part_stay_together_under_its_abbreviated_header():
+    for full, short in (("Flute 1", "Arabian Dances - Fl. 1"), ("F Horn 1", "Arabian Dances - Hn. 1"),
+                        ("Trombone 2", "Arabian Dances - Tbn. 2"), ("B≤ Trumpet 3", "Arabian Dances - Tpt. 3"),
+                        ("E≤ Alto Saxophone 1", "Arabian Dances - A. Sax. 1"), ("Percussion 2", "Arabian Dances- Perc. 2"),
+                        ("B≤ Bass Clarinet", "Arabian Dances - B. Cl."), ("Timpani", "Arabian Dances - Timp./Shkr.")):
+        assert worker.same_part(full, worker.instrument_name(short + "\n" + MUSIC)), (full, short)
+    for left, right in (("Flute 1", "Fl. 2"), ("Flute 1", "Ob. 1"), ("Percussion 1", "Perc. 2"), ("Trombone 1", "Tpt. 1")):
+        assert not worker.same_part(left, right), (left, right)
+
+
+def test_a_part_of_several_pages_is_one_part(scoremaster):
+    pages = [(12, "Fl.\nOb.\nCl.\nTpt.\nTbn."), (12, "Fl.\nOb.\nCl.\nTpt.\nTbn."),
+             (1, "Flute 1\n\n    ARABIAN DANCES\n" + MUSIC), (1, "Arabian Dances - Fl. 1\n" + MUSIC),
+             (1, "F Horn 1\n\n    ARABIAN DANCES\n" + MUSIC),
+             (1, "Arabian Dances - Hn. 1\n" + MUSIC + "\n     B. Sax."),
+             (1, "Percussion 1\n" + MUSIC), (1, "Arabian Dances - Perc. 1\nSus. Cym.\nTri.\nTamb.\nBass Drum\n" + MUSIC)]
+    read = run_pages(scoremaster, pages)
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flute 1", "F Horn 1", "Percussion 1"]
+    assert 8 in read, "a part page naming several percussion instruments is no score page among the parts"
+    assert 1 not in read and 2 not in read, "the score's pages, together, are still set apart"
+
+
+def test_the_first_page_of_a_part_names_it_in_its_first_lines():
+    assert worker.instrument_name("E≤ Baritone\nSaxophone\n     ARABIAN DANCES\n" + MUSIC) == "E≤ Baritone Saxophone"
+    assert worker.instrument_name("E≤ Contra Alto\nClarinet\n     ARABIAN DANCES\n" + MUSIC) == "E≤ Contra Alto Clarinet"
+    assert worker.instrument_name("Percussion 1\n(Marimba, Low Tom,\nFinger Cymbals,\nSuspended Cymbal)   ARABIAN DANCES\n"
+                                  + MUSIC) == "Percussion 1", "the instruments it plays are no name"
+
+
+def test_two_versions_of_one_part_stay_apart(scoremaster):
+    """«Baritone/ Euphonium» in bass clef and «Baritone T.C.» in treble clef are two parts of one line: each first page
+    starts its part, and the pages after them follow theirs."""
+    texts = [("Baritone/\nEuphonium\n    ARABIAN DANCES\n" + MUSIC), ("Arabian Dances - Bar./ Euph.\n" + MUSIC),
+             ("Baritone T.C.\n    ARABIAN DANCES\n" + MUSIC), ("Arabian Dances - Bar. T.C.\n" + MUSIC)]
+    groups = worker._parts_of([(b"x", text) for text in texts])
+    assert [(name, len(found)) for name, found, _ in groups] == [("Baritone/ Euphonium", 2), ("Baritone T.C.", 2)]
+
+
+def test_with_the_catalog_the_flat_of_finale_s_font_is_read():
+    from backend.domain.instrument_catalog import seed_instruments
+    saved = worker.catalog
+    worker.catalog = worker.Catalog({"instruments": list(seed_instruments()), "learned": []})
+    try:
+        assert worker.instrument_name("B≤ Clarinet 1\n    ARABIAN DANCES\n" + MUSIC) == "B≤ Clarinet 1"
+        assert worker.instrument_name("Percussion 2\n(Suspended Cymbal,\nFrame Drum)\n" + MUSIC) == "Percussion 2"
+        assert worker.same_part("B≤ Clarinet 1", "Cl. 1") and not worker.same_part("B≤ Clarinet 1", "Cl. 2")
+    finally:
+        worker.catalog = saved
+
+
+def test_a_part_is_named_with_the_flat_sign():
+    groups = worker._parts_of([(b"x", "B≤ Clarinet 1\n    ARABIAN DANCES\n" + MUSIC), (b"x", "Arabian Dances - Cl. 1\n" + MUSIC)])
+    assert [(name, len(found)) for name, found, _ in groups] == [("B♭ Clarinet 1", 2)]

@@ -149,6 +149,7 @@ class Catalog:
             use_catalog(document["instruments"])
 
     def names(self, piece: str) -> bool:
+        piece = _flats(piece)
         if not self.ready:
             return bool(INSTRUMENT_WORDS.search(piece))
         return match_instrument_name(piece).identity is not None or instrument_name_key(piece) in self.learned
@@ -156,13 +157,18 @@ class Catalog:
     def same(self, left: str, right: str) -> bool:
         """Two names of the same instrument and players («Tpt. 1» and «Trompeta en Sib 1»)."""
         if self.ready:
-            first, second = match_instrument_name(left), match_instrument_name(right)
+            first, second = match_instrument_name(_flats(left)), match_instrument_name(_flats(right))
             if first.identity and second.identity:
                 return (first.identity.canonical_id, first.part_numbers) == (second.identity.canonical_id, second.part_numbers)
         return " ".join(left.casefold().split()) == " ".join(right.casefold().split())
 
 
 catalog = Catalog()
+
+
+def _flats(text: str) -> str:
+    """«≤» is how Finale's music font writes the flat in a PDF's text («B≤ Clarinet», «E≤ Alto Saxophone»)."""
+    return text.replace("≤", "♭")
 
 
 def _load_catalog(client: httpx.Client, callback: str) -> Catalog:
@@ -194,10 +200,93 @@ def looks_like_score(text: str) -> bool:
     return max(named, len(INSTRUMENT_WORDS.findall(text or ""))) >= 4
 
 
+# The name of a part is in the header of its pages (2026-11-01, «Arabian Dances»): below it, the cues of other
+# instruments («Hn.», «B. Sax.») among the staves are no names. Its first lines are enough for a title, a dedication and
+# the name, as in «Paco el barba».
+HEADER_LINES = 8
+# «Arabian Dances - Fl. 1»: the title of the work before the part's name, on the pages after the first.
+_TITLE_BEFORE = re.compile(r"^(.+?)\s*-\s+(\S.*)$")
+
+
+def _header(text: str) -> str:
+    return "\n".join([line for line in (text or "").splitlines() if line.strip()][:HEADER_LINES])
+
+
+def _without_title(piece: str) -> str:
+    found = _TITLE_BEFORE.match(piece)
+    return found.group(2).strip() if found else piece
+
+
+def _a_name(piece: str) -> bool:
+    """A short piece naming an instrument, by the catalog or by the reader's list («Percussion 1» is in neither the
+    catalog nor a part of it)."""
+    return 0 < len(piece) <= 40 and len(piece.split()) <= 4 and (catalog.names(piece) or bool(INSTRUMENT_WORDS.search(piece)))
+
+
+def part_header(text: str) -> tuple[str | None, bool]:
+    """(the part's name, whether the page continues a part). The pages after the first start with «Title - name»; a first
+    page starts with its name, maybe over two lines («E♭ Baritone» / «Saxophone»), above the title in capitals and the
+    instruments in brackets (2026-11-01, «Arabian Dances»). Otherwise, as in «Paco el barba», the shortest piece of the
+    header that names an instrument."""
+    lines = [re.split(r"\s{3,}", line.strip())[0] for line in (text or "").splitlines() if line.strip()]
+    if lines:
+        titled = _TITLE_BEFORE.match(lines[0])
+        if titled and _a_name(titled.group(2).strip()):
+            return titled.group(2).strip(), True
+        second = lines[1] if len(lines) > 1 else ""
+        # The rest of a name split over two lines is one word («Saxophone»); a list of instruments («Caja y bombo») is not.
+        if second and len(second.split()) == 1 and not second.isupper() and not second.startswith("(") \
+                and not re.search(r"\d", second):
+            joined = lines[0] + " " + second
+            if _a_name(joined) and (_a_name(second) or not _a_name(lines[0])):
+                return joined, False
+        if _a_name(lines[0]):
+            return lines[0], False
+    named = [name for name in (_without_title(piece) for piece in _pieces(_header(text)))
+             if len(name) <= 40 and catalog.names(name)]
+    return (min(named, key=len) if named else None), False
+
+
 def instrument_name(text: str) -> str | None:
-    """The shortest piece of a line naming an instrument."""
-    named = [piece for piece in _pieces(text) if len(piece) <= 40 and catalog.names(piece)]
-    return min(named, key=len) if named else None
+    """The name of the part on the page, or None."""
+    return part_header(text)[0]
+
+
+def _words(name: str) -> list[str]:
+    """The words of a name, before any «/» («Timp./Shkr.»: the timpani, then the shaker); «≤» is the flat of Finale's font."""
+    return re.findall(r"[^\W\d_]+", name.split("/")[0].replace("≤", "b").casefold())
+
+
+def _in_order(letters: str, word: str) -> bool:
+    found = iter(word)
+    return all(letter in found for letter in letters)
+
+
+def same_part(left: str, right: str) -> bool:
+    """Two names of one part: the same part number and one name shortening the other («Flute 1» and «Fl. 1»), or the
+    same instrument and players for the catalog."""
+    left, right = _without_title(left), _without_title(right)
+    if catalog.same(left, right):
+        return True
+    if re.findall(r"\d+", left) != re.findall(r"\d+", right):
+        return False
+    first, second = _words(left), _words(right)
+    if not first or not second:
+        return False
+    return _first_word_shortens(first, second) or _first_word_shortens(second, first)
+
+
+def _first_word_shortens(short: list[str], full: list[str]) -> bool:
+    """Every word of the short name shortens a word of the full one, in order: «Fl.» «Flute», «Hn.» «F Horn», «A. Sax.»
+    «E♭ Alto Saxophone»; never «F Horn» «Flute»."""
+    at = 0
+    for word in short:
+        while at < len(full) and not (full[at][0] == word[0] and _in_order(word, full[at])):
+            at += 1
+        if at == len(full):
+            return False
+        at += 1
+    return True
 
 
 def score_names(text: str) -> list[str]:
@@ -244,8 +333,10 @@ def _parts_of(pages: list[tuple[bytes | None, str]]) -> list[tuple[str, list[byt
     not read). A page copista could not read has no music (None) but still says its instrument."""
     groups: list[tuple[str, list[bytes], bool]] = []
     for xml, text in pages:
-        name = instrument_name(text)
-        if not groups or (name and name != groups[-1][0]):
+        name, continues = part_header(text)
+        name = _flats(name) if name else name
+        # A first page starts its part unless it repeats the name; a page after it follows it while it names the same part.
+        if not groups or (name and (not same_part(groups[-1][0], name) if continues else name != groups[-1][0])):
             groups.append((name or f"Parte {len(groups) + 1}", [], False))
         found_name, found, failed = groups[-1]
         groups[-1] = (found_name, found + ([xml] if xml is not None else []), failed or xml is None)
@@ -342,8 +433,16 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         texts = {(path, number): page_text(path, number) if data["kind"] in ("auto", "score") else ""
                  for (_, path), count in zip(saved, pages) for number in range(1, count + 1)}
         named_parts = any(instrument_name(text) and not looks_like_score(text) for text in texts.values())
+        score_like = {key: looks_like_score(text) for key, text in texts.items()}
+
+        def set_apart(path: str, number: int) -> bool:
+            """A page naming several instruments between two part pages is a part's, not the score's (the percussion of
+            «Arabian Dances», 2026-11-01)."""
+            between_parts = score_like.get((path, number - 1)) is False and score_like.get((path, number + 1)) is False
+            return named_parts and score_like[(path, number)] and not between_parts
+
         plan = [(name, path, number) for (name, path), count in zip(saved, pages) for number in range(1, count + 1)
-                if not (named_parts and looks_like_score(texts[(path, number)]))]
+                if not set_apart(path, number)]
         if len(plan) < total:
             print(f"Se apartan {total - len(plan)} páginas de partitura general sin leerlas: la obra sale de las "
                   "particellas.", flush=True)
