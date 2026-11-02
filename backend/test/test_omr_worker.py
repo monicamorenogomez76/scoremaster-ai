@@ -497,3 +497,31 @@ def test_the_work_declares_the_instruments_and_players_of_its_percussion(scorema
     assert {"Suspended Cymbal", "Frame Drum"} <= set(metadata["Percussion 2"].instrument_names)
     assert metadata["Percussion 1"].players == 1 and "Marimba" in metadata["Percussion 1"].instrument_names
     assert metadata["Flute 1"].players is None, "only the percussion it lists"
+
+
+SCORE_PAGE = "\n".join([
+    "                      2",
+    "        Timp.",
+    "                     ? b ..      œ œ œ",
+    "        Shkr.",
+    "                                   F",
+    "       Perc. 1       & b ..      œ œ",
+    "                                   p",
+    "       Perc. 2       ÷   ..      ∑",
+    "                     ÷   ..      œ",
+    "       Perc. 3",
+    "                     ÷   ..      ∑",
+    "        Timp.",
+    "                     ? b ..      œ œ",
+    "       Perc. 1       & b ..      œ",
+    "       Perc. 2       ÷   ..      ∑",
+    "       Perc. 3       ÷   ..      ∑",
+    "       Perc. 4       ÷   ..      ∑"])
+
+
+def test_each_staff_of_a_score_page_takes_the_name_beside_it():
+    """A name over two lines around its staff («Timp.» / «Shkr.») is one; the systems after the first repeat them; a
+    staff of a group with one name for several («Tbns.») has none of its own; the percussion clef «÷» is no name."""
+    assert worker.staff_labels(SCORE_PAGE, 5) == ["Timp. Shkr.", "Perc. 1", "Perc. 2", None, "Perc. 3"]
+    assert worker.staff_labels(SCORE_PAGE, 7) is None, "the clefs of the page are not its staves"
+    assert worker.staff_labels("Flauta\nClarinete", 2) is None

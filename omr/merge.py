@@ -154,19 +154,45 @@ def _without_made_up_composer(xml: bytes) -> bytes:
     return xml.replace(b'<creator type="composer">Music21</creator>', b"")
 
 
-def join_pages(pages: list[bytes], title: str, names: list[str] | None = None) -> bytes:
+def _by_name(reference: list, page: list, same) -> list[int] | None:
+    """The staff of the reference with the same name as each staff of the page, in order; None when one is missing."""
+    mapping, at = [], 0
+    for name in page:
+        while at < len(reference) and not (name and reference[at] and same(name, reference[at])):
+            at += 1
+        if at == len(reference):
+            return None
+        mapping.append(at)
+        at += 1
+    return mapping
+
+
+def join_pages(pages: list[bytes], title: str, names: list[str] | None = None, labels: list | None = None,
+               same=None) -> bytes:
     """The pages of one PDF, staff by staff, aligned with the fullest page; names, one per staff, name them (the
-    instruments written beside a score's staves)."""
+    instruments written beside a score's staves). labels, the names beside each page's staves when its text gives
+    them, place the staves of a page that shows fewer (2026-11-02, «Arabian Dances»: its percussion section is printed
+    alone); otherwise clef and key do."""
     staves = [_staves(xml) for xml in pages]
-    reference = [_signature(staff) for staff in max(staves, key=len, default=[])]
+    labels = labels if labels and len(labels) == len(pages) else [None] * len(pages)
+    widest = max((len(page) for page in staves), default=0)
+    fullest = next((index for index, page in enumerate(staves) if len(page) == widest and labels[index]),
+                   next((index for index, page in enumerate(staves) if len(page) == widest), None))
+    reference = [_signature(staff) for staff in staves[fullest]] if fullest is not None else []
+    reference_names = labels[fullest] if fullest is not None else None
     joined: list[list[stream.Measure]] = [[] for _ in reference]
-    for page in staves:
-        mapping = _align(reference, [_signature(staff) for staff in page])
+    for number, page in enumerate(staves):
+        by_name = (_by_name(reference_names, labels[number], same) if same and reference_names and labels[number]
+                   and len(page) < len(reference) else None)
+        mapping = by_name or _align(reference, [_signature(staff) for staff in page])
         model = max((_measures(staff) for staff in page), key=len, default=[])
         for index in range(len(reference)):
             found = [_measures(page[at]) for at, target in enumerate(mapping) if target == index]
             joined[index].extend(found[0] if found else [_rest(measure) for measure in model])
-    names = names if names and len(names) == len(joined) else [f"Parte {number}" for number in range(1, len(joined) + 1)]
+    if not (names and len(names) == len(joined)):
+        # The names beside the reference page's staves, where it has them (a staff of a group has none).
+        names = [(reference_names[number - 1] if reference_names and len(reference_names) == len(joined)
+                  and reference_names[number - 1] else f"Parte {number}") for number in range(1, len(joined) + 1)]
     parts = [_part(name, measures) for name, measures in zip(names, joined)]
     first_page = max((_measures(staff) for staff in staves[0]), key=len, default=[]) if staves else []
     for part in parts:
@@ -259,19 +285,43 @@ def _lost_rest(model: stream.Measure) -> stream.Measure:
     return rest
 
 
-def fill_lost_rests(files: list[tuple[str, bytes]], score: bytes) -> list[tuple[str, bytes]]:
+PITCHED_PERCUSSION = re.compile(r"timp|tymp|timbal|mallet|xyl|xil|glock|marimb|vibra|bell|campan", re.IGNORECASE)
+
+
+def _unpitched(staff: stream.Part) -> bool:
+    """A staff with a percussion clef anywhere: copista reads the first clef of a percussion staff as a bass clef."""
+    return any(found.sign == "percussion" for found in staff.recurse().getElementsByClass(clef.Clef))
+
+
+def fill_lost_rests(files: list[tuple[str, bytes]], score: bytes, same=None) -> list[tuple[str, bytes]]:
     """Each part (name, MusicXML of one staff) with the rests copista skipped put back, from the score's staves. A part
-    with every measure, with several staves or unlike every staff is left as read."""
-    staves = [_measures(staff) for staff in _staves(score)]
+    with every measure, with several staves or unlike every staff is left as read. With same, a part is aligned with the
+    staff of its own name when the score has one («Percussion 2» and «Perc. 2»), and by rhythm otherwise."""
+    parsed = _staves(score)
+    staves = [_measures(staff) for staff in parsed]
     rhythms = [[_onsets(measure) for measure in staff] for staff in staves]
+    # A part with a percussion clef is aligned only with percussion staves, and a part named like pitched percussion
+    # (timpani, mallets: written with clefs) with any; the others never with percussion staves (2026-11-02).
+    unpitched_staves = [_unpitched(staff) for staff in parsed]
+    staff_names = [staff.partName or "" for staff in parsed]
     fixed = []
     for position, (name, xml) in enumerate(files, 1):
         found = _staves(xml)
         measures = _measures(found[0]) if len(found) == 1 else []
         rhythm = [_onsets(measure) for measure in measures]
-        candidates = [(index, *_matched(rhythm, staff)) for index, staff in enumerate(rhythms) if len(staff) >= len(rhythm)]
+        unpitched = len(found) == 1 and _unpitched(found[0])
+        either = not unpitched and bool(PITCHED_PERCUSSION.search(name))
+        allowed = [index for index, staff in enumerate(rhythms)
+                   if len(staff) >= len(rhythm) and (either or unpitched_staves[index] == unpitched)]
+        # The staff of its own name wins over the clefs (2026-11-02: the cymbals of «Paco el barba» are written in treble
+        # clef in their part and with a percussion clef in the score).
+        named = [index for index, staff in enumerate(rhythms) if same and staff_names[index] and len(staff) >= len(rhythm)
+                 and same(name, staff_names[index])]
+        candidates = [(index, *_matched(rhythm, rhythms[index])) for index in (named or allowed)]
         index, alike, pairs = max(candidates, key=lambda item: item[1], default=(None, -1.0, []))
-        if not measures or index is None or alike < SAME_STAFF:
+        # A staff of the part's own name is the part's even with an unlike rhythm: percussion read by copista differs
+        # much from its staff, and a sparse part is alike any staff full of rests (2026-11-02, «Arabian Dances»).
+        if not measures or index is None or (alike < SAME_STAFF and not named):
             fixed.append((None, name, xml))
             continue
         lost = sum(1 for a, _ in pairs if a is None)

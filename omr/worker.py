@@ -327,6 +327,36 @@ def percussion_plan(texts: list[str]) -> dict[str, dict]:
     return plan
 
 
+# The staves of a score page in its text (2026-11-02, «Arabian Dances»): each staff starts with its clef in the left
+# margin («&» treble, «?» bass, «÷» percussion in the music fonts of Finale and Sibelius) and the instrument's name
+# beside it, sometimes over two lines around the staff («Timp.» / «Shkr.»).
+_CLEF_GLYPH = re.compile(r"(?<!\S)[&?÷](?=\s|$)")
+_MARGIN_NAME = re.compile(r"^\s{0,16}([A-Za-zÀ-ÖØ-öø-ÿ][^\s&?÷œ∑]*(?: [^\s&?÷œ∑]+)*)(?=\s{2,}|$)")
+
+
+def staff_labels(text: str, count: int) -> list[str | None] | None:
+    """The name of each of the page's `count` staves, None for a staff of a group that has one name for several; None
+    when the clefs of the page are not those staves (one system of them, or several repeating them)."""
+    clefs, names = [], []
+    for index, line in enumerate((text or "").splitlines()):
+        found = _MARGIN_NAME.match(line)
+        if found and len(found.group(1)) <= 20 and re.search(r"[^\W\d_]{2}", found.group(1)):
+            names.append((index, found.group(1)))
+        clef = _CLEF_GLYPH.search(line[:45])
+        if clef and (not clefs or abs(clef.start() - clefs[0][1]) <= 3):
+            clefs.append((index, clef.start()))
+    if not count or not clefs or len(clefs) % count:
+        return None
+    lines = [index for index, _ in clefs]
+    staff_names: list[list[str]] = [[] for _ in range(count)]
+    for at, name in names:
+        # The nearest staff; between two, the one below (a name is printed above or beside its staff).
+        nearest = min(range(len(lines)), key=lambda staff: (abs(lines[staff] - at), -staff))
+        if nearest < count:
+            staff_names[nearest].append(name)
+    return [" ".join(found) if found else None for found in staff_names]
+
+
 def score_names(text: str) -> list[str]:
     """The instruments written beside the staves of a score's page, top to bottom."""
     return [piece for piece in _pieces(text) if len(piece) <= 40 and catalog.names(piece)]
@@ -388,7 +418,9 @@ def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str]
     joined = max((staves(xml) for xml, _ in pages), default=0)
     names = score_names(pages[0][1]) if pages else []
     named = names if names and len(names) == joined == count else None
-    return join_pages([xml for xml, _ in pages], title, named), named
+    # The names beside the staves place the staves of a page that shows fewer of them (2026-11-02).
+    labels = [staff_labels(text, staves(xml)) for xml, text in pages]
+    return join_pages([xml for xml, _ in pages], title, named, labels, same_part), named
 
 
 def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: str,
@@ -424,7 +456,7 @@ def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: st
                  if found or name in from_score]
         # Parts of different lengths: copista skipped multi-measure rests (2026-10-29); the score keeps every measure.
         if len({measure_count(xml) for _, xml in files}) > 1 and score_pages():
-            files = fill_lost_rests(files, _score(score_pages(), title)[0])
+            files = fill_lost_rests(files, _score(score_pages(), title)[0], same_part)
         read_pages = sum(len(found) for _, found, _ in groups)
         print(f"La obra se saca de {len(files)} particellas ({read_pages} {'página' if read_pages == 1 else 'páginas'}).",
               flush=True)
