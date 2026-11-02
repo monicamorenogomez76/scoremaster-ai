@@ -172,6 +172,11 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   páginas de la partitura general, alinea cada particella compás a compás con el pentagrama de ritmo más parecido
   (`omr/merge.py`, `fill_lost_rests`) y convierte en silencio los compases que perdió. Lo que leyó de la particella no se
   cambia ni se quita; una particella completa o que no se parece a ningún pentagrama se queda como se leyó.
+- **Particellas de varias páginas:** el nombre de cada particella se lee en la cabecera de la página, no entre los
+  pentagramas, donde aparecen las entradas de otros instrumentos. Las páginas que empiezan por «Título - nombre» siguen a
+  la particella anterior cuando el nombre la abrevia con su mismo número («Fl. 1» de «Flute 1», «Hn. 1» de «F Horn 1»);
+  una primera página siempre empieza particella. Una página que nombra varios instrumentos entre dos páginas de
+  particella, como la percusión, es de esa particella y no de la partitura general.
 - **Instrumentos:** las particellas y los pentagramas de la partitura general se nombran con el catálogo. Si una
   particella no se puede leer, toma su pentagrama de la partitura general.
 - **Transposición:** copista lee las notas tal como están impresas, pero no escribe `<transpose>`. ScoreMaster añade
