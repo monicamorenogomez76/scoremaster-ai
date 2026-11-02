@@ -3,7 +3,7 @@
 Decided on 2026-10-04: an instrument needs one musician per voice (Clarinet 1, 2 and 3
 need three; a shared "Clarinet 1 & 2" part counts two; the staves of one wind part are its voices,
 while the staves of a keyboard part are one musician),
-and percussion is counted as percussionists in total, one per percussion part. Parts without a
+and percussion is counted as percussionists in total, one per percussion part or the players it declares. Parts without a
 confirmed identity (unknown, conflict or metadata-only review) wait for the user and do not count.
 """
 from __future__ import annotations
@@ -51,7 +51,9 @@ def compute_band_fit(score: Score, band_profile: dict[str, int]) -> dict:
             "voices": set(), "parts": set()})
         numbers = () if percussion else _voice_numbers(part, identity)
         part_key = part.metadata.part_id or part.name
-        group["voices"] |= {("voice", number) for number in numbers} or {("part", part_key)}
+        # A percussion part may need several players (2026-11-02: «Percussion 2» of «Arabian Dances», two).
+        players = range(part.metadata.players or 1) if percussion else range(1)
+        group["voices"] |= {("voice", number) for number in numbers} or {("part", part_key, player) for player in players}
         group["parts"].add(part.name)
 
     requirements, issues = [], []

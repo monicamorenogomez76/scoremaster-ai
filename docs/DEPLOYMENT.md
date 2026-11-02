@@ -172,6 +172,11 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   páginas de la partitura general, alinea cada particella compás a compás con el pentagrama de ritmo más parecido
   (`omr/merge.py`, `fill_lost_rests`) y convierte en silencio los compases que perdió. Lo que leyó de la particella no se
   cambia ni se quita; una particella completa o que no se parece a ningún pentagrama se queda como se leyó.
+- **Percusión de varios instrumentos:** si el PDF trae la página de plantilla («Instrumentation»), el lector toma qué
+  instrumentos toca cada particella de percusión («Percussion 1: Marimba, Low Tom…») y cuántos músicos necesita
+  («Percussion 2 — 2 players»), y los escribe en la obra: un `<score-instrument>` por instrumento y un `<player>` por
+  músico (MusicXML 4.0). ScoreMaster reconoce «Percussion», «Perc.» o «Percusión» como percusión, BandFit cuenta esos
+  músicos y cada nota suena como un golpe según su línea, nunca como piano. Sin la página, nada cambia.
 - **Particellas de varias páginas:** el nombre de cada particella se lee en la cabecera de la página, no entre los
   pentagramas, donde aparecen las entradas de otros instrumentos. Las páginas que empiezan por «Título - nombre» siguen a
   la particella anterior cuando el nombre la abrevia con su mismo número («Fl. 1» de «Flute 1», «Hn. 1» de «F Horn 1»);

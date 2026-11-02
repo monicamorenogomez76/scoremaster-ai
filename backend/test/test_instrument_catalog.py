@@ -161,7 +161,8 @@ def test_part_numbers_are_kept_apart_from_the_identity(name, canonical_id, part_
 
 
 @pytest.mark.parametrize("name", [
-    "Voice", "Voice 3", "Part 1", "Instrument", "Percussion", "Bajo",
+    # «Percussion» is a part of several instruments since 2026-11-02 (test_percussion_parts.py), no longer unknown.
+    "Voice", "Voice 3", "Part 1", "Instrument", "Bajo",
     "Solo", "", "   ", "Trombone 3 & Bass Trombone", "Glass Harmonica",
 ])
 def test_generic_ambiguous_or_unknown_names_stay_unknown(name):

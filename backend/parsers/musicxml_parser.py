@@ -70,6 +70,7 @@ def read_part_metadata(content: bytes) -> dict[str, PartMetadata]:
             instrument_sounds=texts("instrument-sound"),
             midi_programs=_integers(score_part.iter("midi-program")),
             midi_channels=_integers(score_part.iter("midi-channel")),
+            players=len(list(score_part.iter("player"))) or None,
         )
     for part in root.iter("part"):
         transpose = next(part.iter("transpose"), None)

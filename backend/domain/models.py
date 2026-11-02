@@ -61,6 +61,8 @@ class PartMetadata:
 	staff_number: Optional[int] = None
 	# Catalog identity confirmed by the user (step 09); not read from the MusicXML.
 	confirmed_id: Optional[str] = None
+	# Players of the part, one <player> each (MusicXML 4.0): a percussion part may need two (2026-11-02).
+	players: Optional[int] = None
 
 
 @dataclass(frozen=True)

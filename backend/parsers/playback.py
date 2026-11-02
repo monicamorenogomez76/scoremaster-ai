@@ -47,8 +47,9 @@ def _unpitched_key(identity, midi: float) -> int | None:
     """The drum a pitched note of an unpitched percussion part plays; None for any other part."""
     if identity is None or identity.section != 'percussion' or identity.sound is not None:
         return None
-    if identity.canonical_id == 'drum_set':
-        return DRUM_SET_KEYS.get(int(midi), 38)
+    if identity.canonical_id in ('drum_set', 'percussion'):
+        # A part of several instruments by the line they sit on (2026-11-02): low drums, snare, cymbals.
+        return DRUM_SET_KEYS.get(int(midi), 45 if midi < 64 else 49 if midi > 78 else 38)
     return DRUM_KEYS.get(identity.canonical_id, 38)
 
 
@@ -71,7 +72,7 @@ def _scores_kept() -> int:
 # Beyond this the work is too large to keep (the whole-score playback already stops at 150 000 events).
 MAX_PREPARED_NOTES = 1_000_000
 # Stored timelines of another version are prepared again.
-TIMELINE_VERSION = 'playback-timeline-v2'   # v2 (2026-11-01): pitched notes of unpitched percussion are drums
+TIMELINE_VERSION = 'playback-timeline-v3'   # v3 (2026-11-02): the generic percussion plays drums by line
 # A small work is answered in the same request; a longer one answers 202 and the browser follows its
 # preparation, so no request stays open for minutes (2026-10-07: Persis took ~3 min on Render).
 WAIT_SECONDS = 20.0

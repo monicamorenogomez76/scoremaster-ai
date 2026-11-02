@@ -41,6 +41,7 @@ def test_solo_passage_carries_identity_too(tmp_path):
 
 
 def test_every_pitched_catalog_identity_has_a_sound():
-    unpitched = {"snare_drum", "bass_drum", "crash_cymbals", "suspended_cymbal", "drum_set", "tambourine", "triangle"}
+    unpitched = {"snare_drum", "bass_drum", "crash_cymbals", "suspended_cymbal", "drum_set", "tambourine", "triangle",
+                 "percussion"}
     for entry in catalog_entries():
         assert (entry.sound is None) == (entry.canonical_id in unpitched), entry.canonical_id

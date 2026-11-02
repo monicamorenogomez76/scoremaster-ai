@@ -1018,6 +1018,27 @@
    ],
    "sound": "tubular_bells",
    "rehearsal_group": "percussion"
+  },
+  {
+   "id": "percussion",
+   "section": "percussion",
+   "family": "percussion",
+   "variant": null,
+   "transposition": null,
+   "label_es": "Percusión",
+   "label_en": "Percussion",
+   "aliases": [
+    "percussion",
+    "percussions",
+    "perc",
+    "percusion",
+    "percusiones",
+    "percussio",
+    "percussioni",
+    "schlagwerk"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
   }
  ],
  "sound_note": "sound: FluidR3_GM soundfont used for playback; unpitched percussion has none because the player synthesises it",

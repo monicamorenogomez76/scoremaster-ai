@@ -457,3 +457,43 @@ def test_with_the_catalog_the_flat_of_finale_s_font_is_read():
 def test_a_part_is_named_with_the_flat_sign():
     groups = worker._parts_of([(b"x", "B≤ Clarinet 1\n    ARABIAN DANCES\n" + MUSIC), (b"x", "Arabian Dances - Cl. 1\n" + MUSIC)])
     assert [(name, len(found)) for name, found, _ in groups] == [("B♭ Clarinet 1", 2)]
+
+
+# The instrumentation page of a band PDF lists what each percussion part plays (2026-11-02, «Arabian Dances»), in two
+# columns whose lines interleave; another page says how many players each needs.
+INSTRUMENTATION = "\n".join([
+    "                         Instrumentation",
+    "    1 - Conductor's Score                 2 - Trombone 1",
+    "    4 - Flute 1                           2 - Baritone/",
+    "    1 - Oboe 1                                Euphonium",
+    "    1 - Bassoon 1                         2 - Timpani/Shaker",
+    "    4 - B≤ Clarinet 1                     2 - Percussion 1",
+    "                                              Marimba",
+    "    4 - B≤ Clarinet 2",
+    "                                              Low Tom",
+    "    2 - B≤ Bass Clarinet                      Suspended Cymbal",
+    "    1 - E≤ Alto Saxophone 1               2 - Percussion 2",
+    "                                              Suspended Cymbal",
+    "    3 - B≤ Trumpet 1                          Frame Drum",
+    "    Extra Parts: $3.50"])
+PLAYERS = "Percussion is set up to work with 5 players.\nTimpani/Shaker — 1 player\nPercussion 1 — 1 player\nPercussion 2 — 2 players"
+
+
+def test_the_percussion_of_each_part_is_read_from_the_instrumentation_page():
+    assert worker.percussion_plan([INSTRUMENTATION, PLAYERS]) == {
+        "Timpani/Shaker": {"instruments": ["Timpani", "Shaker"], "players": 1},
+        "Percussion 1": {"instruments": ["Marimba", "Low Tom", "Suspended Cymbal"], "players": 1},
+        "Percussion 2": {"instruments": ["Suspended Cymbal", "Frame Drum"], "players": 2}}
+    assert worker.percussion_plan(["Flauta 1", "Percusión"]) == {}, "without the page, nothing is made up"
+
+
+def test_the_work_declares_the_instruments_and_players_of_its_percussion(scoremaster):
+    from backend.parsers.musicxml_parser import read_part_metadata
+    pages = [(0, INSTRUMENTATION), (0, PLAYERS), (1, "Percussion 1\n" + MUSIC), (1, "Percussion 2\n" + MUSIC),
+             (1, "Flute 1\n" + MUSIC)]
+    run_pages(scoremaster, pages)
+    metadata = {item.part_name: item for item in read_part_metadata(scoremaster["result"]["musicxml"].encode()).values()}
+    assert metadata["Percussion 2"].players == 2
+    assert {"Suspended Cymbal", "Frame Drum"} <= set(metadata["Percussion 2"].instrument_names)
+    assert metadata["Percussion 1"].players == 1 and "Marimba" in metadata["Percussion 1"].instrument_names
+    assert metadata["Flute 1"].players is None, "only the percussion it lists"
