@@ -525,3 +525,49 @@ def test_each_staff_of_a_score_page_takes_the_name_beside_it():
     assert worker.staff_labels(SCORE_PAGE, 5) == ["Timp. Shkr.", "Perc. 1", "Perc. 2", None, "Perc. 3"]
     assert worker.staff_labels(SCORE_PAGE, 7) is None, "the clefs of the page are not its staves"
     assert worker.staff_labels("Flauta\nClarinete", 2) is None
+
+
+# Faster (2026-11-03): copista reads a page on one processor and GitHub's machine for public repositories has four, so
+# the pages are read by several processes at once. Each reading keeps its page; a page copista cannot read stays failed.
+def read_in_another_process(pdf_path, number, out_dir):
+    if number == 3:
+        raise worker.PageFailed("no staves")
+    return f"<page {number} of {os.path.basename(pdf_path)}/>".encode()
+
+
+def test_pages_are_read_by_several_processes_and_each_keeps_its_page():
+    done = []
+    pages = [("Obra", "/tmp/a.pdf", number) for number in range(1, 7)]
+    read = worker.read_pages(pages, read_in_another_process, {"/tmp/a.pdf": "/tmp"}, workers=3,
+                             on_done=lambda: done.append(1))
+    assert [read[page] for page in pages if page[2] != 3] == [f"<page {n} of a.pdf/>".encode() for n in (1, 2, 4, 5, 6)]
+    assert isinstance(read[pages[2]], worker.PageFailed) and "no staves" in str(read[pages[2]])
+    assert len(done) == 6, "the progress is told after every page"
+    assert worker.read_pages(pages, read_in_another_process, {"/tmp/a.pdf": "/tmp"}, workers=1, on_done=lambda: None) \
+        .keys() == read.keys(), "one process reads the same"
+
+
+def test_the_number_of_processes_fits_the_machine(monkeypatch):
+    monkeypatch.delenv("OMR_PAGE_WORKERS", raising=False)
+    monkeypatch.setattr(os, "cpu_count", lambda: 4)
+    assert worker.page_workers() == 4, "one process of one processor each: the fastest on GitHub's four"
+    monkeypatch.setattr(os, "cpu_count", lambda: 8)
+    assert worker.page_workers() == 4, "never more than four models of copista in memory"
+    monkeypatch.setattr(os, "cpu_count", lambda: 2)
+    assert worker.page_workers() == 2
+    monkeypatch.setenv("OMR_PAGE_WORKERS", "1")
+    assert worker.page_workers() == 1
+
+
+def die_on_two(pdf_path, number, out_dir):
+    if number == 2 and os.environ.get("OMR_TEST_PARENT") != str(os.getpid()):
+        os._exit(1)   # as the system kills a process out of memory
+    return f"<page {number}/>".encode()
+
+
+def test_a_process_that_dies_leaves_its_pages_to_be_read_one_after_another(monkeypatch, capsys):
+    monkeypatch.setenv("OMR_TEST_PARENT", str(os.getpid()))
+    pages = [("Obra", "/tmp/a.pdf", number) for number in range(1, 5)]
+    read = worker.read_pages(pages, die_on_two, {"/tmp/a.pdf": "/tmp"}, workers=2, on_done=lambda: None)
+    assert read[pages[1]] == b"<page 2/>", "read again in this process"
+    assert len(read) == 4 and "se leen de una en una" in capsys.readouterr().out
