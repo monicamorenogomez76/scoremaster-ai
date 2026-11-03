@@ -88,6 +88,62 @@ def read_page(pdf_path: str, number: int, out_dir: str) -> bytes:
         signal.signal(signal.SIGALRM, previous)
 
 
+DEFAULT_READ_PAGE = read_page
+# Several processes of one processor each read faster than one process with all of them (2026-11-03, 12 pages on four
+# processors: 54 s one after another, 43 s with four threads, 29 s two by two, 22 s four processes of one). GitHub's
+# machine for public repositories has four processors and 16 GB. OMR_PAGE_WORKERS changes it.
+MAX_PAGE_WORKERS = 4
+
+
+def page_workers() -> int:
+    try:
+        configured = int(os.environ.get("OMR_PAGE_WORKERS", "0"))
+    except ValueError:
+        configured = 0
+    return max(1, configured) if configured else max(1, min(MAX_PAGE_WORKERS, os.cpu_count() or 1))
+
+
+def _one_thread() -> None:
+    """Each process reads on one processor, so that they do not fight over them."""
+    for name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+        os.environ[name] = "1"
+
+
+def _read_one(read_page, pdf_path: str, number: int, out_dir: str):
+    """The page read, or why it could not be (an exception returned, so that it crosses between processes)."""
+    try:
+        return read_page(pdf_path, number, out_dir)
+    except Exception as error:
+        return error
+
+
+def read_pages(pages: list[tuple[str, str, int]], read_page, out_dirs: dict, workers: int, on_done) -> dict:
+    """{(name, path, number): MusicXML or the exception} of every page, read by `workers` processes at once; on_done is
+    called after each page, in the order they finish."""
+    results = {}
+    if workers <= 1 or len(pages) <= 1:
+        for page in pages:
+            results[page] = _read_one(read_page, page[1], page[2], out_dirs[page[1]])
+            on_done()
+        return results
+    import multiprocessing
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    from concurrent.futures.process import BrokenProcessPool
+    try:
+        with ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("fork"),
+                                 initializer=_one_thread) as pool:
+            futures = {pool.submit(_read_one, read_page, page[1], page[2], out_dirs[page[1]]): page for page in pages}
+            for future in as_completed(futures):
+                results[futures[future]] = future.result()
+                on_done()
+    except BrokenProcessPool:
+        # A process died (out of memory): the pages left are read one after another.
+        print(f"Un lector se detuvo; se leen de una en una las {len(pages) - len(results)} páginas que faltan.", flush=True)
+        left = [page for page in pages if page not in results]
+        results.update(read_pages(left, read_page, out_dirs, 1, on_done))
+    return results
+
+
 def count_pages(pdf_path: str) -> int:
     output = subprocess.run(["pdfinfo", pdf_path], check=True, capture_output=True, text=True, timeout=30).stdout
     return next(int(line.split()[1]) for line in output.splitlines() if line.startswith("Pages:"))
@@ -521,30 +577,38 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         out_dirs = {path: tempfile.mkdtemp(dir=folder) for _, path in saved}
         # The log numbers the files: it never says which work was read (2026-11-01).
         numbered = {path: number for number, (_, path) in enumerate(saved, 1)}
+        # The real copista reads several pages at once; a reading given by the tests, one after another.
+        workers = page_workers() if read_page is DEFAULT_READ_PAGE else 1
+
+        def page_done(total: int):
+            def tell():
+                nonlocal done
+                done += 1
+                client.post(callback + "/progress", json={"pages_done": done, "pages_total": total})
+            return tell
+
+        results = read_pages(plan, read_page, out_dirs, workers, page_done(len(plan)))
         for name, path, number in plan:
-            try:
-                xml = read_page(path, number, out_dirs[path])
-                by_file.setdefault((name, path), []).append((number, xml, texts[(path, number)]))
-            except Exception as error:
+            outcome = results[(name, path, number)]
+            if isinstance(outcome, Exception):
                 # A cover or a text page: skipped. Why copista failed goes to the log, never the PDF nor the token.
-                print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{error}", flush=True)
+                print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{outcome}", flush=True)
                 failed.setdefault((name, path), []).append((number, None, texts[(path, number)]))
-            done += 1
-            client.post(callback + "/progress", json={"pages_done": done, "pages_total": len(plan)})
+            else:
+                by_file.setdefault((name, path), []).append((number, outcome, texts[(path, number)]))
         set_apart = [(name, path, number) for (name, path), count in zip(saved, pages) for number in range(1, count + 1)
                      if (name, path, number) not in plan]
 
         def read_score() -> list[tuple[bytes, str]]:
             """The score's pages set apart, read when a part copista could not read needs its staff."""
-            nonlocal done
             found = []
+            results = read_pages(set_apart, read_page, out_dirs, workers, page_done(len(plan) + len(set_apart)))
             for name, path, number in set_apart:
-                try:
-                    found.append((read_page(path, number, out_dirs[path]), texts[(path, number)]))
-                except Exception as error:
-                    print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{error}", flush=True)
-                done += 1
-                client.post(callback + "/progress", json={"pages_done": done, "pages_total": len(plan) + len(set_apart)})
+                outcome = results[(name, path, number)]
+                if isinstance(outcome, Exception):
+                    print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{outcome}", flush=True)
+                else:
+                    found.append((outcome, texts[(path, number)]))
             return found
 
         if not by_file:
