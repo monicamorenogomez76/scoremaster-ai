@@ -91,7 +91,7 @@ def test_only_catalog_instruments_that_can_play_the_part_are_accepted():
     assert rejected == 2
     accepted, rejected = validate_proposals(_answer(("Bajo 1", "dulzaina.inventada", 0.8, "x")), evidence, parts)
     assert (accepted, rejected) == ({}, 1), "an id outside the catalog is never shown"
-    accepted, _ = validate_proposals(_answer(("Bajo 1", None, 0.2, "No se puede saber.")), evidence, parts)
+    accepted, _ = validate_proposals(_answer(("Bajo 1", "", 0.2, "No se puede saber.")), evidence, parts)
     assert accepted == {}, "«I do not know» proposes nothing"
     with pytest.raises(InvalidProposals):
         validate_proposals({"proposals": [{"part": "Bajo 1"}]}, evidence, parts)
@@ -133,7 +133,7 @@ def test_the_prompt_is_versioned_and_keeps_part_names_as_data():
     from backend.infrastructure.ai.prompts import INSTRUMENT_PROMPT
     from backend.application.instrument_proposals import PROMPT_VERSION
     from backend.infrastructure.ai.prompts import in_language
-    assert INSTRUMENT_PROMPT.version == PROMPT_VERSION == "instrument-proposal-v1"
+    assert INSTRUMENT_PROMPT.version == PROMPT_VERSION == "instrument-proposal-v2"
     assert "una frase en inglés" in in_language(INSTRUMENT_PROMPT, "en").system
     seen = []
 
@@ -207,6 +207,10 @@ def test_over_http_proposals_need_the_csrf_token_and_a_real_ai(clients, provider
     provider["provider"] = Fake(failure=ProviderFailure("rate_limit"))
     failed = ana.post("/works/" + work_id + "/instrument-proposals")
     assert failed.status_code == 503 and failed.json()["reason"] == "rate_limit"
+    # Anything else that fails says so too, instead of a bare 500 the screen could only call «could not» (2026-11-03).
+    provider["provider"] = Fake(failure=RuntimeError("unexpected"))
+    broken = ana.post("/works/" + work_id + "/instrument-proposals")
+    assert broken.status_code == 503 and broken.json()["reason"] == "error"
 
 
 @pytest.mark.real_auth
@@ -215,3 +219,32 @@ def test_a_work_with_every_part_recognised_asks_nothing(clients, provider):
     work_id = _analyze(ana, "Clarinet")
     assert ana.post("/works/" + work_id + "/instrument-proposals").json()["proposals"] == {}
     assert provider["provider"].seen == [], "no call when there is nothing to propose"
+
+
+def test_no_answer_schema_has_a_nullable_field():
+    """Gemini's structured output takes no «string or null» (2026-11-03: «Proponer con IA» failed in Render while the
+    explanations, whose schemas have none, worked). An unknown instrument is an empty text."""
+    import json as _json
+    from backend.application.difficulty_explanation import DifficultyExplanation
+    from backend.application.instrument_proposals import InstrumentProposals
+    from backend.application.llm_review import PassageReview
+    from backend.application.rehearsal_explanation import RehearsalExplanation
+    from backend.application.substitutes_explanation import SubstitutesExplanation
+    for model in (DifficultyExplanation, RehearsalExplanation, PassageReview, InstrumentProposals, SubstitutesExplanation):
+        schema = _json.dumps(model.model_json_schema())
+        assert "anyOf" not in schema and '"null"' not in schema, model.__name__
+
+
+def test_an_empty_instrument_proposes_nothing():
+    evidence = proposal_evidence([FISCORN], "es")
+    accepted, rejected = validate_proposals(_answer(("Fiscorn 1", "", 0.2, "No se puede saber.")), evidence,
+                                            {"Fiscorn 1": FISCORN})
+    assert (accepted, rejected) == ({}, 0)
+
+
+def test_a_baritone_in_treble_clef_is_read_a_ninth_above_its_sound():
+    """«Baritone T.C.» of «Arabian Dances» (2026-11-03), written from A3 to B5 without a declared transposition: the
+    euphonium in treble clef reads a ninth above, so it fits."""
+    treble = _part("Baritone T.C.", ["A3", "D5", "B5"])
+    assert playable_range("euphonium", treble) is True
+    assert playable_range("tuba", treble) is False

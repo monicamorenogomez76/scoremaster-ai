@@ -942,6 +942,8 @@ export const en = {
   'La IA propone el instrumento de {count} partes. Revísalos antes de confirmar.': 'The AI proposes the instrument of {count} parts. Check them before confirming.',
   'Consultando a la IA…': 'Asking the AI…',
   'Proponer con IA': 'Propose with AI',
+  '{reason}. Elige los instrumentos tú o vuelve a intentarlo más tarde.': '{reason}. Choose the instruments yourself or try again later.',
+  'El servidor no respondió (error {status}). Elige los instrumentos tú o vuelve a intentarlo más tarde.': 'The server did not answer (error {status}). Choose the instruments yourself or try again later.',
   'Propuesta de instrumentos': 'Instrument proposal',
   'Sustitutos de instrumentos': 'Instrument substitutes',
   'No se pudieron proponer sustitutos.': 'Substitutes could not be proposed.',

@@ -99,7 +99,11 @@ def playable_range(canonical_id: str, part: ScorePart, margin: int = REACH_MARGI
     if not played:
         return True
     (low, high), _ = R.RANGES[row][5]
-    return _midi(low) - margin <= min(played) and max(played) <= _midi(high) + margin
+    fits = lambda values: _midi(low) - margin <= min(values) and max(values) <= _midi(high) + margin
+    # Without a declared transposition, a baritone or euphonium part may be the treble clef one, a ninth above its sound
+    # (2026-11-03, «Baritone T.C.» of «Arabian Dances»).
+    in_treble = instrument_shift(canonical_id, "G") if part.metadata.transposition is None else 0
+    return fits(played) or bool(in_treble) and fits([value + in_treble for value in played])
 
 
 def reaches_sounding(canonical_id: str, lowest: str, highest: str, margin: int = REACH_MARGIN) -> bool | None:

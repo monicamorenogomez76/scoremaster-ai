@@ -236,7 +236,7 @@ class DemoExplanationProvider:
         for item in evidence["missing"]:
             chosen = next((candidate for candidate in item["candidates"] if free[candidate["id"]] > 0), None)
             if chosen is None:
-                substitutes.append({"missing": item["id"], "instrument": None, "reason": texts["nothing_fits"]})
+                substitutes.append({"missing": item["id"], "instrument": "", "reason": texts["nothing_fits"]})
                 continue
             free[chosen["id"]] -= 1
             substitutes.append({"missing": item["id"], "instrument": chosen["id"],

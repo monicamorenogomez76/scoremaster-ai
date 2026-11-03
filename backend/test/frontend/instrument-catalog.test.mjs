@@ -108,4 +108,8 @@ test('the AI proposals fill the parts nothing was chosen for and say why', async
   assert.deepEqual([aiConfidence(0.9), aiConfidence(0.6), aiConfidence(0.2)], ['alta', 'media', 'baja']);
   fakeServer({ 'POST /works/w/instrument-proposals': [409, { detail: 'La propuesta de instrumentos necesita la IA.' }] });
   await assert.rejects(proposeInstruments('w'), { message: 'La propuesta de instrumentos necesita la IA.' });
+  fakeServer({ 'POST /works/w/instrument-proposals': [503, { detail: 'x', reason: 'timeout' }] });
+  await assert.rejects(proposeInstruments('w'), { message: 'La IA no respondió a tiempo. Elige los instrumentos tú o vuelve a intentarlo más tarde.' });
+  globalThis.fetch = async () => new Response('<html>Bad gateway</html>', { status: 502 });
+  await assert.rejects(proposeInstruments('w'), { message: /error 502/ }, 'a request cut by the platform says its status');
 });

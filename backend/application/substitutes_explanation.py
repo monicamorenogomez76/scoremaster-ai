@@ -3,21 +3,21 @@
 choice is one of the candidates of its part, and no instrument takes more parts than musicians it has to spare. On
 any failure the demo chooses the usual substitutes and the interface says why (backend/application/explanations.py)."""
 import re
-from typing import Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
 from backend.application.explanations import InvalidExplanation, run_explanation
 from backend.domain.text import evidence_text
 
-PROMPT_VERSION = "substitutes-v1"
+PROMPT_VERSION = "substitutes-v2"   # v2 (2026-11-03): no substitute is "", never null
 EVIDENCE_VERSION = "substitutes-evidence-v1"
 MAX_MISSING = 30
 
 
 class Substitute(BaseModel):
     missing: str = Field(pattern=r"^S\d{1,2}$")
-    instrument: Optional[str] = Field(None, max_length=80)
+    # Empty for no substitute: Gemini's structured output takes no nullable field (2026-11-03).
+    instrument: str = Field("", max_length=80)
     reason: str = Field(min_length=1, max_length=300)
 
 
@@ -54,7 +54,7 @@ def validate_substitutes(answer, evidence: dict) -> SubstitutesExplanation:
         if item is None or substitute.missing in seen:
             raise InvalidExplanation("Sustituto de una parte que no está en las evidencias: " + substitute.missing)
         seen.add(substitute.missing)
-        if substitute.instrument is None:
+        if not substitute.instrument:
             continue
         if substitute.instrument not in {candidate["id"] for candidate in item["candidates"]}:
             raise InvalidExplanation("Instrumento que no es candidato de " + substitute.missing)

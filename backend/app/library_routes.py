@@ -1,5 +1,6 @@
 """Works and band template of the signed-in user. Every query is scoped to the owner: another
 user's work answers 404, the same as a work that does not exist."""
+import logging
 from datetime import date
 from typing import Optional
 from urllib.parse import urlparse
@@ -26,6 +27,7 @@ from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.parsers.playback import prepare_playback, preparation_enabled
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 NOT_FOUND = "La obra no existe."
 PROPOSAL_FAILED = "La IA no pudo proponer los instrumentos ahora. Vuelve a intentarlo más tarde o elígelos tú."
 MAX_MUSICIANS = 1000
@@ -181,6 +183,9 @@ def instrument_proposals(work_id: str, user: User = Depends(authenticated_user),
     except (ProviderFailure, InvalidProposals) as failure:
         reason = str(failure) if isinstance(failure, ProviderFailure) else "invalid"
         return JSONResponse(status_code=503, content={"detail": translate(PROPOSAL_FAILED, lang), "reason": reason})
+    except Exception:
+        logger.exception("La propuesta de instrumentos falló antes de responder la IA.")
+        return JSONResponse(status_code=503, content={"detail": translate(PROPOSAL_FAILED, lang), "reason": "error"})
 
 
 @router.get("/works/{work_id}/substitutes")
