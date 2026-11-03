@@ -75,7 +75,7 @@ def test_the_ai_can_only_choose_candidates_and_never_more_musicians_than_are_fre
                   _answer(("S1", "flute", "x"), ("S1", "clarinet.bb", "y"))):
         with pytest.raises(InvalidExplanation):
             validate_substitutes(wrong, evidence)
-    assert validate_substitutes(_answer(("S1", None, "Mejor no sustituirla.")), evidence).substitutes[0].instrument is None
+    assert validate_substitutes(_answer(("S1", "", "Mejor no sustituirla.")), evidence).substitutes[0].instrument == ""
 
 
 class Fake:
@@ -126,7 +126,7 @@ def test_the_prompt_is_versioned_and_gemini_uses_it():
     from backend.application.substitutes_explanation import PROMPT_VERSION
     from backend.infrastructure.ai.gemini_provider import GeminiExplanationProvider
     from backend.infrastructure.ai.prompts import SUBSTITUTES_PROMPT, in_language
-    assert SUBSTITUTES_PROMPT.version == PROMPT_VERSION == "substitutes-v1"
+    assert SUBSTITUTES_PROMPT.version == PROMPT_VERSION == "substitutes-v2"
     assert "en inglés" in in_language(SUBSTITUTES_PROMPT, "en").system
     seen = []
 

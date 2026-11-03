@@ -1,6 +1,6 @@
 // The instrument catalog in the database (2026-10-28): the administration adds the names an instrument is written
 // with and new common instruments from Configuración. API helpers and pure functions only.
-import { apiJson } from './api.js';
+import { apiFetch, apiJson } from './api.js';
 import { t } from './i18n.js';
 
 export const instrumentSections = [['woodwinds', 'Viento madera'], ['brass', 'Viento metal'], ['percussion', 'Percusión'],
@@ -82,8 +82,17 @@ export const withSuggestions = (items, suggestions) => (items || []).map(item =>
 
 // The AI's proposal for the parts still waiting (2026-10-31): only catalog instruments the part's range fits. The one
 // it proposes comes chosen where nothing was; another proposal (from the file or other accounts) is kept.
-export const proposeInstruments = workId => apiJson('/works/' + encodeURIComponent(workId) + '/instrument-proposals',
-  { method: 'POST' }, t('La IA no pudo proponer los instrumentos ahora. Vuelve a intentarlo más tarde o elígelos tú.'));
+export async function proposeInstruments(workId) {
+  const response = await apiFetch('/works/' + encodeURIComponent(workId) + '/instrument-proposals', { method: 'POST' });
+  const body = await response.json().catch(() => ({}));
+  if (response.ok) return body;
+  // Why it failed, as the server says it (2026-11-03: a bare «could not» told nothing), or the status of a cut request.
+  const reasons = { timeout: t('La IA no respondió a tiempo'), rate_limit: t('La IA ha alcanzado su límite de uso'),
+    invalid: t('La IA dio una respuesta que no coincidía con el análisis'), error: t('La IA no está disponible') };
+  if (body.reason) throw new Error(t('{reason}. Elige los instrumentos tú o vuelve a intentarlo más tarde.', { reason: reasons[body.reason] || reasons.error }));
+  if (typeof body.detail === 'string') throw new Error(body.detail);
+  throw new Error(t('El servidor no respondió (error {status}). Elige los instrumentos tú o vuelve a intentarlo más tarde.', { status: response.status }));
+}
 
 export const withAiProposals = (items, proposals) => (items || []).map(item => {
   const ai = (proposals || {})[item.part];

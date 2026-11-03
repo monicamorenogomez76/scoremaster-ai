@@ -5,7 +5,6 @@ the catalog; it never gets the score nor anything about the account. It can only
 proposal whose range the instrument cannot play is dropped (backend/analyzers/rubric_grade.playable_range). A
 proposal is only shown: the part counts once the account confirms it. There is no demo: a rule-based stand-in would
 be one more guess, so without a real provider nothing is proposed."""
-from typing import Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -17,7 +16,7 @@ from backend.domain.models import ScorePart
 from backend.domain.text import evidence_text
 from backend.domain.timing import is_attack, sounding_pitches
 
-PROMPT_VERSION = "instrument-proposal-v1"
+PROMPT_VERSION = "instrument-proposal-v2"   # v2 (2026-11-03): an unknown instrument is "", never null
 EVIDENCE_VERSION = "instrument-evidence-v1"
 PURPOSE = "instrument_proposal"
 MAX_PARTS = 40
@@ -34,7 +33,8 @@ class NotAvailable(Exception):
 
 class InstrumentProposal(BaseModel):
     part: str = Field(min_length=1, max_length=MAX_NAME)
-    instrument: Optional[str] = Field(None, max_length=80)
+    # Empty when it cannot be known: Gemini's structured output takes no nullable field (2026-11-03).
+    instrument: str = Field("", max_length=80)
     confidence: float = Field(ge=0, le=1)
     reason: str = Field(min_length=1, max_length=300)
 
@@ -84,7 +84,7 @@ def validate_proposals(answer, evidence: dict, parts: dict[str, ScorePart]) -> t
     known = {item["id"] for item in evidence["instruments"]}
     accepted, rejected = {}, 0
     for proposal in proposals:
-        if proposal.instrument is None:
+        if not proposal.instrument:
             continue
         part = parts.get(proposal.part)
         valid = (proposal.part in asked and proposal.part not in accepted and part is not None
