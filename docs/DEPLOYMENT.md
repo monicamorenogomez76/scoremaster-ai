@@ -135,11 +135,16 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 
 1. Al subir un PDF, Render lo guarda y lanza en ese repositorio el evento `read-pdf` con un **token de un solo uso**
    para esa importación.
-2. El *workflow* descarga de la rama `main` de ScoreMaster el código del lector (`omr/`) y el catálogo de instrumentos
-   (`backend/domain`); así se actualiza solo. Pide a ScoreMaster el catálogo de la base y los nombres que la cuenta ya
+2. El *workflow* descarga de la rama `main` de ScoreMaster el código del lector (`omr/`), el catálogo de instrumentos
+   (`backend/domain`) y lo que prepara las obras (`backend/parsers`); así se actualiza solo. Pide a ScoreMaster el catálogo de la base y los nombres que la cuenta ya
    confirmó, descarga los PDF con el token, lee las páginas con copista-2m y devuelve el avance y el MusicXML de la
    obra, o por qué falló.
-3. La máquina de GitHub se destruye al terminar, y Render borra los PDF al recibir el resultado.
+3. Antes de devolver la obra, el lector pregunta a ScoreMaster cómo quedará el MusicXML definitivo (`/final`), lo lee con
+   music21 y envía el modelo y el audio ya preparados junto con el resultado. Así Render no pasa minutos leyéndola con su
+   décima de CPU. Render solo lo guarda si corresponde a esos mismos bytes y a sus versiones, se puede abrir y no había nada guardado; en
+   cualquier otro caso, o si el lector no pudo prepararla, Render lee la obra como una subida normal. Lo preparado solo
+   funciona con el *workflow* actual: hay que volver a ejecutar `scripts/deploy_omr_worker.sh` cuando cambia.
+4. La máquina de GitHub se destruye al terminar, y Render borra los PDF al recibir el resultado.
 
 **Crear el repositorio del lector** (una vez)
 

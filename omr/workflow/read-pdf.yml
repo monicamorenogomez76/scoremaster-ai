@@ -36,10 +36,12 @@ jobs:
           repository: ${{ env.SCOREMASTER_REPOSITORY }}
           ref: main
           path: scoremaster
-          # The reader and ScoreMaster's instrument catalog (backend/domain, standard library only; 2026-10-28).
+          # The reader, ScoreMaster's instrument catalog (backend/domain, standard library only; 2026-10-28) and what
+          # prepares the work with music21 (backend/parsers; 2026-11-04).
           sparse-checkout: |
             omr
             backend/domain
+            backend/parsers
           token: ${{ secrets.SCOREMASTER_READ_TOKEN || github.token }}
           persist-credentials: false
 

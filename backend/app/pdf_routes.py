@@ -2,7 +2,10 @@
 instrument); ScoreMaster keeps the PDFs and starts the reader in its private GitHub repository (scoremaster-omr) with a
 one-time token. The reader, with no session, downloads the PDFs with that token, tells its progress and sends back
 the work's MusicXML or why it failed; ScoreMaster then analyses the work like any upload, marked as read from a PDF.
-The token is kept only as its sha256 and is spent, with the PDFs, when the result arrives."""
+The token is kept only as its sha256 and is spent, with the PDFs, when the result arrives. The reader may also send the
+work already prepared (2026-11-04), so that Render does not spend minutes reading it again with music21."""
+import base64
+import binascii
 import hashlib
 import json
 import logging
@@ -19,13 +22,16 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from backend.app.dependencies import (authenticated_user, get_analysis_repository, get_instrument_store, get_library_repository,
-                                      get_omr_dispatcher, get_pdf_import_repository, get_score_store)
+                                      get_omr_dispatcher, get_pdf_import_repository, get_playback_store, get_score_store)
 from backend.app.library_routes import valid_band_profile
 from backend.app.work_analysis import analyze_and_store
 from backend.application.accounts import User
 from backend.domain.instrument_catalog import catalog_entries
 from backend.parsers.pdf_measures import fit_measures
 from backend.parsers.pdf_transpositions import add_transpositions, fix_key_signatures
+from backend.parsers.playback import TIMELINE_VERSION
+from backend.parsers.prepare import usable_score, usable_timeline
+from backend.parsers.score_codec import SCORE_VERSION
 from backend.application.pdf_imports import OmrDispatcher, PdfImport, PdfImportRepository
 
 router = APIRouter()
@@ -33,6 +39,7 @@ logger = logging.getLogger(__name__)
 MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_FILES = 40
 MAX_MUSICXML_CHARACTERS = 20 * 1024 * 1024
+MAX_PREPARED_CHARACTERS = 20 * 1024 * 1024
 NOT_FOUND = "No se encontró la lectura del PDF."
 # A reading that stopped telling its progress, or an analysis that never ended, is given up.
 STALLED = {"queued": timedelta(minutes=30), "preparing": timedelta(minutes=30), "reading": timedelta(minutes=30),
@@ -145,6 +152,9 @@ class Result(BaseModel):
     # Where the work came from and whether the score says it is in C (2026-10-29): parts are always transposed.
     source: Optional[str] = Field(default=None, pattern="^(parts|score)$")
     concert_pitch: bool = False
+    # The work prepared by the reader (2026-11-04). A plain dict: what does not fit is ignored here, it never loses the
+    # reading of a whole PDF to a refused request.
+    prepared: Optional[dict] = None
 
 
 @router.get("/omr/imports/{import_id}/files/{position}")
@@ -179,8 +189,43 @@ def reader_instruments(import_id: str, authorization: Optional[str] = Header(def
             "learned": sorted(instruments.learned(found.user_id)) if instruments else []}
 
 
-def _analyse(found: PdfImport, imports, repository, library, score_store, instruments=None) -> None:
+def _final_musicxml(found: PdfImport, result: Result, instruments) -> bytes:
+    """The bytes kept for the work: what the reader sent with what it cannot know. Raises ET.ParseError."""
+    # copista writes the notes in the key of each instrument but no <transpose> (2026-10-29).
+    # Each measure keeps the length of its time signature: one read too long made its part sound late.
+    content = add_transpositions(fit_measures((result.musicxml or "").encode("utf-8")),
+                                 instruments.learned(found.user_id) if instruments else None,
+                                 result.concert_pitch, result.source or "parts")
+    # A key signature the reader missed in a transposed part is taken from the band.
+    return fix_key_signatures(content)
+
+
+def _keep_prepared(content: bytes, prepared: Optional[dict], score_store, playback_store) -> None:
+    """What the reader prepared, only for the bytes ScoreMaster keeps and never over what is stored: prepared works are
+    shared by content between accounts. Whatever does not fit is left out, and Render reads the work as any other."""
+    if not prepared or prepared.get("sha256") != hashlib.sha256(content).hexdigest():
+        return
+    key = prepared["sha256"]
+    for store, version, usable, name in ((score_store, SCORE_VERSION, usable_score, "score"),
+                                         (playback_store, TIMELINE_VERSION, usable_timeline, "timeline")):
+        encoded = prepared.get(name)
+        if (store is None or prepared.get(name + "_version") != version or not isinstance(encoded, str)
+                or len(encoded) > MAX_PREPARED_CHARACTERS):
+            continue
+        try:
+            data = base64.b64decode(encoded, validate=True)
+            if usable(data) and store.load(key, version) is None:
+                store.save(key, version, data)
+        except (binascii.Error, ValueError):
+            continue
+        except Exception:
+            logger.warning("No se pudo guardar lo que preparó el lector de PDF.", exc_info=True)
+
+
+def _analyse(found: PdfImport, imports, repository, library, score_store, instruments=None, prepared=None,
+             playback_store=None) -> None:
     try:
+        _keep_prepared(imports.musicxml(found.id), prepared, score_store, playback_store)
         # The instruments the account confirmed before name the parts the catalog does not know (2026-10-28).
         learned = instruments.learned(found.user_id) if instruments else None
         saved = analyze_and_store(imports.musicxml(found.id), found.title + ".musicxml", found.user_id, found.band_profile,
@@ -192,12 +237,27 @@ def _analyse(found: PdfImport, imports, repository, library, score_store, instru
         imports.failed(found.id, "No se pudo analizar la obra leída. Revisa el PDF y vuelve a subirlo.")
 
 
+@router.post("/omr/imports/{import_id}/final")
+def reader_final(import_id: str, result: Result, authorization: Optional[str] = Header(default=None),
+                 imports: PdfImportRepository = Depends(get_pdf_import_repository),
+                 instruments=Depends(get_instrument_store)):
+    """The bytes that the same result would keep (2026-11-04), which the reader prepares. Changes nothing."""
+    found = _reader(import_id, authorization, imports)
+    if not result.musicxml or "<!ENTITY" in result.musicxml:
+        raise HTTPException(status_code=422, detail="La lectura no es MusicXML válido.")
+    try:
+        return {"musicxml": _final_musicxml(found, result, instruments).decode("utf-8")}
+    except ET.ParseError:
+        raise HTTPException(status_code=422, detail="La lectura no es MusicXML válido.") from None
+
+
 @router.post("/omr/imports/{import_id}/result", status_code=202)
 def reader_result(import_id: str, result: Result, background: BackgroundTasks,
                   authorization: Optional[str] = Header(default=None),
                   imports: PdfImportRepository = Depends(get_pdf_import_repository),
                   repository=Depends(get_analysis_repository), library=Depends(get_library_repository),
-                  score_store=Depends(get_score_store), instruments=Depends(get_instrument_store)):
+                  score_store=Depends(get_score_store), instruments=Depends(get_instrument_store),
+                  playback_store=Depends(get_playback_store)):
     found = _reader(import_id, authorization, imports)
     content = (result.musicxml or "").encode("utf-8")
     if result.error or not content:
@@ -205,17 +265,13 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
     elif b"<!ENTITY" in content:
         imports.failed(found.id, "La lectura no es MusicXML válido.")
     else:
-        # copista writes the notes in the key of each instrument but no <transpose> (2026-10-29).
         try:
-            # Each measure keeps the length of its time signature: one read too long made its part sound late.
-            content = add_transpositions(fit_measures(content), instruments.learned(found.user_id) if instruments else None,
-                                         result.concert_pitch, result.source or "parts")
-            # A key signature the reader missed in a transposed part is taken from the band.
-            content = fix_key_signatures(content)
+            content = _final_musicxml(found, result, instruments)
         except ET.ParseError:
             imports.failed(found.id, "La lectura no es MusicXML válido.")
             return JSONResponse(status_code=202, content={})
         imports.received(found.id, content)
         # music21 is slow on Render: the reader is answered at once and the work is analysed afterwards.
-        background.add_task(_analyse, found, imports, repository, library, score_store, instruments)
+        background.add_task(_analyse, found, imports, repository, library, score_store, instruments, result.prepared,
+                            playback_store)
     return JSONResponse(status_code=202, content={})
