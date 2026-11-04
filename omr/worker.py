@@ -3,7 +3,7 @@
 from it, the kind of work (found out from the pages, one score, or the parts of a work with one PDF per
 instrument) and a one-time token. The
 reader downloads the PDFs with that token, reads them page by page with copista-2m, tells ScoreMaster how far it got
-and sends back the work's MusicXML, or why it failed. The PDFs live in a temporary folder deleted at the end, and the
+and sends back the work's MusicXML, already prepared when it can (2026-11-04), or why it failed. The PDFs live in a temporary folder deleted at the end, and the
 token is masked in the log. The job is read from GitHub's event file, never from a variable of the step, which GitHub
 prints in the log (2026-10-27)."""
 from __future__ import annotations
@@ -541,6 +541,38 @@ def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, s
     return found
 
 
+def prepared_work(client: httpx.Client, callback: str, body: dict) -> dict | None:
+    """The work prepared here (2026-11-04): this machine reads with music21 in seconds what takes Render minutes. Only
+    a help: on any failure ScoreMaster reads the work itself. Without its catalog the audio would not be what it prepares."""
+    if not catalog.ready:
+        return None
+    try:
+        # Imported here: the processes that read the pages do not load music21, and an older workflow does not bring it.
+        from backend.parsers.prepare import prepare_work
+        answer = client.post(callback + "/final", json=body)
+        if answer.status_code != 200:
+            print("ScoreMaster preparará la obra.", flush=True)
+            return None
+        return prepare_work(answer.json()["musicxml"].encode("utf-8"))
+    except Exception as error:
+        # The kind of error, without its message (it may carry a part's name).
+        print(f"ScoreMaster preparará la obra: {type(error).__name__}.", flush=True)
+        return None
+
+
+def send_result(client: httpx.Client, callback: str, body: dict) -> None:
+    prepared = prepared_work(client, callback, body)
+    if prepared:
+        try:
+            client.post(callback + "/result", json={**body, "prepared": prepared}).raise_for_status()
+            print("Obra preparada para ScoreMaster.", flush=True)
+            return
+        except httpx.HTTPError as error:
+            # A reading is worth more than its preparation: sent again without it.
+            print(f"No se pudo enviar la obra preparada: {type(error).__name__}.", flush=True)
+    client.post(callback + "/result", json=body).raise_for_status()
+
+
 def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count_pages, page_text=page_text) -> int:
     """Reads the job and reports to ScoreMaster. 0 when the work was sent back, 1 when the failure was."""
     print("::add-mask::" + data["token"], flush=True)
@@ -644,8 +676,8 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             musicxml = add_tempo(musicxml, *tempo)
             print(f"Tempo leído del texto del PDF: {tempo[0]} por minuto.", flush=True)
         # ScoreMaster adds the transposition of each instrument, never to a score in C (2026-10-29).
-        client.post(callback + "/result", json={"musicxml": musicxml.decode("utf-8"), "source": source,
-                                                "concert_pitch": concert_pitch}).raise_for_status()
+        send_result(client, callback, {"musicxml": musicxml.decode("utf-8"), "source": source,
+                                       "concert_pitch": concert_pitch})
         print(f"Leídas {total} páginas.", flush=True)
         return 0
     except Refused as reason:

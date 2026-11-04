@@ -311,3 +311,163 @@ def test_a_key_signature_the_reader_missed_is_taken_from_the_band(clients, reade
     assert repair_pdf_works(PostgresPdfImportRepository(postgres_engine), library) == 1
     with postgres_engine.connect() as connection:
         assert clarinet(connection.execute(text("SELECT source FROM works")).scalar_one()) == ["F#", "F#", "C#"]
+
+
+# --- the work prepared in GitHub's machine (2026-11-04): Render's tenth of a CPU took minutes to read it with music21 --
+
+@pytest.fixture
+def stores(reader, postgres_engine):
+    from backend.app.dependencies import get_playback_store, get_score_store
+    from backend.app.stored_scores import clear_parsed_works
+    from backend.infrastructure.prepared_store import PostgresPreparedStore
+    from backend.parsers.playback import clear_timelines
+    found = {"score": PostgresPreparedStore(postgres_engine, "score"),
+             "playback": PostgresPreparedStore(postgres_engine, "playback")}
+    app.dependency_overrides[get_score_store] = lambda: found["score"]
+    app.dependency_overrides[get_playback_store] = lambda: found["playback"]
+    clear_parsed_works()
+    clear_timelines()
+    yield found
+    clear_parsed_works()
+    clear_timelines()
+
+
+def final_of(client, job, read=MUSICXML, **extra):
+    answer = machine(client, job, "/final", json={"musicxml": read.decode(), **extra})
+    assert answer.status_code == 200
+    return answer.json()["musicxml"].encode()
+
+
+def prepared_with_title(content, title="Preparada en GitHub"):
+    """Prepared as the reader does, with a title that tells it apart from what Render would read."""
+    import base64
+    from dataclasses import replace
+    from backend.parsers.musicxml_parser import parse_musicxml
+    from backend.parsers.prepare import prepare_work
+    from backend.parsers.score_codec import encode_score
+    prepared = prepare_work(content)
+    path = Path(__file__).resolve().parents[2] / "test-scores" / "high_register.musicxml"
+    score = replace(parse_musicxml(path), title=title)
+    return {**prepared, "score": base64.b64encode(encode_score(score)).decode()}
+
+
+def forbid_reading(monkeypatch):
+    def refuse(*_):
+        raise AssertionError("Render read the work with music21")
+    monkeypatch.setattr("backend.app.stored_scores.parse_musicxml", refuse)
+
+
+def work_title(client, created):
+    done = client.get("/pdf-imports/" + created.json()["id"]).json()
+    assert done["status"] == "done"
+    return client.get("/works/" + done["work_id"]).json()["title"]
+
+
+def test_the_reader_is_told_the_bytes_that_will_be_kept_and_its_token_lives_on(clients, reader):  # noqa: F811
+    from backend.test.test_pdf_transpositions import work
+    ana, _ = clients
+    created = upload(ana)
+    job = reader.jobs[0]
+    read = work(("Trumpet in B b 1", "G"), ("Horn in F 1", "G"))
+    final = final_of(ana, job, read)
+    assert final.count(b"<transpose>") == 2, "what ScoreMaster adds to what the reader sent"
+    assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "queued", "nothing was received yet"
+    assert machine(ana, job, "/files/0", method="GET").status_code == 200, "the token is spent only by the result"
+    assert final_of(ana, job, read) == final
+    assert machine(ana, job, "/result", json={"musicxml": read.decode()}).status_code == 202
+    assert machine(ana, job, "/final", json={"musicxml": read.decode()}).status_code == 401
+
+
+@pytest.mark.parametrize("sent", [{"musicxml": "<a><b></a>"}, {"musicxml": '<!DOCTYPE a [<!ENTITY b "c">]><a/>'}, {}])
+def test_what_is_no_musicxml_has_no_final_bytes(clients, reader, sent):  # noqa: F811
+    ana, _ = clients
+    upload(ana)
+    assert machine(ana, reader.jobs[0], "/final", json=sent).status_code == 422
+
+
+def test_only_the_job_s_token_asks_for_the_final_bytes(clients, reader):  # noqa: F811
+    ana, _ = clients
+    upload(ana)
+    url = reader.jobs[0]["callback"].split("testserver", 1)[1] + "/final"
+    assert ana.post(url, json={"musicxml": MUSICXML.decode()}).status_code == 401
+
+
+def test_a_work_prepared_in_github_is_not_read_again_in_render(clients, stores, monkeypatch):  # noqa: F811
+    from backend.parsers.playback import TIMELINE_VERSION
+    from backend.parsers.score_codec import SCORE_VERSION
+    import hashlib
+    ana, _ = clients
+    created = upload(ana)
+    job = app.dependency_overrides[get_omr_dispatcher]().jobs[0]
+    final = final_of(ana, job)
+    prepared = prepared_with_title(final)
+    forbid_reading(monkeypatch)
+    answer = machine(ana, job, "/result", json={"musicxml": MUSICXML.decode(), "prepared": prepared})
+    assert answer.status_code == 202
+    assert work_title(ana, created) == "Preparada en GitHub"
+    key = hashlib.sha256(final).hexdigest()
+    assert stores["score"].load(key, SCORE_VERSION) is not None
+    assert stores["playback"].load(key, TIMELINE_VERSION) is not None
+
+
+@pytest.mark.parametrize("change", [
+    {"sha256": "0" * 64},
+    {"score_version": "score-v0"},
+    {"score": "bm90IGd6aXA="},
+    {"score": "this is not base64!"},
+])
+def test_a_prepared_model_that_does_not_fit_is_ignored_and_render_reads_the_work(clients, stores, change):  # noqa: F811
+    from backend.parsers.score_codec import SCORE_VERSION
+    import hashlib
+    ana, _ = clients
+    created = upload(ana)
+    job = app.dependency_overrides[get_omr_dispatcher]().jobs[0]
+    final = final_of(ana, job)
+    prepared = {**prepared_with_title(final), **change}
+    assert machine(ana, job, "/result", json={"musicxml": MUSICXML.decode(), "prepared": prepared}).status_code == 202
+    assert work_title(ana, created) != "Preparada en GitHub", "the work comes from Render's own reading"
+    assert stores["score"].load(hashlib.sha256(final).hexdigest(), SCORE_VERSION) is not None
+
+
+def test_prepared_audio_that_does_not_fit_is_ignored_but_the_model_is_kept(clients, stores, monkeypatch):  # noqa: F811
+    from backend.parsers.playback import TIMELINE_VERSION
+    import hashlib
+    ana, _ = clients
+    created = upload(ana)
+    job = app.dependency_overrides[get_omr_dispatcher]().jobs[0]
+    final = final_of(ana, job)
+    prepared = {**prepared_with_title(final), "timeline": "bm90IGd6aXA="}
+    forbid_reading(monkeypatch)
+    assert machine(ana, job, "/result", json={"musicxml": MUSICXML.decode(), "prepared": prepared}).status_code == 202
+    assert work_title(ana, created) == "Preparada en GitHub"
+    assert stores["playback"].load(hashlib.sha256(final).hexdigest(), TIMELINE_VERSION) is None
+
+
+def test_what_render_already_prepared_is_never_overwritten(clients, stores):  # noqa: F811
+    """Prepared works are shared by content: a reader must not replace what another account's work relies on."""
+    from backend.parsers.score_codec import SCORE_VERSION
+    import base64
+    import hashlib
+    ana, _ = clients
+    created = upload(ana)
+    job = app.dependency_overrides[get_omr_dispatcher]().jobs[0]
+    final = final_of(ana, job)
+    key = hashlib.sha256(final).hexdigest()
+    stored = base64.b64decode(prepared_with_title(final, "Ya estaba")["score"])
+    stores["score"].save(key, SCORE_VERSION, stored)
+    prepared = prepared_with_title(final)
+    assert machine(ana, job, "/result", json={"musicxml": MUSICXML.decode(), "prepared": prepared}).status_code == 202
+    assert stores["score"].load(key, SCORE_VERSION) == stored
+    assert work_title(ana, created) == "Ya estaba"
+
+
+def test_a_failed_reading_prepares_nothing(clients, stores):  # noqa: F811
+    ana, _ = clients
+    created = upload(ana)
+    job = app.dependency_overrides[get_omr_dispatcher]().jobs[0]
+    prepared = prepared_with_title(final_of(ana, job))
+    assert machine(ana, job, "/result", json={"error": "Sin música.", "prepared": prepared}).status_code == 202
+    assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "failed"
+    from sqlalchemy import text
+    with stores["score"].engine.connect() as connection:
+        assert connection.execute(text("SELECT count(*) FROM prepared_works")).scalar_one() == 0

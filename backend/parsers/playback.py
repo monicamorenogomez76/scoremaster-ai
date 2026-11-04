@@ -270,6 +270,22 @@ def _decode(data: bytes) -> _Timeline:
     return _Timeline(parts, {offset: bpm for offset, bpm in raw['marks']}, raw['highest_time'])
 
 
+def encode_timeline(content: bytes) -> bytes:
+    """What the store keeps for a work, for whoever prepares it elsewhere (the PDF reader, 2026-11-04)."""
+    source = extract_musicxml(content)
+    if source is None:
+        raise NotMusicXML('La partitura no es MusicXML válido.')
+    return _encode(_read_timeline(source))
+
+
+def timeline_has_parts(data: bytes) -> bool:
+    """Whether what came from elsewhere can be cut into passages."""
+    try:
+        return bool(_decode(data).parts)
+    except Exception:
+        return False
+
+
 def _read_timeline(content: bytes) -> _Timeline:
     # From the bytes, as the analysis parser: music21 then does not write its own cache to disk.
     score = converter.parse(content, format='musicxml')

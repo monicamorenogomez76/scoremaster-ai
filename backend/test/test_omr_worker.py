@@ -571,3 +571,98 @@ def test_a_process_that_dies_leaves_its_pages_to_be_read_one_after_another(monke
     read = worker.read_pages(pages, die_on_two, {"/tmp/a.pdf": "/tmp"}, workers=2, on_done=lambda: None)
     assert read[pages[1]] == b"<page 2/>", "read again in this process"
     assert len(read) == 4 and "se leen de una en una" in capsys.readouterr().out
+
+
+# --- the work is prepared here (2026-11-04), so that Render does not read it again with its tenth of a CPU --------------
+
+FINAL = b"<score-partwise>as ScoreMaster keeps it</score-partwise>"
+
+
+@pytest.fixture
+def ready_catalog():
+    from backend.domain.instrument_catalog import seed_instruments, use_catalog
+    worker.catalog = worker.Catalog({"instruments": list(seed_instruments()), "learned": []})
+    yield worker.catalog
+    worker.catalog = worker.Catalog()
+    use_catalog(None)
+
+
+def preparing_reader(final=httpx.Response(200, json={"musicxml": FINAL.decode()})):
+    """What the reader says to ScoreMaster when it prepares the work."""
+    seen = {"final": [], "result": None}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/final"):
+            seen["final"].append(json.loads(request.content))
+            return final
+        seen["result"] = json.loads(request.content)
+        return httpx.Response(202)
+
+    seen["client"] = httpx.Client(transport=httpx.MockTransport(handler))
+    return seen
+
+
+BODY = {"musicxml": "<score-partwise/>", "source": "score", "concert_pitch": False}
+
+
+def test_the_bytes_scoremaster_keeps_are_prepared_and_sent_with_the_result(ready_catalog, monkeypatch):
+    seen, prepared = preparing_reader(), []
+    monkeypatch.setattr("backend.parsers.prepare.prepare_work", lambda content: prepared.append(content) or {"sha256": "a"})
+    assert worker.prepared_work(seen["client"], BASE, BODY) == {"sha256": "a"}
+    assert seen["final"] == [BODY]
+    assert prepared == [FINAL]
+
+
+def test_without_scoremaster_s_catalog_nothing_is_prepared():
+    """The audio depends on the catalog: prepared with another one it would not be what Render would prepare."""
+    seen = preparing_reader()
+    worker.catalog = worker.Catalog()
+    assert worker.prepared_work(seen["client"], BASE, BODY) is None
+    assert seen["final"] == []
+
+
+def test_a_scoremaster_without_the_final_step_gets_its_result_as_before(ready_catalog):
+    seen = preparing_reader(httpx.Response(404))
+    assert worker.prepared_work(seen["client"], BASE, BODY) is None
+
+
+def test_a_failed_preparation_is_told_without_its_message_and_stops_nothing(ready_catalog, monkeypatch, capsys):
+    """The message of an error may carry a part's name, and the log is public."""
+    def fail(content):
+        raise ValueError("Flauta de la obra secreta")
+    monkeypatch.setattr("backend.parsers.prepare.prepare_work", fail)
+    assert worker.prepared_work(preparing_reader()["client"], BASE, BODY) is None
+    out = capsys.readouterr().out
+    assert "ValueError" in out and "secreta" not in out
+
+
+def test_an_older_workflow_without_the_parsers_reads_as_before(ready_catalog, monkeypatch):
+    """Until the workflow is deployed again, its checkout brings only omr/ and backend/domain."""
+    import sys
+    monkeypatch.setitem(sys.modules, "backend.parsers.prepare", None)
+    assert worker.prepared_work(preparing_reader()["client"], BASE, BODY) is None
+
+
+def test_the_result_carries_what_was_prepared(scoremaster, monkeypatch):
+    monkeypatch.setattr(worker, "prepared_work", lambda client, callback, body: {"sha256": "a"})
+    assert run(scoremaster, payload()) == 0
+    assert scoremaster["result"]["prepared"] == {"sha256": "a"}
+    assert "musicxml" in scoremaster["result"]
+
+
+def test_the_result_says_nothing_of_a_preparation_that_did_not_happen(scoremaster):
+    assert run(scoremaster, payload()) == 0
+    assert "prepared" not in scoremaster["result"]
+
+
+def test_a_result_refused_with_what_was_prepared_is_sent_again_without_it(monkeypatch):
+    """A reading of minutes must not be lost because of its preparation."""
+    sent = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(413 if "prepared" in sent[-1] else 202)
+
+    monkeypatch.setattr(worker, "prepared_work", lambda client, callback, body: {"sha256": "a"})
+    worker.send_result(httpx.Client(transport=httpx.MockTransport(handler)), BASE, BODY)
+    assert sent == [{**BODY, "prepared": {"sha256": "a"}}, BODY]
