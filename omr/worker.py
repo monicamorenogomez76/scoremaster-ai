@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -631,17 +632,43 @@ def prepared_work(client: httpx.Client, callback: str, body: dict) -> dict | Non
         return None
 
 
+# ScoreMaster restarting (a deploy, or asleep on Render's free plan, 2026-11-05) must not lose a reading of minutes.
+RESULT_WAITS = (15, 30, 60, 120, 120, 180)
+RESTARTING = {429, 500, 502, 503, 504}
+
+
+def _post_result(client: httpx.Client, callback: str, body: dict) -> None:
+    """Sends the result, waiting while ScoreMaster restarts. A token refused after a lost answer means it arrived."""
+    answer_lost = False
+    for wait in (*RESULT_WAITS, None):
+        try:
+            answer = client.post(callback + "/result", json=body)
+        except httpx.TransportError as error:
+            if wait is None:
+                raise
+            answer_lost = True
+            print(f"ScoreMaster no responde ({type(error).__name__}): se reintenta en {wait} s.", flush=True)
+        else:
+            if answer.status_code == 401 and answer_lost:
+                return
+            if answer.status_code not in RESTARTING or wait is None:
+                answer.raise_for_status()
+                return
+            print(f"ScoreMaster responde {answer.status_code}: se reintenta en {wait} s.", flush=True)
+        time.sleep(wait)
+
+
 def send_result(client: httpx.Client, callback: str, body: dict) -> None:
     prepared = prepared_work(client, callback, body)
     if prepared:
         try:
-            client.post(callback + "/result", json={**body, "prepared": prepared}).raise_for_status()
+            _post_result(client, callback, {**body, "prepared": prepared})
             print("Obra preparada para ScoreMaster.", flush=True)
             return
         except httpx.HTTPError as error:
             # A reading is worth more than its preparation: sent again without it.
             print(f"No se pudo enviar la obra preparada: {type(error).__name__}.", flush=True)
-    client.post(callback + "/result", json=body).raise_for_status()
+    _post_result(client, callback, body)
 
 
 def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count_pages, page_text=page_text) -> int:
@@ -687,7 +714,10 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             def tell():
                 nonlocal done
                 done += 1
-                client.post(callback + "/progress", json={"pages_done": done, "pages_total": total})
+                try:
+                    client.post(callback + "/progress", json={"pages_done": done, "pages_total": total})
+                except httpx.HTTPError:
+                    pass   # only information: the pages read are worth more
             return tell
 
         results = read_pages(plan, read_page, out_dirs, workers, page_done(len(plan)))

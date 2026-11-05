@@ -839,3 +839,87 @@ def test_a_page_with_few_staves_and_no_margin_to_tell_is_placed_as_before(full_c
     pages = [(page(5, 2, "C"), margin), (page(2, 2, "D"), "     Timpani   tV\n")]
     joined, _ = worker._score(pages, "Obra")
     assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode())
+
+
+# --- ScoreMaster restarting (2026-11-05: a deploy answered 503 and a reading of minutes was lost) -----------------------
+
+def answering(*answers):
+    """ScoreMaster answering each request in turn; a string is a connection that fails."""
+    sent, pending = [], list(answers)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        answer = pending.pop(0)
+        if isinstance(answer, str):
+            raise httpx.ConnectError(answer)
+        return httpx.Response(answer)
+
+    return httpx.Client(transport=httpx.MockTransport(handler)), sent
+
+
+@pytest.fixture
+def no_waiting(monkeypatch):
+    waits = []
+    monkeypatch.setattr(worker.time, "sleep", waits.append)
+    monkeypatch.setattr(worker, "prepared_work", lambda client, callback, body: None)
+    return waits
+
+
+@pytest.mark.parametrize("first", [503, 502, 500, 429, "connection refused"])
+def test_a_result_waits_for_a_scoremaster_that_is_restarting(no_waiting, first):
+    client, sent = answering(first, first, 202)
+    worker.send_result(client, BASE, BODY)
+    assert sent == [BODY, BODY, BODY]
+    assert len(no_waiting) == 2 and no_waiting[1] > no_waiting[0], "each time a little longer"
+
+
+def test_the_wait_has_an_end(no_waiting):
+    client, sent = answering(*[503] * (len(worker.RESULT_WAITS) + 1))
+    with pytest.raises(httpx.HTTPStatusError):
+        worker.send_result(client, BASE, BODY)
+    assert len(sent) == len(worker.RESULT_WAITS) + 1
+    assert sum(worker.RESULT_WAITS) >= 8 * 60, "enough for a deploy on the free plan"
+
+
+def test_a_refused_result_is_not_sent_again_and_again(no_waiting):
+    client, sent = answering(422)
+    with pytest.raises(httpx.HTTPStatusError):
+        worker.send_result(client, BASE, BODY)
+    assert sent == [BODY] and no_waiting == []
+
+
+def test_a_result_received_while_the_answer_was_lost_is_done(no_waiting):
+    """The answer did not arrive but the result did: the token is spent, and that is no failure."""
+    client, sent = answering("connection reset", 401)
+    worker.send_result(client, BASE, BODY)
+    assert len(sent) == 2
+
+
+def test_a_token_refused_at_the_first_attempt_is_a_failure(no_waiting):
+    client, _ = answering(401)
+    with pytest.raises(httpx.HTTPStatusError):
+        worker.send_result(client, BASE, BODY)
+
+
+def test_what_was_prepared_waits_too_and_is_dropped_only_when_refused(no_waiting, monkeypatch):
+    monkeypatch.setattr(worker, "prepared_work", lambda client, callback, body: {"sha256": "a"})
+    client, sent = answering(503, 202)
+    worker.send_result(client, BASE, BODY)
+    assert sent == [{**BODY, "prepared": {"sha256": "a"}}] * 2
+
+
+def test_a_scoremaster_restarting_does_not_stop_the_reading_of_the_pages(scoremaster):
+    """Progress is only information: losing it must not lose the pages read."""
+    original = scoremaster["client"].post
+    calls = []
+
+    def post(url, **kwargs):
+        if url.endswith("/progress"):
+            calls.append(url)
+            if len(calls) > 1:
+                raise httpx.ConnectError("restarting")
+        return original(url, **kwargs)
+
+    scoremaster["client"].post = post
+    assert run(scoremaster, payload()) == 0
+    assert scoremaster["result"]["musicxml"]
