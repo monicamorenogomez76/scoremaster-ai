@@ -57,6 +57,7 @@ export function FullScoreViewer({ ref, session }) {
       <output id="score-zoom-label">{view.zoomLabel}</output>
       {tool('score-zoom-in', t('Ampliar zoom'), () => renderer.current.zoomIn(), '+')}
     </div>
-    <div id="full-score-rendering" ref={container} />
+    {/* It may scroll sideways (beside a PDF, or zoomed in): the keyboard has to reach it. */}
+    <div id="full-score-rendering" ref={container} tabIndex={0} role="region" aria-label={t('Partitura completa')} />
   </section>;
 }

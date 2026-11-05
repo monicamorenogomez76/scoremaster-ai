@@ -159,3 +159,12 @@ def test_the_page_is_revalidated_and_the_fingerprinted_assets_are_kept():
     assert asset.status_code == 200 and asset.headers["cache-control"] == "public, max-age=31536000, immutable"
     other = client.get("/static/frontend/index.html")
     assert other.headers.get("cache-control") != "public, max-age=31536000, immutable"
+
+
+def test_only_frames_may_show_a_local_file():
+    """The director's own PDF beside the score (2026-11-05) needs blob: in frames; nothing else may load from it."""
+    from backend.app.main import CONTENT_SECURITY_POLICY
+    rules = dict(rule.split(" ", 1) for rule in CONTENT_SECURITY_POLICY.split("; ") if " " in rule)
+    assert "blob:" in rules["frame-src"]
+    assert rules["object-src"] == "'none'"
+    assert "blob:" not in rules.get("script-src", "") and "blob:" not in rules["default-src"]
