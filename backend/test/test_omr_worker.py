@@ -159,6 +159,18 @@ def test_without_instrument_names_the_score_is_used(scoremaster):
     assert part_names(scoremaster["result"]["musicxml"]) == [f"Parte {n}" for n in range(1, 13)]
 
 
+def test_the_list_of_instruments_of_a_score_is_no_part(scoremaster, capsys):
+    # «Three movements for an imaginary city», 2026-11-05: the list begins with «Piccolo» and copista finds a staff on
+    # the pages around it. The work came out as one part of 4 pages, without its 39 pages of score.
+    instruments = "Piccolo\nFlute 1\nOboe 1\nBassoon 1\nClarinet (B♭) 1\nHorn (F) 1\nTrumpet (B♭) 1\nTuba"
+    pages = [(1, "Title\nfor Wind Orchestra"), (1, ""), (1, instruments), (1, ""), (1, "A biography"), (1, ""),
+             (12, ""), (12, "")]
+    run_auto(scoremaster, pages)
+    assert scoremaster["result"]["source"] == "score"
+    assert len(part_names(scoremaster["result"]["musicxml"])) == 12
+    assert "La obra se saca de la partitura general: 2 páginas." in capsys.readouterr().out
+
+
 def test_a_pdf_with_only_parts_named_in_its_text(scoremaster):
     pages = [(1, "Trompeta en Si♭ 1"), (1, ""), (2, "Percusión\nCaja y bombo")]
     run_auto(scoremaster, pages)
