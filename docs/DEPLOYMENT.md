@@ -165,6 +165,7 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 - Hasta 20 MB por PDF, 40 archivos y 160 páginas por obra (unos 30 minutos de lectura en el peor caso; el trabajo tiene 60).
 - Una lectura a la vez; la siguiente espera.
 - Cada lectura tarda 1–2 minutos en arrancar la máquina, más unos segundos por página. Las páginas se leen de cuatro en cuatro, un proceso de copista por procesador (`OMR_PAGE_WORKERS` lo cambia): «Arabian Dances», 112 páginas, pasó de 444 s a 275 s con cuatro procesadores. Si un proceso se queda sin memoria, las páginas que faltan se leen de una en una.
+- Si Render se está reiniciando al terminar la lectura (un despliegue, o dormido en el plan gratuito), el lector espera y reintenta hasta unos 9 minutos, sin perder lo leído. El avance que no se puede enviar se omite.
 - El registro de cada lectura (pestaña **Actions** del repositorio del lector) no muestra el token ni las partituras.
 
 **Correcciones al recibir la lectura**
