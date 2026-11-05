@@ -666,3 +666,66 @@ def test_a_result_refused_with_what_was_prepared_is_sent_again_without_it(monkey
     monkeypatch.setattr(worker, "prepared_work", lambda client, callback, body: {"sha256": "a"})
     worker.send_result(httpx.Client(transport=httpx.MockTransport(handler)), BASE, BODY)
     assert sent == [{**BODY, "prepared": {"sha256": "a"}}, BODY]
+
+
+# --- a scanned score (2026-11-05, «The Lion King»): its OCR names «Oboe» beside the staves, no part exists -------------
+
+MARGIN = "Fl.\nOb.\nCl.\nTpt.\nTbn."
+
+
+def scanned_score(scoremaster, texts):
+    """Pages of three staves, each with its own first note, as copista reads a score."""
+    letters = "CDEFGAB"
+    seen = []
+
+    def read_page(pdf_path, number, out_dir):
+        seen.append(number)
+        return page(3, 1, letters[number - 1])
+
+    data = payload("auto")
+    worker.run(data, client=scoremaster["client"], read_page=read_page, count_pages=lambda path: len(texts),
+               page_text=lambda path, number: texts[number - 1])
+    return seen
+
+
+def first_notes(musicxml):
+    import re
+    first_part = musicxml[musicxml.index("<part "):musicxml.index("</part>")]
+    return re.findall(r"<step>([A-G])</step>", first_part)
+
+
+def test_a_score_mistaken_for_parts_keeps_all_its_pages_in_their_order(scoremaster):
+    texts = [MARGIN, "Oboe\n" + MUSIC, MARGIN, MARGIN, "", MARGIN]
+    seen = scanned_score(scoremaster, texts)
+    assert sorted(seen) == [1, 2, 3, 4, 5, 6], "the pages set apart are read when no part appears"
+    assert first_notes(scoremaster["result"]["musicxml"]) == list("CDEFGA"), "each page where it was printed"
+    assert scoremaster["result"]["source"] == "score"
+
+
+def test_progress_ends_with_the_pages_set_apart_when_they_are_read(scoremaster):
+    scanned_score(scoremaster, [MARGIN, "Oboe\n" + MUSIC, MARGIN])
+    assert scoremaster["progress"][-1] == {"pages_done": 3, "pages_total": 3}
+
+
+def test_the_score_pages_kept_for_the_parts_are_in_their_order_too(scoremaster):
+    """Parts of different lengths are aligned with the score: its pages must be read from the first to the last."""
+    letters = "CDEFGAB"
+    pages_seen = {}
+
+    def read_page(pdf_path, number, out_dir):
+        return page(3, 2, letters[number - 1]) if number <= 3 else page(1, number - 3)
+
+    texts = [MARGIN, "Tuba\n" + MUSIC, MARGIN, "Flute 1\n" + MUSIC, "Trombone 1\n" + MUSIC]
+    original = worker.fill_lost_rests
+
+    def spy(files, score, same_part):
+        pages_seen["score"] = score
+        return original(files, score, same_part)
+
+    worker.fill_lost_rests = spy
+    try:
+        worker.run(payload("auto"), client=scoremaster["client"], read_page=read_page, count_pages=lambda path: 5,
+                   page_text=lambda path, number: texts[number - 1])
+    finally:
+        worker.fill_lost_rests = original
+    assert first_notes(pages_seen["score"].decode())[::2][:3] == list("CDE")

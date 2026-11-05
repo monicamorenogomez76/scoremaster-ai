@@ -188,6 +188,7 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   («Percussion 2 — 2 players»), y los escribe en la obra: un `<score-instrument>` por instrumento y un `<player>` por
   músico (MusicXML 4.0). ScoreMaster reconoce «Percussion», «Perc.» o «Percusión» como percusión, BandFit cuenta esos
   músicos y cada nota suena como un golpe según su línea, nunca como piano. Sin la página, nada cambia.
+- **Guion escaneado:** el OCR de un escaneado escribe nombres como «Oboe» junto a los pentagramas, y parecía una particella. Si al leer no aparece ninguna, las páginas apartadas se leen y la obra sale del guion completo, con cada página en su orden.
 - **Particellas de varias páginas:** el nombre de cada particella se lee en la cabecera de la página, no entre los
   pentagramas, donde aparecen las entradas de otros instrumentos. Las páginas que empiezan por «Título - nombre» siguen a
   la particella anterior cuando el nombre la abrevia con su mismo número («Fl. 1» de «Flute 1», «Hn. 1» de «F Horn 1»);
