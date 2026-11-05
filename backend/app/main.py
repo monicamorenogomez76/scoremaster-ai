@@ -145,7 +145,8 @@ CONTENT_SECURITY_POLICY = "; ".join([
     "media-src 'self' data: blob: https:",
     "connect-src 'self' https:",
     "worker-src 'self' blob:",
-    "frame-src https://www.youtube-nocookie.com",
+    # blob: the director's own PDF beside the score, opened in the browser and checked to be a PDF (2026-11-05).
+    "frame-src https://www.youtube-nocookie.com blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

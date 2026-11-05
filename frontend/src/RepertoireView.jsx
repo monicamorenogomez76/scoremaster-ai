@@ -2,6 +2,7 @@ import React from 'react';
 import { DifficultyPanel, PublishedGrades, WorkExplanation } from './DifficultyView.jsx';
 import { OverviewPanel } from './OverviewView.jsx';
 import { PdfUpload } from './PdfUpload.jsx';
+import { PdfCompare } from './score/PdfCompare.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
@@ -45,7 +46,7 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
         {tabs().map(([name, label]) => <button key={name} id={'work-tab-' + name} type="button" role="tab"
           aria-selected={tab === name} aria-controls={'work-panel-' + name} onClick={() => onTabChange(name)}>{label}</button>)}
       </div>
-      <div id="work-panel-score" role="tabpanel" aria-labelledby="work-tab-score" hidden={tab !== 'score'}>{scoreViewer}</div>
+      <div id="work-panel-score" role="tabpanel" aria-labelledby="work-tab-score" hidden={tab !== 'score'}><PdfCompare workId={data?.work_id}>{scoreViewer}</PdfCompare></div>
       <div id="work-panel-difficulty" role="tabpanel" aria-labelledby="work-tab-difficulty" hidden={tab !== 'difficulty'}>
         {/* First in the tab, where it is seen without scrolling (2026-10-07: «¿dónde lo veo?»). */}
         {data && <WorkExplanation key={data.work_id} workId={data.work_id} onOpenPassage={onOpenPassage} />}

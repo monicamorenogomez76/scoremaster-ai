@@ -178,6 +178,15 @@ try {
   await english.locator('#embedded-score').getByRole('heading', { name: 'Full score' }).waitFor();
   await english.locator('#full-score-status').getByText('All voices').waitFor({ timeout: 60000 });
   await audit(english, 'Work › Score (English)');
+  // A PDF from the computer beside the score (2026-11-05): nothing uploaded.
+  const chooser = english.locator('.score-compare-input');
+  await chooser.setInputFiles({ name: 'not-a-pdf.pdf', mimeType: 'application/pdf', buffer: Buffer.from('<html></html>') });
+  await english.locator('.score-compare-error').getByText('is not a PDF').waitFor();
+  await chooser.setInputFiles({ name: 'work.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') });
+  await english.locator('.score-compare-pdf iframe').waitFor();
+  await audit(english, 'Work › Score with its PDF (English)');
+  await english.getByRole('button', { name: 'Close the PDF' }).click();
+  await english.locator('.score-compare-pdf').waitFor({ state: 'detached' });
   await english.locator('#work-tab-recordings').click();
   await english.locator('#videos-content').getByText('Recordings of').waitFor();
   await audit(english, 'Work › Recordings (English)');
