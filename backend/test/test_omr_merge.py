@@ -3,7 +3,7 @@ page; omr/merge.py joins the pages of a score staff by staff, and the parts read
 from xml.etree import ElementTree as ET
 
 from backend.parsers.musicxml_parser import parse_musicxml
-from omr.merge import combine_parts, join_pages
+from omr.merge import combine_parts, join_pages, staff_of
 
 
 def page(parts: int, measures: int, first_pitch: str = "C") -> bytes:
@@ -270,3 +270,64 @@ def test_the_staff_of_its_name_wins_over_the_clefs():
     part = staves_with_clefs((["G"] * 4, list("qqqq")))
     [(_, fixed)] = fill_lost_rests([("Platos", part)], score, lambda a, b: a == b)
     assert contents(fixed) == list("rrqqqq"), "the cymbals in treble clef follow their percussion staff"
+
+
+# --- slurs (2026-11-05): copista writes them, and joining the pages lost every one -------------------------------------
+
+def slurred(first="C", second="D", staves=1) -> bytes:
+    """A page with a slur from the first note to the last of a measure, on every staff."""
+    bar = ('<attributes><divisions>2</divisions><key><fifths>0</fifths></key><time><beats>2</beats><beat-type>4</beat-type>'
+           '</time><clef><sign>G</sign><line>2</line></clef></attributes>'
+           f'<note><pitch><step>{first}</step><octave>5</octave></pitch><duration>2</duration><type>quarter</type>'
+           '<notations><slur type="start" number="1"/></notations></note>'
+           f'<note><pitch><step>{second}</step><octave>5</octave></pitch><duration>2</duration><type>quarter</type>'
+           '<notations><slur type="stop" number="1"/></notations></note>')
+    names = "".join(f'<score-part id="P{n}"><part-name>Part {n}</part-name></score-part>' for n in range(1, staves + 1))
+    body = "".join(f'<part id="P{n}"><measure number="1">{bar}</measure></part>' for n in range(1, staves + 1))
+    return (f'<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"><part-list>{names}</part-list>{body}'
+            '</score-partwise>').encode()
+
+
+def slurs_of(xml: bytes) -> list[tuple[str, str]]:
+    """(the pitch step, start or stop) of each end of a slur, in the order of the music."""
+    from xml.etree import ElementTree as ET
+    return [(found.find("pitch/step").text, slur.get("type")) for found in ET.fromstring(xml).iter("note")
+            for slur in found.iter("slur")]
+
+
+def test_joining_pages_keeps_the_slurs_on_their_notes():
+    joined = join_pages([slurred("C", "D"), slurred("E", "F")], "Obra")
+    assert slurs_of(joined) == [("C", "start"), ("D", "stop"), ("E", "start"), ("F", "stop")]
+
+
+def test_each_staff_keeps_its_own_slurs():
+    joined = join_pages([slurred("C", "D", staves=3)], "Obra")
+    assert len(slurs_of(joined)) == 6
+
+
+def test_a_measure_without_slurs_stays_without_them():
+    assert slurs_of(join_pages([page(2, 2)], "Obra")) == []
+
+
+def test_the_parts_of_a_work_keep_their_slurs():
+    combined = combine_parts([("Flauta", join_pages([slurred()], "x")), ("Oboe", join_pages([slurred("E", "F")], "x"))], "Obra")
+    assert slurs_of(combined) == [("C", "start"), ("D", "stop"), ("E", "start"), ("F", "stop")]
+
+
+def test_a_staff_taken_from_the_score_keeps_its_slurs():
+    assert len(slurs_of(staff_of(join_pages([slurred(staves=2)], "Obra"), 1))) == 2
+
+
+def test_a_work_music21_refuses_to_retouch_keeps_its_slurs(monkeypatch):
+    """The second way of writing a work, with the notation as read (2026-10-28), keeps them too."""
+    from music21.musicxml.xmlObjects import MusicXMLExportException
+    from omr import merge
+
+    class Refusing(merge.GeneralObjectExporter):
+        def parse(self, *args, **kwargs):
+            if self.makeNotation:
+                raise MusicXMLExportException("a 2048th")
+            return super().parse(*args, **kwargs)
+
+    monkeypatch.setattr(merge, "GeneralObjectExporter", Refusing)
+    assert slurs_of(join_pages([slurred()], "Obra")) == [("C", "start"), ("D", "stop")]
