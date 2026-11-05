@@ -571,7 +571,7 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
         return read_pages[0]
 
     groups = _parts_of(parts) if parts else []
-    named = any(instrument_name(text) for _, text in parts)
+    named = any(instrument_name(text) and not looks_like_score(text) for _, text in parts)
     if named:
         # A cover or a page of notes before the named parts is no part (2026-10-28).
         groups = [group for group in groups if not group[0].startswith("Parte ")]
