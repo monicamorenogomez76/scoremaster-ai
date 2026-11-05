@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from omr.merge import add_instrumentation, add_tempo, combine_parts, fill_lost_rests, join_pages, measure_count, staff_of
+from omr.merge import add_instrumentation, add_tempo, combine_parts, fill_lost_rests, join_pages, measure_count, silent_page, staff_of
 
 try:
     # ScoreMaster's instrument catalog (2026-10-28), checked out with the reader; an older workflow brings only omr/.
@@ -418,6 +418,53 @@ def score_names(text: str) -> list[str]:
     return [piece for piece in _pieces(text) if len(piece) <= 40 and catalog.names(piece)]
 
 
+# OCR of a scanned score (2026-11-05, «The Lion King»): the margin of its first page of music has every name, nearly right.
+# Only these slips are corrected, and only into a name the catalog knows: a wrong instrument gives a wrong transposition.
+_MARGIN_LINE = re.compile(r"^\s{0,12}(\S.*?)(?=\s{2,}|$)")
+MARGIN_KNOWN_SHARE = 0.6
+BRASS_BARITONE = "Baritone Horn"
+
+
+def _is_brass(name: str) -> bool:
+    found = match_instrument_name(name).identity if use_catalog else None
+    return bool(found) and found.section == "brass"
+
+
+def ocr_name(read: str) -> str:
+    """The catalog's reading of a name from OCR, or the name as written."""
+    number_at_end = re.sub(r"(?<=[a-z])[lI](?=[,\s]|$)", " 1", read)
+    no_key = re.sub(r"^[A-G][\'.,]?\s*(?=[A-Z][a-z])", "", number_at_end)
+    for reading in (read, number_at_end, no_key):
+        if catalog.names(reading):
+            return reading
+    return read
+
+
+def _margin_lines(text: str) -> list[str]:
+    """What may be a staff's name in a scanned page's margin: enough letters, no brackets, no heading in capitals."""
+    lines = [found.group(1).strip() for found in map(_MARGIN_LINE.match, (text or "").splitlines()) if found]
+    return [line for line in lines if len(re.findall(r"[^\W\d_]", line)) >= 3 and not line.startswith("(")
+            and len(line) <= 20 and not line.isupper()]
+
+
+def margin_names(text: str, count: int) -> list[str] | None:
+    """The name beside each of a scanned page's `count` staves; None when the margin does not have one name per staff or
+    the catalog knows too few of them to trust it. A name in brackets shares a staff («(String Bass)»), and the last
+    line the catalog does not know is the foot of the page."""
+    readings = [ocr_name(name) for name in _margin_lines(text)]
+    # What the catalog does not know at either end, beyond one name per staff: the foot of the page, a heading.
+    while len(readings) > count and not catalog.names(readings[-1]):
+        readings.pop()
+    while len(readings) > count and not catalog.names(readings[0]):
+        readings.pop(0)
+    known = sum(1 for reading in readings if catalog.names(reading))
+    if len(readings) != count or known < MARGIN_KNOWN_SHARE * count:
+        return None
+    # «Baritone» alone names the saxophone in the catalog: after the brass, it is the brass one.
+    return [BRASS_BARITONE if reading.casefold().rstrip(".") in ("baritone", "bar") and at and _is_brass(readings[at - 1])
+            else reading for at, reading in enumerate(readings)]
+
+
 CONCERT_PITCH = re.compile(r"\b(?:full\s+score|score|partitura(?:\s+general)?|gui[oó]n)\s+(?:in|en)\s+(?:c|do)\b|"
                            r"\bc\s+score\b|\bconcert\s+pitch\b|\bsonidos?\s+reales?\b|\bsons\s+r[ée]els\b",
                            re.IGNORECASE)
@@ -467,13 +514,33 @@ def _parts_of(pages: list[tuple[bytes | None, str]]) -> list[tuple[str, list[byt
     return groups
 
 
+def _misread(xml: bytes, text: str, joined: int) -> bool:
+    """Copista saw fewer staves than the margin of the page has lines (2026-11-05, «The Lion King», 8 of 20): placed by
+    their clefs, a clarinet took a bass line and the grade rose to 6. A page of a scan without text cannot say otherwise."""
+    if staves(xml) >= joined:
+        return False
+    # One line more than staves: the foot of the page. OCR may miss a line or two.
+    return not (text or "").strip() or joined - 2 <= len(_margin_lines(text)) <= joined + 1
+
+
+def _silent(xml: bytes, joined: int) -> bytes:
+    """A misread page keeps its measures with rests on every staff: its notes cannot be placed."""
+    print(f"Página de partitura mal leída: {staves(xml)} de {joined} pentagramas.", flush=True)
+    return silent_page(xml, joined)
+
+
 def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str] | None]:
     """The score's pages joined, its staves named after the instruments written beside them on its first page when
     there is one name per staff."""
-    count = staves(pages[0][0]) if pages else 0
     joined = max((staves(xml) for xml, _ in pages), default=0)
+    pages = [(_silent(xml, joined) if _misread(xml, text, joined) else xml, text) for xml, text in pages]
+    count = staves(pages[0][0]) if pages else 0
     names = score_names(pages[0][1]) if pages else []
     named = names if names and len(names) == joined == count else None
+    if named is None and catalog.ready:
+        # A scan's text: the first page of music whose margin has every staff.
+        named = next((found for found in (margin_names(text, joined) for xml, text in pages if staves(xml) == joined)
+                      if found), None)
     # The names beside the staves place the staves of a page that shows fewer of them (2026-11-02).
     labels = [staff_labels(text, staves(xml)) for xml, text in pages]
     return join_pages([xml for xml, _ in pages], title, named, labels, same_part), named

@@ -212,6 +212,13 @@ def join_pages(pages: list[bytes], title: str, names: list[str] | None = None, l
     return _write(title, parts)
 
 
+def silent_page(xml: bytes, count: int) -> bytes:
+    """The page's measures as rests, on `count` staves."""
+    page = _staves(xml)
+    model = max((_measures(staff) for staff in page), key=len, default=[])
+    return _write("", [_part(f"Parte {number}", [_rest(measure) for measure in model]) for number in range(1, count + 1)])
+
+
 def combine_parts(files: list[tuple[str, bytes]], title: str) -> bytes:
     """Parts read from several PDFs (one per instrument), named after their files: «Flauta 1.pdf» is «Flauta 1»; a
     file with several staves numbers them («Clarinetes 1», «Clarinetes 2»)."""
