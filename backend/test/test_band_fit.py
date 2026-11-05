@@ -95,3 +95,14 @@ def test_requirements_follow_the_catalog_order_and_an_empty_score_is_compatible(
 
     assert [item["key"] for item in result["requirements"]] == ["flute", "tuba"]
     assert compute_band_fit(band(), {})["compatibility_percent"] == 100
+
+
+def test_a_part_with_several_percussion_instruments_needs_one_percussionist():
+    """«Percusión 1» plays suspended cymbal and triangle on one paper (2026-11-05): before, it needed nobody."""
+    from backend.domain.models import PartMetadata, ScorePart, Score
+    def paper(name, players=None):
+        return ScorePart(name, (), PartMetadata(part_id=name, part_name=name, players=players))
+    score = Score("Obra", (paper("Plato suspendido y triángulo"), paper("Percusión 2 (Caja, Bombo)"),
+                           paper("Percusión 3: Plato, Gong", players=2)), (), None)
+    required = {item["key"]: item["required"] for item in compute_band_fit(score, {})["requirements"]}
+    assert required == {"percussion": 4}, "one per paper, unless the PDF says how many"

@@ -143,3 +143,30 @@ def test_a_confirmation_by_the_user_wins_over_any_evidence():
         "clarinet.bb", RESOLVED, "USER", 1.0)
     assert resolution.evidence == ("confirmed by the user → clarinet.bb",)
     assert resolve_part(conflict).identity.canonical_id == "flute"
+
+
+# --- a part that plays several percussion instruments (2026-11-05): one paper, one percussionist -----------------------
+
+@pytest.mark.parametrize("name", [
+    "Plato suspendido y triángulo", "Suspended Cymbal, Triangle", "Triángulo y Pandereta", "Caja / Bombo",
+    "Percusión 1 (Plato suspendido y Triángulo)", "Percussion 1 (Marimba, Low Tom, Finger Cymbals)",
+    "Percusión 2: Caja, Bombo", "Percusión 3 - Gong", "Timbales/Triángulo", "Bombo i plats",
+])
+def test_a_part_naming_several_percussion_instruments_is_one_percussion_part(name):
+    resolution = resolve_part(part(name))
+    assert resolution.status == RESOLVED
+    assert resolution.identity.canonical_id == "percussion"
+
+
+def test_the_number_of_a_percussion_part_with_its_instruments_is_kept():
+    assert resolve_part(part("Percusión 2 (Caja, Bombo)")).part_numbers == (2,)
+
+
+@pytest.mark.parametrize("name", ["Flauta/Flautín", "Trompeta y Plato", "Clarinete, Caja", "Banda y Caja", "Plato y algo raro"])
+def test_a_name_that_is_not_all_percussion_stays_as_it_was(name):
+    assert resolve_part(part(name)).identity is None or resolve_part(part(name)).identity.section != "percussion"
+
+
+@pytest.mark.parametrize("name, expected", [("Caja", "snare_drum"), ("Platos", "crash_cymbals"), ("Percussion 1", "percussion")])
+def test_a_part_naming_one_instrument_keeps_it(name, expected):
+    assert resolve_part(part(name)).identity.canonical_id == expected

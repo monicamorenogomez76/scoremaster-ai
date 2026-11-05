@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from backend.domain.instrument_catalog import InstrumentIdentity, identity_by_id, match_instrument_name
+from backend.domain.instrument_catalog import GENERIC_PERCUSSION, InstrumentIdentity, identity_by_id, match_instrument_name
 from backend.domain.models import ScorePart
 
 # Initial thresholds, not calibrated yet: >= auto accept, review band below it.
@@ -19,9 +19,8 @@ AGREEMENT_CONFIDENCE = 0.97
 METADATA_ONLY_CONFIDENCE = 0.75
 
 # Bump when the resolution rules or confidences change.
-RESOLVER_VERSION = "instrument-resolver-v3"   # v3 (2026-11-02): a percussion part agrees with the percussion it declares
+RESOLVER_VERSION = "instrument-resolver-v4"   # v4 (2026-11-05): a part naming several percussion instruments is one percussion part
 RESOLVED, REVIEW, CONFLICT, UNKNOWN = "resolved", "review", "conflict", "unknown"
-GENERIC_PERCUSSION = "percussion"
 SOURCE_ALIAS, SOURCE_MUSICXML, SOURCE_UNKNOWN, SOURCE_USER = "ALIAS", "MUSICXML", "UNKNOWN", "USER"
 
 

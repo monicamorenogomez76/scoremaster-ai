@@ -107,6 +107,9 @@ def _prepare(name: str) -> str:
     return " ".join(text.split())
 
 
+GENERIC_PERCUSSION = "percussion"
+
+
 def _key_last(words: list[str]) -> list[str]:
     keys = [word for word in words if _is_key(word)]
     return [word for word in words if not _is_key(word)] + keys[:1]
@@ -244,7 +247,11 @@ def _with_key(identity: InstrumentIdentity, key: str) -> bool:
     return identity.canonical_id in _ANY_KEY or key[1:] == written
 
 
-def match_instrument_name(name: str) -> CatalogMatch:
+_LISTED_AFTER = re.compile(r"\s*(?:[(:]|\s[-–—]\s)")
+_LIST_SEPARATOR = re.compile(r"\s*(?:[,;/+&]|\b(?:y|e|i|and|et|und)\b)\s*", re.IGNORECASE)
+
+
+def _exact_match(name: str) -> CatalogMatch:
     base, part_numbers = _split_part_numbers(_prepare(name))
     alias = normalize_instrument_name(base)
     index = _load()[1]
@@ -256,6 +263,29 @@ def match_instrument_name(name: str) -> CatalogMatch:
     if identity is None:
         return CatalogMatch(name, None, (), None, UNKNOWN)
     return CatalogMatch(name, identity, part_numbers, alias, ALIAS)
+
+
+def _several_percussion(name: str) -> CatalogMatch | None:
+    """One percussion part that says what it plays (2026-11-05): «Percusión 1 (Plato, Triángulo)», or only percussion
+    instruments listed, «Plato suspendido y triángulo». One paper, one player. Anything else in the list keeps it unknown."""
+    generic = _load()[1].get(GENERIC_PERCUSSION)
+    if generic is None or generic.section != "percussion":
+        return None
+    head = _LISTED_AFTER.split(name, maxsplit=1)[0]
+    found = _exact_match(head) if head != name else None
+    if found and found.identity and found.identity.canonical_id == GENERIC_PERCUSSION:
+        return CatalogMatch(name, generic, found.part_numbers, GENERIC_PERCUSSION, ALIAS)
+    pieces = [piece for piece in _LIST_SEPARATOR.split(name) if piece.strip()]
+    matches = [_exact_match(piece) for piece in pieces]
+    if len(pieces) < 2 or not all(match.identity and match.identity.section == "percussion" for match in matches):
+        return None
+    numbers = tuple(number for match in matches for number in match.part_numbers)
+    return CatalogMatch(name, generic, numbers, GENERIC_PERCUSSION, ALIAS)
+
+
+def match_instrument_name(name: str) -> CatalogMatch:
+    found = _exact_match(name)
+    return found if found.identity else _several_percussion(name) or found
 
 
 def english_label(label: str, fallback: str = "") -> str:
