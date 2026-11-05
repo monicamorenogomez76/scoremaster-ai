@@ -43,6 +43,34 @@ def _has_phrase_mark(element) -> bool:
         any(isinstance(mark, expressions.Fermata) for mark in getattr(element, "expressions", []))
 
 
+def _coinciding(part) -> tuple[Optional[int], Optional[int]]:
+    """Most instruments and most lines struck at one moment of a part; None when they never coincide (lines: when they
+    coincide only once). A chord and a voice written over another coincide alike."""
+    moments: dict[tuple[int, int], list] = {}
+    for index, measure in enumerate(part.iter("measure")):
+        now = last = 0
+        for element in measure:
+            if element.tag == "backup":
+                now -= int(float(element.findtext("duration") or 0))
+            elif element.tag == "forward":
+                now += int(float(element.findtext("duration") or 0))
+            elif element.tag == "note":
+                chord_note = element.find("chord") is not None
+                if not chord_note:
+                    last = now
+                    now += int(float(element.findtext("duration") or 0))
+                if element.find("rest") is None and element.find("grace") is None:
+                    sound = element.find("unpitched")
+                    sound = sound if sound is not None else element.find("pitch")
+                    named = element.find("instrument")
+                    moments.setdefault((index, last), []).append(
+                        (named.get("id") if named is not None else None,
+                         tuple(child.text for child in sound) if sound is not None else None))
+    instruments = max((len({name for name, _ in hits if name}) for hits in moments.values()), default=0)
+    line_counts = [count for count in (len({line for _, line in hits}) for hits in moments.values()) if count > 1]
+    return instruments if instruments > 1 else None, max(line_counts) if len(line_counts) > 1 else None
+
+
 def _articulations(element) -> tuple[str, ...]:
     """Technique marks (accent, staccato, tenuto…); breath marks and caesuras are phrase marks, not technique."""
     return tuple(item.name for item in getattr(element, "articulations", ())
@@ -73,6 +101,10 @@ def read_part_metadata(content: bytes) -> dict[str, PartMetadata]:
             players=len(list(score_part.iter("player"))) or None,
         )
     for part in root.iter("part"):
+        if part.get("id") in metadata:
+            instruments, lines = _coinciding(part)
+            metadata[part.get("id")] = replace(metadata[part.get("id")], simultaneous_instruments=instruments,
+                                               simultaneous_lines=lines)
         transpose = next(part.iter("transpose"), None)
         if part.get("id") in metadata and transpose is not None:
             metadata[part.get("id")] = replace(metadata[part.get("id")], transposition=_transposition(transpose))

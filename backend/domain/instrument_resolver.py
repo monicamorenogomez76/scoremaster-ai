@@ -19,7 +19,7 @@ AGREEMENT_CONFIDENCE = 0.97
 METADATA_ONLY_CONFIDENCE = 0.75
 
 # Bump when the resolution rules or confidences change.
-RESOLVER_VERSION = "instrument-resolver-v4"   # v4 (2026-11-05): a part naming several percussion instruments is one percussion part
+RESOLVER_VERSION = "instrument-resolver-v5"   # v5 (2026-11-05): percussion that coincides needs its players; v4: a part naming several percussion instruments is one percussion part
 RESOLVED, REVIEW, CONFLICT, UNKNOWN = "resolved", "review", "conflict", "unknown"
 SOURCE_ALIAS, SOURCE_MUSICXML, SOURCE_UNKNOWN, SOURCE_USER = "ALIAS", "MUSICXML", "UNKNOWN", "USER"
 

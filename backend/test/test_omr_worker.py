@@ -4,6 +4,7 @@ reads them page by page, tells its progress and sends back the work's MusicXML, 
 page and ScoreMaster are faked here: the tests never run copista nor call the network."""
 import json
 import os
+import re
 
 import httpx
 import pytest
@@ -729,3 +730,112 @@ def test_the_score_pages_kept_for_the_parts_are_in_their_order_too(scoremaster):
     finally:
         worker.fill_lost_rests = original
     assert first_notes(pages_seen["score"].decode())[::2][:3] == list("CDE")
+
+
+# --- the names of a scanned score (2026-11-05, «The Lion King»): its OCR is nearly right, and the catalog wants exact names
+
+@pytest.fixture
+def full_catalog():
+    from backend.domain.instrument_catalog import seed_instruments, use_catalog
+    worker.catalog = worker.Catalog({"instruments": list(seed_instruments()), "learned": []})
+    yield worker.catalog
+    worker.catalog = worker.Catalog()
+    use_catalog(None)
+
+
+SCANNED_MARGIN = """     (From the film)
+                              THE WORK
+     Flute/Piccolo      tV  r r
+     Oboe               tV
+     Bassoon            :
+     Clarinet 1         tV
+     Clarinet 2, 3      tV
+     Bari, Sax.         tV
+     B'Trumpetl         tV
+     FHornl,2           tV
+     Baritone           :
+     Tuba               :
+     (String Bass)      :
+     Percussion I
+     Timpani            :
+     The Work -
+"""
+
+
+@pytest.mark.parametrize("read, name", [("Clarinet 1", "Clarinet 1"), ("B'Trumpetl", "Trumpet 1"), ("FHornl,2", "Horn 1,2"),
+                                        ("Bari, Sax.", "Bari, Sax."), ("Percussion I", "Percussion I")])
+def test_what_ocr_writes_is_corrected_only_into_a_name_of_the_catalog(full_catalog, read, name):
+    assert worker.catalog.names(worker.ocr_name(read))
+    assert worker.ocr_name(read) == name
+
+
+@pytest.mark.parametrize("read", ["Ba{", "lert.2", "Xyzzyl"])
+def test_what_ocr_garbled_stays_as_written_for_the_director_to_confirm(full_catalog, read):
+    assert worker.ocr_name(read) == read
+    assert not worker.catalog.names(read)
+
+
+def test_the_margin_of_a_scanned_score_names_its_staves(full_catalog):
+    names = worker.margin_names(SCANNED_MARGIN, 12)
+    assert names == ["Flute/Piccolo", "Oboe", "Bassoon", "Clarinet 1", "Clarinet 2, 3", "Bari, Sax.", "Trumpet 1", "Horn 1,2",
+                     "Baritone Horn", "Tuba", "Percussion I", "Timpani"]
+    assert "(String Bass)" not in names, "what shares a staff in brackets is no staff"
+    assert "The Work -" not in names, "the foot of the page is no staff"
+
+
+def test_a_margin_that_does_not_match_the_staves_names_nothing(full_catalog):
+    assert worker.margin_names(SCANNED_MARGIN, 8) is None
+    assert worker.margin_names(SCANNED_MARGIN, 30) is None
+
+
+def test_a_margin_the_catalog_barely_knows_names_nothing(full_catalog):
+    noise = "\n".join(f"     Xq{letter}zz.    tV" for letter in "abcdef") + "\n     Oboe   tV\n"
+    assert worker.margin_names(noise, 7) is None
+
+
+def test_the_score_takes_the_first_margin_that_fits_its_staves(full_catalog):
+    pages = [(page(12, 1, "C"), "   barely\n   any text\n"), (page(12, 1, "D"), SCANNED_MARGIN)]
+    _, named = worker._score(pages, "Obra")
+    assert named and named[0] == "Flute/Piccolo" and named[-1] == "Timpani"
+
+
+def test_a_baritone_among_the_brass_is_the_horn_and_not_the_saxophone(full_catalog):
+    """«Baritone» alone names the saxophone in the catalog: between trombone and tuba it is the brass one."""
+    margin = "\n".join(f"     {name}    tV" for name in ("Oboe", "Bari Sax.", "Trombone 1,2", "Baritone", "Tuba"))
+    assert worker.margin_names(margin, 5) == ["Oboe", "Bari Sax.", "Trombone 1,2", "Baritone Horn", "Tuba"]
+    among_woodwinds = "\n".join(f"     {name}    tV" for name in ("Oboe", "Alto Sax.", "Tenor Sax.", "Baritone", "Trumpet"))
+    assert worker.margin_names(among_woodwinds, 5)[3] == "Baritone"
+
+
+def test_a_page_the_margin_shows_was_misread_leaves_rests_and_says_so(full_catalog, capsys):
+    """Copista saw 8 staves where the margin names 20 («The Lion King»): placed by their clef, a clarinet took a bass
+    line and the grade rose to 6. Its measures stay, silent, and the log says which."""
+    margin = "\n".join(f"     {name}    tV" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))
+    pages = [(page(5, 2, "C"), margin), (page(3, 2, "D"), margin), (page(5, 2, "E"), margin)]
+    joined, named = worker._score(pages, "Obra")
+    steps = re.findall(r"<step>([A-G])</step>", joined.decode())
+    assert set(steps) == {"C", "E"}, "the notes of the misread page are not placed"
+    from omr.merge import measure_count
+    assert measure_count(joined) == 6, "its measures stay"
+    assert "Página de partitura mal leída: 3 de 5 pentagramas." in capsys.readouterr().out
+
+
+def test_a_page_of_a_scan_without_text_and_few_staves_leaves_rests(full_catalog):
+    margin = "\n".join(f"     {name}    tV" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))
+    joined, _ = worker._score([(page(5, 2, "C"), margin), (page(3, 2, "D"), "")], "Obra")
+    assert "D" not in re.findall(r"<step>([A-G])</step>", joined.decode())
+
+
+def test_the_margin_of_a_misread_page_counts_even_if_its_abbreviations_are_unknown(full_catalog):
+    margin = "\n".join(f"     {name}    tV" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))
+    garbled = "\n".join(f"     {name}    tV" for name in ("FUP;cc", "Obo.", "CI.1", "Tpl.1", "Tba."))
+    joined, _ = worker._score([(page(5, 2, "C"), margin), (page(3, 2, "D"), garbled)], "Obra")
+    assert "D" not in re.findall(r"<step>([A-G])</step>", joined.decode())
+
+
+def test_a_page_with_few_staves_and_no_margin_to_tell_is_placed_as_before(full_catalog):
+    """A section printed alone (the percussion of «Arabian Dances») is no misreading."""
+    margin = "\n".join(f"     {name}    tV" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))
+    pages = [(page(5, 2, "C"), margin), (page(2, 2, "D"), "     Timpani   tV\n")]
+    joined, _ = worker._score(pages, "Obra")
+    assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode())

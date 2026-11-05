@@ -8,6 +8,7 @@ import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
 import { WorksList } from './WorksView.jsx';
 import { t } from './i18n.js';
+import { gradeWarning } from './library.js';
 
 const tabs = () => [['score', t('Partitura')], ['difficulty', t('Dificultad')], ['recordings', t('Grabaciones')]];
 
@@ -39,6 +40,7 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
           <h2 id="work-detail-title">{data?.title || t('Partitura sin título')}</h2>
           <p className="result-supporting">{data?.composer || t('Compositor no indicado en el MusicXML')}</p>
           {data?.source_format === 'pdf' && <p className="pdf-provisional" role="note">{t('Leída de PDF · grado provisional: revisa en la partitura las notas más agudas y graves, y confirma los instrumentos en Mi banda.')}</p>}
+          {gradeWarning(data) && <p className="pdf-provisional" role="note">{gradeWarning(data)}</p>}
         </div>
         <button id="back-to-list" className="secondary-action" type="button" onClick={() => onModeChange('list')}>{t('Volver al repertorio')}</button>
       </div>

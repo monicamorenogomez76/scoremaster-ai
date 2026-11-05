@@ -9,7 +9,7 @@ from backend.domain.models import (PartMetadata, PartTransposition, Score, Score
                                    TempoMark)
 
 # Stored scores of another version are parsed again.
-SCORE_VERSION = 'score-v2'   # v2 (2026-10-25): key, meter, tuplets, dynamics, articulation, ornaments
+SCORE_VERSION = 'score-v3'   # v3 (2026-11-05): what coincides on a staff. v2 (2026-10-25): key, meter, tuplets, dynamics, articulation, ornaments
 
 
 def encode_score(score: Score) -> bytes:

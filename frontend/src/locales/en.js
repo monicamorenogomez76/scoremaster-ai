@@ -272,6 +272,8 @@ export const en = {
   'PDF para comparar: {name}': 'PDF to compare: {name}',
   'Abrir el PDF en otra pestaña': 'Open the PDF in another tab',
   '{name} no es un PDF.': '{name} is not a PDF.',
+  'Grado incompleto: {unknown} de {total} partes sin identificar. Sin saber el instrumento no se puede valorar su dificultad: confírmalas en Mi banda.':
+    'Incomplete grade: {unknown} of {total} parts not identified. Without knowing the instrument its difficulty cannot be assessed: confirm them in My band.',
   'Leída de PDF · grado provisional: revisa en la partitura las notas más agudas y graves, y confirma los instrumentos en Mi banda.':
     'Read from PDF · provisional grade: check the highest and lowest notes in the score, and confirm the instruments in My band.',
   'Volver al repertorio': 'Back to the repertoire',

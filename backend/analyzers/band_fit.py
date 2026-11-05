@@ -8,7 +8,7 @@ confirmed identity (unknown, conflict or metadata-only review) wait for the user
 """
 from __future__ import annotations
 
-from backend.domain.instrument_catalog import catalog_entries, match_instrument_name
+from backend.domain.instrument_catalog import listed_percussion, catalog_entries, match_instrument_name
 from backend.domain.instrument_resolver import RESOLVED, resolve_part
 from backend.domain.models import Score
 
@@ -18,6 +18,7 @@ PERCUSSION_LABEL_ES = "Percusionistas"
 
 # Instruments whose player reads several staves at once.
 SINGLE_PLAYER_SECTIONS = {"keyboard"}
+DRUM_SET = "drum_set"
 
 
 def _voice_numbers(part, identity) -> tuple[int, ...]:
@@ -27,6 +28,25 @@ def _voice_numbers(part, identity) -> tuple[int, ...]:
     if named or not staff or identity.section in SINGLE_PLAYER_SECTIONS:
         return named
     return (staff,)
+
+
+def _percussion_players(part, identity) -> int:
+    """One player per paper unless two instruments sound at once (2026-11-05: bass drum and cymbals together are two);
+    what the PDF prints wins. Lines alone say nothing of a marimba's chords or both drums of the timpani: they count
+    only on a paper that names its instruments, all without a pitch of their own."""
+    metadata = part.metadata
+    if metadata.players:
+        return metadata.players
+    if identity.canonical_id == DRUM_SET:
+        return 1
+    if metadata.simultaneous_instruments:
+        return metadata.simultaneous_instruments
+    listed = listed_percussion(metadata.part_name or part.name) or tuple(
+        {found.canonical_id: found for found in (match_instrument_name(name).identity for name in metadata.instrument_names)
+         if found}.values())
+    if metadata.simultaneous_lines and len(listed) > 1 and not any(found and found.sound for found in listed):
+        return min(len(listed), metadata.simultaneous_lines)
+    return 1
 
 
 def compute_band_fit(score: Score, band_profile: dict[str, int]) -> dict:
@@ -52,7 +72,7 @@ def compute_band_fit(score: Score, band_profile: dict[str, int]) -> dict:
         numbers = () if percussion else _voice_numbers(part, identity)
         part_key = part.metadata.part_id or part.name
         # A percussion part may need several players (2026-11-02: «Percussion 2» of «Arabian Dances», two).
-        players = range(part.metadata.players or 1) if percussion else range(1)
+        players = range(_percussion_players(part, identity)) if percussion else range(1)
         group["voices"] |= {("voice", number) for number in numbers} or {("part", part_key, player) for player in players}
         group["parts"].add(part.name)
 
