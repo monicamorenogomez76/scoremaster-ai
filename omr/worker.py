@@ -479,33 +479,35 @@ def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str]
     return join_pages([xml for xml, _ in pages], title, named, labels, same_part), named
 
 
-def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: str,
+def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]], title: str,
           read_score=lambda: []) -> tuple[bytes, str, bool]:
-    """read: the pages of each file, None where copista could not read the page. read_score reads the score's pages
-    that were set apart, when a part needs them. Returns the work, where it came from (parts or score) and whether the
-    score says it is in C."""
+    """read: the pages of each file by their place in the upload, None where copista could not read the page. read_score
+    reads the score's pages that were set apart, when a part needs them or no part appears. Returns the work, where it
+    came from (parts or score) and whether the score says it is in C."""
     score, parts = [], []
     for _, pages in read:
-        for _, xml, text in pages:
+        for place, xml, text in pages:
             if xml is None:
                 if not looks_like_score(text):
                     parts.append((None, text))
+            elif staves(xml) >= SCORE_STAVES:
+                score.append((place, xml, text))
             else:
-                (score if staves(xml) >= SCORE_STAVES else parts).append((xml, text))
+                parts.append((xml, text))
+    read_pages = []
+
+    def score_pages() -> list[tuple[bytes, str]]:
+        """The score's pages in the order they were printed, the ones set apart read only once."""
+        if not read_pages:
+            read_pages.append([(xml, text) for _, xml, text in sorted(score + read_score(), key=lambda found: found[0])])
+        return read_pages[0]
+
     groups = _parts_of(parts) if parts else []
     named = any(instrument_name(text) for _, text in parts)
     if named:
         # A cover or a page of notes before the named parts is no part (2026-10-28).
         groups = [group for group in groups if not group[0].startswith("Parte ")]
     if groups and (named or not score):
-        read_pages = []
-
-        def score_pages() -> list[tuple[bytes, str]]:
-            """The score's pages, the ones set apart read only once."""
-            if not read_pages:
-                read_pages.append(score + read_score())
-            return read_pages[0]
-
         missing = [name for name, found, _ in groups if not found]
         from_score = _from_score(missing, [name for name, _, _ in groups], score_pages(), title) if missing else {}
         files = [(name, join_pages(found, name) if found else from_score[name]) for name, found, _ in groups
@@ -513,12 +515,14 @@ def _auto(read: list[tuple[str, list[tuple[int, bytes | None, str]]]], title: st
         # Parts of different lengths: copista skipped multi-measure rests (2026-10-29); the score keeps every measure.
         if len({measure_count(xml) for _, xml in files}) > 1 and score_pages():
             files = fill_lost_rests(files, _score(score_pages(), title)[0], same_part)
-        read_pages = sum(len(found) for _, found, _ in groups)
-        print(f"La obra se saca de {len(files)} particellas ({read_pages} {'página' if read_pages == 1 else 'páginas'}).",
+        pages_of_parts = sum(len(found) for _, found, _ in groups)
+        print(f"La obra se saca de {len(files)} particellas ({pages_of_parts} {'página' if pages_of_parts == 1 else 'páginas'}).",
               flush=True)
         return combine_parts(files, title), "parts", False
-    print(f"La obra se saca de la partitura general: {len(score)} páginas.", flush=True)
-    return _score(score, title)[0], "score", any(at_concert_pitch(text) for _, text in score)
+    # A scan's OCR names «Oboe» beside the staves and no part appears (2026-11-05): the pages set apart are the work's.
+    pages = score_pages()
+    print(f"La obra se saca de la partitura general: {len(pages)} páginas.", flush=True)
+    return _score(pages, title)[0], "score", any(at_concert_pitch(text) for _, text in pages)
 
 
 def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, str]], title: str) -> dict[str, bytes]:
@@ -625,14 +629,15 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             if isinstance(outcome, Exception):
                 # A cover or a text page: skipped. Why copista failed goes to the log, never the PDF nor the token.
                 print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{outcome}", flush=True)
-                failed.setdefault((name, path), []).append((number, None, texts[(path, number)]))
+                failed.setdefault((name, path), []).append(((numbered[path], number), None, texts[(path, number)]))
             else:
-                by_file.setdefault((name, path), []).append((number, outcome, texts[(path, number)]))
+                by_file.setdefault((name, path), []).append(((numbered[path], number), outcome, texts[(path, number)]))
         set_apart = [(name, path, number) for (name, path), count in zip(saved, pages) for number in range(1, count + 1)
                      if (name, path, number) not in plan]
 
-        def read_score() -> list[tuple[bytes, str]]:
-            """The score's pages set apart, read when a part copista could not read needs its staff."""
+        def read_score() -> list[tuple[tuple[int, int], bytes, str]]:
+            """The score's pages set apart with their place in the upload, read when a part needs its staff or no part
+            appears."""
             found = []
             results = read_pages(set_apart, read_page, out_dirs, workers, page_done(len(plan) + len(set_apart)))
             for name, path, number in set_apart:
@@ -640,7 +645,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                 if isinstance(outcome, Exception):
                     print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{outcome}", flush=True)
                 else:
-                    found.append((outcome, texts[(path, number)]))
+                    found.append(((numbered[path], number), outcome, texts[(path, number)]))
             return found
 
         if not by_file:
