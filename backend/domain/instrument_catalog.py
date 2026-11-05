@@ -283,6 +283,15 @@ def _several_percussion(name: str) -> CatalogMatch | None:
     return CatalogMatch(name, generic, numbers, GENERIC_PERCUSSION, ALIAS)
 
 
+def listed_percussion(name: str) -> tuple[InstrumentIdentity | None, ...]:
+    """The instruments a percussion part lists in its name, None for those the catalog does not know; () when it lists none."""
+    head = _LISTED_AFTER.split(name, maxsplit=1)
+    found = _exact_match(head[0]) if len(head) > 1 else None
+    listed = head[1] if found and found.identity and found.identity.canonical_id == GENERIC_PERCUSSION else name
+    pieces = [piece.strip(" ()") for piece in _LIST_SEPARATOR.split(listed) if piece.strip(" ()")]
+    return tuple(_exact_match(piece).identity for piece in pieces) if len(pieces) > 1 else ()
+
+
 def match_instrument_name(name: str) -> CatalogMatch:
     found = _exact_match(name)
     return found if found.identity else _several_percussion(name) or found

@@ -1,4 +1,6 @@
 """BandFit by confirmed instrument identity (step 09): one musician per voice, percussionists in total."""
+import pytest
+
 from backend.analyzers.band_fit import PERCUSSION, compute_band_fit
 from backend.domain.models import PartMetadata, Score, ScoreMeasure, ScoreNote, ScorePart
 
@@ -106,3 +108,54 @@ def test_a_part_with_several_percussion_instruments_needs_one_percussionist():
                            paper("Percusión 3: Plato, Gong", players=2)), (), None)
     required = {item["key"]: item["required"] for item in compute_band_fit(score, {})["requirements"]}
     assert required == {"percussion": 4}, "one per paper, unless the PDF says how many"
+
+
+# --- two percussion instruments at once on one paper (2026-11-05): two percussionists ----------------------------------
+
+def percussion_needed(*parts):
+    return {item["key"]: item["required"] for item in compute_band_fit(band(*parts), {})["requirements"]}.get(PERCUSSION)
+
+
+def paper(name, **fields):
+    return ScorePart(name, BAR, PartMetadata(part_id=name, part_name=name, **fields))
+
+
+def test_bass_drum_and_cymbals_together_on_one_paper_need_two():
+    assert percussion_needed(paper("Percusión 1 (Bombo y Platos)", simultaneous_lines=2)) == 2
+    assert percussion_needed(paper("Bombo y platos", simultaneous_lines=2)) == 2
+
+
+def test_instruments_on_one_paper_that_never_coincide_need_one():
+    assert percussion_needed(paper("Plato suspendido y triángulo")) == 1
+
+
+def test_the_notes_of_a_musicxml_say_which_instruments_coincide():
+    assert percussion_needed(paper("Percussion 1", simultaneous_instruments=2)) == 2
+    assert percussion_needed(paper("Percussion 1", simultaneous_instruments=3)) == 3
+
+
+def test_what_the_pdf_prints_wins_over_what_coincides():
+    assert percussion_needed(paper("Percusión 1 (Bombo y Platos)", simultaneous_lines=2, players=1)) == 1
+    assert percussion_needed(paper("Percussion 1", simultaneous_instruments=3, players=2)) == 2
+
+
+def test_a_drum_set_is_one_player_whatever_coincides():
+    assert percussion_needed(paper("Drumset", simultaneous_instruments=2, simultaneous_lines=2)) == 1
+
+
+@pytest.mark.parametrize("name", ["Marimba", "Xylophone", "Timpani", "Caja", "Percussion 1"])
+def test_two_lines_at_once_are_not_two_instruments_without_saying_so(name):
+    """Chords of a marimba, both drums of the timpani, a misread snare: the lines alone say nothing."""
+    assert percussion_needed(paper(name, simultaneous_lines=2)) == 1
+
+
+def test_a_list_with_a_tuned_instrument_cannot_tell_its_chords_from_two_instruments():
+    assert percussion_needed(paper("Percusión 1 (Marimba, Bombo)", simultaneous_lines=2)) == 1
+
+
+def test_never_more_players_than_instruments_named():
+    assert percussion_needed(paper("Bombo y platos", simultaneous_lines=3)) == 2
+
+
+def test_the_instruments_declared_count_as_named():
+    assert percussion_needed(paper("Percussion 1", instrument_names=("Bass Drum", "Cymbals"), simultaneous_lines=2)) == 2

@@ -37,7 +37,7 @@ def test_the_stored_model_version_changes_with_what_it_keeps():
     """difficulty-v3 keeps key, meter, tuplets, dynamics, articulation and ornaments: works stored before are
     read again (prepare_missing_works looks for the current version)."""
     from backend.parsers.score_codec import SCORE_VERSION
-    assert SCORE_VERSION == "score-v2"
+    assert SCORE_VERSION == "score-v3"
 
 
 def test_something_else_is_not_read_as_a_score():
