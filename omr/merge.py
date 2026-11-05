@@ -12,7 +12,7 @@ import copy
 import re
 from xml.sax.saxutils import escape
 
-from music21 import chord, clef, converter, duration, instrument, key, metadata, note, stream, meter
+from music21 import chord, clef, converter, duration, instrument, key, metadata, note, stream, meter, spanner
 from music21.musicxml.m21ToXml import GeneralObjectExporter
 from music21.musicxml.xmlObjects import MusicXMLExportException
 
@@ -68,13 +68,24 @@ def _part(name: str, measures: list[stream.Measure]) -> stream.Part:
     named.partName = name
     part.insert(0, named)
     in_force = {}
+    copies, slurs = {}, {}
     for number, measure in enumerate(measures, 1):
-        measure = copy.deepcopy(measure)
+        source = measure
+        measure = copy.deepcopy(source)
+        for original, copied in zip(source.recurse().notes, measure.recurse().notes):
+            copies[id(original)] = copied
+            slurs.update((id(found), found) for found in original.getSpannerSites() if isinstance(found, spanner.Slur))
         for old in list(measure.recurse().getElementsByClass(instrument.Instrument)):
             old.activeSite.remove(old)
         _drop_repeated(measure, in_force)
         measure.number = number
         part.append(measure)
+    # A slur hangs from its staff, not from a measure: the copied notes need one of their own (2026-11-05, every slur
+    # copista wrote was lost here).
+    for slur in slurs.values():
+        ends = [copies.get(id(end)) for end in slur.getSpannedElements()]
+        if all(ends):
+            part.insert(0, spanner.Slur(ends))
     return part
 
 
