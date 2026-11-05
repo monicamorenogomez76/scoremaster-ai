@@ -501,6 +501,7 @@ button:disabled { opacity: 0.65; cursor: default; }
 #ensemble-time { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
 .loading-status { font-size: .85rem; color: var(--muted); }
 #full-score-rendering { display: flex; justify-content: center; align-items: flex-start; padding: 16px; box-sizing: border-box; height: 70vh; min-height: 320px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--sunken); }
+#full-score-rendering:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
 #full-score-rendering svg { max-width: none; background: var(--paper); box-shadow: var(--shadow-1); }
 .family-chart { margin: 24px 0; padding: 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
 .family-chart h2 { margin: 0 0 6px; font-size: 1.05rem; }
