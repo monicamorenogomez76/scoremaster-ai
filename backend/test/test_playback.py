@@ -225,3 +225,47 @@ def test_percussion_written_with_pitches_still_sounds_as_its_drum(tmp_path):
     assert [hit['note'] for hit in tracks['Caja']['percussion']] == [38, 38] and tracks['Caja']['events'] == []
     assert tracks['Bombo']['percussion'][0]['note'] == 35 and tracks['Platos']['percussion'][0]['note'] == 49
     assert tracks['Timpani']['percussion'] == [] and len(tracks['Timpani']['events']) == 2
+
+
+# --- grace notes sound (2026-11-05): with no length they fell on the main note and could hardly be heard ---------------
+
+def _with_grace(graces: str, before: str = "") -> bytes:
+    full = '<note><pitch><step>{}</step><octave>5</octave></pitch><duration>{}</duration><type>{}</type></note>'
+    grace = '<note><grace/><pitch><step>{}</step><octave>5</octave></pitch><type>eighth</type></note>'
+    leading = full.format(before, 4, "half") if before else ""
+    return ('<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1"><part-name>Oboe</part-name>'
+            '</score-part></part-list><part id="P1"><measure number="1"><attributes><divisions>2</divisions><time><beats>4</beats>'
+            '<beat-type>4</beat-type></time></attributes>' + leading + "".join(grace.format(step) for step in graces)
+            + full.format("C", 4, "half") + '</measure></part></score-partwise>').encode()
+
+
+def _notes_of(content: bytes):
+    from backend.parsers.playback import GRACE_QUARTERS, _read_timeline
+    return GRACE_QUARTERS, _read_timeline(content).parts[0].notes
+
+
+def test_a_grace_note_sounds_just_before_its_note():
+    length, notes = _notes_of(_with_grace("D", before="E"))
+    assert length > 0
+    grace, main = notes[1], notes[2]
+    assert grace.release > grace.onset, "it lasts"
+    assert grace.release == main.onset == 2.0, "and ends where its note starts, on the beat"
+    assert main.release == 4.0, "the note keeps its place and its length"
+
+
+def test_a_group_of_grace_notes_plays_in_order_before_its_note():
+    length, notes = _notes_of(_with_grace("DEF", before="G"))
+    first, second, third, main = notes[1:5]
+    assert [first.onset, second.onset, third.onset] == [2.0 - 3 * length, 2.0 - 2 * length, 2.0 - length]
+    assert third.release == main.onset == 2.0
+
+
+def test_a_grace_note_at_the_very_start_never_sounds_before_the_work():
+    length, notes = _notes_of(_with_grace("D"))
+    assert notes[0].onset == 0.0 and notes[0].release == length
+    assert notes[1].onset == 0.0, "its note stays on the beat"
+
+
+def test_the_audio_prepared_before_is_prepared_again():
+    from backend.parsers.playback import TIMELINE_VERSION
+    assert TIMELINE_VERSION == "playback-timeline-v4"

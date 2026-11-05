@@ -72,7 +72,10 @@ def _scores_kept() -> int:
 # Beyond this the work is too large to keep (the whole-score playback already stops at 150 000 events).
 MAX_PREPARED_NOTES = 1_000_000
 # Stored timelines of another version are prepared again.
-TIMELINE_VERSION = 'playback-timeline-v3'   # v3 (2026-11-02): the generic percussion plays drums by line
+TIMELINE_VERSION = 'playback-timeline-v4'   # v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
+# A grace note takes no time in the score: it sounds this long, just before its note, which stays on the beat (2026-11-05:
+# with no length it fell on the note and could hardly be heard).
+GRACE_QUARTERS = 0.125
 # A small work is answered in the same request; a longer one answers 202 and the browser follows its
 # preparation, so no request stays open for minutes (2026-10-07: Persis took ~3 min on Render).
 WAIT_SECONDS = 20.0
@@ -309,9 +312,16 @@ def _read_timeline(content: bytes) -> _Timeline:
         part.toSoundingPitch(inPlace=True)
         part.stripTies(inPlace=True)
         notes = []
-        for event in part.flatten().notes:
+        events = list(part.flatten().notes)
+        for index, event in enumerate(events):
             onset = float(event.offset)
             release = onset + float(event.duration.quarterLength)
+            if event.duration.isGrace:
+                following = 0
+                while index + following + 1 < len(events) and events[index + following + 1].duration.isGrace:
+                    following += 1
+                onset = max(0.0, onset - (following + 1) * GRACE_QUARTERS)
+                release = onset + GRACE_QUARTERS
             # Simultaneous drum-set hits arrive as a PercussionChord, not as chord.Chord.
             hits = (list(event.notes) if isinstance(event, m21_percussion.PercussionChord)
                     else [event] if isinstance(event, note.Unpitched) else [])
