@@ -59,6 +59,13 @@ export const updatePreparation = (id, status) => json('/works/' + encodeURICompo
 export const analysisStatusText = work => (work?.summary?.grade == null ? t('Sin analizar')
   : work.source_format === 'pdf' ? t('Disponible · leída de PDF') : t('Disponible'));
 
+// Without knowing an instrument its range and notes do not count, so the grade may fall far short (2026-11-05).
+export const gradeWarning = analysis => {
+  const parts = analysis?.instruments || [];
+  const unknown = parts.filter(part => part.status !== 'resolved').length;
+  return unknown ? t('Grado incompleto: {unknown} de {total} partes sin identificar. Sin saber el instrumento no se puede valorar su dificultad: confírmalas en Mi banda.', { unknown, total: parts.length }) : '';
+};
+
 // Critical passages of the works in preparation (origin "analysis"; the director's notes arrive later).
 export const listPriorities = async () => (await json('/works/priorities', {}, t('No se pudieron cargar las prioridades.'))).priorities;
 

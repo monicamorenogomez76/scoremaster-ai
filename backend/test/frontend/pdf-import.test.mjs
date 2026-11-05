@@ -72,3 +72,18 @@ test('while reading, the director sees how long is left', () => {
   assert.equal(pdfStatusText({ status: 'reading', pages_done: 19, pages_total: 20 }, 20), 'Leyendo la página 19 de 20 · falta menos de un minuto…');
   assert.equal(pdfStatusText({ status: 'reading', pages_done: 14, pages_total: 20 }, 60), 'Leyendo la página 14 de 20 · queda un minuto…');
 });
+
+// Without knowing an instrument its range and notes do not count (2026-11-05: «Persian Market», grade 6, showed 2).
+test('a grade with parts not identified says so', async () => {
+  const { gradeWarning } = await import('../../../frontend/src/library.js');
+  const parts = (...statuses) => ({ instruments: statuses.map((status, index) => ({ part: 'Parte ' + index, status })) });
+  assert.equal(gradeWarning(parts('resolved', 'resolved')), '');
+  assert.equal(gradeWarning(parts('unknown', 'unknown', 'unknown')),
+    'Grado incompleto: 3 de 3 partes sin identificar. Sin saber el instrumento no se puede valorar su dificultad: confírmalas en Mi banda.');
+  assert.equal(gradeWarning(parts('resolved', 'review', 'conflict')),
+    'Grado incompleto: 2 de 3 partes sin identificar. Sin saber el instrumento no se puede valorar su dificultad: confírmalas en Mi banda.');
+  assert.equal(gradeWarning(parts('resolved', 'unknown')),
+    'Grado incompleto: 1 de 2 partes sin identificar. Sin saber el instrumento no se puede valorar su dificultad: confírmalas en Mi banda.');
+  assert.equal(gradeWarning({}), '', 'an analysis not loaded yet warns of nothing');
+  assert.equal(gradeWarning(null), '');
+});
