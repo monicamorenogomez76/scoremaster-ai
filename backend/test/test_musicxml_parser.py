@@ -182,3 +182,43 @@ def test_a_part_without_key_or_meter_keeps_them_empty():
     score_path = Path(__file__).parents[2] / "test-scores" / "minimal.musicxml"
     measure = parse_musicxml(score_path).parts[0].measures[0]
     assert measure.dynamics == () and all(item.articulations == () and not item.tuplet for item in measure.notes)
+
+
+# --- what coincides on a percussion staff (2026-11-05) ----------------------------------------------------------------
+
+def _percussion_xml(notes: str, instruments: str = "") -> bytes:
+    return ('<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1"><part-name>Percusion</part-name>'
+            f'{instruments}</score-part></part-list><part id="P1"><measure number="1"><attributes><divisions>1</divisions>'
+            f'</attributes>{notes}</measure></part></score-partwise>').encode()
+
+
+def _hit(step, chord=False, instrument=None):
+    return ("<note>" + ("<chord/>" if chord else "") + f"<unpitched><display-step>{step}</display-step><display-octave>5"
+            "</display-octave></unpitched><duration>1</duration>"
+            + (f'<instrument id="{instrument}"/>' if instrument else "") + "<type>quarter</type></note>")
+
+
+def test_the_instruments_of_the_notes_tell_what_coincides():
+    from backend.parsers.musicxml_parser import read_part_metadata
+    both = _hit("C", instrument="A") + _hit("G", chord=True, instrument="B")
+    found = read_part_metadata(_percussion_xml(both))["P1"]
+    assert found.simultaneous_instruments == 2
+
+
+def test_one_coincidence_of_lines_may_be_a_misreading():
+    from backend.parsers.musicxml_parser import read_part_metadata
+    once = _hit("C") + _hit("G", chord=True)
+    assert read_part_metadata(_percussion_xml(once))["P1"].simultaneous_lines is None
+    assert read_part_metadata(_percussion_xml(once + once))["P1"].simultaneous_lines == 2
+
+
+def test_voices_that_coincide_count_as_a_chord_does():
+    from backend.parsers.musicxml_parser import read_part_metadata
+    voices = (_hit("C") + _hit("C") + "<backup><duration>2</duration></backup>" + _hit("G") + _hit("G"))
+    assert read_part_metadata(_percussion_xml(voices))["P1"].simultaneous_lines == 2
+
+
+def test_a_part_with_hits_one_after_another_coincides_in_nothing():
+    from backend.parsers.musicxml_parser import read_part_metadata
+    found = read_part_metadata(_percussion_xml(_hit("C", instrument="A") + _hit("G", instrument="B")))["P1"]
+    assert found.simultaneous_instruments is None and found.simultaneous_lines is None
