@@ -28,6 +28,10 @@ class PdfImport:
     updated_at: Optional[datetime] = None
 
 
+# Goes up when repair_pdf_works does something new; a new reading arrives with every repair made.
+REPAIRS_VERSION = 1
+
+
 class PdfImportRepository(Protocol):
     def create(self, user_id: UUID, kind: str, title: str, files: list[tuple[str, bytes]], token_sha256: str,
                band_profile: dict, total_minutes: int) -> PdfImport: ...
@@ -43,6 +47,9 @@ class PdfImportRepository(Protocol):
     def done(self, import_id: UUID, work_id: UUID) -> None: ...
     def failed(self, import_id: UUID, error: str) -> None: ...
 
+    def to_repair(self) -> list[tuple[UUID, UUID, str]]:
+        """Works read from a PDF that have not been through the current repairs."""
+    def repaired(self, work_id: UUID) -> None: ...
     def read_before(self, moment: datetime) -> list[tuple[UUID, UUID, str]]:
         """(owner, work, kind) of the imports that became a work before that moment."""
 

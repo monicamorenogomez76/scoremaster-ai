@@ -46,6 +46,11 @@ def next_start(monkeypatch):
     monkeypatch.setattr("backend.parsers.reader._reading_received", False)
 
 
+def as_read_before_the_repairs(connection):
+    from sqlalchemy import text
+    connection.execute(text("UPDATE pdf_imports SET repaired_version = NULL"))
+
+
 def machine(client, job, path, **kwargs):
     """The reader in GitHub Actions: no session, only the one-time token of the job."""
     headers = {"Authorization": "Bearer " + job["token"]}
@@ -250,6 +255,8 @@ def test_works_read_before_the_transposition_are_transposed_when_the_server_star
     imports, analyses = PostgresPdfImportRepository(postgres_engine), PostgresAnalysisRepository(postgres_engine)
 
     next_start(monkeypatch)
+    with postgres_engine.begin() as connection:
+        as_read_before_the_repairs(connection)
     assert repair_pdf_works(imports, library, instruments) == 1, "the score in C read later is left alone"
     with postgres_engine.connect() as connection:
         source, stored_sha = connection.execute(text("SELECT source, source_sha256 FROM works WHERE id = :work"),
@@ -282,6 +289,8 @@ def test_measures_read_too_long_or_too_short_keep_their_length(clients, reader, 
         connection.execute(text("UPDATE analyses SET source_sha256 = :sha"), {"sha": sha})
     library, imports = PostgresLibraryRepository(postgres_engine), PostgresPdfImportRepository(postgres_engine)
     next_start(monkeypatch)
+    with postgres_engine.begin() as connection:
+        as_read_before_the_repairs(connection)
     assert repair_pdf_works(imports, library) == 1, "a work kept before is fitted when the server starts"
     with postgres_engine.connect() as connection:
         assert offsets(bytes(connection.execute(text("SELECT source FROM works")).scalar_one())) == [0, 2, 4]
@@ -315,6 +324,8 @@ def test_a_key_signature_the_reader_missed_is_taken_from_the_band(clients, reade
         connection.execute(text("UPDATE works SET source = :read, source_sha256 = :sha"),
                            {"read": before, "sha": hashlib.sha256(before).hexdigest()})
     library = PostgresLibraryRepository(postgres_engine)
+    with postgres_engine.begin() as connection:
+        as_read_before_the_repairs(connection)
     assert repair_pdf_works(PostgresPdfImportRepository(postgres_engine), library) == 1
     with postgres_engine.connect() as connection:
         assert clarinet(connection.execute(text("SELECT source FROM works")).scalar_one()) == ["F#", "F#", "C#"]

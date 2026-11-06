@@ -91,7 +91,7 @@ def test_a_database_created_before_gets_the_generic_percussion(postgres_engine):
     with postgres_engine.begin() as connection:
         config = Config("alembic.ini")
         config.attributes["connection"] = connection
-        command.upgrade(config, "head")
+        command.upgrade(config, "0019_generic_percussion")
         assert connection.execute(sa.text("SELECT count(*) FROM instrument_names WHERE instrument_id = 'percussion'")).scalar() == 8
-        command.upgrade(config, "head")   # nothing twice
+        command.upgrade(config, "0019_generic_percussion")   # nothing twice
         assert connection.execute(sa.text("SELECT count(*) FROM instruments WHERE id = 'percussion'")).scalar() == 1

@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, delete, func, select, text, update
+from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, delete, func, or_, select, text, update
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from backend.application.pdf_imports import FINISHED, PdfImport
+from backend.application.pdf_imports import FINISHED, REPAIRS_VERSION, PdfImport
 from backend.infrastructure.analysis_repository import Base
 
 
@@ -31,6 +31,7 @@ class StoredPdfImport(Base):
     work_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), ForeignKey('works.id', ondelete='SET NULL'),
                                                     nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    repaired_version: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -102,13 +103,27 @@ class PostgresPdfImportRepository:
             return bytes(content) if content is not None else None
 
     def done(self, import_id: UUID, work_id: UUID) -> None:
-        self._update(import_id, status='done', work_id=work_id, musicxml=None)
+        self._update(import_id, status='done', work_id=work_id, musicxml=None, repaired_version=REPAIRS_VERSION)
 
     def failed(self, import_id: UUID, error: str) -> None:
         with Session(self.engine) as session, session.begin():
             session.execute(delete(StoredPdfImportFile).where(StoredPdfImportFile.import_id == import_id))
             session.execute(update(StoredPdfImport).where(StoredPdfImport.id == import_id).values(
                 status='failed', error=error[:300], token_sha256=None, musicxml=None, updated_at=func.now()))
+
+    def to_repair(self) -> list[tuple[UUID, UUID, str]]:
+        with Session(self.engine) as session:
+            rows = session.execute(select(StoredPdfImport.user_id, StoredPdfImport.work_id, StoredPdfImport.kind)
+                                   .where(StoredPdfImport.status == 'done', StoredPdfImport.work_id.is_not(None),
+                                          or_(StoredPdfImport.repaired_version.is_(None),
+                                              StoredPdfImport.repaired_version < REPAIRS_VERSION))).all()
+        return [(row.user_id, row.work_id, row.kind) for row in rows]
+
+    def repaired(self, work_id: UUID) -> None:
+        """Without touching updated_at: read_before tells by it when the work was read."""
+        with Session(self.engine) as session, session.begin():
+            session.execute(update(StoredPdfImport).where(StoredPdfImport.work_id == work_id)
+                            .values(repaired_version=REPAIRS_VERSION))
 
     def read_before(self, moment: datetime) -> list[tuple[UUID, UUID, str]]:
         with Session(self.engine) as session:
