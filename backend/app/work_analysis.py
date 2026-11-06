@@ -11,12 +11,13 @@ import logging
 from backend.analyzers.difficulty import DIFFICULTY_VERSION, compute_difficulty_score
 from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
-from backend.app.stored_scores import confirm_instruments, parsed_work
+from backend.app.stored_scores import confirm_instruments, kept_work, parsed_work
 from backend.application.library import WorkUpload
 from backend.application.save_analysis import save_analysis
 from backend.domain.instrument_catalog import catalog_version, instrument_name_key
 from backend.domain.instrument_resolver import RESOLVED, RESOLVER_VERSION, resolve_part
 from backend.parsers.pdf_measures import fit_measures
+from backend.parsers.reader import StartupStopped, startup_turn
 from backend.parsers.pdf_transpositions import add_transpositions, fix_key_signatures
 
 
@@ -72,10 +73,11 @@ def analyze_and_store(content: bytes, file_name: str, user_id: UUID, profile: di
 
 
 
-def refresh_outdated_analyses(repository, library, score_store=None) -> int:
+def refresh_outdated_analyses(repository, library, score_store=None, only_prepared: bool = False) -> int:
     """Analyses every work whose latest analysis came from an earlier ScoreLint again (difficulty-v2,
     2026-10-14), with the band, minutes and confirmed instruments it was made with. The old analysis stays
-    as history and the work itself is not touched. Returns how many works were analysed again."""
+    as history and the work itself is not touched. Returns how many works were analysed again. only_prepared leaves a work without
+    its model for the next start: this process may have no room for music21 (2026-11-06)."""
     refreshed = 0
     for outdated in repository.outdated_latest(DIFFICULTY_VERSION, {"resolver_version": RESOLVER_VERSION,
                                                                     "catalog_version": catalog_version()}):
@@ -86,11 +88,17 @@ def refresh_outdated_analyses(repository, library, score_store=None) -> int:
         configuration = outdated.configuration
         overrides = configuration.get("instrument_overrides") or {}
         try:
-            score = confirm_instruments(parsed_work(content, score_store), overrides)
-            result = _result(score, configuration.get("band_profile") or {}, int(configuration.get("total_minutes") or 90))
-            save_analysis(result, content, configuration.get("band_profile") or {}, int(configuration.get("total_minutes") or 90),
-                          repository, overrides, user_id=outdated.user_id, work_id=outdated.work_id)
+            with startup_turn():
+                parsed = kept_work(content, score_store) if only_prepared else parsed_work(content, score_store)
+                if parsed is None:
+                    continue
+                score = confirm_instruments(parsed, overrides)
+                result = _result(score, configuration.get("band_profile") or {}, int(configuration.get("total_minutes") or 90))
+                save_analysis(result, content, configuration.get("band_profile") or {}, int(configuration.get("total_minutes") or 90),
+                              repository, overrides, user_id=outdated.user_id, work_id=outdated.work_id)
             refreshed += 1
+        except StartupStopped:
+            raise
         except Exception:
             logger.warning("No se pudo volver a analizar una obra con la versión actual de ScoreLint.", exc_info=True)
     return refreshed

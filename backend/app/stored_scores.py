@@ -8,19 +8,22 @@ from dataclasses import replace
 from hashlib import sha256
 import logging
 from pathlib import Path
+import subprocess
+import sys
 from tempfile import NamedTemporaryFile
 from threading import Lock
-from typing import Optional
+from typing import Callable, Optional
 from uuid import UUID
 
 from backend.application.library import LibraryRepository
 from backend.domain.models import Score
 from backend.parsers.musicxml_parser import parse_musicxml
 from backend.parsers.playback import TIMELINE_VERSION, PreparedStore, prepare_playback
-from backend.parsers.reader import read
+from backend.parsers.reader import StartupStopped, read, startup_turn
 from backend.parsers.score_codec import SCORE_VERSION, decode_score, encode_score
 
 PARSED_KEPT = 4
+PREPARING_SECONDS = 30 * 60   # Render's tenth of a CPU; a reading is kept waiting meanwhile
 _parsed: OrderedDict = OrderedDict()
 _saved: set = set()          # keys this process knows are in the store
 _lock = Lock()
@@ -107,6 +110,11 @@ def parsed_work(content: bytes, store: Optional[PreparedStore] = None) -> Score:
     return found if found is not None else read(_parse, content, key, store)
 
 
+def kept_work(content: bytes, store: Optional[PreparedStore]) -> Optional[Score]:
+    """The musical model if it is already prepared: never read here."""
+    return _known(sha256(content).hexdigest(), store)
+
+
 def parse_source(content: bytes, overrides: Optional[dict[str, str]] = None,
                  store: Optional[PreparedStore] = None) -> Score:
     return confirm_instruments(parsed_work(content, store), overrides or {})
@@ -124,19 +132,42 @@ def stored_score(library: LibraryRepository, user_id: UUID, work_id: UUID,
     return work.title, parse_source(found[0], overrides, store)
 
 
-def prepare_missing_works(score_store, playback_store, after_models=None) -> None:
+def prepare_in_own_process(kind: str, source: bytes, store) -> None:
+    """The model ("score") or the audio of a work of the startup, read by a process that gives all its memory back. Whatever
+    fails is left for the next start."""
+    try:
+        done = subprocess.run([sys.executable, "-m", "backend.app.prepare_child", kind], input=source, capture_output=True,
+                              timeout=PREPARING_SECONDS, check=True)
+        store.save(sha256(source).hexdigest(), SCORE_VERSION if kind == "score" else TIMELINE_VERSION, done.stdout)
+    except (subprocess.SubprocessError, OSError):
+        # The process that dies says nothing of the work.
+        logger.warning('No se pudo preparar una obra en su propio proceso.')
+
+
+def prepare_missing_works(score_store, playback_store, after_models=None,
+                          read_work: Optional[Callable[[str, bytes], None]] = None) -> None:
     """Works uploaded before (or analysed while the server was preparing others) are read once, one
     at a time, when the server starts: then proposals and passages need no reading at all.
-    after_models runs once the models are read and before the audio (the analyses made again)."""
-    for source in score_store.missing_sources(SCORE_VERSION):
-        try:
-            parsed_work(source, score_store)
-        except Exception:
-            logger.warning('No se pudo preparar el modelo de una obra.', exc_info=True)
-    if after_models is not None:
-        try:
-            after_models()
-        except Exception:
-            logger.warning('No se pudieron volver a analizar las obras guardadas.', exc_info=True)
-    for source in playback_store.missing_sources(TIMELINE_VERSION):
-        prepare_playback(source, playback_store)
+    after_models runs once the models are read and before the audio (the analyses made again).
+    read_work reads a work outside this process, its model ("score") or its audio ("playback")."""
+    try:
+        for source in score_store.missing_sources(SCORE_VERSION):
+            try:
+                with startup_turn():
+                    read_work("score", source) if read_work else parsed_work(source, score_store)
+            except StartupStopped:
+                raise
+            except Exception:
+                logger.warning('No se pudo preparar el modelo de una obra.', exc_info=True)
+        if after_models is not None:
+            try:
+                after_models()
+            except StartupStopped:
+                raise
+            except Exception:
+                logger.warning('No se pudieron volver a analizar las obras guardadas.', exc_info=True)
+        for source in playback_store.missing_sources(TIMELINE_VERSION):
+            with startup_turn():
+                read_work("playback", source) if read_work else prepare_playback(source, playback_store)
+    except StartupStopped:
+        logger.info('Se recibió una lectura de PDF: las obras pendientes siguen en el próximo arranque.')

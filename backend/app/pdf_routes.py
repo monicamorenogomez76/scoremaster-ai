@@ -11,6 +11,7 @@ import json
 import logging
 from xml.etree import ElementTree as ET
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -24,13 +25,13 @@ from pydantic import BaseModel, Field
 from backend.app.dependencies import (authenticated_user, get_analysis_repository, get_instrument_store, get_library_repository,
                                       get_omr_dispatcher, get_pdf_import_repository, get_playback_store, get_score_store)
 from backend.app.library_routes import valid_band_profile
+from backend.app.stored_scores import clear_parsed_works
 from backend.app.work_analysis import analyze_and_store
 from backend.application.accounts import User
 from backend.domain.instrument_catalog import catalog_entries
-from backend.parsers.pdf_measures import fit_measures
-from backend.parsers.pdf_transpositions import add_transpositions, fix_key_signatures
 from backend.parsers.playback import TIMELINE_VERSION
-from backend.parsers.prepare import usable_score, usable_timeline
+from backend.parsers.prepare import final_musicxml, opened_final, usable_score, usable_timeline
+from backend.parsers.reader import ONE_READING, ask_for_turn, end_turn
 from backend.parsers.score_codec import SCORE_VERSION
 from backend.application.pdf_imports import OmrDispatcher, PdfImport, PdfImportRepository
 
@@ -181,23 +182,47 @@ def reader_instruments(import_id: str, authorization: Optional[str] = Header(def
     """The catalog the reader names the parts with (2026-10-28): the common instruments with their names and the part
     names the account confirmed before (normalized, without part numbers)."""
     found = _reader(import_id, authorization, imports)
+    learned = instruments.learned(found.user_id) if instruments else {}
     return {"instruments": [{"id": identity.canonical_id, "section": identity.section, "family": identity.family,
                              "variant": identity.variant, "transposition": identity.transposition,
                              "label_es": identity.label_es, "label_en": identity.label_en, "aliases": list(identity.aliases),
                              "sound": identity.sound, "rehearsal_group": identity.rehearsal_group}
                             for identity in catalog_entries()],
-            "learned": sorted(instruments.learned(found.user_id)) if instruments else []}
+            "learned": sorted(learned), "learned_instruments": learned}
+
+
+# Render's 512 MB (2026-11-06): a reading of 34 staves is a MusicXML of 12 MB; its body and its XML tree take ~300 MB. Render
+# ran out of memory receiving one while music21 read another work: the reader now finishes the work and sends it compressed,
+# and one reading goes at a time, told before its body is read.
+_READING_SENT = re.compile(r"^/omr/imports/[^/]+/(final|result)$")
+
+
+class OneReadingAtATime:
+    """Wraps the whole request, its analysis in the background included. Without a token, the route answers 401 as usual."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "POST" or not _READING_SENT.match(scope["path"]) \
+                or not dict(scope["headers"]).get(b"authorization"):
+            await self.app(scope, receive, send)
+            return
+        if not ask_for_turn():
+            await JSONResponse(status_code=503, content={"detail": "ScoreMaster está procesando otra obra."})(scope, receive, send)
+            return
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            # Its model is in the store; the works of the startup need that room.
+            clear_parsed_works()
+            end_turn()
 
 
 def _final_musicxml(found: PdfImport, result: Result, instruments) -> bytes:
-    """The bytes kept for the work: what the reader sent with what it cannot know. Raises ET.ParseError."""
-    # copista writes the notes in the key of each instrument but no <transpose> (2026-10-29).
-    # Each measure keeps the length of its time signature: one read too long made its part sound late.
-    content = add_transpositions(fit_measures((result.musicxml or "").encode("utf-8")),
-                                 instruments.learned(found.user_id) if instruments else None,
-                                 result.concert_pitch, result.source or "parts")
-    # A key signature the reader missed in a transposed part is taken from the band.
-    return fix_key_signatures(content)
+    """The bytes kept for the work, for a reader that sends what it read. Raises ET.ParseError."""
+    return final_musicxml((result.musicxml or "").encode("utf-8"), instruments.learned(found.user_id) if instruments else None,
+                          result.concert_pitch, result.source or "parts")
 
 
 def _keep_prepared(content: bytes, prepared: Optional[dict], score_store, playback_store) -> None:
@@ -225,10 +250,11 @@ def _keep_prepared(content: bytes, prepared: Optional[dict], score_store, playba
 def _analyse(found: PdfImport, imports, repository, library, score_store, instruments=None, prepared=None,
              playback_store=None) -> None:
     try:
-        _keep_prepared(imports.musicxml(found.id), prepared, score_store, playback_store)
+        content = imports.musicxml(found.id)
+        _keep_prepared(content, prepared, score_store, playback_store)
         # The instruments the account confirmed before name the parts the catalog does not know (2026-10-28).
         learned = instruments.learned(found.user_id) if instruments else None
-        saved = analyze_and_store(imports.musicxml(found.id), found.title + ".musicxml", found.user_id, found.band_profile,
+        saved = analyze_and_store(content, found.title + ".musicxml", found.user_id, found.band_profile,
                                   found.total_minutes, {}, repository, library, score_store, source_format="pdf",
                                   learned=learned)
         imports.done(found.id, UUID(saved["work_id"]))
@@ -259,8 +285,18 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
                   score_store=Depends(get_score_store), instruments=Depends(get_instrument_store),
                   playback_store=Depends(get_playback_store)):
     found = _reader(import_id, authorization, imports)
+    finished = None
+    if result.prepared and "musicxml_gz" in result.prepared:
+        finished = opened_final(result.prepared, MAX_MUSICXML_CHARACTERS)
+        if finished is None:
+            # The token lives on: the reader sends what it read, as an older one does.
+            raise HTTPException(status_code=422, detail="La obra terminada no es lo que dice ser.")
     content = (result.musicxml or "").encode("utf-8")
-    if result.error or not content:
+    if finished:
+        imports.received(found.id, finished)
+        background.add_task(_analyse, found, imports, repository, library, score_store, instruments, result.prepared,
+                            playback_store)
+    elif result.error or not content:
         imports.failed(found.id, result.error or "El lector no devolvió ninguna obra.")
     elif b"<!ENTITY" in content:
         imports.failed(found.id, "La lectura no es MusicXML válido.")

@@ -92,3 +92,10 @@ def seed_instrument_catalog():
     finally:
         use_catalog(None)
         use_private_instruments(())
+
+
+@pytest.fixture(autouse=True)
+def a_fresh_server(monkeypatch):
+    """Each test starts as the server does: nobody has asked for the turn of a reading."""
+    monkeypatch.setattr("backend.parsers.reader._reading_asked", None)
+    monkeypatch.setattr("backend.parsers.reader._reading_received", False)

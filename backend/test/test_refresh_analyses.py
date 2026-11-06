@@ -47,3 +47,23 @@ def test_works_analysed_with_an_earlier_instrument_catalog_are_analysed_again(cl
                            {"work": work})
     assert refresh_outdated_analyses(*repositories) == 1
     assert refresh_outdated_analyses(*repositories) == 0
+
+
+def test_a_work_without_its_model_waits_for_the_next_start(monkeypatch):
+    # Render's 512 MB (2026-11-06): the process that prepared it ran out of memory, and the server then read it with music21.
+    from backend.app import work_analysis
+
+    class Outdated:
+        def outdated_latest(self, *_):
+            from types import SimpleNamespace
+            return [SimpleNamespace(user_id="u", work_id="w", configuration={})]
+
+    class Library:
+        def work_file(self, user_id, work_id):
+            return b"<score-partwise/>", "obra.musicxml"
+
+    def refuse(*_):
+        raise AssertionError("the server read it with music21")
+    monkeypatch.setattr(work_analysis, "parsed_work", refuse)
+    monkeypatch.setattr(work_analysis, "kept_work", lambda content, store: None)
+    assert work_analysis.refresh_outdated_analyses(Outdated(), Library(), object(), only_prepared=True) == 0

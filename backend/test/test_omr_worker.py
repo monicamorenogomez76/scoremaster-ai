@@ -2,6 +2,8 @@
 decided 2026-10-27). ScoreMaster sends the job with a one-time token: the reader downloads the PDFs from ScoreMaster with it,
 reads them page by page, tells its progress and sends back the work's MusicXML, or why it failed. The reading of a
 page and ScoreMaster are faked here: the tests never run copista nor call the network."""
+import base64
+import gzip
 import json
 import os
 import re
@@ -37,6 +39,10 @@ def scoremaster():
             return httpx.Response(204)
         if path.endswith("/result"):
             seen["result"] = json.loads(request.content)
+            finished = seen["result"].get("prepared", {}).get("musicxml_gz")
+            if finished:
+                # What it is once opened: the tests look at the work, sent as it was read or finished here.
+                seen["result"]["musicxml"] = gzip.decompress(base64.b64decode(finished)).decode()
             return httpx.Response(202)
         return httpx.Response(404)
 
@@ -618,12 +624,37 @@ def preparing_reader(final=httpx.Response(200, json={"musicxml": FINAL.decode()}
 BODY = {"musicxml": "<score-partwise/>", "source": "score", "concert_pitch": False}
 
 
-def test_the_bytes_scoremaster_keeps_are_prepared_and_sent_with_the_result(ready_catalog, monkeypatch):
-    seen, prepared = preparing_reader(), []
-    monkeypatch.setattr("backend.parsers.prepare.prepare_work", lambda content: prepared.append(content) or {"sha256": "a"})
-    assert worker.prepared_work(seen["client"], BASE, BODY) == {"sha256": "a"}
-    assert seen["final"] == [BODY]
-    assert prepared == [FINAL]
+def test_the_work_is_finished_and_prepared_here_without_asking_scoremaster(ready_catalog, monkeypatch):
+    # Render's 512 MB (2026-11-06): it ran out of memory opening a MusicXML of 12 MB. Compressed it is 347 KB.
+    seen, asked = preparing_reader(), []
+    monkeypatch.setattr("backend.parsers.prepare.finish_reading",
+                        lambda *arguments: asked.append(arguments) or {"sha256": "a", "musicxml_gz": "x"})
+    worker.catalog.learned_instruments = {"fiscornio": "flugelhorn.bb"}
+    assert worker.prepared_work(seen["client"], BASE, BODY) == {"sha256": "a", "musicxml_gz": "x"}
+    assert seen["final"] == [], "nothing goes to Render to be worked out"
+    assert asked == [(BODY["musicxml"].encode(), {"fiscornio": "flugelhorn.bb"}, False, "score")]
+
+
+def test_a_finished_work_goes_without_its_uncompressed_copy(monkeypatch):
+    sent = []
+
+    def handler(request):
+        sent.append(json.loads(request.content))
+        return httpx.Response(202)
+    monkeypatch.setattr(worker, "prepared_work", lambda client, callback, body: {"sha256": "a", "musicxml_gz": "x"})
+    worker.send_result(httpx.Client(transport=httpx.MockTransport(handler)), BASE, BODY)
+    assert sent == [{"source": "score", "concert_pitch": False, "prepared": {"sha256": "a", "musicxml_gz": "x"}}]
+
+
+def test_a_finished_work_refused_is_sent_as_before(monkeypatch):
+    sent = []
+
+    def handler(request):
+        sent.append(json.loads(request.content))
+        return httpx.Response(422 if "prepared" in sent[-1] else 202)
+    monkeypatch.setattr(worker, "prepared_work", lambda client, callback, body: {"sha256": "a", "musicxml_gz": "x"})
+    worker.send_result(httpx.Client(transport=httpx.MockTransport(handler)), BASE, BODY)
+    assert sent[-1] == BODY
 
 
 def test_without_scoremaster_s_catalog_nothing_is_prepared():
@@ -634,16 +665,11 @@ def test_without_scoremaster_s_catalog_nothing_is_prepared():
     assert seen["final"] == []
 
 
-def test_a_scoremaster_without_the_final_step_gets_its_result_as_before(ready_catalog):
-    seen = preparing_reader(httpx.Response(404))
-    assert worker.prepared_work(seen["client"], BASE, BODY) is None
-
-
 def test_a_failed_preparation_is_told_without_its_message_and_stops_nothing(ready_catalog, monkeypatch, capsys):
     """The message of an error may carry a part's name, and the log is public."""
-    def fail(content):
+    def fail(*_):
         raise ValueError("Flauta de la obra secreta")
-    monkeypatch.setattr("backend.parsers.prepare.prepare_work", fail)
+    monkeypatch.setattr("backend.parsers.prepare.finish_reading", fail)
     assert worker.prepared_work(preparing_reader()["client"], BASE, BODY) is None
     out = capsys.readouterr().out
     assert "ValueError" in out and "secreta" not in out
@@ -935,3 +961,4 @@ def test_a_scoremaster_restarting_does_not_stop_the_reading_of_the_pages(scorema
     scoremaster["client"].post = post
     assert run(scoremaster, payload()) == 0
     assert scoremaster["result"]["musicxml"]
+
