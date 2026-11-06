@@ -25,7 +25,8 @@ class StoredPdfImport(Base):
     pages_done: Mapped[int] = mapped_column(Integer, nullable=False, server_default='0')
     pages_total: Mapped[int] = mapped_column(Integer, nullable=False, server_default='0')
     error: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
-    musicxml: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
+    # deferred: the progress of a reading is polled every 4 seconds, and this is up to 12 MB (2026-11-06).
+    musicxml: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True, deferred=True)
     band_profile: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     total_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default='60')
     work_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), ForeignKey('works.id', ondelete='SET NULL'),
