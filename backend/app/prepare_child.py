@@ -6,10 +6,10 @@ import os
 from pathlib import Path
 import sys
 
-from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.domain.instrument_catalog import use_catalog, use_private_instruments
+from backend.infrastructure.database import database_engine
 from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
 from backend.parsers.playback import encode_timeline
 from backend.parsers.prepare import encoded_model
@@ -29,7 +29,7 @@ def _load_catalog() -> None:
     if not url:
         return
     try:
-        repository = PostgresInstrumentRepository(create_engine(url))
+        repository = PostgresInstrumentRepository(database_engine(url))
         use_catalog(repository.common() or None)
         use_private_instruments(repository.private())
     except SQLAlchemyError:

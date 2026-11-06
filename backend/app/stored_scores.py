@@ -139,6 +139,11 @@ def prepare_in_own_process(kind: str, source: bytes, store) -> None:
         done = subprocess.run([sys.executable, "-m", "backend.app.prepare_child", kind], input=source, capture_output=True,
                               timeout=PREPARING_SECONDS, check=True)
         store.save(sha256(source).hexdigest(), SCORE_VERSION if kind == "score" else TIMELINE_VERSION, done.stdout)
+    except subprocess.CalledProcessError as failed:
+        # Only the name of the error: its message may carry the address of the database. Killed for memory, it leaves none.
+        lines = (failed.stderr or b"").decode(errors="replace").strip().splitlines()
+        error = lines[-1].partition(":")[0] if lines else "sin error"
+        logger.warning('No se pudo preparar una obra en su propio proceso (salida %s, %s).', failed.returncode, error)
     except (subprocess.SubprocessError, OSError):
         # The process that dies says nothing of the work.
         logger.warning('No se pudo preparar una obra en su propio proceso.')

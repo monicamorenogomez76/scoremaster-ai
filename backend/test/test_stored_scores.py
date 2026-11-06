@@ -160,6 +160,17 @@ def test_another_process_prepares_the_work_and_the_server_keeps_it(monkeypatch, 
         assert store.load(key, TIMELINE_VERSION)
 
 
+def test_the_process_of_a_work_connects_with_the_url_neon_gives(monkeypatch):
+    """Neon's URL names no driver; SQLAlchemy would then look for psycopg2, which is not installed."""
+    from backend.app import stored_scores
+    from backend.parsers.score_codec import SCORE_VERSION
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:secret@127.0.0.1:1/nothing?sslmode=disable")
+    store = MemoryStore()
+    source = (Path(__file__).resolve().parents[2] / "test-scores" / "high_register.musicxml").read_bytes()
+    stored_scores.prepare_in_own_process("score", source, store)
+    assert store.load(sha256(source).hexdigest(), SCORE_VERSION), "without its catalog, the work is still prepared"
+
+
 def test_a_process_that_dies_stops_nothing(monkeypatch, caplog):
     from backend.app import stored_scores
     store = MemoryStore()
@@ -167,6 +178,16 @@ def test_a_process_that_dies_stops_nothing(monkeypatch, caplog):
     stored_scores.prepare_in_own_process("score", b"<score-partwise/>", store)
     assert store.saved == 0
     assert "No se pudo preparar una obra" in caplog.text
+
+
+def test_a_process_that_fails_says_why_without_its_message(monkeypatch, caplog):
+    """The message of an error may carry the address of the database: only the name of the error goes to the log."""
+    from backend.app import stored_scores
+    monkeypatch.setattr(stored_scores.subprocess, "run", lambda *_, **__: (_ for _ in ()).throw(
+        stored_scores.subprocess.CalledProcessError(1, "child", stderr=b"Traceback\nValueError: postgresql://secret\n")))
+    stored_scores.prepare_in_own_process("score", b"<score-partwise/>", MemoryStore())
+    assert "ValueError" in caplog.text and "salida 1" in caplog.text
+    assert "secret" not in caplog.text
 
 
 def test_the_process_of_a_work_is_the_first_to_go_when_memory_runs_out(tmp_path):
