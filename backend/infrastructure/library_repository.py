@@ -24,7 +24,8 @@ class StoredWork(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     composer: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    source: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    # deferred: a file travels only when asked for (Neon transfers 5 GB a month, 2026-11-06).
+    source: Mapped[bytes] = mapped_column(LargeBinary, nullable=False, deferred=True)
     source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
     preparation_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default='review')
