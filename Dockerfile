@@ -19,6 +19,9 @@ COPY migrations ./migrations
 COPY demo ./demo
 COPY alembic.ini ./alembic.ini
 
+# glibc keeps one arena of freed memory per thread: on Render's 512 MB, two are enough (2026-11-06).
+ENV MALLOC_ARENA_MAX=2
+
 # The server runs without root privileges.
 RUN useradd --system --uid 10001 --no-create-home scoremaster
 USER scoremaster

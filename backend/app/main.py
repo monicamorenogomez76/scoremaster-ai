@@ -30,8 +30,8 @@ from backend.app.evaluation_routes import router as evaluation_router
 from backend.app.instrument_routes import (confirmable_ids, learn_confirmations, load_instrument_catalog,
                                            router as instrument_router)
 from backend.app.rehearsal_routes import router as rehearsal_router
-from backend.app.pdf_routes import router as pdf_router
-from backend.app.stored_scores import prepare_missing_works
+from backend.app.pdf_routes import OneReadingAtATime, router as pdf_router
+from backend.app.stored_scores import prepare_in_own_process, prepare_missing_works
 from backend.app.work_analysis import analyze_and_store, refresh_outdated_analyses, repair_pdf_works
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
@@ -73,7 +73,7 @@ async def lifespan(app):
 
 def _refresh_analyses(score_store):
     """Works analysed with an earlier ScoreLint are analysed again (difficulty-v2, 2026-10-14)."""
-    refreshed = refresh_outdated_analyses(get_analysis_repository(), get_library_repository(), score_store)
+    refreshed = refresh_outdated_analyses(get_analysis_repository(), get_library_repository(), score_store, only_prepared=True)
     if refreshed:
         # uvicorn.error is the logger Render shows.
         logging.getLogger("uvicorn.error").info("Obras analizadas de nuevo con la versión actual de ScoreLint: %s.", refreshed)
@@ -85,7 +85,9 @@ def _prepare_missing(score_store, playback_store):
         repaired = repair_pdf_works(get_pdf_import_repository(), get_library_repository(), get_instrument_store())
         if repaired:
             logging.getLogger("uvicorn.error").info("Obras de PDF reparadas (compases y transposición): %s.", repaired)
-        prepare_missing_works(score_store, playback_store, after_models=lambda: _refresh_analyses(score_store))
+        prepare_missing_works(score_store, playback_store, after_models=lambda: _refresh_analyses(score_store),
+                              read_work=lambda kind, source: prepare_in_own_process(
+                                  kind, source, score_store if kind == "score" else playback_store))
     except Exception:
         logging.getLogger(__name__).warning("No se pudieron preparar las obras guardadas.", exc_info=True)
 
@@ -134,6 +136,7 @@ app.include_router(evaluation_router)
 app.include_router(pdf_router)
 app.include_router(instrument_router)
 app.include_router(ai_usage_router)
+app.add_middleware(OneReadingAtATime)
 
 # The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
 CONTENT_SECURITY_POLICY = "; ".join([

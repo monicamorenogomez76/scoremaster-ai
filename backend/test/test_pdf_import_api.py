@@ -41,6 +41,11 @@ def upload(client, files=(("obra.pdf", PDF),), kind="score", title="Oregon Trail
                        files=[("files", (name, content, "application/pdf")) for name, content in files])
 
 
+def next_start(monkeypatch):
+    """A reading received stops the startup until the next one."""
+    monkeypatch.setattr("backend.parsers.reader._reading_received", False)
+
+
 def machine(client, job, path, **kwargs):
     """The reader in GitHub Actions: no session, only the one-time token of the job."""
     headers = {"Authorization": "Bearer " + job["token"]}
@@ -216,7 +221,7 @@ def test_a_score_in_c_read_from_a_pdf_keeps_its_sounding_pitch(clients, reader, 
     assert (b"<transpose>" in stored) == transposed
 
 
-def test_works_read_before_the_transposition_are_transposed_when_the_server_starts(clients, reader, postgres_engine):  # noqa: F811
+def test_works_read_before_the_transposition_are_transposed_when_the_server_starts(clients, reader, postgres_engine, monkeypatch):  # noqa: F811
     """Works read from a PDF before 2026-10-29 kept copista's MusicXML without <transpose>: everything sounded as
     written. At startup they take the transposition of each instrument and are analysed again, without reading the
     PDF again; the notes stay as written."""
@@ -244,6 +249,7 @@ def test_works_read_before_the_transposition_are_transposed_when_the_server_star
     library, instruments = PostgresLibraryRepository(postgres_engine), PostgresInstrumentRepository(postgres_engine)
     imports, analyses = PostgresPdfImportRepository(postgres_engine), PostgresAnalysisRepository(postgres_engine)
 
+    next_start(monkeypatch)
     assert repair_pdf_works(imports, library, instruments) == 1, "the score in C read later is left alone"
     with postgres_engine.connect() as connection:
         source, stored_sha = connection.execute(text("SELECT source, source_sha256 FROM works WHERE id = :work"),
@@ -255,7 +261,7 @@ def test_works_read_before_the_transposition_are_transposed_when_the_server_star
     assert refresh_outdated_analyses(analyses, library) == 0
 
 
-def test_measures_read_too_long_or_too_short_keep_their_length(clients, reader, postgres_engine):  # noqa: F811
+def test_measures_read_too_long_or_too_short_keep_their_length(clients, reader, postgres_engine, monkeypatch):  # noqa: F811
     """2026-10-29: a measure copista read with three beats in 2/4 made every later measure of its part sound late."""
     import hashlib
     from sqlalchemy import text
@@ -275,6 +281,7 @@ def test_measures_read_too_long_or_too_short_keep_their_length(clients, reader, 
                            {"read": read, "sha": sha})
         connection.execute(text("UPDATE analyses SET source_sha256 = :sha"), {"sha": sha})
     library, imports = PostgresLibraryRepository(postgres_engine), PostgresPdfImportRepository(postgres_engine)
+    next_start(monkeypatch)
     assert repair_pdf_works(imports, library) == 1, "a work kept before is fitted when the server starts"
     with postgres_engine.connect() as connection:
         assert offsets(bytes(connection.execute(text("SELECT source FROM works")).scalar_one())) == [0, 2, 4]
@@ -471,3 +478,128 @@ def test_a_failed_reading_prepares_nothing(clients, stores):  # noqa: F811
     from sqlalchemy import text
     with stores["score"].engine.connect() as connection:
         assert connection.execute(text("SELECT count(*) FROM prepared_works")).scalar_one() == 0
+
+
+# --- Render's 512 MB (2026-11-06): a reading of 34 staves is a MusicXML of 12 MB; Render ran out of memory receiving it -------
+
+def finished(read=MUSICXML):
+    """What the reader sends now: the work finished in GitHub's machine, compressed, with its preparation."""
+    from backend.parsers.prepare import finish_reading
+    return finish_reading(read, {}, False, "score")
+
+
+def test_a_reading_finished_by_the_reader_is_kept_without_opening_its_xml(clients, reader, stores, monkeypatch):  # noqa: F811
+    import base64
+    import gzip
+    from backend.app import pdf_routes
+    ana, _ = clients
+    created = upload(ana)
+    prepared = finished()
+    forbid_reading(monkeypatch)
+
+    def refuse(*_):
+        raise AssertionError("Render opened the XML")
+    monkeypatch.setattr(pdf_routes, "final_musicxml", refuse)
+    answer = machine(ana, reader.jobs[0], "/result", json={"source": "score", "prepared": prepared})
+    assert answer.status_code == 202
+    done = ana.get("/pdf-imports/" + created.json()["id"]).json()
+    assert done["status"] == "done"
+    kept = ana.get("/works/" + done["work_id"] + "/file").content
+    assert kept == gzip.decompress(base64.b64decode(prepared["musicxml_gz"]))
+
+
+@pytest.mark.parametrize("spoil", ["other work", "not gzip", "entity"])
+def test_a_finished_reading_that_is_not_right_is_refused_and_the_reader_sends_it_as_before(clients, reader, spoil):  # noqa: F811
+    import base64
+    import gzip
+    ana, _ = clients
+    created = upload(ana)
+    prepared = finished()
+    if spoil == "other work":
+        prepared["sha256"] = "0" * 64
+    elif spoil == "not gzip":
+        prepared["musicxml_gz"] = "AAAA"
+    else:
+        content = b'<!DOCTYPE a [<!ENTITY b "c">]><a/>'
+        prepared.update(musicxml_gz=base64.b64encode(gzip.compress(content)).decode(),
+                        sha256=__import__("hashlib").sha256(content).hexdigest())
+    answer = machine(ana, reader.jobs[0], "/result", json={"prepared": prepared})
+    assert answer.status_code == 422
+    assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "queued"
+
+
+def test_a_finished_reading_too_large_when_opened_is_refused(clients, reader, monkeypatch):  # noqa: F811
+    from backend.app import pdf_routes
+    ana, _ = clients
+    upload(ana)
+    monkeypatch.setattr(pdf_routes, "MAX_MUSICXML_CHARACTERS", 10)
+    assert machine(ana, reader.jobs[0], "/result", json={"prepared": finished()}).status_code == 422
+
+
+def test_the_model_of_a_reading_does_not_stay_in_memory_after_its_turn(clients, reader, stores):  # noqa: F811
+    from backend.app import stored_scores
+    ana, _ = clients
+    created = upload(ana)
+    assert machine(ana, reader.jobs[0], "/result", json={"prepared": finished()}).status_code == 202
+    assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "done"
+    assert not stored_scores._parsed, "the works of the startup need that room; it is read back from the store"
+
+
+def test_the_reader_gets_the_instrument_of_each_name_the_account_confirmed(clients, reader, monkeypatch):  # noqa: F811
+    from backend.app.dependencies import get_instrument_store
+    ana, _ = clients
+    upload(ana)
+
+    class Store:
+        def learned(self, user_id):
+            return {"fiscornio": "flugelhorn.bb"}
+    app.dependency_overrides[get_instrument_store] = lambda: Store()
+    try:
+        catalog = machine(ana, reader.jobs[0], "/instruments", method="GET").json()
+    finally:
+        app.dependency_overrides.pop(get_instrument_store, None)
+    assert catalog["learned"] == ["fiscornio"]
+    assert catalog["learned_instruments"] == {"fiscornio": "flugelhorn.bb"}
+
+
+def test_one_reading_is_analysed_at_a_time(clients, reader, monkeypatch):  # noqa: F811
+    from backend.app import pdf_routes
+    ana, _ = clients
+    upload(ana)
+    held = []
+    real = pdf_routes.analyze_and_store
+
+    def analysing(*args, **kwargs):
+        held.append(pdf_routes.ONE_READING.locked())
+        return real(*args, **kwargs)
+    monkeypatch.setattr(pdf_routes, "analyze_and_store", analysing)
+    assert machine(ana, reader.jobs[0], "/result", json={"musicxml": MUSICXML.decode()}).status_code == 202
+    assert held == [True]
+    assert not pdf_routes.ONE_READING.locked()
+
+
+def test_a_reader_is_told_to_wait_while_another_reading_is_processed(clients, reader, monkeypatch):  # noqa: F811
+    # Told before its 13 MB are read: receiving them while music21 reads another work is what ran out of memory.
+    from backend.app import pdf_routes
+    ana, _ = clients
+    created = upload(ana)
+    monkeypatch.setattr("backend.parsers.reader._reading_asked", None)   # asking leaves the startup waiting
+    assert pdf_routes.ONE_READING.acquire(blocking=False)
+    try:
+        for path in ("/final", "/result"):
+            assert machine(ana, reader.jobs[0], path, json={"musicxml": MUSICXML.decode()}).status_code == 503
+    finally:
+        pdf_routes.ONE_READING.release()
+    assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "queued", "the reader tries again"
+
+
+def test_without_a_token_nothing_takes_the_turn_of_a_reading(clients, reader):  # noqa: F811
+    from backend.app import pdf_routes
+    ana, _ = clients
+    upload(ana)
+    url = reader.jobs[0]["callback"].split("testserver", 1)[1] + "/final"
+    assert pdf_routes.ONE_READING.acquire(blocking=False)
+    try:
+        assert ana.post(url, json={"musicxml": "<a/>"}).status_code == 401
+    finally:
+        pdf_routes.ONE_READING.release()

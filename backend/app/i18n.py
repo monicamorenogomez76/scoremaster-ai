@@ -45,6 +45,8 @@ EN = {
     "Solo se aceptan archivos PDF.": "Only PDF files are accepted.",
     "No existe ese PDF.": "That PDF does not exist.",
     "La lectura no es MusicXML válido.": "The reading is not valid MusicXML.",
+    "ScoreMaster está procesando otra obra.": "ScoreMaster is processing another work.",
+    "La obra terminada no es lo que dice ser.": "The finished work is not what it says it is.",
     "No se encontró la lectura del PDF.": "The reading of the PDF was not found.",
     "La lectura de PDF no está configurada en este servidor.": "PDF reading is not set up on this server.",
     "No se pudo poner en marcha el lector de PDF. Inténtalo de nuevo.": "Could not start the PDF reader. Try again.",

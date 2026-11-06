@@ -202,6 +202,7 @@ class Catalog:
     def __init__(self, document: dict | None = None):
         self.ready = bool(use_catalog and document and document.get("instruments"))
         self.learned = set(document.get("learned") or []) if self.ready else set()
+        self.learned_instruments = dict(document.get("learned_instruments") or {}) if self.ready else {}
         if self.ready:
             use_catalog(document["instruments"])
 
@@ -614,26 +615,24 @@ def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, s
 
 
 def prepared_work(client: httpx.Client, callback: str, body: dict) -> dict | None:
-    """The work prepared here (2026-11-04): this machine reads with music21 in seconds what takes Render minutes. Only
-    a help: on any failure ScoreMaster reads the work itself. Without its catalog the audio would not be what it prepares."""
+    """The work finished and prepared here (2026-11-04, 2026-11-06): this machine does with music21 in seconds what takes Render
+    minutes, and Render ran out of memory opening a MusicXML of 12 MB. Only a help: on any failure ScoreMaster does it itself.
+    Without its catalog the audio would not be what it prepares."""
     if not catalog.ready:
         return None
     try:
         # Imported here: the processes that read the pages do not load music21, and an older workflow does not bring it.
-        from backend.parsers.prepare import prepare_work
-        answer = client.post(callback + "/final", json=body)
-        if answer.status_code != 200:
-            print("ScoreMaster preparará la obra.", flush=True)
-            return None
-        return prepare_work(answer.json()["musicxml"].encode("utf-8"))
+        from backend.parsers.prepare import finish_reading
+        return finish_reading(body["musicxml"].encode("utf-8"), catalog.learned_instruments, body["concert_pitch"], body["source"])
     except Exception as error:
         # The kind of error, without its message (it may carry a part's name).
         print(f"ScoreMaster preparará la obra: {type(error).__name__}.", flush=True)
         return None
 
 
-# ScoreMaster restarting (a deploy, or asleep on Render's free plan, 2026-11-05) must not lose a reading of minutes.
-RESULT_WAITS = (15, 30, 60, 120, 120, 180)
+# ScoreMaster restarting (a deploy, or asleep on Render's free plan, 2026-11-05) or reading a work of its startup, minutes on
+# its tenth of a CPU (2026-11-06), must not lose a reading of minutes.
+RESULT_WAITS = (15, 30, 60, 120, 120, 180, 300, 300)
 RESTARTING = {429, 500, 502, 503, 504}
 
 
@@ -662,7 +661,9 @@ def send_result(client: httpx.Client, callback: str, body: dict) -> None:
     prepared = prepared_work(client, callback, body)
     if prepared:
         try:
-            _post_result(client, callback, {**body, "prepared": prepared})
+            # Finished here, the work travels compressed inside what was prepared.
+            light = {key: value for key, value in body.items() if key != "musicxml"} if "musicxml_gz" in prepared else body
+            _post_result(client, callback, {**light, "prepared": prepared})
             print("Obra preparada para ScoreMaster.", flush=True)
             return
         except httpx.HTTPError as error:
