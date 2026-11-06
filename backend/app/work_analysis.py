@@ -112,10 +112,10 @@ def repair_pdf_works(imports, library, instruments=None) -> int:
     """Works read from a PDF before these fixes are repaired as a reading is now, without reading the PDF again: every
     measure takes the length of its time signature (fit_measures, 2026-10-29), if read before #142 each part the
     transposition of its instrument (copista writes none), and a transposed part the key signature the reader missed. refresh_outdated_analyses then analyses them again because
-    their file changed. Returns how many changed; once repaired, a work is left as it is."""
+    their file changed. Returns how many changed; once repaired, a work is not even downloaded again (2026-11-06)."""
     untransposed = {work_id for _, work_id, _ in imports.read_before(TRANSPOSED_SINCE)}
     changed = 0
-    for user_id, work_id, kind in imports.read_before(datetime.now(timezone.utc)):
+    for user_id, work_id, kind in imports.to_repair():
         stored = library.work_file(user_id, work_id)
         if stored is None:
             continue
@@ -127,6 +127,7 @@ def repair_pdf_works(imports, library, instruments=None) -> int:
             repaired = fix_key_signatures(repaired)
             if repaired != stored[0] and library.replace_source(user_id, work_id, repaired):
                 changed += 1
+            imports.repaired(work_id)
         except Exception:
             logger.warning("No se pudo reparar una obra leída de PDF.", exc_info=True)
     return changed
