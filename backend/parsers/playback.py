@@ -180,6 +180,10 @@ def _ready(key: str, store: Optional[PreparedStore]) -> Optional[_Timeline]:
     return found
 
 
+def is_prepared(content: bytes, store: Optional[PreparedStore] = None) -> bool:
+    return _ready(timeline_key(content), store) is not None
+
+
 def _prepare(content: bytes, key: str, store: Optional[PreparedStore]) -> _Timeline:
     """Runs in the reader thread."""
     found = _ready(key, store)

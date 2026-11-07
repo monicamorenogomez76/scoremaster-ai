@@ -115,3 +115,46 @@ def test_a_prepared_work_does_not_wait_while_another_one_is_being_read():
     threading.Thread(target=lambda: build_playback(content, "Clarinet", 1, 1) and done.set()).start()
     assert done.wait(5), "the prepared work was cut without waiting for the other one"
     busy.set()
+
+
+# A work read from a PDF may weigh more than an upload may (2026-11-07, 158 pages and 37 parts: 11 MB). The browser sends
+# it back to play it; what is already prepared needs no reading, so its size costs nothing.
+def _limits(monkeypatch):
+    from backend.app import main
+    monkeypatch.setattr(main, "MAX_UPLOAD_BYTES", 100)
+    monkeypatch.setattr(main, "MAX_PREPARED_UPLOAD_BYTES", 10 ** 6)
+
+
+def _play(content):
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+    return TestClient(app).post("/playback", files={"file": ("obra.musicxml", content, "application/xml")},
+                                data={"instrument": "Clarinet", "first_measure": 1, "last_measure": 1})
+
+
+def test_a_prepared_work_plays_even_if_it_weighs_more_than_an_upload(monkeypatch):
+    playback.clear_timelines()
+    _limits(monkeypatch)
+    content = (SCORES / "high_density.musicxml").read_bytes()
+    expected = build_playback(content, "Clarinet", 1, 1)
+    _no_music21(monkeypatch)
+    response = _play(content)
+    assert response.status_code == 200
+    assert response.json() == expected
+
+
+def test_a_heavy_work_nobody_prepared_is_refused_before_reading_it(monkeypatch):
+    playback.clear_timelines()
+    _limits(monkeypatch)
+    _no_music21(monkeypatch)
+    assert _play((SCORES / "high_density.musicxml").read_bytes()).status_code == 413
+
+
+def test_a_prepared_work_has_a_limit_too(monkeypatch):
+    from backend.app import main
+    playback.clear_timelines()
+    _limits(monkeypatch)
+    content = (SCORES / "high_density.musicxml").read_bytes()
+    build_playback(content, "Clarinet", 1, 1)
+    monkeypatch.setattr(main, "MAX_PREPARED_UPLOAD_BYTES", 200)
+    assert _play(content).status_code == 413

@@ -129,6 +129,18 @@ def test_responses_carry_security_headers(client):
     assert headers["referrer-policy"] == "strict-origin-when-cross-origin"
 
 
+def test_a_heavy_work_already_prepared_can_be_analysed_again(client, monkeypatch):
+    """Confirming the instruments of a work read from a PDF sends it back, and it may weigh more than an upload."""
+    from backend.app import main
+    from backend.app.stored_scores import clear_parsed_works, parsed_work
+    csrf = register(client).json()["csrf_token"]
+    clear_parsed_works()
+    monkeypatch.setattr(main, "MAX_UPLOAD_BYTES", 100)
+    assert analyze(client, {"X-CSRF-Token": csrf}).status_code == 413
+    parsed_work(SCORE.read_bytes())
+    assert analyze(client, {"X-CSRF-Token": csrf}).status_code == 200
+
+
 def test_uploads_are_limited_before_parsing(client):
     csrf = register(client).json()["csrf_token"]
     huge = b"<score-partwise>" + b" " * (8 * 1024 * 1024)

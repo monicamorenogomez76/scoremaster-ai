@@ -31,7 +31,7 @@ from backend.app.instrument_routes import (confirmable_ids, learn_confirmations,
                                            router as instrument_router)
 from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.pdf_routes import OneReadingAtATime, router as pdf_router
-from backend.app.stored_scores import prepare_in_own_process, prepare_missing_works
+from backend.app.stored_scores import kept_work, prepare_in_own_process, prepare_missing_works
 from backend.app.work_analysis import analyze_and_store, refresh_outdated_analyses, repair_pdf_works
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
@@ -44,7 +44,7 @@ from backend.application.library import LibraryRepository
 from backend.domain.models import Score
 from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
 from backend.parsers.musicxml_source import extract_musicxml
-from backend.parsers.playback import (NotMusicXML, StillPreparing, build_playback, prepare_playback, preparation_enabled,
+from backend.parsers.playback import (NotMusicXML, StillPreparing, build_playback, is_prepared, prepare_playback, preparation_enabled,
                                       preparation_status)
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -163,6 +163,9 @@ SECURITY_HEADERS = {
 }
 HSTS = "max-age=31536000; includeSubDomains"
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+# A work read from a PDF may weigh more (2026-11-07: 158 pages, 37 parts, 11 MB); it comes back to be played or analysed, and
+# what is already prepared is not read again.
+MAX_PREPARED_UPLOAD_BYTES = 32 * 1024 * 1024
 MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024
 
 
@@ -183,10 +186,10 @@ async def security(request, call_next):
     return response
 
 
-def _read_upload(file: UploadFile) -> bytes:
-    """Upload bytes within the size limits, with no XML entity declarations."""
-    content = file.file.read(MAX_UPLOAD_BYTES + 1)
-    if len(content) > MAX_UPLOAD_BYTES:
+def _read_upload(file: UploadFile, prepared=lambda content: False) -> bytes:
+    """Upload bytes within the size limits, with no XML entity declarations. prepared tells a work that needs no reading."""
+    content = file.file.read(MAX_PREPARED_UPLOAD_BYTES + 1)
+    if len(content) > MAX_PREPARED_UPLOAD_BYTES or (len(content) > MAX_UPLOAD_BYTES and not prepared(content)):
         raise HTTPException(status_code=413, detail="La partitura supera 8 MB.")
     if is_zipfile(io.BytesIO(content)):
         with ZipFile(io.BytesIO(content)) as archive:
@@ -252,10 +255,13 @@ def playback(
         raise HTTPException(status_code=400, detail="El rango de compases no es válido.")
     selection = [name[:200] for name in instruments[:64]] if instruments else instrument
     try:
-        return build_playback(_read_upload(file), selection, first_measure, last_measure, store, answer_quickly=True)
+        content = _read_upload(file, lambda content: is_prepared(content, store))
+        return build_playback(content, selection, first_measure, last_measure, store, answer_quickly=True)
     except StillPreparing as preparing:
         # A long work: the browser follows /playback/preparations/{key} and asks again when it is ready.
         return JSONResponse(status_code=202, content={"preparing": preparing.key})
+    except HTTPException:
+        raise
     except NotMusicXML as exc:
         raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.") from exc
     except Exception as exc:
@@ -317,7 +323,7 @@ def analyze_score(
         raise HTTPException(status_code=400, detail="band_profile must map instruments to musician counts.")
     overrides = _instrument_overrides(instrument_overrides, confirmable_ids(user, instruments))
 
-    content = _read_upload(file)
+    content = _read_upload(file, lambda content: kept_work(content, score_store) is not None)
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
     musicxml_suffix = _musicxml_suffix(content, extension)
