@@ -56,8 +56,8 @@ class _Copista:
     model = None
 
     @classmethod
-    def read(cls, pdf_path: str, number: int, out_dir: str) -> bytes:
-        os.environ["COPISTERIA_DETECTOR"] = "2m"
+    def read(cls, pdf_path: str, number: int, out_dir: str, detector: str = "2m") -> bytes:
+        os.environ["COPISTERIA_DETECTOR"] = detector
         from copisteria import read
         from copisteria.paths import EVIDENCE
         from copisteria.pipeline import transcribe
@@ -72,14 +72,14 @@ def _timed_out(signum, frame):
     raise TimeoutError
 
 
-def read_page(pdf_path: str, number: int, out_dir: str) -> bytes:
-    """One page read by copista-2m, at most PAGE_TIMEOUT_SECONDS."""
+def read_page(pdf_path: str, number: int, out_dir: str, detector: str = "2m") -> bytes:
+    """One page read by copista-2m, or the detector given, at most PAGE_TIMEOUT_SECONDS."""
     import signal
     import traceback
     previous = signal.signal(signal.SIGALRM, _timed_out)
     signal.alarm(PAGE_TIMEOUT_SECONDS)
     try:
-        return _Copista.read(pdf_path, number, out_dir)
+        return _Copista.read(pdf_path, number, out_dir, detector)
     except TimeoutError:
         raise PageFailed(f"More than {PAGE_TIMEOUT_SECONDS} s on one page.") from None
     except Exception:
@@ -90,6 +90,13 @@ def read_page(pdf_path: str, number: int, out_dir: str) -> bytes:
 
 
 DEFAULT_READ_PAGE = read_page
+# copista-2m may take a page of a score apart into short systems (2026-11-07, «The Lion King»: a page of three measures came
+# out with 12 staves of 20 and 12 measures, and every later measure moved); copista-28m read those pages whole. It is slower
+# and its weights weigh 115 MB, so only the pages left short are read with it, and they are downloaded only then.
+BIG_DETECTOR_REPOSITORY = "kobimusic/copista-28m"
+BIG_DETECTOR_REVISION = "44464d11234a22ba23634ec8eb1e31e3b012021a"
+BIG_DETECTOR_FILE = "small/v7_obj-recall-30m_best.pt"
+MAX_SECOND_READINGS = 30
 # Several processes of one processor each read faster than one process with all of them (2026-11-03, 12 pages on four
 # processors: 54 s one after another, 43 s with four threads, 29 s two by two, 22 s four processes of one). GitHub's
 # machine for public repositories has four processors and 16 GB. OMR_PAGE_WORKERS changes it.
@@ -672,7 +679,52 @@ def send_result(client: httpx.Client, callback: str, body: dict) -> None:
     _post_result(client, callback, body)
 
 
-def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count_pages, page_text=page_text) -> int:
+def _fetch_big_detector() -> None:
+    from copisteria.paths import MODELS
+    from huggingface_hub import hf_hub_download
+    hf_hub_download(BIG_DETECTOR_REPOSITORY, BIG_DETECTOR_FILE, revision=BIG_DETECTOR_REVISION, local_dir=MODELS)
+
+
+def read_page_big(pdf_path: str, number: int, out_dir: str) -> bytes:
+    _fetch_big_detector()
+    return read_page(pdf_path, number, out_dir, "28m")
+
+
+def read_with_big_detector(pages: list[tuple[str, int]]) -> dict:
+    """{(path, number): MusicXML or the exception}, in a new process: copisteria keeps the first detector it loads."""
+    import multiprocessing
+    from concurrent.futures import ProcessPoolExecutor
+    with tempfile.TemporaryDirectory() as out_dir, ProcessPoolExecutor(
+            max_workers=1, mp_context=multiprocessing.get_context("spawn")) as pool:
+        futures = {page: pool.submit(_read_one, read_page_big, page[0], page[1], out_dir) for page in pages}
+        return {page: future.result() for page, future in futures.items()}
+
+
+def read_short_pages_again(found: list, paths: dict, read_again) -> list:
+    """The pages (place, MusicXML, text) with fewer staves than the fullest, read again, keep the second reading when it
+    has more. One or two staves are a part's; whatever fails leaves the first reading."""
+    widest = max((staves(xml) for _, xml, _ in found if xml is not None), default=0)
+    short = [place for place, xml, _ in found if xml is not None and 3 <= staves(xml) < widest][:MAX_SECOND_READINGS]
+    if not short:
+        return found
+    print(f"Se releen {len(short)} páginas con menos pentagramas que las demás.", flush=True)
+    try:
+        again = read_again([(paths[file_number], number) for file_number, number in short])
+    except Exception as error:
+        print(f"No se pudieron releer: {type(error).__name__}.", flush=True)
+        return found
+    better = []
+    for place, xml, text in found:
+        second = again.get((paths[place[0]], place[1])) if place in short else None
+        if isinstance(second, bytes) and staves(second) > staves(xml):
+            print(f"Archivo {place[0]}, página {place[1]}: de {staves(xml)} a {staves(second)} pentagramas.", flush=True)
+            xml = second
+        better.append((place, xml, text))
+    return better
+
+
+def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count_pages, page_text=page_text,
+        read_again=None) -> int:
     """Reads the job and reports to ScoreMaster. 0 when the work was sent back, 1 when the failure was."""
     print("::add-mask::" + data["token"], flush=True)
     client.headers["Authorization"] = "Bearer " + data["token"]
@@ -708,6 +760,9 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         out_dirs = {path: tempfile.mkdtemp(dir=folder) for _, path in saved}
         # The log numbers the files: it never says which work was read (2026-11-01).
         numbered = {path: number for number, (_, path) in enumerate(saved, 1)}
+        paths = {number: path for path, number in numbered.items()}
+        if read_again is None:
+            read_again = read_with_big_detector if read_page is DEFAULT_READ_PAGE else lambda pages: {}
         # The real copista reads several pages at once; a reading given by the tests, one after another.
         workers = page_workers() if read_page is DEFAULT_READ_PAGE else 1
 
@@ -744,10 +799,12 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                     print(f"Archivo {numbered[path]}, página {number} sin música, se salta:\n{outcome}", flush=True)
                 else:
                     found.append(((numbered[path], number), outcome, texts[(path, number)]))
-            return found
+            return read_short_pages_again(found, paths, read_again)
 
         if not by_file:
             raise Refused("No se encontró música en el PDF.")
+        by_file = {key: read_short_pages_again(sorted(pages_read, key=lambda found: found[0]), paths, read_again)
+                   for key, pages_read in by_file.items()}
         read = [(name, sorted(by_file.get((name, path), []) + failed.get((name, path), []), key=lambda page: page[0]))
                 for name, path in saved if (name, path) in by_file or (name, path) in failed]
         try:

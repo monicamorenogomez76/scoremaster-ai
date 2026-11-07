@@ -962,3 +962,81 @@ def test_a_scoremaster_restarting_does_not_stop_the_reading_of_the_pages(scorema
     assert run(scoremaster, payload()) == 0
     assert scoremaster["result"]["musicxml"]
 
+
+
+# Pages copista-2m takes apart (2026-11-07, «The Lion King»): a page of three measures came out as three short systems, 12
+# staves and 12 measures instead of 20 and 3, and every later measure moved. copista-28m reads them whole.
+def test_a_short_page_of_a_score_is_read_again_and_keeps_the_better_reading(capsys):
+    found = [((1, 1), page(5, 2, "C"), ""), ((1, 2), page(3, 8, "D"), ""), ((1, 3), page(5, 2, "E"), "")]
+    asked = []
+
+    def read_again(pages):
+        asked.extend(pages)
+        return {pages[0]: page(5, 2, "F")}
+
+    better = worker.read_short_pages_again(found, {1: "obra.pdf"}, read_again)
+    assert asked == [("obra.pdf", 2)], "only the short page"
+    assert [xml for _, xml, _ in better] == [found[0][1], page(5, 2, "F"), found[2][1]]
+    assert "Archivo 1, página 2: de 3 a 5 pentagramas." in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("second", [page(2, 2, "F"), page(3, 2, "F"), worker.PageFailed("no")])
+def test_a_second_reading_that_is_no_better_changes_nothing(second):
+    found = [((1, 1), page(5, 2, "C"), ""), ((1, 2), page(3, 8, "D"), "")]
+    assert worker.read_short_pages_again(found, {1: "obra.pdf"}, lambda pages: {pages[0]: second}) == found
+
+
+def test_the_second_model_failing_altogether_changes_nothing():
+    found = [((1, 1), page(5, 2, "C"), ""), ((1, 2), page(3, 8, "D"), "")]
+
+    def read_again(pages):
+        raise OSError("the weights could not be downloaded")
+
+    assert worker.read_short_pages_again(found, {1: "obra.pdf"}, read_again) == found
+
+
+def test_parts_and_pages_copista_could_not_read_are_not_read_again():
+    found = [((1, 1), page(5, 2, "C"), ""), ((1, 2), page(1, 2, "D"), ""), ((1, 3), page(2, 2, "E"), ""),
+             ((1, 4), None, "")]
+
+    def read_again(pages):
+        raise AssertionError(f"read again: {pages}")
+
+    assert worker.read_short_pages_again(found, {1: "obra.pdf"}, read_again) == found
+
+
+def test_second_readings_are_limited():
+    found = [((1, 1), page(5, 2, "C"), "")] + [((1, number), page(3, 2, "D"), "") for number in range(2, 100)]
+    asked = []
+
+    def read_again(pages):
+        asked.extend(pages)
+        return {}
+
+    worker.read_short_pages_again(found, {1: "obra.pdf"}, read_again)
+    assert asked == [("obra.pdf", number) for number in range(2, 2 + worker.MAX_SECOND_READINGS)]
+
+
+def test_a_reading_uses_the_second_reading_of_its_short_page(scoremaster):
+    counts = {1: 5, 2: 3, 3: 5}
+    asked = []
+
+    def read_again(pages):
+        asked.extend(pages)
+        return {pages[0]: page(5, 2, "F")}
+
+    worker.run(payload("score"), client=scoremaster["client"], count_pages=lambda path: 3, page_text=lambda path, number: "",
+               read_page=lambda path, number, out_dir: page(counts[number], 8 if number == 2 else 2, "C"), read_again=read_again)
+    assert [number for _, number in asked] == [2]
+    from omr.merge import measure_count
+    assert measure_count(scoremaster["result"]["musicxml"].encode()) == 6, "the measures of the page as it is printed"
+
+
+def test_the_second_reading_uses_the_big_detector_at_its_pinned_revision(monkeypatch):
+    fetched, read = [], []
+    monkeypatch.setattr(worker, "_fetch_big_detector", lambda: fetched.append(1))
+    monkeypatch.setattr(worker._Copista, "read",
+                        classmethod(lambda cls, pdf, number, out_dir, detector="2m": read.append(detector) or b"<xml/>"))
+    assert worker.read_page_big("obra.pdf", 4, "dir") == b"<xml/>"
+    assert fetched == [1] and read == ["28m"]
+    assert re.fullmatch(r"[0-9a-f]{40}", worker.BIG_DETECTOR_REVISION)
