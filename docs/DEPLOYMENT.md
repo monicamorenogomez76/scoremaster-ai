@@ -138,7 +138,7 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 2. El *workflow* descarga de la rama `main` de ScoreMaster el código del lector (`omr/`), el catálogo de instrumentos
    (`backend/domain`) y lo que prepara las obras (`backend/parsers`); así se actualiza solo. Pide a ScoreMaster el catálogo de la base y los nombres que la cuenta ya
    confirmó, descarga los PDF con el token, lee las páginas con copista-2m y devuelve el avance y el MusicXML de la
-   obra, o por qué falló.
+   obra, o por qué falló. Las páginas de partitura que salen con menos pentagramas que las demás se releen con copista-28m (hasta 30 por archivo o partitura, y sus pesos, 115 MB, solo se descargan entonces).
 3. Antes de devolver la obra, el lector pregunta a ScoreMaster cómo quedará el MusicXML definitivo (`/final`), lo lee con
    music21 y envía el modelo y el audio ya preparados junto con el resultado. Así Render no pasa minutos leyéndola con su
    décima de CPU. Render solo lo guarda si corresponde a esos mismos bytes y a sus versiones, se puede abrir y no había nada guardado; en
