@@ -331,3 +331,35 @@ def test_a_work_music21_refuses_to_retouch_keeps_its_slurs(monkeypatch):
 
     monkeypatch.setattr(merge, "GeneralObjectExporter", Refusing)
     assert slurs_of(join_pages([slurred()], "Obra")) == [("C", "start"), ("D", "stop")]
+
+
+def measure_lengths(xml: bytes) -> list[float]:
+    """The length of each measure of each part, in quarters, voices overlapping."""
+    found = []
+    for part in ET.fromstring(xml).findall("part"):
+        divisions = 1
+        for bar in part.findall("measure"):
+            if bar.findtext("attributes/divisions"):
+                divisions = int(bar.findtext("attributes/divisions"))
+            now = end = 0
+            for element in bar:
+                duration = int(float(element.findtext("duration") or 0))
+                if element.tag == "backup":
+                    now -= duration
+                elif element.tag in ("forward", "note") and element.find("chord") is None:
+                    now += duration
+                    end = max(end, now)
+            found.append(end / divisions)
+    return found
+
+
+def test_a_rest_copista_marks_as_a_whole_measure_keeps_its_length():
+    """copista marks some rests as whole-measure ones that are not (2026-11-17, «Pirates of the Caribbean»: 81 of 693): a
+    rest of three beats and one of one in 4/4. Joined with the other parts, music21 wrote the first one a whole measure
+    long, and the measure had five beats."""
+    from omr.merge import combine_parts
+    marked = work(list("hh")).replace(b'<note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>half</type></note>',
+                                      b'<note><rest measure="yes"/><duration>2</duration><type>quarter</type></note>'
+                                      b'<note><rest/><duration>2</duration><type>quarter</type></note>', 1)
+    assert measure_lengths(marked) == [2.0, 2.0]
+    assert measure_lengths(combine_parts([("Flauta", marked), ("Tuba", work(list("hh")))], "Obra")) == [2.0] * 4

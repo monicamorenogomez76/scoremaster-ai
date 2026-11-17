@@ -8,6 +8,7 @@ token is masked in the log. The job is read from GitHub's event file, never from
 prints in the log (2026-10-27)."""
 from __future__ import annotations
 
+from difflib import SequenceMatcher
 import json
 import os
 import re
@@ -277,6 +278,16 @@ def _header(text: str) -> str:
     return "\n".join([line for line in (text or "").splitlines() if line.strip()][:HEADER_LINES])
 
 
+def _without_key_reading(piece: str) -> str:
+    """A name without the key a scan's text misread before it («EC ALTO SAXOPHONE 2»: the E♭), which the catalog does not
+    know (2026-11-17)."""
+    words = piece.split()
+    # «B.» before a name abbreviates it («B. Sax»): only a key read with a «~» or as two letters goes.
+    while len(words) > 1 and (words[0].startswith("~") or words[0].upper() in _KEY_READINGS - {"B", "E", "F"}):
+        words = words[1:]
+    return " ".join(words)
+
+
 def _without_title(piece: str) -> str:
     found = _TITLE_BEFORE.match(piece)
     return found.group(2).strip() if found else piece
@@ -307,8 +318,9 @@ def part_header(text: str) -> tuple[str | None, bool]:
                 return joined, False
         if _a_name(lines[0]):
             return lines[0], False
-    named = [name for name in (_without_title(piece) for piece in _pieces(_header(text)))
-             if len(name) <= 40 and catalog.names(name)]
+    # «MALLET PERCUSSION» is in no catalog: the reader's list of instrument words names it too (2026-11-17).
+    named = [name for name in (_without_key_reading(_without_title(piece)) for piece in _pieces(_header(text)))
+             if len(name) <= 40 and (catalog.names(name) or _a_name(name)) and not name.startswith("(")]
     return (min(named, key=len) if named else None), False
 
 
@@ -508,19 +520,108 @@ def staves(xml: bytes) -> int:
     return total
 
 
-def _parts_of(pages: list[tuple[bytes | None, str]]) -> list[tuple[str, list[bytes], bool]]:
+# How a scan's text reads the key before a name: «B♭», «E♭», «F» and their misreadings («~b», «EL», «BC»).
+_KEY_READINGS = {"B", "BB", "BL", "BC", "E", "EB", "EL", "EC", "F", "AB", "DB", "GB"}
+
+
+def _name_words(name: str) -> list[str]:
+    """The words of a part's name as a scan's text may misread them: the key before it goes («~b», «EL», «Bb»: the flat
+    read as letters), and an «l» or «I» alone is a 1."""
+    words = [re.sub(r"[^\w]", "", word).upper() for word in name.replace(",", " ").split()]
+    words = ["1" if word in ("L", "I") else word for word in words if word]
+    while words and words[0] in _KEY_READINGS:
+        words = words[1:]
+    return words
+
+
+def _misread_alike(left: str, right: str) -> bool:
+    """One name read twice: the same words, the short ones and the numbers exactly, the long ones but for a letter or two
+    («CLARTNET»). «B.C.» and «T.C.», or «1» and «2», are different parts."""
+    first, second = _name_words(left), _name_words(right)
+    # Abbreviations alone («Fl. 1», «Hn. 1») say too little to forgive a letter.
+    if not first or len(first) != len(second) or not any(len(word) > 3 for word in first):
+        return first == second and bool(first)
+    return all(a == b if len(a) <= 3 or len(b) <= 3 or a.isdigit() else SequenceMatcher(None, a, b).ratio() >= 0.8
+               for a, b in zip(first, second))
+
+
+def _instrument_words(name: str) -> list[str]:
+    return [word for word in _name_words(name) if not word.isdigit()]
+
+
+def _page_names(pages: list[tuple]) -> list[tuple[str | None, bool]]:
+    """The name and continuation of each page; a page naming another instrument between two pages of one part is theirs
+    (2026-11-17: a page of the tuba read «B. Sax»). Another number of the same instrument («Flute 2») is a part of its own."""
+    found = [part_header(page[1]) for page in pages]
+    found = [(_flats(name) if name else name, continues) for name, continues in found]
+    for at in range(1, len(found) - 1):
+        before, here, after = found[at - 1][0], found[at][0], found[at + 1][0]
+        if before and here and after and _one_part(before, after) and not _one_part(before, here) \
+                and _instrument_words(before) != _instrument_words(here):
+            found[at] = (before, True)
+    return found
+
+
+def _one_part(left: str, right: str) -> bool:
+    """Two first pages of one part: the same name, or a misreading of it. A shortened name is not enough here: «Baritone T.C.»
+    after «Baritone/ Euphonium» is another part."""
+    return left == right or _misread_alike(left, right)
+
+
+def _parts_of(pages: list[tuple]) -> list[tuple[str, list[bytes], bool]]:
     """Consecutive part pages grouped by the instrument their text names: (name, pages read, had pages copista could
-    not read). A page copista could not read has no music (None) but still says its instrument."""
+    not read). A page copista could not read has no music (None) but still says its instrument. A page (xml, text, True)
+    is a part's first page by its look: without a name it starts a part, which the next page naming one names."""
     groups: list[tuple[str, list[bytes], bool]] = []
-    for xml, text in pages:
-        name, continues = part_header(text)
-        name = _flats(name) if name else name
-        # A first page starts its part unless it repeats the name; a page after it follows it while it names the same part.
-        if not groups or (name and (not same_part(groups[-1][0], name) if continues else name != groups[-1][0])):
+    unnamed = False   # the last part was started by a first page without a name
+    for page, (name, continues) in zip(pages, _page_names(pages)):
+        xml, first = page[0], len(page) > 2 and page[2]
+        if first and not name:
+            groups.append((f"Parte {len(groups) + 1}", [], False))
+            unnamed = True
+        elif unnamed and name and not continues and not first and len(groups[-1][1]) + groups[-1][2] == 1:
+            # Right after the first page: the credits page whose name the text missed. Later, it is another part.
+            groups[-1] = (name, *groups[-1][1:])
+            unnamed = False
+        # A first page starts its part unless it repeats the name, as the scan's text may misread it; a page after it follows
+        # it while it names the same part.
+        elif not groups or (name and (not same_part(groups[-1][0], name) if continues else not _one_part(groups[-1][0], name))):
             groups.append((name or f"Parte {len(groups) + 1}", [], False))
+            unnamed = False
         found_name, found, failed = groups[-1]
         groups[-1] = (found_name, found + ([xml] if xml is not None else []), failed or xml is None)
     return groups
+
+
+# A part's first page prints the work's title block (2026-11-17): a page without text whose top is like that of the first
+# pages the text tells (they give the credits) starts a part. Measured on «Pirates of the Caribbean»: 0.60 and 0.73 for the
+# first pages without text, never above 0.18 for the others.
+CREDITS = re.compile(r"music\s+b[yv]|arrang|compos", re.IGNORECASE)
+TITLE_LIKE = 0.4
+
+
+def _top_band(pdf_path: str, number: int):
+    import numpy as np
+    from PIL import Image
+    with tempfile.TemporaryDirectory() as folder:
+        subprocess.run(["pdftoppm", "-f", str(number), "-l", str(number), "-r", "40", "-gray", "-png", "-singlefile",
+                        pdf_path, f"{folder}/top"], check=True, capture_output=True, timeout=60)
+        image = Image.open(f"{folder}/top.png").convert("L")
+    width, height = image.size
+    return np.asarray(image.crop((0, 0, width, int(height * 0.16))).resize((64, 12))) < 200
+
+
+def title_pages(pdf_path: str, numbers: list[int], references: list[int]) -> set[int]:
+    """Of the pages numbers (without text), those whose top is like that of a first page among references."""
+    if not references or not numbers:
+        return set()
+    known = [_top_band(pdf_path, number) for number in references]
+    found = set()
+    for number in numbers:
+        band = _top_band(pdf_path, number)
+        if max((band & other).sum() / max(1, (band | other).sum()) for other in known) >= TITLE_LIKE:
+            found.add(number)
+    return found
 
 
 def _misread(xml: bytes, text: str, joined: int) -> bool:
@@ -555,8 +656,24 @@ def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str]
     return join_pages([xml for xml, _ in pages], title, named, labels, same_part), named
 
 
+def _first_pages(saved: list[tuple[str, str]], pages: list[int], texts: dict, numbered: dict) -> frozenset:
+    """The places of the parts' first pages without text, by their title block (2026-11-17). Only a help: nothing on failure."""
+    found = set()
+    try:
+        for (_, path), count in zip(saved, pages):
+            references = [number for number in range(1, count + 1) if CREDITS.search(texts.get((path, number)) or "")]
+            empty = [number for number in range(1, count + 1) if not (texts.get((path, number)) or "").strip()]
+            found |= {(numbered[path], number) for number in title_pages(path, empty, references)}
+    except Exception as error:
+        print(f"No se pudieron buscar las primeras páginas sin texto: {type(error).__name__}.", flush=True)
+        return frozenset()
+    if found:
+        print(f"{len(found)} primeras páginas de particella sin texto, por su título.", flush=True)
+    return frozenset(found)
+
+
 def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]], title: str,
-          read_score=lambda: []) -> tuple[bytes, str, bool]:
+          read_score=lambda: [], first_pages: frozenset = frozenset()) -> tuple[bytes, str, bool]:
     """read: the pages of each file by their place in the upload, None where copista could not read the page. read_score
     reads the score's pages that were set apart, when a part needs them or no part appears. Returns the work, where it
     came from (parts or score) and whether the score says it is in C."""
@@ -565,11 +682,11 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
         for place, xml, text in pages:
             if xml is None:
                 if not looks_like_score(text):
-                    parts.append((None, text))
+                    parts.append((None, text, place in first_pages))
             elif staves(xml) >= SCORE_STAVES:
                 score.append((place, xml, text))
             else:
-                parts.append((xml, text))
+                parts.append((xml, text, place in first_pages))
     read_pages = []
 
     def score_pages() -> list[tuple[bytes, str]]:
@@ -579,10 +696,12 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
         return read_pages[0]
 
     groups = _parts_of(parts) if parts else []
-    named = any(instrument_name(text) and not looks_like_score(text) for _, text in parts)
+    named = any(instrument_name(text) and not looks_like_score(text) for _, text, _ in parts)
     if named:
-        # A cover or a page of notes before the named parts is no part (2026-10-28).
-        groups = [group for group in groups if not group[0].startswith("Parte ")]
+        # A cover or a page of notes before the named parts is no part (2026-10-28); a part without a name among them is
+        # (2026-11-17: scanned pages without text).
+        first_named = next((index for index, group in enumerate(groups) if not group[0].startswith("Parte ")), len(groups))
+        groups = groups[first_named:]
     if groups and (named or not score):
         missing = [name for name, found, _ in groups if not found]
         from_score = _from_score(missing, [name for name, _, _ in groups], score_pages(), title) if missing else {}
@@ -809,7 +928,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                 for name, path in saved if (name, path) in by_file or (name, path) in failed]
         try:
             if data["kind"] == "auto":
-                musicxml, source, concert_pitch = _auto(read, data["title"], read_score)
+                musicxml, source, concert_pitch = _auto(read, data["title"], read_score, _first_pages(saved, pages, texts, numbered))
             elif data["kind"] == "score":
                 pages_read = [(xml, text) for _, pages_xml in read for _, xml, text in pages_xml if xml is not None]
                 musicxml, source = _score(pages_read, data["title"])[0], "score"
