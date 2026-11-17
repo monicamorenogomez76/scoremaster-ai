@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copy of the database (Neon, or any PostgreSQL 17).
+# Copy of the database (Neon, or any PostgreSQL 17 or 18).
 # Usage: scripts/backup_db.sh [file name]   → backups/<file>, by default scoremaster-YYYY-MM-DD-HHMM.dump
 set -eu
 cd "$(dirname "$0")/.."
