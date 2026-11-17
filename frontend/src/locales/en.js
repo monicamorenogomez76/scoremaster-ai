@@ -337,6 +337,8 @@ export const en = {
   'Solo se aceptan archivos PDF: {name}.': 'Only PDF files are accepted: {name}.',
   'Cada PDF puede tener hasta 20 MB: {name}.': 'Each PDF can be up to 20 MB: {name}.',
   'No se pudo enviar el PDF.': 'Could not send the PDF.',
+  '{message} Respuesta del servidor: {status}.': '{message} Server response: {status}.',
+  'No se pudo conectar con el servidor. Comprueba la conexión y vuelve a intentarlo.': 'Could not reach the server. Check the connection and try again.',
   'No se pudo consultar la lectura del PDF.': 'Could not check the reading of the PDF.',
   'falta menos de un minuto': 'less than a minute left',
   'queda un minuto': 'one minute left',

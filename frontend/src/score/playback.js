@@ -1,5 +1,5 @@
 // Sampled solo playback. The MusicXML remains on our server/browser only.
-import { apiFetch } from '../api.js';
+import { apiFetch, failureMessage } from '../api.js';
 import { recordedPreset, voiceGain } from './sample-banks.js';
 import { t } from '../i18n.js';
 
@@ -120,7 +120,7 @@ async function fetchTimeline(body, signal) {
   for (;;) {
     const response = await apiFetch('/playback', { method: 'POST', body, signal });
     if (response.status !== 202) {
-      if (!response.ok) throw new Error(t('No se pudo preparar la reproducción.'));
+      if (!response.ok) throw new Error(await failureMessage(response, t('No se pudo preparar la reproducción.')));
       return response.json();
     }
     const { preparing } = await response.json();

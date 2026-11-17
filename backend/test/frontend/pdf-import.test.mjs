@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { checkPdfFiles, pdfAvailable, pdfImportStatus, pdfStatusText, PDF_POLL_MS, remainingSeconds, startPdfImport } from '../../../frontend/src/pdfImport.js';
+import { checkPdfFiles, pdfAvailable, pdfImportStatus, pdfStatusText, PDF_POLL_MS, POLL_FAILURES_SHOWN, pollProblem, remainingSeconds, startPdfImport } from '../../../frontend/src/pdfImport.js';
 import { analysisStatusText } from '../../../frontend/src/library.js';
 
 // PDF scores (decided 2026-10-27): the reader runs in GitHub Actions; the browser starts the reading and
@@ -86,4 +86,26 @@ test('a grade with parts not identified says so', async () => {
     'Grado incompleto: 1 de 2 partes sin identificar. Sin saber el instrumento no se puede valorar su dificultad: confírmalas en Mi banda.');
   assert.equal(gradeWarning({}), '', 'an analysis not loaded yet warns of nothing');
   assert.equal(gradeWarning(null), '');
+});
+
+test('a server that does not answer the PDF option at once is asked again', async () => {
+  const waits = [];
+  let answers = [[503, {}], [503, {}], [200, { available: true }]];
+  globalThis.fetch = async () => { const [status, body] = answers.shift(); return new Response(JSON.stringify(body), { status }); };
+  assert.equal(await pdfAvailable(ms => { waits.push(ms); }), true);
+  assert.equal(waits.length, 2);
+  answers = [[200, { available: false }]];
+  assert.equal(await pdfAvailable(() => { throw new Error('no wait'); }), false, 'a server without a reader is believed');
+  answers = [[503, {}], [503, {}], [503, {}]];
+  assert.equal(await pdfAvailable(() => {}), false);
+});
+
+test('a failed send says what the server answered', async () => {
+  globalThis.fetch = async () => new Response('<html>Bad gateway</html>', { status: 502 });
+  await assert.rejects(startPdfImport([pdf('obra.pdf')], 'auto', '', '60'), { message: 'No se pudo enviar el PDF. Respuesta del servidor: 502.' });
+});
+
+test('a reading being followed shows a problem only when it lasts', () => {
+  assert.equal(pollProblem(1, 'No se pudo consultar la lectura del PDF.'), '');
+  assert.equal(pollProblem(POLL_FAILURES_SHOWN, 'No se pudo consultar la lectura del PDF.'), 'No se pudo consultar la lectura del PDF.');
 });

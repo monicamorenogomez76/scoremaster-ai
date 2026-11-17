@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { t } from '../../../frontend/src/i18n.js';
+import { failureMessage } from '../../../frontend/src/api.js';
 
 function harness() {
   const starts = [], callbacks = new Set(), instruments = [], optionsUsed = [], samplersUsed = [], failRecorded = { value: false }, withRecordings = { value: false }, formFields = [];
@@ -18,7 +19,7 @@ function harness() {
   ] };
   const current = { data, failNext: false, hold: null, queue: [] };
   const apiCalls = [], timers = [];
-  const scope = { exports: {}, t, withRecordings, window: { AudioContext: function () { return audio; } },
+  const scope = { exports: {}, t, failureMessage, withRecordings, window: { AudioContext: function () { return audio; } },
     FormData: class { append(key, value) { formFields.push([key, value]); } }, AbortController,
     fetch: async () => ({ ok: true, json: async () => current.data }),
     // playback.js calls the API through api.js; the test answers directly.
@@ -331,4 +332,10 @@ test('a recording that falls back to the soundfont takes the soundfont gain', as
   const voice = h.optionsUsed[0].destination;
   assert.ok(Math.abs(voice.gain.value - voiceGain('flute', false, 1)) < 1e-12);
   t.stop();
+});
+
+test('a work the server refuses to play says why', async () => {
+  const { api, queue } = harness();
+  queue([413, { detail: 'La partitura supera 8 MB.' }]);
+  await assert.rejects(api.passageTimeline(longWork, piccolo), { message: 'La partitura supera 8 MB.' });
 });

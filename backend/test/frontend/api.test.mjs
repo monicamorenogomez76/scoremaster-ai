@@ -114,3 +114,19 @@ test('an expired confirmation link reports the server message', async () => {
   fakeServer({ '/auth/email/verify': [400, { detail: 'El enlace no es válido o ha caducado. Pide otro.' }] });
   await assert.rejects(verifyEmail('abc'), { message: 'El enlace no es válido o ha caducado. Pide otro.' });
 });
+
+// 2026-11-17: «No se pudo enviar el PDF» and «No se pudo preparar la reproducción» hid what the server said, twice.
+test('an answer without a message of the server says its status', async () => {
+  const { failureMessage } = await import('../../../frontend/src/api.js');
+  assert.equal(await failureMessage(new Response('<html>Bad gateway</html>', { status: 502 }), 'No se pudo enviar el PDF.'),
+    'No se pudo enviar el PDF. Respuesta del servidor: 502.');
+  assert.equal(await failureMessage(new Response(JSON.stringify({ detail: 'La partitura supera 8 MB.' }), { status: 413 }), 'X.'),
+    'La partitura supera 8 MB.');
+});
+
+test('a request that never reaches the server says so', async () => {
+  globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
+  await assert.rejects(apiFetch('/works'), { message: 'No se pudo conectar con el servidor. Comprueba la conexión y vuelve a intentarlo.' });
+  globalThis.fetch = async () => { throw new DOMException('Cancelado', 'AbortError'); };
+  await assert.rejects(apiFetch('/works'), { name: 'AbortError' });
+});

@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { checkPdfFiles, pdfAvailable, pdfImportStatus, PDF_POLL_MS, pdfStatusText, remainingSeconds, startPdfImport } from './pdfImport.js';
+import { checkPdfFiles, pdfAvailable, pdfImportStatus, PDF_POLL_MS, pdfStatusText, pollProblem, remainingSeconds, startPdfImport } from './pdfImport.js';
 import { t } from './i18n.js';
 
 // «Desde un PDF» (decided 2026-10-27): one score, the parts of a work (one PDF per instrument) or, by default (2026-10-28),
@@ -28,17 +28,19 @@ export function PdfUpload({ visible, minutes, onOpenWork }) {
   // Follows the reading every few seconds until it ends; the work opens when it is analysed.
   useEffect(() => {
     if (!reading) return undefined;
-    let current = true, timer;
+    let current = true, timer, failures = 0;
     const poll = async () => {
       try {
         const found = await pdfImportStatus(reading);
         if (!current) return;
+        failures = 0; setError('');
         samples.current.push({ at: Date.now(), done: found.pages_done || 0 });
         setStatus(found);
         if (found.status === 'done') { setReading(null); onOpenWork(found.work_id); return; }
         if (found.status === 'failed') { setReading(null); return; }
       } catch (failure) {
-        if (current) setError(failure.message);
+        failures += 1;
+        if (current) setError(pollProblem(failures, failure.message));
       }
       if (current) timer = setTimeout(poll, PDF_POLL_MS);
     };
