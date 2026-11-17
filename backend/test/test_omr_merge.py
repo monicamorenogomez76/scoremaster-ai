@@ -419,7 +419,39 @@ def test_a_measure_taken_from_a_transposed_part_sounds_as_the_score_writes_it():
     assert [item.findtext("pitch/step") for item in third.findall("note")] == ["C"]
 
 
-def test_several_parts_on_one_staff_are_not_compared():
+def test_a_staff_of_several_parts_is_compared_with_them_together():
+    """Trumpets 1 and 2 on one staff of the score: the staff attacks where any of them does."""
     from omr.merge import check_with_parts
     checked = check_with_parts(work(list("hhqq")), [("Trompeta 1", work(list("hhqq"))), ("Trompeta 2", work(list("hhqq")))], "Obra")
-    assert checked.compared == 0 and checked.agreement is None
+    assert checked.compared == 4 and checked.agreement == 1.0
+    names = names_of(checked.musicxml)
+    assert names == ["Trompeta 1, Trompeta 2"], "a staff without a name takes those of its parts"
+
+
+def test_a_shared_staff_unlike_its_parts_is_said_and_kept():
+    """Which of the parts misread cannot be told: the score's measure stays, and is said."""
+    from omr.merge import check_with_parts
+    checked = check_with_parts(work(list("hhqq")), [("Trompeta 1", work(list("hhqq"))), ("Trompeta 2", work(list("hheq")))], "Obra")
+    assert checked.dubious == [(0, 3)] and staff_contents(checked.musicxml, 0) == list("hhqq")
+
+
+def test_a_silent_measure_of_a_shared_staff_gets_the_first_part_that_plays():
+    from omr.merge import check_with_parts
+    checked = check_with_parts(work(list("hhrq")), [("Trompeta 1", work(list("hhqq"))), ("Trompeta 2", work(list("hhqq")))], "Obra")
+    assert staff_contents(checked.musicxml, 0)[2] != "r" and checked.dubious == [(0, 3)]
+
+
+def test_parts_are_paired_with_the_staves_all_together():
+    """Each part chose its staff alone (2026-11-17): the string bass took the bassoon's, and six low brass parts one staff.
+    They are paired all together: one part per staff, and the ones left over with a part of their instrument."""
+    from omr.merge import check_with_parts
+    checked = check_with_parts(work(list("hhqq"), list("hhqq")), [("Flauta", work(list("hhqq"))), ("Oboe", work(list("hhqq")))], "Obra")
+    assert names_of(checked.musicxml) == ["Flauta", "Oboe"] and checked.agreement == 1.0
+
+
+def test_a_staff_numbered_like_a_part_is_not_its_by_the_name():
+    """The score's staves without names are numbered «Parte N», and so are the parts without one: no likeness by name."""
+    from omr.merge import check_with_parts
+    score = work(list("hhqq"), list("qqhh"))
+    checked = check_with_parts(score, [("Part 1", work(list("qqhh")))], "Obra", same=lambda left, right: left == right)
+    assert checked.agreement == 1.0 and names_of(checked.musicxml)[1] == "Part 1"
