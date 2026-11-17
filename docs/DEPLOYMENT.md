@@ -3,7 +3,7 @@
 | Pieza | Servicio | Plan |
 |---|---|---|
 | Aplicación (FastAPI + React) | [Render](https://render.com), servicio web `scoremaster` en Frankfurt, con la misma imagen Docker que `docker compose up`. Configuración en [`render.yaml`](../render.yaml) | Gratuito |
-| Base de datos | PostgreSQL 17 en [Neon](https://neon.com), AWS Europe Central 1 (Frankfurt) | Gratuito |
+| Base de datos | PostgreSQL 18 en [Neon](https://neon.com), AWS Europe Central 1 (Frankfurt) | Gratuito |
 | Lector de PDF | GitHub Actions en el repositorio público `scoremaster-omr` | Gratuito (sin tope de minutos en un repositorio público) |
 | Correo (recuperación de contraseña y confirmación del email) | [Brevo](https://www.brevo.com), API transaccional | Gratuito (300 correos al día) |
 | IA | Gemini (Google AI Studio) | Gratuito |
@@ -92,7 +92,7 @@ Para cambiar de plan basta con editar `plan:` en `render.yaml` o hacerlo desde e
 
 ## Base de datos en Neon
 
-1. Crear un proyecto con **PostgreSQL 17** en **AWS Europe Central 1 (Frankfurt)**, la región del servicio de Render.
+1. Crear un proyecto con **PostgreSQL 18** (los scripts también copian y restauran una base 17) en **AWS Europe Central 1 (Frankfurt)**, la región del servicio de Render.
 2. **Connect** → desactivar *Connection pooling* y copiar la cadena **directa**
    (`postgresql://…neon.tech/…?sslmode=require&channel_binding=require`). Las migraciones de Alembic y el pool de
    SQLAlchemy necesitan la conexión directa.
@@ -102,7 +102,7 @@ Neon guarda 6 horas de historial para volver a un momento anterior desde su pane
 
 ## Copia de seguridad y restauración
 
-Los scripts usan la imagen `postgres:17` de Docker: no hay que instalar PostgreSQL. La URL se lee de
+Los scripts usan la imagen `postgres:18` de Docker, que copia y restaura bases 17 y 18: no hay que instalar PostgreSQL. La URL se lee de
 `DATABASE_URL_EXTERNAL` o se pide sin mostrarla, para que no quede en el historial del terminal. Las copias van a
 `backups/`, que no se versiona porque contienen datos personales.
 

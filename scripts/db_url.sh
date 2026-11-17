@@ -31,7 +31,8 @@ pg_url() {
     -e 's#@127\.0\.0\.1:#@host.docker.internal:#' -e 's#@localhost:#@host.docker.internal:#'
 }
 
-# PostgreSQL 17 client tools in Docker (the version of Render's database): nothing to install.
+# PostgreSQL client tools in Docker: nothing to install. Version 18 (2026-11-17): a new Neon project runs 18, which the tools of
+# 17 refuse to copy; the newer tools copy and restore 17 as well.
 pg() {
-  docker run --rm -i -e PGURL="$PGURL" -v "$PWD/backups:/backups" postgres:17 "$@"
+  docker run --rm -i -e PGURL="$PGURL" -v "$PWD/backups:/backups" postgres:18 "$@"
 }
