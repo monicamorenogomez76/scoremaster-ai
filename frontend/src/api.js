@@ -17,15 +17,24 @@ export async function apiFetch(url, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set('Accept-Language', currentLanguage());
   if (!SAFE_METHODS.has(method) && csrfToken) headers.set('X-CSRF-Token', csrfToken);
-  const response = await fetch(url, { ...options, headers, credentials: 'same-origin' });
+  let response;
+  try { response = await fetch(url, { ...options, headers, credentials: 'same-origin' }); }
+  catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    throw new Error(t('No se pudo conectar con el servidor. Comprueba la conexión y vuelve a intentarlo.'));
+  }
   if (response.status === 401) unauthorizedListeners.forEach(listener => listener());
   return response;
 }
 
-async function detail(response, fallback) {
-  try { const body = await response.json(); return typeof body.detail === 'string' ? body.detail : fallback; }
-  catch { return fallback; }
+// The server's message; without one (a page of Render's proxy, a restart), the fallback with the status, so that the cause
+// can be told (2026-11-17: two generic messages hid it).
+export async function failureMessage(response, fallback) {
+  try { const body = await response.json(); if (typeof body.detail === 'string') return body.detail; }
+  catch { /* no JSON */ }
+  return response.status ? t('{message} Respuesta del servidor: {status}.', { message: fallback, status: response.status }) : fallback;
 }
+const detail = failureMessage;
 
 // JSON request to the API; an error carries the server's message, or the fallback.
 export async function apiJson(url, options, fallback) {

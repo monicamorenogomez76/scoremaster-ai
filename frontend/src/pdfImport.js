@@ -1,15 +1,27 @@
 // PDF scores (decided 2026-10-27): the server keeps the PDFs and starts the reader in GitHub Actions; the
 // browser follows the reading until the work is analysed. Plain functions, so the Node tests can import them.
-import { apiFetch, apiJson } from './api.js';
+import { apiFetch, apiJson, failureMessage } from './api.js';
 import { t } from './i18n.js';
 
 const MAX_FILES = 40;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 export const PDF_POLL_MS = 4000;
 
-export async function pdfAvailable() {
-  try { return Boolean((await apiJson('/pdf-imports/available', {}, '')).available); }
-  catch { return false; }
+// Polls that may fail in a row before the reading shows a problem: one failure is a server waking up or restarting.
+export const POLL_FAILURES_SHOWN = 3;
+export const pollProblem = (failures, message) => (failures >= POLL_FAILURES_SHOWN ? message : '');
+const AVAILABLE_TRIES = 3;
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Asked again when the server does not answer at once (it may be waking up): an error used to hide the option for good.
+export async function pdfAvailable(wait = pause) {
+  for (let tried = 1; ; tried += 1) {
+    try { return Boolean((await apiJson('/pdf-imports/available', {}, '')).available); }
+    catch {
+      if (tried >= AVAILABLE_TRIES) return false;
+      await wait(3000);
+    }
+  }
 }
 
 // An error in Spanish, or '' when the files can be sent.
@@ -32,10 +44,8 @@ export async function startPdfImport(files, kind, title, minutes) {
   body.append('title', title || '');
   body.append('total_minutes', minutes || '60');
   const response = await apiFetch('/pdf-imports', { method: 'POST', body });
-  let data = {};
-  try { data = await response.json(); } catch { /* the message below */ }
-  if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : t('No se pudo enviar el PDF.'));
-  return data.id;
+  if (!response.ok) throw new Error(await failureMessage(response, t('No se pudo enviar el PDF.')));
+  return (await response.json()).id;
 }
 
 export const pdfImportStatus = id => apiJson('/pdf-imports/' + encodeURIComponent(id), {},
