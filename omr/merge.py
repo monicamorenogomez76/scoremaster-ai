@@ -8,7 +8,9 @@ after their files. The staves of a score take the instrument names written besid
 (2026-10-28); otherwise they are confirmed in «Mi banda»."""
 from __future__ import annotations
 
+from collections import Counter
 import copy
+from dataclasses import dataclass
 import re
 from xml.sax.saxutils import escape
 
@@ -322,6 +324,37 @@ def _unpitched(staff: stream.Part) -> bool:
     return any(found.sign == "percussion" for found in staff.recurse().getElementsByClass(clef.Clef))
 
 
+def _written_likeness(part: list[frozenset], staff: list[frozenset], pairs) -> float:
+    shared = [_alike(part[a], staff[b]) for a, b in pairs if a is not None and b is not None and staff[b]]
+    return sum(shared) / len(shared) if shared else -1.0
+
+
+def _staff_of_part(name: str, found: list, rhythms: list, unpitched_staves: list, staff_names: list, same,
+                   silenced: bool = False):
+    """The score staff of a part of one staff and how their measures pair (part measure, staff measure); (None, []) when the
+    part is like no staff. silenced: an empty measure of the score may be a page copista misread, so it does not count
+    against the likeness."""
+    measures = _measures(found[0]) if len(found) == 1 else []
+    rhythm = [_onsets(measure) for measure in measures]
+    unpitched = len(found) == 1 and _unpitched(found[0])
+    either = not unpitched and bool(PITCHED_PERCUSSION.search(name))
+    allowed = [index for index, staff in enumerate(rhythms)
+               if len(staff) >= len(rhythm) and (either or unpitched_staves[index] == unpitched)]
+    # The staff of its own name wins over the clefs (2026-11-02: the cymbals of «Paco el barba» are written in treble
+    # clef in their part and with a percussion clef in the score).
+    named = [index for index, staff in enumerate(rhythms) if same and staff_names[index] and len(staff) >= len(rhythm)
+             and same(name, staff_names[index])]
+    candidates = [(index, *_matched(rhythm, rhythms[index])) for index in (named or allowed)]
+    if silenced:
+        candidates = [(index, _written_likeness(rhythm, rhythms[index], pairs), pairs) for index, _, pairs in candidates]
+    index, alike, pairs = max(candidates, key=lambda item: item[1], default=(None, -1.0, []))
+    # A staff of the part's own name is the part's even with an unlike rhythm: percussion read by copista differs
+    # much from its staff, and a sparse part is alike any staff full of rests (2026-11-02, «Arabian Dances»).
+    if not measures or index is None or (alike < SAME_STAFF and not named):
+        return None, []
+    return index, pairs
+
+
 def fill_lost_rests(files: list[tuple[str, bytes]], score: bytes, same=None) -> list[tuple[str, bytes]]:
     """Each part (name, MusicXML of one staff) with the rests copista skipped put back, from the score's staves. A part
     with every measure, with several staves or unlike every staff is left as read. With same, a part is aligned with the
@@ -337,20 +370,8 @@ def fill_lost_rests(files: list[tuple[str, bytes]], score: bytes, same=None) -> 
     for position, (name, xml) in enumerate(files, 1):
         found = _staves(xml)
         measures = _measures(found[0]) if len(found) == 1 else []
-        rhythm = [_onsets(measure) for measure in measures]
-        unpitched = len(found) == 1 and _unpitched(found[0])
-        either = not unpitched and bool(PITCHED_PERCUSSION.search(name))
-        allowed = [index for index, staff in enumerate(rhythms)
-                   if len(staff) >= len(rhythm) and (either or unpitched_staves[index] == unpitched)]
-        # The staff of its own name wins over the clefs (2026-11-02: the cymbals of «Paco el barba» are written in treble
-        # clef in their part and with a percussion clef in the score).
-        named = [index for index, staff in enumerate(rhythms) if same and staff_names[index] and len(staff) >= len(rhythm)
-                 and same(name, staff_names[index])]
-        candidates = [(index, *_matched(rhythm, rhythms[index])) for index in (named or allowed)]
-        index, alike, pairs = max(candidates, key=lambda item: item[1], default=(None, -1.0, []))
-        # A staff of the part's own name is the part's even with an unlike rhythm: percussion read by copista differs
-        # much from its staff, and a sparse part is alike any staff full of rests (2026-11-02, «Arabian Dances»).
-        if not measures or index is None or (alike < SAME_STAFF and not named):
+        index, pairs = _staff_of_part(name, found, rhythms, unpitched_staves, staff_names, same)
+        if index is None:
             fixed.append((None, name, xml))
             continue
         lost = sum(1 for a, _ in pairs if a is None)
@@ -420,3 +441,87 @@ def add_instrumentation(xml: bytes, plan: dict[str, dict], same_part) -> bytes:
         at = midi.start() if midi else block.rindex("</score-part>")
         return (block[:at] + added + block[at:]).encode("utf-8")
     return re.sub(rb"<score-part\b.*?</score-part>", declared, xml, flags=re.S)
+
+
+# --- the score checked with its parts ------------------------------------------------------------------------------------
+# The score first (2026-11-17): with a score, the work is the score's, and its parts check it measure by measure, by rhythm.
+# Where both attack alike, the reading is trusted. Where they differ one of them misread: the part, read alone on its page,
+# is taken and the measure is said, so that the director can check it against the PDF. A page of the score copista misread
+# was silenced, and its measures come from the parts the same way.
+GENERIC_STAFF = re.compile(r"^(part|parte)?\s*\d*$", re.IGNORECASE)
+
+
+@dataclass
+class Checked:
+    musicxml: bytes
+    agreement: float | None                 # share of the measures with notes where score and part attack alike
+    compared: int                           # measures with notes in the score or its part, of staves with one part
+    dubious: list[tuple[int, int]]          # (staff from 0, measure number) taken from the part
+    unmatched: int = 0                      # parts like no staff: their measures with notes count as disagreements
+
+
+def _transposition(part: list[stream.Measure], staff: list[stream.Measure], pairs) -> int:
+    """Semitones from the part to the score where they agree: a score in C and its parts in B♭ or F."""
+    found = Counter()
+    for a, b in pairs:
+        if a is None or b is None or _onsets(part[a]) != _onsets(staff[b]):
+            continue
+        heard = [[item.pitch.midi for item in measure.recurse().notes if isinstance(item, note.Note)] for measure in (part[a], staff[b])]
+        found.update(score - written for written, score in zip(*heard))
+    return found.most_common(1)[0][0] if found else 0
+
+
+def _take(target: stream.Measure, source: stream.Measure, semitones: int) -> None:
+    """The notes of the part's measure in the score's measure, as the score writes them."""
+    for element in list(target.recurse().notesAndRests) + list(target.getElementsByClass(stream.Voice)):
+        target.remove(element, recurse=True)
+    taken = copy.deepcopy(source)
+    if semitones:
+        taken.transpose(semitones, inPlace=True)
+    for element in list(taken):
+        if isinstance(element, (note.GeneralNote, stream.Voice)):
+            target.insert(element.offset, element)
+
+
+def check_with_parts(score: bytes, files: list[tuple[str, bytes]], title: str, same=None) -> Checked:
+    """The score with what its parts read: measures where they differ come from the part. A staff that several parts share
+    (two trumpets) is not compared."""
+    parsed = _staves(score)
+    staves = [_measures(staff) for staff in parsed]
+    rhythms = [[_onsets(measure) for measure in staff] for staff in staves]
+    unpitched_staves = [_unpitched(staff) for staff in parsed]
+    staff_names = [staff.partName or "" for staff in parsed]
+    by_staff: dict[int, list] = {}
+    agreed = compared = unmatched = 0
+    for name, xml in files:
+        found = _staves(xml)
+        index, pairs = _staff_of_part(name, found, rhythms, unpitched_staves, staff_names, same, silenced=True)
+        if index is not None:
+            by_staff.setdefault(index, []).append((name, _measures(found[0]), pairs))
+        elif len(found) == 1:
+            # A part like no staff: the score misread it, or left it out.
+            unmatched += 1
+            compared += sum(1 for measure in _measures(found[0]) if _onsets(measure))
+    dubious = []
+    for index, matched in sorted(by_staff.items()):
+        if len(matched) != 1:
+            continue
+        name, measures, pairs = matched[0]
+        if GENERIC_STAFF.match(staff_names[index]):
+            parsed[index].partName = name
+        semitones = _transposition(measures, staves[index], pairs)
+        for a, b in pairs:
+            if b is None:
+                continue
+            staff_rhythm = rhythms[index][b]
+            part_rhythm = _onsets(measures[a]) if a is not None else frozenset()
+            if not staff_rhythm and not part_rhythm:
+                continue
+            compared += 1
+            if staff_rhythm == part_rhythm:
+                agreed += 1
+                continue
+            dubious.append((index, b + 1))
+            if a is not None:
+                _take(staves[index][b], measures[a], semitones)
+    return Checked(_write(title, parsed), agreed / compared if compared else None, compared, dubious, unmatched)

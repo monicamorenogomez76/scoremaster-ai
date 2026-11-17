@@ -22,7 +22,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from omr.merge import add_instrumentation, add_tempo, combine_parts, fill_lost_rests, join_pages, measure_count, silent_page, staff_of
+from omr.merge import add_instrumentation, add_tempo, check_with_parts, combine_parts, fill_lost_rests, join_pages, measure_count, silent_page, staff_of
 
 try:
     # ScoreMaster's instrument catalog (2026-10-28), checked out with the reader; an older workflow brings only omr/.
@@ -707,6 +707,9 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
         from_score = _from_score(missing, [name for name, _, _ in groups], score_pages(), title) if missing else {}
         files = [(name, join_pages(found, name) if found else from_score[name]) for name, found, _ in groups
                  if found or name in from_score]
+        checked = _checked_score(score_pages(), files, title)
+        if checked is not None:
+            return checked
         # Parts of different lengths: copista skipped multi-measure rests (2026-10-29); the score keeps every measure.
         if len({measure_count(xml) for _, xml in files}) > 1 and score_pages():
             files = fill_lost_rests(files, _score(score_pages(), title)[0], same_part)
@@ -718,6 +721,30 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
     pages = score_pages()
     print(f"La obra se saca de la partitura general: {len(pages)} páginas.", flush=True)
     return _score(pages, title)[0], "score", any(at_concert_pitch(text) for _, text in pages)
+
+
+# The score first (2026-11-17): with a score and its parts, the work is the score's when its parts agree with it in this
+# share of the measures with notes; below it the score is no guide and the work comes from the parts.
+SCORE_TRUSTED = 0.9
+
+
+def _checked_score(pages: list[tuple[bytes, str]], files: list[tuple[str, bytes]], title: str) -> tuple[bytes, str, bool] | None:
+    """The score checked with its parts, or None when there is no score or it is not trusted. The log numbers the staves:
+    it never says which work was read."""
+    if not pages:
+        return None
+    joined, _ = _score(pages, title)
+    checked = check_with_parts(joined, files, title, same_part)
+    if checked.agreement is None:
+        print("La partitura general no se pudo comparar con las particellas.", flush=True)
+        return None
+    print(f"Partitura general y particellas coinciden en el {checked.agreement:.0%} de {checked.compared} compases; "
+          f"{len(checked.dubious)} compases dudosos se toman de las particellas"
+          + (f"; {checked.unmatched} particellas no se parecen a ningún pentagrama." if checked.unmatched else "."), flush=True)
+    if checked.agreement < SCORE_TRUSTED:
+        return None
+    print(f"La obra se saca de la partitura general ({len(pages)} páginas), comprobada con {len(files)} particellas.", flush=True)
+    return checked.musicxml, "score", any(at_concert_pitch(text) for _, text in pages)
 
 
 def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, str]], title: str) -> dict[str, bytes]:

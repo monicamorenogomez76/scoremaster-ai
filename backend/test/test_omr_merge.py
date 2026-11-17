@@ -363,3 +363,63 @@ def test_a_rest_copista_marks_as_a_whole_measure_keeps_its_length():
                                       b'<note><rest/><duration>2</duration><type>quarter</type></note>', 1)
     assert measure_lengths(marked) == [2.0, 2.0]
     assert measure_lengths(combine_parts([("Flauta", marked), ("Tuba", work(list("hh")))], "Obra")) == [2.0] * 4
+
+
+# The score first (2026-11-17): with a score, the work is the score's; its parts check it. Where both attack alike the
+# reading is trusted; where they differ one of them misread, and the part, read alone on its page, is taken and the measure
+# said to be checked. A page of the score copista misread is silent, and its measures come from the parts as well.
+def names_of(xml: bytes) -> list[str]:
+    return [item.findtext("part-name") for item in ET.fromstring(xml).find("part-list")]
+
+
+def staff_contents(xml: bytes, index: int) -> list[str]:
+    kinds = []
+    for bar in ET.fromstring(xml).findall("part")[index].findall("measure"):
+        found = bar.findall("note")
+        kinds.append("r" if all(item.find("rest") is not None for item in found)
+                     else {1: "h", 2: "q", 4: "e"}.get(len(found), "?"))
+    return kinds
+
+
+def test_a_score_its_parts_agree_with_is_kept_and_named_after_them():
+    from omr.merge import check_with_parts
+    score = work(list("hhqq"), list("qqhh"))
+    checked = check_with_parts(score, [("Flauta", work(list("hhqq"))), ("Tuba", work(list("qqhh")))], "Obra")
+    assert checked.agreement == 1.0 and checked.compared == 8 and checked.dubious == []
+    assert names_of(checked.musicxml) == ["Flauta", "Tuba"], "staves without a name take their part's"
+    assert staff_contents(checked.musicxml, 0) == list("hhqq")
+
+
+def test_a_measure_the_score_and_its_part_read_unlike_is_the_parts_and_is_said():
+    from omr.merge import check_with_parts
+    checked = check_with_parts(work(list("hhqq")), [("Flauta", work(list("hheq")))], "Obra")
+    assert checked.agreement == 0.75 and checked.dubious == [(0, 3)]
+    assert staff_contents(checked.musicxml, 0) == list("hheq")
+
+
+def test_the_silent_measures_of_a_misread_page_come_from_the_parts():
+    from omr.merge import check_with_parts
+    checked = check_with_parts(work(list("hhrrqq")), [("Flauta", work(list("hhqhqq")))], "Obra")
+    assert staff_contents(checked.musicxml, 0) == list("hhqhqq")
+    assert checked.dubious == [(0, 3), (0, 4)]
+
+
+def test_the_rests_a_part_lost_are_no_disagreement():
+    from omr.merge import check_with_parts
+    checked = check_with_parts(SCORE, [("Flauta", work(list("rqhqhe")))], "Obra")
+    assert checked.agreement == 1.0 and checked.dubious == []
+
+
+def test_a_measure_taken_from_a_transposed_part_sounds_as_the_score_writes_it():
+    """A score in C and a part in B♭: the part's measure is written a tone higher than the score writes it."""
+    from omr.merge import check_with_parts
+    part = work(list("hhhh")).replace(b"<step>C</step>", b"<step>D</step>")
+    checked = check_with_parts(work(list("hhrh")), [("Clarinete", part)], "Obra")
+    third = ET.fromstring(checked.musicxml).findall("part")[0].findall("measure")[2]
+    assert [item.findtext("pitch/step") for item in third.findall("note")] == ["C"]
+
+
+def test_several_parts_on_one_staff_are_not_compared():
+    from omr.merge import check_with_parts
+    checked = check_with_parts(work(list("hhqq")), [("Trompeta 1", work(list("hhqq"))), ("Trompeta 2", work(list("hhqq")))], "Obra")
+    assert checked.compared == 0 and checked.agreement is None

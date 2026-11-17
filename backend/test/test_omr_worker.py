@@ -207,9 +207,9 @@ def test_an_instrument_name_is_the_short_line_that_names_one():
     assert worker.instrument_name("Timpani            Capitanía 2011") == "Timpani"
 
 
-# Faster (2026-10-28): with named parts, the score's pages are told by their text and never read; the director sees
-# each step of the reading.
-def test_with_named_parts_the_score_pages_are_not_read(scoremaster):
+# Faster (2026-10-28): with named parts, the score's pages are told by their text and read after the parts. Since
+# 2026-11-17 they are always read: the score is the work when its parts agree with it.
+def test_with_named_parts_the_score_pages_are_read_after_them(scoremaster):
     read = []
     pages = [(0, "PACO EL BARBA"), (12, "Fl.\nOb.\nCl. 1\nCl. 2\nSax. A.\nTpt. 1\nTbn.\nTuba"), (12, "Fl.\nCl.\nTpt.\nTbn.\nTuba"),
              (1, "Paco el barba\nFlauta 1"), (1, "Trombón 1")]
@@ -223,9 +223,10 @@ def test_with_named_parts_the_score_pages_are_not_read(scoremaster):
 
     worker.run(payload("auto"), client=scoremaster["client"], read_page=read_page, count_pages=lambda path: len(pages),
                page_text=lambda path, number: pages[number - 1][1])
-    assert read == [1, 4, 5], "the score's pages (2 and 3) are skipped by their text"
-    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta 1", "Trombón 1"]
-    assert scoremaster["progress"][-1] == {"pages_done": 3, "pages_total": 3}
+    assert read == [1, 4, 5, 2, 3], "the score's pages (2 and 3), told by their text, come last"
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta 1", "Trombón 1"], \
+        "two parts alike every staff check nothing: the work is the parts'"
+    assert scoremaster["progress"][-1] == {"pages_done": 5, "pages_total": 5}
 
 
 def test_a_score_page_is_told_by_the_instruments_written_beside_its_staves():
@@ -443,7 +444,7 @@ def test_a_part_of_several_pages_is_one_part(scoremaster):
     read = run_pages(scoremaster, pages)
     assert part_names(scoremaster["result"]["musicxml"]) == ["Flute 1", "F Horn 1", "Percussion 1"]
     assert 8 in read, "a part page naming several percussion instruments is no score page among the parts"
-    assert 1 not in read and 2 not in read, "the score's pages, together, are still set apart"
+    assert read[-2:] == [1, 2], "the score's pages, together, are set apart and read last"
 
 
 def test_the_first_page_of_a_part_names_it_in_its_first_lines():
@@ -1122,3 +1123,19 @@ def test_a_page_without_text_like_the_first_pages_is_a_first_page(tmp_path):
     first.save(pdf, save_all=True, append_images=rest)
     assert worker.title_pages(str(pdf), [2, 3, 4], references=[1]) == {3}
     assert worker.title_pages(str(pdf), [2, 3, 4], references=[]) == set()
+
+
+# The score first (2026-11-17): the work is the score's when its parts agree with it, named after them.
+def test_a_score_its_parts_agree_with_is_the_work(capsys):
+    from backend.test.test_omr_merge import work
+    score = [(work(list("hhqq"), list("qqhh")), "")]
+    musicxml, source, _ = worker._checked_score(score, [("Flauta", work(list("hhqq"))), ("Tuba", work(list("qqhh")))], "Obra")
+    assert source == "score" and part_names(musicxml.decode()) == ["Flauta", "Tuba"]
+    assert "coinciden en el 100% de 8 compases" in capsys.readouterr().out
+
+
+def test_a_score_its_parts_disagree_with_gives_way_to_them():
+    from backend.test.test_omr_merge import work
+    score = [(work(list("hhqq"), list("qqhh")), "")]
+    assert worker._checked_score(score, [("Flauta", work(list("eeee"))), ("Tuba", work(list("qqhh")))], "Obra") is None
+    assert worker._checked_score([], [("Flauta", work(list("hhqq")))], "Obra") is None
