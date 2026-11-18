@@ -612,7 +612,7 @@ button:disabled { opacity: 0.65; cursor: default; }
 .work-detail-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .work-detail-heading h2 { margin: 0; font-size: 1.4rem; }
 .work-detail-heading p { margin: 4px 0 0; }
-.work-tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.work-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
 .work-tabs button { width: auto; margin-bottom: -1px; padding: 10px 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); font-weight: 600; }
 .work-tabs button[aria-selected="true"] { border-bottom-color: var(--primary); color: var(--primary); }
 
@@ -763,6 +763,26 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .instrument-confirm-item .band-profile-row { grid-template-columns: minmax(0, 1fr) minmax(160px, 220px); }
 .instrument-ai-reason { margin: 0; font-size: .875rem; line-height: 1.5; }
 .band-substitutes { display: grid; gap: 8px; margin-top: 16px; }
+/* The musical analysis of a work (2026-11-18): summary, a timeline of its sections and a table by section. */
+.musical-analysis { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.analysis-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 0; }
+.analysis-summary div { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.analysis-summary dt { color: var(--muted); font-size: .85rem; }
+.analysis-summary dd { margin: 0; font-weight: 600; }
+.analysis-timeline { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.analysis-block { display: flex; flex: 1 1 0; flex-direction: column; gap: 2px; min-width: 64px; padding: 8px; border-top: 4px solid var(--line-strong); border-radius: 6px; background: var(--panel-alt); font-size: .85rem; line-height: 1.5; }
+.analysis-block--tonic { border-top-color: var(--primary); }
+.analysis-table-wrap { min-width: 0; overflow-x: auto; }
+.analysis-table-wrap:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.analysis-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.analysis-table th, .analysis-table td { padding: 8px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; line-height: 1.5; }
+/* On a phone each section is a card: every value after its name, nothing to scroll sideways. */
+@media (max-width: 640px) {
+  .analysis-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .analysis-table tr { display: block; padding: 8px 0; border-top: 1px solid var(--line); }
+  .analysis-table th, .analysis-table td { display: block; padding: 2px 0; border-top: 0; }
+  .analysis-table td::before { content: attr(data-label) ": "; color: var(--muted); }
+}
 .substitute-reason { display: block; line-height: 1.5; }
 .own-instrument-form { display: grid; gap: 8px; margin: 0; padding: 12px 16px 16px; border: 1px solid var(--line); border-radius: 12px; }
 .own-instrument-form legend { padding: 0 4px; font-weight: 600; }

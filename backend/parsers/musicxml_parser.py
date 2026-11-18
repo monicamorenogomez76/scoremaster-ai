@@ -112,6 +112,38 @@ def read_part_metadata(content: bytes) -> dict[str, PartMetadata]:
     return metadata
 
 
+def read_structure(content: bytes) -> dict[str, list[dict]]:
+    """The marks of the structure of each measure of each part, by part id and measure index: barline, repeats, ending,
+    rehearsal mark, words, segno and coda (2026-11-18). music21 keeps some of them in its own objects; the MusicXML says
+    them plainly."""
+    root = ElementTree.fromstring(content)
+    found = {}
+    for part in root.iter("part"):
+        measures = []
+        for measure in part.iter("measure"):
+            marks: dict = {}
+            for barline in measure.iter("barline"):
+                repeat = barline.find("repeat")
+                if repeat is not None:
+                    marks["repeat_start" if repeat.get("direction") == "forward" else "repeat_end"] = True
+                ending = barline.find("ending")
+                if ending is not None and ending.get("type") == "start" and ending.get("number"):
+                    marks["ending"] = ending.get("number")
+                style = _text(barline.find("bar-style"))
+                if style and barline.get("location", "right") == "right":
+                    marks["barline"] = style
+            for kind in measure.iter("direction-type"):
+                rehearsal = _text(kind.find("rehearsal"))
+                if rehearsal and "rehearsal" not in marks:
+                    marks["rehearsal"] = rehearsal
+                marks["words"] = marks.get("words", ()) + tuple(text for text in map(_text, kind.findall("words")) if text)
+                marks["segno"] = marks.get("segno", False) or kind.find("segno") is not None
+                marks["coda"] = marks.get("coda", False) or kind.find("coda") is not None
+            measures.append(marks)
+        found[part.get("id")] = measures
+    return found
+
+
 def metadata_for_part(parsed_part, declared: dict[str, PartMetadata]) -> PartMetadata:
     """music21 keeps the MusicXML part id in `groups` ("P1"), or "P1-Staff2" for each staff of a
     multi-staff part; staves of one part share its metadata."""
@@ -158,6 +190,7 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
         raise ValueError("MusicXML with entity declarations is not accepted.")
     declared_metadata = read_part_metadata(score_xml)
     changes = note_instruments(score_xml)
+    structure = read_structure(score_xml)
     # music21 receives the extracted document, so the file extension does not matter.
     parsed_score = converter.parse(score_xml, format="musicxml")
     # bestTitle: <movement-title> is kept by music21 as movementName with an empty title (2026-10-14: those
@@ -239,7 +272,10 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
                                          duration_quarters=float(parsed_measure.duration.quarterLength),
                                          key_fifths=key_fifths, time_signature=time_signature, dynamics=marked))
 
-        part = ScorePart(name=part_name, measures=tuple(measures), metadata=metadata_for_part(parsed_part, declared_metadata))
+        metadata = metadata_for_part(parsed_part, declared_metadata)
+        marks = structure.get(metadata.part_id, [])
+        measures = [replace(measure, **marks[index]) if index < len(marks) else measure for index, measure in enumerate(measures)]
+        part = ScorePart(name=part_name, measures=tuple(measures), metadata=metadata)
         parts.extend(_by_instrument(part, changes.get(part.metadata.part_id)))
 
     return Score(
