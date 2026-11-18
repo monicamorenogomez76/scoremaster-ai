@@ -25,6 +25,8 @@ MELODY_SHARE = 0.6       # share of the tune's attacks a part plays, in any octa
 # Above the band, these double the tune or ornament it (trills, a descant): the tune is looked for below them, and they
 # are named among those who double it when they play it.
 ABOVE_THE_TUNE = {"piccolo", "glockenspiel", "xylophone", "chimes", "crotales"}
+# The timpani have pitch but play no tune: they are left out of it altogether.
+NEVER_THE_TUNE = {"timpani"}
 SECTION_WORDS = re.compile(r"\b(trio|trío|coda|fine|introd|intro|maestoso|marcha|marcia|tempo\s+i|d\.\s*[cs]\.)", re.IGNORECASE)
 MAJOR_NAMES = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
 MINOR_NAMES = ("C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B")
@@ -94,6 +96,11 @@ def _pitched(part: ScorePart) -> bool:
     return not (identity and identity.section == "percussion" and not identity.sound)
 
 
+def _no_tune(part: ScorePart) -> bool:
+    identity = resolve_part(part).identity
+    return bool(identity and identity.canonical_id in NEVER_THE_TUNE)
+
+
 def _above_the_tune(part: ScorePart) -> bool:
     identity = resolve_part(part).identity
     return bool(identity and identity.canonical_id in ABOVE_THE_TUNE)
@@ -102,7 +109,7 @@ def _above_the_tune(part: ScorePart) -> bool:
 def _skyline(score: Score) -> dict[int, list[tuple[float, int, str]]]:
     """Per measure, (offset in the measure, sounding MIDI, part) of the highest note at each attack, without the parts
     that play above the tune; with only those, with them."""
-    pitched = [part for part in score.parts if _pitched(part)]
+    pitched = [part for part in score.parts if _pitched(part) and not _no_tune(part)]
     below = [part for part in pitched if not _above_the_tune(part)] or pitched
     top: dict[tuple[int, float], tuple[int, str]] = {}
     for part in below:
@@ -121,7 +128,7 @@ def _attacks(score: Score) -> dict[str, tuple[dict[tuple[int, float], set[int]],
     """Per pitched part, the pitch classes it attacks at each (measure, offset) and its sounding MIDI notes."""
     found = {}
     for part in score.parts:
-        if not _pitched(part):
+        if not _pitched(part) or _no_tune(part):
             continue
         events, bounds = part_events(part)
         at: dict[tuple[int, float], set[int]] = {}

@@ -174,6 +174,10 @@ try {
   await english.locator('#work-explanation').getByRole('button', { name: 'Explain the difficulty' }).click();
   await english.locator('#work-explanation .explanation-summary').getByText(/ is grade \d/).waitFor();
   await audit(english, 'Work › Difficulty › explanation (English)');
+  // The musical analysis of the work (2026-11-18): summary, timeline and table by section.
+  await english.locator('#work-tab-analysis').click();
+  await english.locator('#musical-analysis .analysis-summary').getByText('Main key').waitFor({ timeout: 60000 });
+  await audit(english, 'Work › Analysis (English)');
   await english.locator('#work-tab-score').click();
   await english.locator('#embedded-score').getByRole('heading', { name: 'Full score' }).waitFor();
   await english.locator('#full-score-status').getByText('All voices').waitFor({ timeout: 60000 });
