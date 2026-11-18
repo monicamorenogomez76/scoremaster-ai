@@ -37,6 +37,17 @@ class ScoreMeasure:
 	key_fifths: Optional[int] = None
 	time_signature: Optional[str] = None
 	dynamics: tuple[str, ...] = ()
+	# The marks of the structure (2026-11-18), for the musical analysis: the style of the barline that ends the measure
+	# ("light-light" a double bar, "light-heavy" a final one), repeats, the ending it belongs to ("1", "2"), the
+	# rehearsal mark and the words written in it («Trio», «D.C. al Fine», «Allegro»), segno and coda.
+	barline: Optional[str] = None
+	repeat_start: bool = False
+	repeat_end: bool = False
+	ending: Optional[str] = None
+	rehearsal: Optional[str] = None
+	words: tuple[str, ...] = ()
+	segno: bool = False
+	coda: bool = False
 
 
 @dataclass(frozen=True)
