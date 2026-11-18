@@ -22,7 +22,7 @@ concurrency:
 
 env:
   SCOREMASTER_REPOSITORY: monicamorenogomez76/scoremaster-ai
-  COPISTERIA_COMMIT: 5d1cd54286bb8a27e33a495c88fadf0e2101152d
+  COPISTERIA_COMMIT: 2be4a9d88c15fd6b36fe7c97e0fa816f08804570
   COPISTA_REVISION: c37d89e1e52edc95c1a73bda0aea5f2f71a9c763
 
 jobs:
