@@ -67,6 +67,9 @@ try {
   assert.deepEqual((await kept(['B♭ Trumpet']))[0].notes, ['1C', '2E', '3G', '1D', '2F', '3A'], 'the whole part when it is named whole');
   assert.deepEqual((await kept('B♭ Trumpet 3'))[0].notes, ['1G', '1A'], 'a single instrument keeps its staff, as before');
   assert.deepEqual((await kept(['Voice 2'])).map(part => [part.id, part.notes]), [['P3', ['1B', '1B']]], 'parts sharing a name are told apart by number');
+  // A part that changes instrument (2026-11-17): the analysis names each instrument; the viewer shows the written part.
+  assert.deepEqual((await kept('B♭ Trumpet (Bells)')).map(part => [part.id, part.name]), [['P1', 'B♭ Trumpet (Bells)']], 'an instrument of a part is shown from it');
+  assert.deepEqual((await kept(['B♭ Trumpet (Wood Blocks)']))[0].notes, ['1C', '2E', '3G', '1D', '2F', '3A']);
   console.log('PASS: a passage shows the staves it plays, also inside a multi-staff part');
 } finally {
   await browser.close();

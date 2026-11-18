@@ -268,4 +268,4 @@ def test_a_grace_note_at_the_very_start_never_sounds_before_the_work():
 
 def test_the_audio_prepared_before_is_prepared_again():
     from backend.parsers.playback import TIMELINE_VERSION
-    assert TIMELINE_VERSION == "playback-timeline-v4"
+    assert TIMELINE_VERSION == "playback-timeline-v5"

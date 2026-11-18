@@ -1,4 +1,5 @@
 """Sounding-pitch timelines for solo passages and the full ensemble."""
+from bisect import bisect_right
 from collections import Counter, OrderedDict
 from concurrent.futures import Future, TimeoutError as FutureTimeout, wait
 from dataclasses import dataclass
@@ -15,8 +16,10 @@ from pathlib import Path
 
 from music21 import chord, converter, note, percussion as m21_percussion, stream, tempo
 
+from backend.domain.instrument_catalog import GENERIC_PERCUSSION, identity_by_id, match_instrument_name
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import ScorePart
+from backend.parsers.instrument_changes import note_instruments, note_key, split_name
 from backend.parsers.musicxml_parser import metadata_for_part, read_part_metadata
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.parsers.reader import reader
@@ -57,6 +60,15 @@ def _identity(part, name, declared):
     return resolve_part(ScorePart(name, (), metadata_for_part(part, declared))).identity
 
 
+def _changed_identity(instrument: str, identity):
+    """One of the instruments of a part that changes; one the catalog does not know (wood blocks, gong) sounds as the
+    percussion the part is, by the line its notes sit on."""
+    found = match_instrument_name(instrument).identity
+    if found is None and identity is not None and identity.section == 'percussion':
+        return identity_by_id(GENERIC_PERCUSSION)
+    return found or identity
+
+
 # Each work is read with music21 once: its parts, measures, tempo marks and sounding notes are kept as
 # plain numbers, and every passage is cut from them (2026-10-07: parsing a real band score took most of
 # the 10-20 s waited per passage, and more than a minute on Render's free plan).
@@ -72,7 +84,7 @@ def _scores_kept() -> int:
 # Beyond this the work is too large to keep (the whole-score playback already stops at 150 000 events).
 MAX_PREPARED_NOTES = 1_000_000
 # Stored timelines of another version are prepared again.
-TIMELINE_VERSION = 'playback-timeline-v4'   # v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
+TIMELINE_VERSION = 'playback-timeline-v5'   # v5 (2026-11-17): a part that changes instrument sounds as each one; v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
 # A grace note takes no time in the score: it sounds this long, just before its note, which stays on the beat (2026-11-05:
 # with no length it fell on the note and could hardly be heard).
 GRACE_QUARTERS = 0.125
@@ -297,6 +309,7 @@ def _read_timeline(content: bytes) -> _Timeline:
     # From the bytes, as the analysis parser: music21 then does not write its own cache to disk.
     score = converter.parse(content, format='musicxml')
     declared = read_part_metadata(content)
+    changes = note_instruments(content)
     raw_names = [part.partName or (part.id if isinstance(part.id, str) else f'Part {i}')
                  for i, part in enumerate(score.parts, 1)]
     counts, indexes = Counter(raw_names), Counter()
@@ -313,11 +326,29 @@ def _read_timeline(content: bytes) -> _Timeline:
         measures = tuple((int(m.number or i), float(m.offset))
                          for i, m in enumerate(part.getElementsByClass(stream.Measure), 1))
         highest_time = float(part.highestTime)
+        metadata = metadata_for_part(part, declared)
+        change = changes.get(metadata.part_id)
+        instruments = change[0] if change else (None,)
+        starts = [offset for _, offset in measures]
+
+        def played(event) -> Optional[str]:
+            """The instrument of a note of a part that changes instrument (2026-11-17), by where the written note stands."""
+            if change is None:
+                return None
+            at = max(0, bisect_right(starts, float(event.offset)) - 1)
+            return change[1].get(note_key(metadata.staff_number, at, float(event.offset) - starts[at]) if starts else None,
+                                 instruments[0])
+
+        written = {id(event): played(event) for event in part.flatten().notes}
         part.toSoundingPitch(inPlace=True)
         part.stripTies(inPlace=True)
-        notes = []
+        by_instrument = {instrument: [] for instrument in instruments}
+        identities = {instrument: identity if instrument is None else _changed_identity(instrument, identity)
+                      for instrument in instruments}
         events = list(part.flatten().notes)
         for index, event in enumerate(events):
+            instrument = written.get(id(event), instruments[0])
+            notes, identity = by_instrument[instrument], identities[instrument]
             onset = float(event.offset)
             release = onset + float(event.duration.quarterLength)
             if event.duration.isGrace:
@@ -336,11 +367,14 @@ def _read_timeline(content: bytes) -> _Timeline:
                 drums = tuple(key for key in (_unpitched_key(identity, pitch.midi) for pitch in pitches) if key is not None)
                 notes.append(_Note(onset, release, drums=drums) if drums
                              else _Note(onset, release, pitches=tuple(float(pitch.midi) for pitch in pitches)))
-        total += len(notes)
+        total += len(events)
         if total > MAX_PREPARED_NOTES:
             raise ValueError('La partitura es demasiado larga para reproducirla.')
-        parts.append(_Part(name, program, identity.canonical_id if identity else None,
-                           identity.sound if identity else None, measures, highest_time, tuple(notes)))
+        for instrument, notes in by_instrument.items():
+            identity = identities[instrument]
+            parts.append(_Part(name if instrument is None else split_name(name, instrument), program,
+                               identity.canonical_id if identity else None, identity.sound if identity else None, measures,
+                               highest_time, tuple(notes)))
     marks = {float(mark.getOffsetInHierarchy(score)): float(mark.getQuarterBPM())
              for mark in score.recurse().getElementsByClass(tempo.MetronomeMark)
              if mark.number is not None and mark.getQuarterBPM() > 0}
