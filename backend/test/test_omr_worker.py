@@ -144,20 +144,20 @@ def part_names(musicxml: str) -> list[str]:
     return [item.findtext("part-name") for item in ET.fromstring(musicxml.encode()).find("part-list")]
 
 
-def test_a_pdf_with_score_and_parts_gives_the_work_of_its_parts(scoremaster, capsys):
+def test_a_pdf_with_score_and_parts_gives_the_work_of_its_score_named_by_its_parts(scoremaster, capsys):
     pages = [(0, "PACO EL BARBA\nPasodoble"), (12, "Paco el barba\nFl.\nCl."), (12, "2\nFl."),
              (1, "Paco el barba\nFlauta 1\nPasodoble"), (1, "Flauta 1    2"), (1, "Paco el barba\nTrombón 1")]
     assert run_auto(scoremaster, pages) == 0
-    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta 1", "Trombón 1"]
+    assert part_names(scoremaster["result"]["musicxml"])[:2] == ["Flauta 1", "Trombón 1"]
     log = capsys.readouterr().out
-    assert "La obra se saca de 2 particellas (3 páginas)." in log
+    assert "La obra se saca de la partitura general (2 páginas), comprobada con 2 particellas." in log
     assert "página 1 sin música" in log
 
 
 def test_parts_before_the_score_are_found_too(scoremaster):
     pages = [(1, "Clarinete en Si♭ 1"), (1, "Saxofón alto"), (12, "Score"), (12, "")]
     run_auto(scoremaster, pages)
-    assert part_names(scoremaster["result"]["musicxml"]) == ["Clarinete en Si♭ 1", "Saxofón alto"]
+    assert part_names(scoremaster["result"]["musicxml"])[:2] == ["Clarinete en Si♭ 1", "Saxofón alto"]
 
 
 def test_without_instrument_names_the_score_is_used(scoremaster):
@@ -207,9 +207,9 @@ def test_an_instrument_name_is_the_short_line_that_names_one():
     assert worker.instrument_name("Timpani            Capitanía 2011") == "Timpani"
 
 
-# Faster (2026-10-28): with named parts, the score's pages are told by their text and never read; the director sees
-# each step of the reading.
-def test_with_named_parts_the_score_pages_are_not_read(scoremaster):
+# Faster (2026-10-28): with named parts, the score's pages are told by their text and read after the parts. Since
+# 2026-11-17 they are always read: the score is the work when its parts agree with it.
+def test_with_named_parts_the_score_pages_are_read_after_them(scoremaster):
     read = []
     pages = [(0, "PACO EL BARBA"), (12, "Fl.\nOb.\nCl. 1\nCl. 2\nSax. A.\nTpt. 1\nTbn.\nTuba"), (12, "Fl.\nCl.\nTpt.\nTbn.\nTuba"),
              (1, "Paco el barba\nFlauta 1"), (1, "Trombón 1")]
@@ -223,9 +223,9 @@ def test_with_named_parts_the_score_pages_are_not_read(scoremaster):
 
     worker.run(payload("auto"), client=scoremaster["client"], read_page=read_page, count_pages=lambda path: len(pages),
                page_text=lambda path, number: pages[number - 1][1])
-    assert read == [1, 4, 5], "the score's pages (2 and 3) are skipped by their text"
-    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta 1", "Trombón 1"]
-    assert scoremaster["progress"][-1] == {"pages_done": 3, "pages_total": 3}
+    assert read == [1, 4, 5, 2, 3], "the score's pages (2 and 3), told by their text, come last"
+    assert part_names(scoremaster["result"]["musicxml"])[:2] == ["Flauta 1", "Trombón 1"], "the score, named by its parts"
+    assert scoremaster["progress"][-1] == {"pages_done": 5, "pages_total": 5}
 
 
 def test_a_score_page_is_told_by_the_instruments_written_beside_its_staves():
@@ -294,15 +294,15 @@ def test_a_part_copista_cannot_read_comes_from_its_staff_in_the_score(scoremaste
     assert "La parte 3 sale de la partitura general" in capsys.readouterr().out
 
 
-def test_an_unnamed_score_completes_a_part_only_with_one_staff_per_part(scoremaster, capsys):
+def test_an_unnamed_score_is_named_by_the_parts_read(scoremaster, capsys):
     catalog_server(scoremaster)
     pages = [(4, ""), (1, "Flauta"), (1, "Clarinete"), (0, "Trompeta 1"), (1, "Tuba")]
     run_pages(scoremaster, pages)
     assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Trompeta 1", "Tuba"], "by position"
     pages = [(5, ""), (1, "Flauta"), (1, "Clarinete"), (0, "Trompeta 1"), (1, "Tuba")]
     run_pages(scoremaster, pages)
-    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Tuba"]
-    assert "No se pudo completar la parte 3" in capsys.readouterr().out
+    assert part_names(scoremaster["result"]["musicxml"]) == ["Flauta", "Clarinete", "Tuba", "Parte 4", "Parte 5"], \
+        "the score is the work: its staves take the names of the parts read, the others keep their number"
 
 
 # A score may be printed in C (2026-10-29): ScoreMaster transposes the parts, never a score whose page says it is in C.
@@ -312,7 +312,7 @@ def test_the_reader_says_where_the_work_came_from_and_whether_the_score_is_in_c(
     run_pages(scoremaster, [(4, "Guion\nFlauta\nClarinete\nTrompeta 1\nTuba"), (4, "")])
     assert (scoremaster["result"]["source"], scoremaster["result"]["concert_pitch"]) == ("score", False)
     run_pages(scoremaster, [(4, "Partitura en Do"), (1, "Flauta"), (1, "Trombón 1")])
-    assert (scoremaster["result"]["source"], scoremaster["result"]["concert_pitch"]) == ("parts", False)
+    assert (scoremaster["result"]["source"], scoremaster["result"]["concert_pitch"]) == ("score", True), "the score first, always"
 
 
 def test_a_page_in_c_is_told_by_its_text():
@@ -324,11 +324,11 @@ def test_a_page_in_c_is_told_by_its_text():
 
 # copista skips the multi-measure rests of the parts (2026-10-29, «Paco el barba»). Parts of different lengths are the
 # sign: the score's pages are read too, and each part gets back its rests from its staff.
-def test_parts_of_different_lengths_get_back_their_rests_from_the_score(scoremaster, capsys):
+def test_with_parts_of_different_lengths_the_score_is_the_work(scoremaster, capsys):
     from backend.test.test_omr_merge import contents, work
     catalog_server(scoremaster)
     score = work(list("rrrrqhqhe"), list("hhhhqqqqh"), list("qqqqqqqqq"), list("eeeeeeeee"))
-    pages = {1: (score, "Flauta\nClarinete\nTrompeta 1\nTuba"), 2: (work(list("rqhqhe")), "Flauta"),
+    pages = {1: (score, "Flauta\nTuba\nClarinete\nTrompeta 1"), 2: (work(list("rqhqhe")), "Flauta"),
              3: (work(list("hhhhqqqqh")), "Tuba")}
     read = []
 
@@ -342,7 +342,7 @@ def test_parts_of_different_lengths_get_back_their_rests_from_the_score(scoremas
     musicxml = scoremaster["result"]["musicxml"].encode()
     from omr.merge import staff_of
     assert contents(staff_of(musicxml, 0)) == list("rrrrqhqhe") and contents(staff_of(musicxml, 1)) == list("hhhhqqqqh")
-    assert "Parte 1: 3 compases de silencio recuperados" in capsys.readouterr().out
+    assert "coinciden en el 100%" in capsys.readouterr().out, "the rests the parts lost are no disagreement"
 
 
 # copista reads no tempo (2026-11-01, «Paco el barba», a moorish march at crotchet = 50, sounded at the default 120).
@@ -399,8 +399,8 @@ def test_the_log_names_no_file_nor_part(scoremaster, capsys):
     log = capsys.readouterr().out
     for name in ("Mi obra secreta", "Score-parts", "Flauta", "Clarinete", "Trompeta", "Tuba"):
         assert name not in log, name
-    assert "Archivo 1, página 1 sin música" in log and "Parte 1: 3 compases de silencio recuperados" in log
-    assert sorted(part_names(scoremaster["result"]["musicxml"])) == ["Flauta", "Trompeta 1", "Tuba"], "ScoreMaster gets the names"
+    assert "Archivo 1, página 1 sin música" in log and "coinciden en el" in log
+    assert {"Flauta", "Tuba"} <= set(part_names(scoremaster["result"]["musicxml"])), "ScoreMaster gets the names"
 
 
 def test_a_refused_file_is_named_to_scoremaster_and_numbered_in_the_log(scoremaster, capsys):
@@ -441,9 +441,9 @@ def test_a_part_of_several_pages_is_one_part(scoremaster):
              (1, "Arabian Dances - Hn. 1\n" + MUSIC + "\n     B. Sax."),
              (1, "Percussion 1\n" + MUSIC), (1, "Arabian Dances - Perc. 1\nSus. Cym.\nTri.\nTamb.\nBass Drum\n" + MUSIC)]
     read = run_pages(scoremaster, pages)
-    assert part_names(scoremaster["result"]["musicxml"]) == ["Flute 1", "F Horn 1", "Percussion 1"]
+    assert part_names(scoremaster["result"]["musicxml"])[:3] == ["Flute 1", "F Horn 1", "Percussion 1"]
     assert 8 in read, "a part page naming several percussion instruments is no score page among the parts"
-    assert 1 not in read and 2 not in read, "the score's pages, together, are still set apart"
+    assert read[-2:] == [1, 2], "the score's pages, together, are set apart and read last"
 
 
 def test_the_first_page_of_a_part_names_it_in_its_first_lines():
@@ -748,7 +748,7 @@ def test_progress_ends_with_the_pages_set_apart_when_they_are_read(scoremaster):
 
 
 def test_the_score_pages_kept_for_the_parts_are_in_their_order_too(scoremaster):
-    """Parts of different lengths are aligned with the score: its pages must be read from the first to the last."""
+    """The parts check the score measure by measure: its pages must be read from the first to the last."""
     letters = "CDEFGAB"
     pages_seen = {}
 
@@ -756,18 +756,18 @@ def test_the_score_pages_kept_for_the_parts_are_in_their_order_too(scoremaster):
         return page(3, 2, letters[number - 1]) if number <= 3 else page(1, number - 3)
 
     texts = [MARGIN, "Tuba\n" + MUSIC, MARGIN, "Flute 1\n" + MUSIC, "Trombone 1\n" + MUSIC]
-    original = worker.fill_lost_rests
+    original = worker.check_with_parts
 
-    def spy(files, score, same_part):
+    def spy(score, files, title, same=None):
         pages_seen["score"] = score
-        return original(files, score, same_part)
+        return original(score, files, title, same)
 
-    worker.fill_lost_rests = spy
+    worker.check_with_parts = spy
     try:
         worker.run(payload("auto"), client=scoremaster["client"], read_page=read_page, count_pages=lambda path: 5,
                    page_text=lambda path, number: texts[number - 1])
     finally:
-        worker.fill_lost_rests = original
+        worker.check_with_parts = original
     assert first_notes(pages_seen["score"].decode())[::2][:3] == list("CDE")
 
 
@@ -856,7 +856,7 @@ def test_a_page_the_margin_shows_was_misread_leaves_rests_and_says_so(full_catal
     assert set(steps) == {"C", "E"}, "the notes of the misread page are not placed"
     from omr.merge import measure_count
     assert measure_count(joined) == 6, "its measures stay"
-    assert "Página de partitura mal leída: 3 de 5 pentagramas." in capsys.readouterr().out
+    assert "Página de partitura mal leída: 3 de 5 pentagramas, 2 compases." in capsys.readouterr().out
 
 
 def test_a_page_of_a_scan_without_text_and_few_staves_leaves_rests(full_catalog):
@@ -973,7 +973,7 @@ def test_a_short_page_of_a_score_is_read_again_and_keeps_the_better_reading(caps
 
     def read_again(pages):
         asked.extend(pages)
-        return {pages[0]: page(5, 2, "F")}
+        return {("obra.pdf", 2): page(5, 2, "F")}
 
     better = worker.read_short_pages_again(found, {1: "obra.pdf"}, read_again)
     assert asked == [("obra.pdf", 2)], "only the short page"
@@ -981,10 +981,17 @@ def test_a_short_page_of_a_score_is_read_again_and_keeps_the_better_reading(caps
     assert "Archivo 1, página 2: de 3 a 5 pentagramas." in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("second", [page(2, 2, "F"), page(3, 2, "F"), worker.PageFailed("no")])
+@pytest.mark.parametrize("second", [page(2, 2, "F"), worker.PageFailed("no")])
 def test_a_second_reading_that_is_no_better_changes_nothing(second):
     found = [((1, 1), page(5, 2, "C"), ""), ((1, 2), page(3, 8, "D"), "")]
     assert worker.read_short_pages_again(found, {1: "obra.pdf"}, lambda pages: {pages[0]: second}) == found
+
+
+def test_a_second_reading_with_as_many_staves_is_kept_for_its_measures():
+    """The big model counts measures better: with the same staves, its reading is the page's."""
+    found = [((1, 1), page(5, 2, "C"), ""), ((1, 2), page(3, 8, "D"), "")]
+    better = worker.read_short_pages_again(found, {1: "obra.pdf"}, lambda pages: {pages[0]: page(3, 2, "F")})
+    assert worker.measure_count(better[1][1]) == 2
 
 
 def test_the_second_model_failing_altogether_changes_nothing():
@@ -1024,7 +1031,7 @@ def test_a_reading_uses_the_second_reading_of_its_short_page(scoremaster):
 
     def read_again(pages):
         asked.extend(pages)
-        return {pages[0]: page(5, 2, "F")}
+        return {found: page(5, 2, "F") for found in pages if found[1] == 2}
 
     worker.run(payload("score"), client=scoremaster["client"], count_pages=lambda path: 3, page_text=lambda path, number: "",
                read_page=lambda path, number, out_dir: page(counts[number], 8 if number == 2 else 2, "C"), read_again=read_again)
@@ -1122,3 +1129,66 @@ def test_a_page_without_text_like_the_first_pages_is_a_first_page(tmp_path):
     first.save(pdf, save_all=True, append_images=rest)
     assert worker.title_pages(str(pdf), [2, 3, 4], references=[1]) == {3}
     assert worker.title_pages(str(pdf), [2, 3, 4], references=[]) == set()
+
+
+# The score first (2026-11-17): the work is the score's when its parts agree with it, named after them.
+def test_a_score_its_parts_agree_with_is_the_work(capsys):
+    from backend.test.test_omr_merge import work
+    score = [(work(list("hhqq"), list("qqhh")), "")]
+    musicxml, source, _ = worker._checked_score(score, [("Flauta", work(list("hhqq"))), ("Tuba", work(list("qqhh")))], "Obra")
+    assert source == "score" and part_names(musicxml.decode()) == ["Flauta", "Tuba"]
+    assert "coinciden en el 100% de 8 compases" in capsys.readouterr().out
+
+
+def test_a_score_is_the_work_even_when_its_parts_disagree_with_it():
+    """The score first, always (2026-11-18): the parts are asked only for the measures where the readings differ."""
+    from backend.test.test_omr_merge import work
+    score = [(work(list("hhqq"), list("qqhh")), "")]
+    musicxml, source, _ = worker._checked_score(score, [("Flauta", work(list("eeee"))), ("Tuba", work(list("qqhh")))], "Obra")
+    assert source == "score"
+    assert worker._checked_score([], [("Flauta", work(list("hhqq")))], "Obra") is None
+
+
+# A misread page repeats its measures in blocks (2026-11-18, «Pirates of the Caribbean» page 35: ten measures for five;
+# page 40: five, an empty one and five; «The Lion King» page 4: three blocks of an empty one and three). Its true measures
+# are what is left without the empty ones, divided by the blocks: the count nearest the pages read well.
+def test_the_measures_of_a_misread_page_are_counted_by_its_blocks():
+    assert worker.true_measures(10, 0, typical=5) == 5
+    assert worker.true_measures(11, 1, typical=5) == 5
+    assert worker.true_measures(12, 3, typical=5) == 3
+    assert worker.true_measures(7, 0, typical=5) == 7, "nothing divides it: kept as read"
+
+
+def test_a_misread_page_keeps_its_true_measures(full_catalog):
+    good = page(5, 5, "C")
+    split = page(3, 10, "D")
+    margin = "\n".join(f"     {name}    tV" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))
+    joined, _ = worker._score([(good, margin), (split, margin), (good, margin)], "Obra")
+    from omr.merge import measure_count
+    assert measure_count(joined) == 15
+
+
+def test_a_score_page_with_too_many_measures_is_read_again_with_the_big_model():
+    """The big model counts the measures of a score better (2026-11-18, «Pirates of the Caribbean»): a page with two
+    measures more than most is read again, and the reading kept unless it sees fewer staves."""
+    found = [((1, number), page(5, 5, "C"), "") for number in range(1, 4)] + [((1, 4), page(5, 8, "C"), ""),
+                                                                            ((1, 5), page(5, 7, "C"), ""), ((1, 6), page(1, 9, "C"), "")]
+    asked = []
+
+    def read_again(pages):
+        asked.extend(pages)
+        return {("obra.pdf", 4): page(5, 5, "D"), ("obra.pdf", 5): page(4, 5, "D")}
+
+    better = worker.read_short_pages_again(found, {1: "obra.pdf"}, read_again)
+    assert asked == [("obra.pdf", 4), ("obra.pdf", 5)], "the pages with too many measures; a part's page is not"
+    assert [worker.measure_count(xml) for _, xml, _ in better][3:5] == [5, 7], "a reading with fewer staves is not kept"
+
+
+def test_a_page_with_fewer_staves_and_its_measures_in_blocks_is_misread(full_catalog):
+    """Its margin's text did not say so (2026-11-18, «Pirates of the Caribbean» pages 35 and 40)."""
+    good = page(5, 5, "C")
+    joined, _ = worker._score([(good, "texto"), (page(3, 10, "D"), "texto"), (good, "texto")], "Obra")
+    from omr.merge import measure_count
+    assert measure_count(joined) == 15 and "D" not in re.findall(r"<step>([A-G])</step>", joined.decode())
+    joined, _ = worker._score([(good, "texto"), (page(3, 5, "D"), "texto"), (good, "texto")], "Obra")
+    assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode()), "a page that shows fewer staves keeps its notes"
