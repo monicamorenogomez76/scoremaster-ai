@@ -21,6 +21,7 @@ from backend.app.stored_scores import stored_score
 from backend.application.ai import ProviderFailure
 from backend.application.instrument_proposals import InvalidProposals, NotAvailable, propose_instruments
 from backend.application.substitutes_explanation import explain_substitutes
+from backend.analyzers.musical_analysis import analyse
 from backend.analyzers.substitutes import substitute_candidates
 from backend.application.difficulty_explanation import explain_difficulty
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
@@ -203,6 +204,16 @@ def work_substitutes(work_id: str, user: User = Depends(authenticated_user),
     profile = (record.configuration or {}).get("band_profile") or {}
     missing = substitute_candidates(found[1], record.result.get("band_fit") or {}, profile)
     return explain_substitutes(missing, provider, DemoExplanationProvider(), cache, language(accept_language))
+
+
+@router.get("/works/{work_id}/musical-analysis")
+def work_musical_analysis(work_id: str, user: User = Depends(authenticated_user),
+                          library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store)):
+    """The analysis of the work as in a conservatory (2026-11-18): form, keys, cadences and who plays what, calculated."""
+    found = stored_score(library, user.id, _work_id(work_id), score_store)
+    if found is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return analyse(found[1])
 
 
 @router.get("/works/{work_id}/file")

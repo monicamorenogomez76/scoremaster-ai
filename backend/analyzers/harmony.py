@@ -53,6 +53,16 @@ def _part_events(part: ScorePart) -> tuple[list[_Event], dict[int, tuple[float, 
     return events, measures
 
 
+def part_events(part: ScorePart) -> tuple[list[_Event], dict[int, tuple[float, float]]]:
+    """Sounding notes of a part (start, end, MIDI, measure) and (start, length) of each measure, for other analyses."""
+    return _part_events(part)
+
+
+def key_of(histogram: list[float]) -> tuple[int, bool]:
+    """(tonic pitch class, is_minor) of duration-weighted pitch classes (Krumhansl-Kessler)."""
+    return _key(histogram)
+
+
 def _correlation(left, right) -> float:
     mean_left, mean_right = sum(left) / len(left), sum(right) / len(right)
     covariance = sum((a - mean_left) * (b - mean_right) for a, b in zip(left, right))
