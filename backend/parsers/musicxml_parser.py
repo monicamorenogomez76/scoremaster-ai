@@ -7,6 +7,7 @@ from xml.etree import ElementTree
 
 from music21 import articulations, chord, converter, dynamics, expressions, note, stream, tempo
 
+from backend.parsers.instrument_changes import note_instruments, note_key, split_name
 from backend.parsers.musicxml_source import extract_musicxml
 from backend.domain.models import PartMetadata, PartTransposition, Score, ScoreMeasure, ScoreNote, ScorePart, TempoMark
 
@@ -125,6 +126,29 @@ def metadata_for_part(parsed_part, declared: dict[str, PartMetadata]) -> PartMet
     return PartMetadata()
 
 
+def _by_instrument(part: ScorePart, change) -> tuple[ScorePart, ...]:
+    """A part that changes instrument, one part per instrument: the notes of the others become rests of their length. They
+    keep the part id, so one player still plays them all."""
+    if change is None:
+        return (part,)
+    instruments, by_note = change
+    staff = part.metadata.staff_number
+
+    def played(measure_index: int, item: ScoreNote) -> str:
+        return by_note.get(note_key(staff, measure_index, item.offset_quarters or 0), instruments[0])
+
+    def silenced(item: ScoreNote) -> ScoreNote:
+        return replace(item, pitch=None, is_rest=True, chord_pitches=(), tie=None, articulations=(), ornaments=())
+
+    return tuple(ScorePart(
+        name=split_name(part.name, instrument),
+        measures=tuple(replace(measure, notes=tuple(item if item.is_rest or played(index, item) == instrument else silenced(item)
+                                                   for item in measure.notes if not (item.is_grace and played(index, item) != instrument)))
+                       for index, measure in enumerate(part.measures)),
+        metadata=replace(part.metadata, part_name=instrument, instrument_names=(instrument,)))
+        for instrument in instruments)
+
+
 def parse_musicxml(source: Union[str, Path]) -> Score:
     score_xml = extract_musicxml(Path(source).read_bytes())
     if score_xml is None:
@@ -133,6 +157,7 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
     if b"<!ENTITY" in score_xml:
         raise ValueError("MusicXML with entity declarations is not accepted.")
     declared_metadata = read_part_metadata(score_xml)
+    changes = note_instruments(score_xml)
     # music21 receives the extracted document, so the file extension does not matter.
     parsed_score = converter.parse(score_xml, format="musicxml")
     # bestTitle: <movement-title> is kept by music21 as movementName with an empty title (2026-10-14: those
@@ -214,7 +239,8 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
                                          duration_quarters=float(parsed_measure.duration.quarterLength),
                                          key_fifths=key_fifths, time_signature=time_signature, dynamics=marked))
 
-        parts.append(ScorePart(name=part_name, measures=tuple(measures), metadata=metadata_for_part(parsed_part, declared_metadata)))
+        part = ScorePart(name=part_name, measures=tuple(measures), metadata=metadata_for_part(parsed_part, declared_metadata))
+        parts.extend(_by_instrument(part, changes.get(part.metadata.part_id)))
 
     return Score(
         title=title or "Untitled score",

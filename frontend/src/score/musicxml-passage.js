@@ -11,6 +11,10 @@ export function parseMeasureRange(value) {
 // Part names are compared as the analysis reports them: whitespace and line breaks collapsed.
 const normalizeName = text => text.replace(/\s+/g, ' ').trim();
 
+// A part that changes instrument is analysed as one part per instrument (2026-11-17): «Xylophone (Wood Blocks)» is shown
+// from the written part «Xylophone», with both instruments, as it is printed.
+export const writtenPart = name => /^(.*\S)\s+\([^()]+\)$/.exec(name)?.[1] || null;
+
 export function filterMusicXmlPassage(source, instrumentName, measureRange) {
   const [firstMeasure, lastMeasure] = parseMeasureRange(measureRange);
   const documentXml = new DOMParser().parseFromString(source, 'application/xml');
@@ -36,7 +40,7 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
     // A rehearsal block or a campaign passage. The analysis numbers parts sharing a name ("Voice 3"
     // is the third "Voice") and staves of one part ("B♭ Trumpet 3" is the third staff of
     // «B♭ Trumpet»): a numbered staff keeps only that staff, the one the audio plays (2026-10-14).
-    const wanted = new Set(instrumentName.map(normalizeName));
+    const wanted = new Set(instrumentName.map(normalizeName).flatMap(name => [name, writtenPart(name)].filter(Boolean)));
     const nameOf = part => normalizeName(directChild(part, 'part-name')?.textContent || '');
     matchingParts = scoreParts.filter(part => {
       const name = nameOf(part);
@@ -55,7 +59,10 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
     // a staff of a multi-staff part, or one of several parts sharing a name.
     const exact = named(normalizeName(instrumentName));
     const partMatch = normalizeName(instrumentName).match(/^(.*)\s+(\d+)$/);
-    if (exact.length === 1 || !partMatch) {
+    const written = writtenPart(normalizeName(instrumentName));
+    if (!exact.length && written && named(written).length) {
+      matchingParts = named(written);
+    } else if (exact.length === 1 || !partMatch) {
       matchingParts = exact;
     } else {
       matchingParts = named(partMatch[1]);
