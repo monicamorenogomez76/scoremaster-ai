@@ -225,10 +225,10 @@ def join_pages(pages: list[bytes], title: str, names: list[str] | None = None, l
     return _write(title, parts)
 
 
-def silent_page(xml: bytes, count: int) -> bytes:
-    """The page's measures as rests, on `count` staves."""
+def silent_page(xml: bytes, count: int, measures: int | None = None) -> bytes:
+    """The page's measures as rests, on `count` staves; only its first `measures` when the page repeats them."""
     page = _staves(xml)
-    model = max((_measures(staff) for staff in page), key=len, default=[])
+    model = max((_measures(staff) for staff in page), key=len, default=[])[:measures]
     return _write("", [_part(f"Parte {number}", [_rest(measure) for measure in model]) for number in range(1, count + 1)])
 
 
@@ -555,8 +555,9 @@ def _parts_in_order(files: list[tuple[str, bytes]], rhythms: list, unpitched_sta
     # baritone in both clefs). An edition may bring the horns before the trumpets and print them after.
     chosen: list[int | None] = [None] * len(options)
     taken: dict[int, int] = {}
+    # Ties go in order: the first part to the first staff.
     for score, at, index in sorted(((score, at, index) for at, (_, _, choices) in enumerate(options)
-                                    for index, (score, _) in choices.items()), reverse=True):
+                                    for index, (score, _) in choices.items()), key=lambda item: (-item[0], item[1], item[2])):
         if chosen[at] is not None:
             continue
         if index not in taken:

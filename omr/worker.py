@@ -19,6 +19,7 @@ import tempfile
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
+from xml.etree import ElementTree
 
 import httpx
 
@@ -97,7 +98,8 @@ DEFAULT_READ_PAGE = read_page
 BIG_DETECTOR_REPOSITORY = "kobimusic/copista-28m"
 BIG_DETECTOR_REVISION = "44464d11234a22ba23634ec8eb1e31e3b012021a"
 BIG_DETECTOR_FILE = "small/v7_obj-recall-30m_best.pt"
-MAX_SECOND_READINGS = 30
+MAX_SECOND_READINGS = 40
+SUSPICIOUS_MEASURES = 2
 # Several processes of one processor each read faster than one process with all of them (2026-11-03, 12 pages on four
 # processors: 54 s one after another, 43 s with four threads, 29 s two by two, 22 s four processes of one). GitHub's
 # machine for public repositories has four processors and 16 GB. OMR_PAGE_WORKERS changes it.
@@ -624,26 +626,58 @@ def title_pages(pdf_path: str, numbers: list[int], references: list[int]) -> set
     return found
 
 
-def _misread(xml: bytes, text: str, joined: int) -> bool:
+# A page with fewer staves and this many times the measures of the full ones was taken apart into blocks (2026-11-18,
+# «Pirates of the Caribbean» pages 35 and 40: 10 and 11 measures for 5); a page that shows fewer staves has its own.
+SPLIT_MEASURES = 1.8
+
+
+def _misread(xml: bytes, text: str, joined: int, typical: float = 0) -> bool:
     """Copista saw fewer staves than the margin of the page has lines (2026-11-05, «The Lion King», 8 of 20): placed by
-    their clefs, a clarinet took a bass line and the grade rose to 6. A page of a scan without text cannot say otherwise."""
+    their clefs, a clarinet took a bass line and the grade rose to 6. A page of a scan without text cannot say otherwise,
+    nor a page whose measures came out in blocks."""
     if staves(xml) >= joined:
         return False
+    if typical and measure_count(xml) >= SPLIT_MEASURES * typical:
+        return True
     # One line more than staves: the foot of the page. OCR may miss a line or two.
     return not (text or "").strip() or joined - 2 <= len(_margin_lines(text)) <= joined + 1
 
 
-def _silent(xml: bytes, joined: int) -> bytes:
-    """A misread page keeps its measures with rests on every staff: its notes cannot be placed."""
-    print(f"Página de partitura mal leída: {staves(xml)} de {joined} pentagramas.", flush=True)
-    return silent_page(xml, joined)
+def true_measures(count: int, empty: int, typical: float) -> int:
+    """The measures of a misread page, which repeats them in blocks (2026-11-18): «Pirates of the Caribbean» page 35, two
+    blocks of five; page 40, five, an empty one and five; «The Lion King» page 4, three blocks of an empty one and three.
+    Without the empty ones and divided by the blocks, the count nearest the pages read well; as read when nothing divides."""
+    best = count
+    for blocks in (2, 3, 4):
+        if count - empty > 0 and (count - empty) % blocks == 0:
+            found = (count - empty) // blocks
+            if abs(found - typical) < abs(best - typical):
+                best = found
+    return best
+
+
+def _empty_measures(xml: bytes) -> int:
+    """Measures with no note on any staff."""
+    parts = [[sum(1 for item in measure.iter("note") if item.find("rest") is None) for measure in part.iter("measure")]
+             for part in ElementTree.fromstring(xml).iter("part")]
+    longest = max((len(part) for part in parts), default=0)
+    return sum(1 for at in range(longest) if not any(part[at] for part in parts if at < len(part)))
+
+
+def _silent(xml: bytes, joined: int, typical: float) -> bytes:
+    """A misread page keeps its true measures with rests on every staff: its notes cannot be placed."""
+    measures = true_measures(measure_count(xml), _empty_measures(xml), typical)
+    print(f"Página de partitura mal leída: {staves(xml)} de {joined} pentagramas, {measures} compases.", flush=True)
+    return silent_page(xml, joined, measures)
 
 
 def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str] | None]:
     """The score's pages joined, its staves named after the instruments written beside them on its first page when
     there is one name per staff."""
     joined = max((staves(xml) for xml, _ in pages), default=0)
-    pages = [(_silent(xml, joined) if _misread(xml, text, joined) else xml, text) for xml, text in pages]
+    full = sorted(measure_count(xml) for xml, _ in pages if staves(xml) == joined)
+    typical = full[len(full) // 2] if full else 0
+    pages = [(_silent(xml, joined, typical) if _misread(xml, text, joined, typical) else xml, text) for xml, text in pages]
     count = staves(pages[0][0]) if pages else 0
     names = score_names(pages[0][1]) if pages else []
     named = names if names and len(names) == joined == count else None
@@ -723,13 +757,9 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
     return _score(pages, title)[0], "score", any(at_concert_pitch(text) for _, text in pages)
 
 
-# The score first (2026-11-17): with a score and its parts, the work is the score's when its parts agree with it in this
-# share of the measures with notes; below it the score is no guide and the work comes from the parts.
-SCORE_TRUSTED = 0.9
-
-
 def _checked_score(pages: list[tuple[bytes, str]], files: list[tuple[str, bytes]], title: str) -> tuple[bytes, str, bool] | None:
-    """The score checked with its parts, or None when there is no score or it is not trusted. The log numbers the staves:
+    """The score checked with its parts, or None when there is no score. With a score the work is always the score's
+    (2026-11-18): its parts are asked only for the measures where the two readings differ. The log numbers the staves:
     it never says which work was read."""
     if not pages:
         return None
@@ -737,12 +767,10 @@ def _checked_score(pages: list[tuple[bytes, str]], files: list[tuple[str, bytes]
     checked = check_with_parts(joined, files, title, same_part)
     if checked.agreement is None:
         print("La partitura general no se pudo comparar con las particellas.", flush=True)
-        return None
+        return checked.musicxml, "score", any(at_concert_pitch(text) for _, text in pages)
     print(f"Partitura general y particellas coinciden en el {checked.agreement:.0%} de {checked.compared} compases; "
           f"{len(checked.dubious)} compases dudosos se toman de las particellas"
           + (f"; {checked.unmatched} particellas no se parecen a ningún pentagrama." if checked.unmatched else "."), flush=True)
-    if checked.agreement < SCORE_TRUSTED:
-        return None
     print(f"La obra se saca de la partitura general ({len(pages)} páginas), comprobada con {len(files)} particellas.", flush=True)
     return checked.musicxml, "score", any(at_concert_pitch(text) for _, text in pages)
 
@@ -848,12 +876,19 @@ def read_with_big_detector(pages: list[tuple[str, int]]) -> dict:
 
 def read_short_pages_again(found: list, paths: dict, read_again) -> list:
     """The pages (place, MusicXML, text) with fewer staves than the fullest, read again, keep the second reading when it
-    has more. One or two staves are a part's; whatever fails leaves the first reading."""
+    has more. The score's pages with SUSPICIOUS_MEASURES measures more than most too: the big model counts measures better,
+    and its reading is kept unless it sees fewer staves (2026-11-18, «Pirates of the Caribbean»: 240 measures rereading 21
+    pages, 237 rereading all 43, the work has 237; all of them took 10 minutes more). One or two staves are a part's;
+    whatever fails leaves the first reading."""
     widest = max((staves(xml) for _, xml, _ in found if xml is not None), default=0)
-    short = [place for place, xml, _ in found if xml is not None and 3 <= staves(xml) < widest][:MAX_SECOND_READINGS]
+    full = sorted(measure_count(xml) for _, xml, _ in found if xml is not None and staves(xml) == widest >= SCORE_STAVES)
+    typical = full[len(full) // 2] if full else 0
+    short = [place for place, xml, _ in found
+             if xml is not None and 3 <= staves(xml)
+             and (staves(xml) < widest or (typical and staves(xml) >= SCORE_STAVES and measure_count(xml) >= typical + SUSPICIOUS_MEASURES))][:MAX_SECOND_READINGS]
     if not short:
         return found
-    print(f"Se releen {len(short)} páginas con menos pentagramas que las demás.", flush=True)
+    print(f"Se releen con el modelo grande {len(short)} páginas con menos pentagramas o más compases que las demás.", flush=True)
     try:
         again = read_again([(paths[file_number], number) for file_number, number in short])
     except Exception as error:
@@ -864,6 +899,8 @@ def read_short_pages_again(found: list, paths: dict, read_again) -> list:
         second = again.get((paths[place[0]], place[1])) if place in short else None
         if isinstance(second, bytes) and staves(second) > staves(xml):
             print(f"Archivo {place[0]}, página {place[1]}: de {staves(xml)} a {staves(second)} pentagramas.", flush=True)
+            xml = second
+        elif isinstance(second, bytes) and staves(second) == staves(xml) >= SCORE_STAVES:
             xml = second
         better.append((place, xml, text))
     return better
@@ -899,8 +936,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         plan = [(name, path, number) for (name, path), count in zip(saved, pages) for number in range(1, count + 1)
                 if not set_apart(path, number)]
         if len(plan) < total:
-            print(f"Se apartan {total - len(plan)} páginas de partitura general sin leerlas: la obra sale de las "
-                  "particellas.", flush=True)
+            print(f"Las {total - len(plan)} páginas de partitura general se leen después de las particellas.", flush=True)
         done, read, by_file, failed = 0, [], {}, {}
         client.post(callback + "/progress", json={"pages_done": 0, "pages_total": len(plan)})
         out_dirs = {path: tempfile.mkdtemp(dir=folder) for _, path in saved}
