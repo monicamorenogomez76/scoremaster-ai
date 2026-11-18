@@ -10,6 +10,7 @@ import re
 
 import httpx
 import pytest
+import shutil
 
 import omr.worker as worker
 from backend.test.test_omr_merge import page
@@ -1101,6 +1102,8 @@ def test_a_first_page_without_a_name_takes_the_name_of_the_next(full_catalog):
     assert grouped_pages(("FLUTE 2", False), ("", True), ("OBOE", False), ("", False)) == [("FLUTE 2", 1), ("OBOE", 3)]
 
 
+# Poppler draws the pages, as in the reader's workflow; the CI machine has none.
+@pytest.mark.skipif(shutil.which("pdftoppm") is None, reason="needs poppler-utils")
 def test_a_page_without_text_like_the_first_pages_is_a_first_page(tmp_path):
     from PIL import Image, ImageDraw
 
