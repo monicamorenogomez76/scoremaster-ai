@@ -17,8 +17,19 @@ from music21.musicxml.m21ToXml import GeneralObjectExporter
 from music21.musicxml.xmlObjects import MusicXMLExportException
 
 
+def _true_measure_rests(xml: bytes) -> bytes:
+    """A rest copista marked as a whole-measure one that shares its measure is an ordinary rest: music21 reads a marked rest
+    a whole measure long (2026-11-17, «Pirates of the Caribbean»: 81 of 693, three beats and one in 4/4 became five)."""
+    def honest(measure: re.Match) -> bytes:
+        block = measure.group(0)
+        if len(re.findall(rb"<note\b", block)) - len(re.findall(rb"<chord\s*/>", block)) <= 1:
+            return block
+        return re.sub(rb'(<rest\b[^>]*?)\s+measure="yes"', rb"\1", block)
+    return re.sub(rb"<measure\b.*?</measure>", honest, xml, flags=re.S)
+
+
 def _staves(xml: bytes) -> list[stream.Part]:
-    return list(converter.parseData(xml.decode("utf-8"), format="musicxml").parts)
+    return list(converter.parseData(_true_measure_rests(xml).decode("utf-8"), format="musicxml").parts)
 
 
 def _signature(staff: stream.Part) -> tuple:

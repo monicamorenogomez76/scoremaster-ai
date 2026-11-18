@@ -7,6 +7,7 @@ import gzip
 import json
 import os
 import re
+import shutil
 
 import httpx
 import pytest
@@ -1040,3 +1041,84 @@ def test_the_second_reading_uses_the_big_detector_at_its_pinned_revision(monkeyp
     assert worker.read_page_big("obra.pdf", 4, "dir") == b"<xml/>"
     assert fetched == [1] and read == ["28m"]
     assert re.fullmatch(r"[0-9a-f]{40}", worker.BIG_DETECTOR_REVISION)
+
+
+# «Pirates of the Caribbean» (2026-11-17): every page of a part prints its name, and the scan's text reads it differently
+# from page to page («~b ALTO CLARINET», «EL ALTO CLARINET»; «TROMBONE l»; a page of the tuba read «B. Sax»). Each variant
+# opened a part of its own: 41 parts for some 30. Between consecutive pages, a misreading of the same name is the same part.
+def grouped(*names: str) -> list[tuple[str, int]]:
+    return [(name, len(found)) for name, found, _ in worker._parts_of([(page(1, 2, "C"), text + "\n" + MUSIC) for text in names])]
+
+
+def test_a_name_misread_on_the_next_page_is_the_same_part(full_catalog):
+    assert grouped("~b ALTO CLARINET", "EL ALTO CLARINET", "~b ALTO CLARINET") == [("~b ALTO CLARINET", 3)]
+    assert grouped("TROMBONE 1", "TROMBONE l", "TROMBONE 1", "TROMBONE 2") == [("TROMBONE 1", 3), ("TROMBONE 2", 1)]
+    assert grouped("~b BASS CLARINET", "~b BASS CLARTNET") == [("~b BASS CLARINET", 2)]
+    assert grouped("~b BARITONE SAXOPHONE", "Eb BARITONE SAXOPHONE") == [("~b BARITONE SAXOPHONE", 2)]
+
+
+def test_a_page_named_otherwise_between_two_of_one_part_is_that_parts(full_catalog):
+    assert grouped("TUBA", "TUBA", "B. Sax", "TUBA", "STRING BASS") == [("TUBA", 4), ("STRING BASS", 1)]
+
+
+def test_names_that_differ_in_earnest_stay_apart(full_catalog):
+    assert grouped("BARITONE B.C.", "BARITONE T.C.") == [("BARITONE B.C.", 1), ("BARITONE T.C.", 1)]
+    assert grouped("~b ALTO SAXOPHONE 1", "EC ALTO SAXOPHONE 2") == [("~b ALTO SAXOPHONE 1", 1), ("EC ALTO SAXOPHONE 2", 1)]
+    assert grouped("FLUTE 1", "FLUTE 2", "FLUTE 1") == [("FLUTE 1", 1), ("FLUTE 2", 1), ("FLUTE 1", 1)]
+
+
+def test_a_first_page_names_its_part_under_the_title_even_with_its_key_misread(full_catalog):
+    """«EC ALTO SAXOPHONE 2»: the scan read the E♭ as «EC», the catalog knew no such name and the saxophone 2 was added
+    to the saxophone 1 (2026-11-17, «Pirates of the Caribbean»)."""
+    text = ("     From Walt Disney Pictures' PIRATES OF THE CARIBBEAN: THE CURSE OF THE BLACK PEARL\n"
+            "                  PIRATES OF THE CARIBBEAN\n                       (Symphonic Suite)\n"
+            "EC ALTO SAXOPHONE 2                                         Music by KLAUS BADELT\n" + MUSIC)
+    assert worker.part_header(text) == ("ALTO SAXOPHONE 2", False)
+    assert worker.part_header(text.replace("EC ALTO SAXOPHONE 2", "~b TRUMPET 1")) == ("TRUMPET 1", False)
+    assert worker._without_key_reading("B. Sax") == "B. Sax"
+    mallets = text.replace("EC ALTO SAXOPHONE 2", "MALLET PERCUSSION").replace(MUSIC, "(Tambourine, Bells, Chimes, Gong)\n" + MUSIC)
+    assert worker.part_header(mallets) == ("MALLET PERCUSSION", False), "the instruments it plays are no name"
+
+
+def test_a_name_with_its_numbers_written_together_is_the_same_part(full_catalog):
+    assert grouped("F HORN 1 , 2", "F HORN 1,2") == [("F HORN 1 , 2", 2)]
+
+
+# Scanned parts without text (2026-11-17, «Pirates of the Caribbean»: the clarinets 2 and 3, nine pages): nothing names
+# them and they were added to the clarinet 1. A part's first page prints the work's title block, like the first pages
+# whose text gives the credits («Music by», «Arranged by»): it starts a part, named by the next page that names it, or
+# «Parte N».
+def grouped_pages(*pages: tuple[str, bool]) -> list[tuple[str, int]]:
+    found = [(page(1, 2, "C"), (text + "\n" + MUSIC) if text else "", first) for text, first in pages]
+    return [(name, len(xmls)) for name, xmls, _ in worker._parts_of(found)]
+
+
+def test_a_first_page_without_text_starts_a_part(full_catalog):
+    assert grouped_pages(("~b CLARINET 1", False), ("~b CLARINET 1", False), ("", True), ("", False), ("", True), ("", False),
+                         ("ALTO CLARINET", False)) == [("~b CLARINET 1", 2), ("Parte 2", 2), ("Parte 3", 2), ("ALTO CLARINET", 1)]
+
+
+def test_a_first_page_without_a_name_takes_the_name_of_the_next(full_catalog):
+    assert grouped_pages(("FLUTE 2", False), ("", True), ("OBOE", False), ("", False)) == [("FLUTE 2", 1), ("OBOE", 3)]
+
+
+# Poppler draws the pages, as in the reader's workflow; the CI machine has none.
+@pytest.mark.skipif(shutil.which("pdftoppm") is None, reason="needs poppler-utils")
+def test_a_page_without_text_like_the_first_pages_is_a_first_page(tmp_path):
+    from PIL import Image, ImageDraw
+
+    def sheet(title: bool) -> Image.Image:
+        image = Image.new("L", (850, 1100), 255)
+        draw = ImageDraw.Draw(image)
+        if title:
+            draw.rectangle((150, 30, 700, 120), fill=0)
+        for top in range(200 if title else 80, 1000, 120):
+            for line in range(5):
+                draw.line((60, top + line * 10, 800, top + line * 10), fill=0, width=2)
+        return image
+
+    pdf = tmp_path / "parts.pdf"
+    first, *rest = [sheet(title) for title in (True, False, True, False)]
+    first.save(pdf, save_all=True, append_images=rest)
+    assert worker.title_pages(str(pdf), [2, 3, 4], references=[1]) == {3}
+    assert worker.title_pages(str(pdf), [2, 3, 4], references=[]) == set()
