@@ -7,10 +7,10 @@ import gzip
 import json
 import os
 import re
+import shutil
 
 import httpx
 import pytest
-import shutil
 
 import omr.worker as worker
 from backend.test.test_omr_merge import page
