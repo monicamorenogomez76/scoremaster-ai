@@ -48,3 +48,17 @@ export function sectionShares(sections) {
   const total = lengths.reduce((sum, length) => sum + length, 0);
   return lengths.map(length => Math.round(length * 10000 / total) / 100);
 }
+
+// «7 min 47 s».
+export function durationText(seconds) {
+  const minutes = Math.floor(seconds / 60), rest = seconds % 60;
+  return minutes ? t('{minutes} min {seconds} s', { minutes, seconds: rest }) : t('{seconds} s', { seconds: rest });
+}
+
+// «c. 1: ♩ = 120 · Allegro»: the tempo written at a measure, with its words.
+export const tempoText = entry => t('c. {measure}: {tempo}', { measure: entry.measure,
+  tempo: [entry.bpm ? '♩ = ' + entry.bpm : '', ...entry.words].filter(Boolean).join(' · ') });
+
+// The first items of a long list and how many more there are.
+export const listText = (items, shown) => items.length > shown
+  ? t('{items} y {count} más', { items: items.slice(0, shown).join(', '), count: items.length - shown }) : items.join(', ');

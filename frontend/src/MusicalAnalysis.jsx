@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { cadenceText, keyName, loadMusicalAnalysis, markText, relationText, sectionShares, textureText } from './musicalAnalysis.js';
+import { cadenceText, durationText, keyName, listText, loadMusicalAnalysis, markText, relationText, sectionShares, tempoText,
+  textureText } from './musicalAnalysis.js';
 import { t } from './i18n.js';
 
 // The analysis of the work as in a conservatory (2026-11-18): its form, keys, cadences and who plays what, calculated by
@@ -32,6 +33,18 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         <div><dt>{t('Forma')}</dt><dd>{result.form}</dd></div>
         <div><dt>{t('Secciones')}</dt><dd>{result.sections.length}</dd></div>
         <div><dt>{t('Cadencias')}</dt><dd>{result.cadences.length}</dd></div>
+        <div><dt>{t('Duración')}</dt><dd>{durationText(result.general.seconds)}{result.general.assumed_tempo &&
+          <span className="result-supporting"> · {t('sin tempo escrito')}</span>}</dd></div>
+        <div><dt>{t('Compases')}</dt><dd>{result.general.measures}</dd></div>
+        <div><dt>{t('Partes')}</dt><dd>{result.general.parts}</dd></div>
+      </dl>
+      <dl className="analysis-facts">
+        {result.climax && <div><dt>{t('Clímax')}</dt><dd>{t('c. {measure}, sección {section}, {dynamic}, {count} partes', {
+          measure: result.climax.measure, dynamic: result.climax.dynamic, count: result.climax.playing,
+          section: result.sections.find(section => section.id === result.climax.section)?.label || '—' })}</dd></div>}
+        {result.general.tempos.length > 0 && <div><dt>{t('Tempos')}</dt><dd>{listText(result.general.tempos.map(tempoText), 8)}</dd></div>}
+        {result.general.meters.length > 0 && <div><dt>{t('Compás')}</dt><dd>{listText(result.general.meters.map(item =>
+          t('{meter} (c. {measure})', item)), 8)}</dd></div>}
       </dl>
       <ol className="analysis-timeline" aria-label={t('Secciones de la obra en orden')}>
         {result.sections.map((section, index) => <li key={section.id} className={'analysis-block analysis-block--' + section.relation}
@@ -47,7 +60,8 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
           <caption className="visually-hidden">{t('Análisis por secciones')}</caption>
           <thead><tr>
             <th scope="col">{t('Sección')}</th><th scope="col">{t('Compases')}</th><th scope="col">{t('Tonalidad')}</th>
-            <th scope="col">{t('Melodía')}</th><th scope="col">{t('Textura')}</th><th scope="col">{t('Marcas')}</th>
+            <th scope="col">{t('Tempo')}</th><th scope="col">{t('Melodía')}</th><th scope="col">{t('Textura')}</th>
+            <th scope="col">{t('Dinámicas')}</th><th scope="col">{t('Marcas')}</th>
             <th scope="col">{t('Cadencias')}</th>
           </tr></thead>
           <tbody>{result.sections.map(section => {
@@ -58,9 +72,11 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
                 {' '}{t('(vuelve el material de {section})', { section: result.sections.find(other => other.id === section.like)?.label || section.like })}</span>}</th>
               <td data-label={t('Compases')}>{t('{first}–{last}', { first: section.first, last: section.last })}</td>
               <td data-label={t('Tonalidad')}>{keyName(section.key)}<span className="result-supporting"> · {relationText(section.relation)}</span></td>
+              <td data-label={t('Tempo')}>{[section.tempo ? '♩ = ' + section.tempo : '', section.meter].filter(Boolean).join(' · ') || '—'}</td>
               <td data-label={t('Melodía')}>{section.melody || '—'}{section.doubled_by.length > 0 && <span className="result-supporting">
                 {' '}{t('(doblada por {parts})', { parts: section.doubled_by.join(', ') })}</span>}</td>
               <td data-label={t('Textura')}>{textureText(section.texture)}<span className="result-supporting"> · {t('{count} partes', { count: section.playing.length })}</span></td>
+              <td data-label={t('Dinámicas')}>{section.dynamics.join(' ') || '—'}</td>
               <td data-label={t('Marcas')}>{marks.join(', ') || '—'}</td>
               <td data-label={t('Cadencias')}>{cadences.map(cadence => t('{kind} (c. {measure})', { kind: cadenceText(cadence.kind), measure: cadence.measure })).join(', ') || '—'}</td>
             </tr>;
