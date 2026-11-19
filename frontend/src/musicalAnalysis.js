@@ -104,3 +104,20 @@ export function themeText(section) {
   for (const motif of section.motifs) items.push(t('cabeza de {theme}: {part} (c. {measure})', motif));
   return items.join(' · ') || '—';
 }
+
+const ROLES = () => ({ continuous: t('continua'), punctual: t('puntual') });
+
+// «solo: Flute (c. 9) · percusión: Caja (continua) · agudo extremo: Oboe (c. 22)».
+export function orchestrationText(section) {
+  const items = [];
+  for (const kind of ['solo', 'soli']) {
+    const solos = section.solos.filter(item => item.kind === kind);
+    const parts = solos.map(item => t('{part} (c. {measure})', item)).join(', ');
+    if (solos.length) items.push(kind === 'solo' ? t('solo: {parts}', { parts }) : t('soli: {parts}', { parts }));
+  }
+  if (section.percussion.length) items.push(t('percusión: {parts}', { parts: section.percussion.map(item =>
+    item.part + ' (' + (ROLES()[item.role] || item.role) + ')').join(', ') }));
+  if (section.registers.length) items.push(t('agudo extremo: {parts}', { parts: section.registers.map(item =>
+    t('{part} (c. {measure})', item)).join(', ') }));
+  return items.join(' · ') || '—';
+}

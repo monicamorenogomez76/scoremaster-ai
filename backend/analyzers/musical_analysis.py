@@ -13,13 +13,14 @@ from collections import Counter
 
 from backend.analyzers.harmony import find_cadences, key_of, part_events
 from backend.analyzers.phrases import find_phrases
+from backend.analyzers.rubric_grade import instrument_range
 from backend.analyzers.tempo import estimate_duration
 from backend.domain.timing import quarter_bpm_at
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v5"   # v5 (2026-11-19): themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v6"   # v6 (2026-11-19): orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -462,6 +463,47 @@ def _development(section: dict, span: list[int], parts: dict[str, ScorePart], th
     return found
 
 
+SOLO_WORDS = re.compile(r"\b(solo|soli)\b", re.IGNORECASE)
+CONTINUOUS = 0.5        # share of the measures of a section a percussion part plays to keep the rhythm
+# Semitones below the top of the instrument's whole range that count as its extreme high register. The bottom of the
+# range is ordinary writing (third clarinets, baritone saxophone) and is not named.
+HIGH_EDGE = 2
+
+
+def _solos(span: list[int], score: Score) -> list[dict]:
+    """The solos and solis written in the parts of a section."""
+    inside, found = set(span), []
+    for part in score.parts:
+        for measure in part.measures:
+            if measure.number in inside:
+                for words in measure.words:
+                    if match := SOLO_WORDS.search(words):
+                        found.append({"part": part.name, "measure": measure.number, "kind": match.group(1).lower()})
+    return sorted(found, key=lambda item: item["measure"])
+
+
+def _percussion(span: list[int], score: Score, playing: dict[int, set[str]]) -> list[dict]:
+    """Each unpitched percussion part playing in a section: continuous when it plays most of it, punctual otherwise."""
+    found = []
+    for part in score.parts:
+        if _pitched(part):
+            continue
+        share = sum(part.name in playing[number] for number in span) / len(span)
+        if share:
+            found.append({"part": part.name, "role": "continuous" if share >= CONTINUOUS else "punctual"})
+    return found
+
+
+def _registers(span: list[int], ranges: dict[str, tuple[int, int, dict[int, list[int]]]]) -> list[dict]:
+    """The first measure where each part reaches the extreme high register of its instrument."""
+    found = []
+    for name, (_, high, notes) in ranges.items():
+        measure = next((number for number in span if any(value >= high - HIGH_EDGE for value in notes.get(number, ()))), None)
+        if measure is not None:
+            found.append({"part": name, "register": "high", "measure": measure})
+    return found
+
+
 def _beat(meter: str | None) -> float:
     """The beat in quarters: a dotted quarter in compound meters (6/8, 9/8, 12/8)."""
     try:
@@ -568,6 +610,7 @@ def analyse(score: Score) -> dict:
     for number in numbers:
         meter = next((item.time_signature for item in measures[number] if item.time_signature), meter)
         meters[number] = meter
+    ranges = {part.name: found for part in score.parts if (found := instrument_range(part))}
     order = [part.name for part in score.parts]
     sounding = [name for name in order if any(name in playing[number] for number in numbers)]
 
@@ -601,7 +644,8 @@ def analyse(score: Score) -> dict:
         phrases, periods = _phrases(next((item for item in score.parts if item.name == melody), None), span, cadences, skyline)
         sections[-1].update({"texture_kind": _texture(span, lines, attacks), "imitations": _imitations(melody, span, tuned),
                              "syncopation": _syncopation(span, lines, meters),
-                             "ostinatos": _ostinatos(span, lines, melody)})
+                             "ostinatos": _ostinatos(span, lines, melody), "solos": _solos(span, score),
+                             "percussion": _percussion(span, score, playing), "registers": _registers(span, ranges)})
         sections[-1].update({"phrases": phrases, "periods": periods,
                              "structure": " + ".join(str(phrase["measures"]) for phrase in phrases)})
     heads = [_theme_notes(next((item for item in score.parts if item.name == section["melody"]), None),

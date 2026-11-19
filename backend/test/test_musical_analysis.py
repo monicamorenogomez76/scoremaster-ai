@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v5" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v6" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -282,3 +282,26 @@ def test_the_head_of_a_theme_heard_in_another_section_develops_it():
     found = analyse(replace(score, parts=score.parts[:2] + (replace(tuba, measures=bars),)))
     assert found["sections"][1]["motifs"] == [{"theme": "T1", "part": "Tuba", "measure": 9}]
     assert found["sections"][0]["motifs"] == [] and found["sections"][2]["motifs"] == []
+
+
+def test_the_solos_written_in_a_section_are_given():
+    score = aba()
+    flute = score.parts[0]
+    bars = tuple(replace(bar, words=("Solo",)) if bar.number == 9 else bar for bar in flute.measures)
+    found = analyse(replace(score, parts=(replace(flute, measures=bars),) + score.parts[1:]))
+    assert [section["solos"] for section in found["sections"]] == [[], [{"part": "Flute", "measure": 9, "kind": "solo"}], []]
+
+
+def test_the_percussion_of_each_section_keeps_the_rhythm_or_marks_moments():
+    score = aba()
+    hits = [[("C4", Q)] * 4] * 8 + REST * 11 + [[("C4", Q)] * 4] + REST * 4
+    found = analyse(replace(score, parts=score.parts + (part("Snare Drum", hits, MARKS),)))
+    assert [section["percussion"] for section in found["sections"]] == [
+        [{"part": "Snare Drum", "role": "continuous"}], [], [{"part": "Snare Drum", "role": "punctual"}]]
+
+
+def test_parts_in_the_extreme_high_register_of_their_instrument_are_named():
+    [section] = analyse(texture(("Flute", [[("C7", 4.0)]] * 2 + [[("C5", 4.0)]] * 2),
+                                ("Tuba", [[("C3", 4.0)]] * 3 + [[("D1", 4.0)]])))["sections"]
+    assert section["registers"] == [{"part": "Flute", "register": "high", "measure": 1}], \
+        "the bottom of the range is ordinary writing: only the extreme high register is named"

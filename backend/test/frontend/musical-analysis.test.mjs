@@ -73,3 +73,13 @@ test('the theme of a section and the themes it develops read as words', async ()
     'T2 (vuelve) · cabeza de T1: Tuba (c. 9)');
   assert.equal(themeText({ theme: null, motifs: [] }), '—');
 });
+
+test('solos, percussion and extreme registers read as words', async () => {
+  const { orchestrationText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(orchestrationText({ solos: [{ part: 'Flute', measure: 9, kind: 'solo' }],
+    percussion: [{ part: 'Caja', role: 'continuous' }, { part: 'Platos', role: 'punctual' }],
+    registers: [{ part: 'Oboe', register: 'high', measure: 22 }] }),
+    'solo: Flute (c. 9) · percusión: Caja (continua), Platos (puntual) · agudo extremo: Oboe (c. 22)');
+  assert.equal(orchestrationText({ solos: [], percussion: [], registers: [] }), '—');
+});
