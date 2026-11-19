@@ -51,3 +51,15 @@ test('phrases and periods read as a musician says them', async () => {
   assert.equal(periodText({ first: 1, last: 8, kind: 'period', symmetric: true }), 'periodo simétrico, cc. 1–8');
   assert.equal(periodText({ first: 9, last: 20, kind: 'repetition', symmetric: false }), 'frase repetida, cc. 9–20');
 });
+
+test('texture and rhythm read as a musician says them', async () => {
+  const { textureKindText, rhythmText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(textureKindText('melody_and_accompaniment'), 'melodía acompañada');
+  assert.equal(textureKindText('polyphonic'), 'polifónica');
+  assert.equal(textureKindText(null), '');
+  assert.equal(rhythmText({ syncopation: 0.5, ostinatos: [{ part: 'Tuba', first: 1, last: 4 }],
+    imitations: [{ part: 'Clarinet', imitates: 'Flute', measure: 2 }] }),
+    'síncopas (50 %) · ostinato: Tuba (cc. 1–4) · imitación: Clarinet (c. 2)');
+  assert.equal(rhythmText({ syncopation: 0.05, ostinatos: [], imitations: [] }), '—');
+});

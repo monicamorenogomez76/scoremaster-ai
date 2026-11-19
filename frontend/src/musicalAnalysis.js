@@ -75,3 +75,21 @@ export function periodText(period) {
     : (period.symmetric ? t('frase repetida') : t('frase repetida'));
   return t('{kind}, cc. {first}–{last}', { kind, first: period.first, last: period.last });
 }
+
+const TEXTURE_KINDS = () => ({ unison: t('unísono'), homorhythmic: t('homorrítmica'),
+  melody_and_accompaniment: t('melodía acompañada'), polyphonic: t('polifónica') });
+export const textureKindText = kind => (kind ? TEXTURE_KINDS()[kind] || kind : '');
+
+// Below this share of syncopated attacks the rhythm is not called syncopated.
+const SYNCOPATED = 0.15;
+
+// «síncopas (50 %) · ostinato: Tuba (cc. 1–4) · imitación: Clarinet (c. 2)».
+export function rhythmText(section) {
+  const items = [];
+  if (section.syncopation >= SYNCOPATED) items.push(t('síncopas ({share} %)', { share: Math.round(section.syncopation * 100) }));
+  if (section.ostinatos.length) items.push(t('ostinato: {parts}', { parts: section.ostinatos.map(item =>
+    t('{part} (cc. {first}–{last})', item)).join(', ') }));
+  if (section.imitations.length) items.push(t('imitación: {parts}', { parts: section.imitations.map(item =>
+    t('{part} (c. {measure})', item)).join(', ') }));
+  return items.join(' · ') || '—';
+}

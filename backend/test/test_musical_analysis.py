@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v3" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v4" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -212,3 +212,42 @@ def test_a_period_is_an_antecedent_and_a_consequent():
 def test_phrases_never_cross_the_sections():
     for section in analyse(aba())["sections"]:
         assert all(section["first"] <= phrase["first"] <= phrase["last"] <= section["last"] for phrase in section["phrases"])
+
+
+# The fourth block (2026-11-19): texture and rhythm of each section.
+def texture(*voices) -> Score:
+    return Score("Textura", tuple(part(name, bars) for name, bars in voices))
+
+
+EIGHTHS = [[("C5", 0.5), ("D5", 0.5), ("E5", 0.5), ("F5", 0.5), ("G5", 0.5), ("F5", 0.5), ("E5", 0.5), ("D5", 0.5)]] * 4
+CHORDS = [[("E4", 1.0)] * 4] * 4
+HELD = [[("C3", 4.0)]] * 4
+
+
+def test_the_texture_of_a_section_is_named_by_its_layers():
+    def kind(*voices):
+        return analyse(texture(*voices))["sections"][0]["texture_kind"]
+    same = [[("C5", 1.0), ("D5", 1.0), ("E5", 1.0), ("C5", 1.0)]] * 4
+    assert kind(("Flute", same), ("Clarinet", [[(n[:-1] + "4", d) for n, d in bar] for bar in same])) == "unison"
+    assert kind(("Flute", same), ("Clarinet", [[("E4", 1.0), ("F4", 1.0), ("G4", 1.0), ("E4", 1.0)]] * 4)) == "homorhythmic"
+    assert kind(("Flute", EIGHTHS), ("Clarinet", CHORDS), ("Tuba", HELD)) == "melody_and_accompaniment", \
+        "repeated chords and a held bass accompany: one line moves"
+    line = [[("E4", 1.5), ("F4", 0.5), ("G4", 1.0), ("A4", 1.0)]] * 4
+    assert kind(("Flute", EIGHTHS), ("Clarinet", line), ("Tuba", HELD)) == "polyphonic", "two lines move, each in its rhythm"
+
+
+def test_an_entry_that_imitates_the_tune_is_found():
+    tune = [[("C5", 1.0), ("D5", 1.0), ("E5", 1.0), ("F5", 1.0)], [("G5", 2.0), ("E5", 2.0)], [("C5", 4.0)], [("C5", 4.0)]]
+    answer = [[(None, 4.0)]] + [[(n[:-1] + "4", d) for n, d in bar] for bar in tune[:3]]
+    [section] = analyse(texture(("Flute", tune), ("Clarinet", answer)))["sections"]
+    assert section["imitations"] == [{"part": "Clarinet", "imitates": "Flute", "measure": 2}]
+
+
+def test_syncopations_and_ostinatos_are_found():
+    syncopated = [[("C5", 0.5), ("D5", 1.0), ("E5", 1.0), ("F5", 1.0), ("G5", 0.5)]] * 4
+    ostinato = [[("C3", 1.0), ("G2", 1.0), ("C3", 1.0), ("G2", 1.0)]] * 4
+    [section] = analyse(texture(("Flute", syncopated), ("Tuba", ostinato)))["sections"]
+    assert section["syncopation"] >= 0.5
+    assert section["ostinatos"] == [{"part": "Tuba", "first": 1, "last": 4}]
+    [plain] = analyse(texture(("Flute", CHORDS), ("Tuba", HELD)))["sections"]
+    assert plain["syncopation"] == 0.0
