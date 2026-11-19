@@ -117,6 +117,19 @@ def reaches_sounding(canonical_id: str, lowest: str, highest: str, margin: int =
     return _midi(low) - margin <= _midi(lowest) - shift and _midi(highest) - shift <= _midi(high) + margin
 
 
+def instrument_range(part: ScorePart) -> tuple[int, int, dict[int, list[int]]] | None:
+    """The whole range of the part's instrument (the grade 5 one, lowest and highest as MIDI) and the part's notes in
+    each measure in the same terms; None when the guides have no range for it."""
+    identity = resolve_part(part).identity
+    row = R.RANGE_ROW_BY_INSTRUMENT.get(identity.canonical_id) if identity else None
+    if row is None:
+        return None
+    shift = _transposition(part) if row in R.CONCERT_PITCH_ROWS else 0
+    (low, high), _ = R.RANGES[row][5]
+    return _midi(low), _midi(high), {measure.number: [_midi(name) + shift for event in _attacks(measure)
+                                                      for name in sounding_pitches(event)] for measure in part.measures}
+
+
 def _range(part: ScorePart, row: str) -> dict:
     played = _played(part, row)
     if not played:
