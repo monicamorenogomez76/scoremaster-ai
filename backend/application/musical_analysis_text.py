@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.explanations import InvalidExplanation, run_explanation
 from backend.domain.text import evidence_text
 
-PROMPT_VERSION = "musical-analysis-text-v1"
-EVIDENCE_VERSION = "musical-analysis-evidence-v1"
+PROMPT_VERSION = "musical-analysis-text-v2"   # v2 (2026-11-19): harmonic rhythm, secondary dominants, pedals
+EVIDENCE_VERSION = "musical-analysis-evidence-v2"   # v2 (2026-11-19): harmonic rhythm, secondary dominants, pedals
 # The topics of the commentary, in the order of a conservatory analysis; the interpretation, last, is the only opinion.
 TOPICS = ("form", "themes", "harmony", "texture", "rhythm", "dynamics", "interpretation")
 MAX_SECTIONS = 30
@@ -47,6 +47,12 @@ class MusicalAnalysisText(BaseModel):
     interpretation: Topic
 
 
+def _note(note: str, language: str) -> str:
+    """«Si bemol», «B♭»."""
+    letter = note[0] if language == "en" else SOLFEGE[note[0]]
+    return letter + ACCIDENTALS[language].get(note[1:], "")
+
+
 def key_label(key: dict | None, language: str = "es") -> str:
     """«Mi bemol mayor», «E♭ major»."""
     if not key:
@@ -78,6 +84,9 @@ def _section(section: dict, language: str, name) -> dict:
         "solos": [{**item, "part": name(item["part"])} for item in section["solos"][:MAX_LISTED]],
         "percussion": [{**item, "part": name(item["part"])} for item in section["percussion"][:MAX_LISTED]],
         "extreme_high_register": names([item["part"] for item in section["registers"]]),
+        "harmonic_rhythm": section.get("harmonic_rhythm"),
+        "secondary_dominants": section.get("secondary_dominants", [])[:MAX_LISTED],
+        "pedals": [{**item, "note": _note(item["note"], language)} for item in section.get("pedals", [])[:MAX_LISTED]],
     }
 
 
