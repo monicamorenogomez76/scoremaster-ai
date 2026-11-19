@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v7" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v8" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -319,3 +319,21 @@ def test_a_modulation_inside_a_section_is_found():
     [modulation] = section["modulations"]
     assert (modulation["key"], modulation["relation"]) == ({"tonic": "G", "mode": "major"}, "dominant")
     assert 6 <= modulation["measure"] <= 8
+
+
+def test_the_final_chord_decides_between_a_key_and_its_relative():
+    # G major and E minor share every note: a work that lingers on E minor but closes D7 → G is in G major.
+    chords = [("E3", "G4", "B4", "E5"), ("C3", "G4", "C5", "E5"), ("A2", "A4", "C5", "E5"), ("E3", "G4", "B4", "E5"),
+              ("E3", "B3", "G4", "B4"), ("B2", "B3", "F#4", "B4"), ("E3", "G4", "B4", "E5"), ("D3", "F#4", "C5", "A4"),
+              ("G2", "G4", "B4", "D5")]
+    found = analyse(texture(*((name, [[(chord[voice], 4.0)] for chord in chords])
+                              for voice, name in enumerate(("Tuba", "Horn in F", "Clarinet", "Flute")))))
+    assert found["main_key"] == {"tonic": "G", "mode": "major"}
+    assert found["sections"][0]["key"] == {"tonic": "G", "mode": "major"}
+    assert found["sections"][0]["relation"] == "tonic"
+
+
+def test_a_final_chord_of_another_key_changes_nothing():
+    # ABA closes on its C major chord: the key it already had is confirmed.
+    found = analyse(aba())
+    assert found["main_key"] == {"tonic": "C", "mode": "major"}
