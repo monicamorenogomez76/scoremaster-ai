@@ -93,3 +93,14 @@ export function rhythmText(section) {
     t('{part} (c. {measure})', item)).join(', ') }));
   return items.join(' · ') || '—';
 }
+
+const STATEMENTS = () => ({ exposition: t('exposición'), return: t('vuelve'), transposed: t('vuelve en otro tono'),
+  varied: t('vuelve variado') });
+
+// «T2 (vuelve) · cabeza de T1: Tuba (c. 9)»: the theme of a section and the heads of earlier themes heard in it.
+export function themeText(section) {
+  const items = [];
+  if (section.theme) items.push(section.theme.id + ' (' + (STATEMENTS()[section.theme.statement] || section.theme.statement) + ')');
+  for (const motif of section.motifs) items.push(t('cabeza de {theme}: {part} (c. {measure})', motif));
+  return items.join(' · ') || '—';
+}

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { cadenceText, durationText, keyName, listText, loadMusicalAnalysis, markText, periodText, phrasesText, relationText,
-  rhythmText, sectionShares, tempoText, textureKindText, textureText } from './musicalAnalysis.js';
+  rhythmText, sectionShares, tempoText, textureKindText, textureText, themeText } from './musicalAnalysis.js';
 import { t } from './i18n.js';
 
 // The analysis of the work as in a conservatory (2026-11-18): its form, keys, cadences and who plays what, calculated by
@@ -22,7 +22,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
   const { result } = state;
   return <section id="musical-analysis" className="musical-analysis" aria-labelledby="musical-analysis-title" aria-busy={state.status === 'loading'}>
     <h2 id="musical-analysis-title">{t('Análisis musical')}</h2>
-    <p className="result-supporting">{t('Calculado por ScoreMaster a partir de la partitura: forma, tonalidades, cadencias, textura, ritmo y quién toca qué. La melodía y las frases son una aproximación.')}</p>
+    <p className="result-supporting">{t('Calculado por ScoreMaster a partir de la partitura: forma, temas, tonalidades, cadencias, textura, ritmo y quién toca qué. La melodía, las frases y los temas son una aproximación.')}</p>
     {fromPdf && <p className="pdf-provisional" role="note">{t('Leída de PDF: el análisis es provisional, porque la lectura puede tener errores.')}</p>}
     {state.status === 'loading' && <p className="result-supporting">{t('Analizando la obra…')}</p>}
     {state.error && <p className="result-supporting" role="alert">{state.error}</p>}
@@ -32,6 +32,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         <div><dt>{t('Tonalidad principal')}</dt><dd>{keyName(result.main_key)}</dd></div>
         <div><dt>{t('Forma')}</dt><dd>{result.form}</dd></div>
         <div><dt>{t('Secciones')}</dt><dd>{result.sections.length}</dd></div>
+        <div><dt>{t('Temas')}</dt><dd>{result.themes.length}</dd></div>
         <div><dt>{t('Cadencias')}</dt><dd>{result.cadences.length}</dd></div>
         <div><dt>{t('Duración')}</dt><dd>{durationText(result.general.seconds)}{result.general.assumed_tempo &&
           <span className="result-supporting"> · {t('sin tempo escrito')}</span>}</dd></div>
@@ -60,7 +61,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
           <caption className="visually-hidden">{t('Análisis por secciones')}</caption>
           <thead><tr>
             <th scope="col">{t('Sección')}</th><th scope="col">{t('Compases')}</th><th scope="col">{t('Tonalidad')}</th>
-            <th scope="col">{t('Tempo')}</th><th scope="col">{t('Melodía')}</th><th scope="col">{t('Frases')}</th><th scope="col">{t('Textura')}</th>
+            <th scope="col">{t('Tempo')}</th><th scope="col">{t('Melodía')}</th><th scope="col">{t('Tema')}</th><th scope="col">{t('Frases')}</th><th scope="col">{t('Textura')}</th>
             <th scope="col">{t('Ritmo y contrapunto')}</th>
             <th scope="col">{t('Dinámicas')}</th><th scope="col">{t('Marcas')}</th>
             <th scope="col">{t('Cadencias')}</th>
@@ -76,6 +77,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
               <td data-label={t('Tempo')}>{[section.tempo ? '♩ = ' + section.tempo : '', section.meter].filter(Boolean).join(' · ') || '—'}</td>
               <td data-label={t('Melodía')}>{section.melody || '—'}{section.doubled_by.length > 0 && <span className="result-supporting">
                 {' '}{t('(doblada por {parts})', { parts: section.doubled_by.join(', ') })}</span>}</td>
+              <td data-label={t('Tema')}>{themeText(section)}</td>
               <td data-label={t('Frases')}>{phrasesText(section)}{section.periods.length > 0 && <span className="result-supporting">
                 {' · '}{section.periods.map(periodText).join('; ')}</span>}</td>
               <td data-label={t('Textura')}>{[textureKindText(section.texture_kind), textureText(section.texture)].filter(Boolean).join(', ')}<span className="result-supporting"> · {t('{count} partes', { count: section.playing.length })}</span></td>

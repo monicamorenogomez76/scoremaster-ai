@@ -19,7 +19,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v4"   # v4 (2026-11-19): texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v5"   # v5 (2026-11-19): themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -387,6 +387,81 @@ def _imitations(melody: str | None, span: list[int], parts: dict[str, ScorePart]
     return found
 
 
+THEME_MEASURES = 4      # the measures of the tune taken as its theme when no phrase is found
+LEAP = 3                # semitones: a head with no leap is a scale, too common to tell a theme
+
+
+def _shape(notes: list[tuple[float, int, int]]) -> list[tuple[int, float]]:
+    """(interval, time to the next note) of a line: the same in any key."""
+    return [(b[1] - a[1], round(b[0] - a[0], 4)) for a, b in zip(notes, notes[1:])]
+
+
+def _theme_likeness(left: list[tuple[int, float]], right: list[tuple[int, float]]) -> float:
+    """Notes with the same interval and rhythm count 1, with the same interval 0.5, over the longer theme."""
+    if not left or not right:
+        return 0.0
+    score = sum(1.0 if a == b else 0.5 if a[0] == b[0] else 0.0 for a, b in zip(left, right))
+    return score / max(len(left), len(right))
+
+
+def _theme_notes(part: ScorePart | None, span: list[int], phrases: list[dict]) -> list[tuple[float, int, int]]:
+    """The tune of the first phrase of a section, or of its first measures without phrases."""
+    if part is None:
+        return []
+    last = phrases[0]["last"] if phrases else span[min(THEME_MEASURES, len(span)) - 1]
+    return _line(part, [number for number in span if number <= last])
+
+
+def _themes(sections: list[dict], heads: list[list[tuple[float, int, int]]]) -> list[dict]:
+    """Each section's theme (T1…): a new one (exposition), an earlier one again (return), again in another key
+    (transposed) or changed (varied). Sets "theme" on each section and gives the themes in order of exposition."""
+    themes: list[dict] = []
+    shapes: list[list[tuple[int, float]]] = []
+    for section, notes in zip(sections, heads):
+        shape = _shape(notes)
+        if len(shape) < MOTIF_NOTES - 1:
+            section["theme"] = None
+            continue
+        likeness, at = max(((_theme_likeness(shape, other), index) for index, other in enumerate(shapes)), default=(0.0, None))
+        if at is not None and likeness >= VARIED_MATERIAL:
+            same_start = notes[0][1] % 12 == themes[at]["start"]
+            statement = "varied" if likeness < SAME_MATERIAL else "return" if same_start else "transposed"
+            section["theme"] = {"id": themes[at]["id"], "statement": statement}
+            continue
+        themes.append({"id": f"T{len(themes) + 1}", "section": section["id"], "part": section["melody"],
+                       "first": notes[0][2], "last": notes[-1][2], "start": notes[0][1] % 12,
+                       "motif": tuple(shape[:MOTIF_NOTES - 1])})
+        shapes.append(shape)
+        section["theme"] = {"id": themes[-1]["id"], "statement": "exposition"}
+    return themes
+
+
+def _heads(line: list[tuple[float, int, int]]) -> dict[tuple, int]:
+    """The first measure of every run of MOTIF_NOTES notes of a line, keyed by its intervals and rhythm."""
+    found: dict[tuple, int] = {}
+    for at in range(len(line) - MOTIF_NOTES + 1):
+        found.setdefault(tuple(_shape(line[at:at + MOTIF_NOTES])), line[at][2])
+    return found
+
+
+def _development(section: dict, span: list[int], parts: dict[str, ScorePart], themes: list[dict]) -> list[dict]:
+    """The head of a theme exposed in an earlier section heard in this one, in any part, key or octave, with its
+    rhythm. A head without a leap is a scale and is not looked for."""
+    own = (section.get("theme") or {}).get("id")
+    earlier = [theme for theme in themes if int(theme["section"][1:]) < int(section["id"][1:]) and theme["id"] != own
+               and any(abs(interval) >= LEAP for interval, _ in theme["motif"])]
+    if not earlier:
+        return []
+    heads = {name: _heads(_line(part, span)) for name, part in parts.items()}
+    found = []
+    for theme in earlier:
+        heard = [(measure, name) for name, found_heads in heads.items() if (measure := found_heads.get(theme["motif"]))]
+        if heard:
+            measure, name = min(heard)
+            found.append({"theme": theme["id"], "part": name, "measure": measure})
+    return found
+
+
 def _beat(meter: str | None) -> float:
     """The beat in quarters: a dotted quarter in compound meters (6/8, 9/8, 12/8)."""
     try:
@@ -470,7 +545,7 @@ def analyse(score: Score) -> dict:
     numbers = _numbers(score)
     if not numbers:
         return {"version": MUSICAL_ANALYSIS_VERSION, "general": None, "main_key": None, "form": "", "sections": [],
-                "cadences": [], "climax": None}
+                "cadences": [], "climax": None, "themes": []}
     measures = _marks(score)
     starts = _starts(numbers, measures)
     spans = [(start, numbers[numbers.index(starts[at + 1]) - 1] if at + 1 < len(starts) else numbers[-1])
@@ -529,6 +604,11 @@ def analyse(score: Score) -> dict:
                              "ostinatos": _ostinatos(span, lines, melody)})
         sections[-1].update({"phrases": phrases, "periods": periods,
                              "structure": " + ".join(str(phrase["measures"]) for phrase in phrases)})
+    heads = [_theme_notes(next((item for item in score.parts if item.name == section["melody"]), None),
+                          inside(section["first"], section["last"]), section["phrases"]) for section in sections]
+    themes = _themes(sections, heads)
+    for section in sections:
+        section["motifs"] = _development(section, inside(section["first"], section["last"]), tuned, themes)
     section_of = {number: section["id"] for section in sections for number in inside(section["first"], section["last"])}
     return {
         "version": MUSICAL_ANALYSIS_VERSION,
@@ -537,6 +617,7 @@ def analyse(score: Score) -> dict:
         "main_key": _key(*main),
         "form": " ".join(section["label"] for section in sections),
         "sections": sections,
+        "themes": [{key: value for key, value in theme.items() if key not in ("start", "motif")} for theme in themes],
         "cadences": [{"id": f"C{at}", "measure": number, "offset": offset, "kind": kind, "section": section_of.get(number)}
                      for at, ((number, offset), kind) in enumerate(sorted(cadences.items()), 1)],
     }
