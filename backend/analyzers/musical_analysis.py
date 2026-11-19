@@ -20,7 +20,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v6"   # v6 (2026-11-19): orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v7"   # v7 (2026-11-19): plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -504,6 +504,33 @@ def _registers(span: list[int], ranges: dict[str, tuple[int, int, dict[int, list
     return found
 
 
+MODULATION_WINDOW = 2       # the key of a measure inside a section comes from this many measures on each side
+MODULATION_MEASURES = 4     # a key held this many measures in a row inside a section is a modulation
+
+
+def _relative(key: tuple[int, bool]) -> tuple[int, bool]:
+    tonic, minor = key
+    return ((tonic + 3) % 12, False) if minor else ((tonic + 9) % 12, True)
+
+
+def _modulations(span: list[int], key: tuple[int, bool], histograms: dict[int, list[float]]) -> list[dict]:
+    """The keys a section moves to and holds for a while before the next section, with their relation to the section's
+    key. Its relative is left out: the key profiles confuse them (G major and E minor share every note)."""
+    local = []
+    for at in range(len(span)):
+        window = span[max(0, at - MODULATION_WINDOW):at + MODULATION_WINDOW + 1]
+        local.append(key_of([sum(histograms[number][pc] for number in window) for pc in range(12)]))
+    found, at = [], 0
+    while at < len(span):
+        end = at
+        while end + 1 < len(span) and local[end + 1] == local[at]:
+            end += 1
+        if local[at] not in (key, _relative(key)) and end - at + 1 >= MODULATION_MEASURES:
+            found.append({"measure": span[at], "key": _key(*local[at]), "relation": _relation(local[at], key)})
+        at = end + 1
+    return found
+
+
 def _beat(meter: str | None) -> float:
     """The beat in quarters: a dotted quarter in compound meters (6/8, 9/8, 12/8)."""
     try:
@@ -625,6 +652,7 @@ def analyse(score: Score) -> dict:
     main = max(lengths, key=lambda key: (lengths[key], -keys.index(key)))
     labels = _labels([_material(inside(first, last), skyline) for first, last in spans])
     cadences = find_cadences(score)
+    every_cadence = find_cadences(score, every_kind=True)
     sections = []
     for at, ((first, last), key, (label, like, likeness)) in enumerate(zip(spans, keys, labels), 1):
         span = inside(first, last)
@@ -645,7 +673,8 @@ def analyse(score: Score) -> dict:
         sections[-1].update({"texture_kind": _texture(span, lines, attacks), "imitations": _imitations(melody, span, tuned),
                              "syncopation": _syncopation(span, lines, meters),
                              "ostinatos": _ostinatos(span, lines, melody), "solos": _solos(span, score),
-                             "percussion": _percussion(span, score, playing), "registers": _registers(span, ranges)})
+                             "percussion": _percussion(span, score, playing), "registers": _registers(span, ranges),
+                             "modulations": _modulations(span, key, histograms)})
         sections[-1].update({"phrases": phrases, "periods": periods,
                              "structure": " + ".join(str(phrase["measures"]) for phrase in phrases)})
     heads = [_theme_notes(next((item for item in score.parts if item.name == section["melody"]), None),
@@ -663,5 +692,5 @@ def analyse(score: Score) -> dict:
         "sections": sections,
         "themes": [{key: value for key, value in theme.items() if key not in ("start", "motif")} for theme in themes],
         "cadences": [{"id": f"C{at}", "measure": number, "offset": offset, "kind": kind, "section": section_of.get(number)}
-                     for at, ((number, offset), kind) in enumerate(sorted(cadences.items()), 1)],
+                     for at, ((number, offset), kind) in enumerate(sorted(every_cadence.items()), 1)],
     }

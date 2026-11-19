@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { cadenceText, durationText, keyName, listText, loadMusicalAnalysis, markText, orchestrationText, periodText, phrasesText, relationText,
+import { cadenceText, durationText, keyName, listText, loadMusicalAnalysis, markText, modulationText, orchestrationText, periodText, phrasesText, relationText,
   rhythmText, sectionShares, tempoText, textureKindText, textureText, themeText } from './musicalAnalysis.js';
 import { t } from './i18n.js';
 
@@ -74,7 +74,8 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
               <th scope="row">{section.label}{section.like && <span className="result-supporting">
                 {' '}{t('(vuelve el material de {section})', { section: result.sections.find(other => other.id === section.like)?.label || section.like })}</span>}</th>
               <td data-label={t('Compases')}>{t('{first}–{last}', { first: section.first, last: section.last })}</td>
-              <td data-label={t('Tonalidad')}>{keyName(section.key)}<span className="result-supporting"> · {relationText(section.relation)}</span></td>
+              <td data-label={t('Tonalidad')}>{keyName(section.key)}<span className="result-supporting"> · {relationText(section.relation)}
+                {section.modulations.length > 0 && <>{' · '}{section.modulations.map(modulationText).join('; ')}</>}</span></td>
               <td data-label={t('Tempo')}>{[section.tempo ? '♩ = ' + section.tempo : '', section.meter].filter(Boolean).join(' · ') || '—'}</td>
               <td data-label={t('Melodía')}>{section.melody || '—'}{section.doubled_by.length > 0 && <span className="result-supporting">
                 {' '}{t('(doblada por {parts})', { parts: section.doubled_by.join(', ') })}</span>}</td>

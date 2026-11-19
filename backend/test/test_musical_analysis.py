@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v6" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v7" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -305,3 +305,17 @@ def test_parts_in_the_extreme_high_register_of_their_instrument_are_named():
                                 ("Tuba", [[("C3", 4.0)]] * 3 + [[("D1", 4.0)]])))["sections"]
     assert section["registers"] == [{"part": "Flute", "register": "high", "measure": 1}], \
         "the bottom of the range is ordinary writing: only the extreme high register is named"
+
+
+def test_a_modulation_inside_a_section_is_found():
+    # Six measures in C, six in G (with its F sharp) and four back in C, with no mark between them: one section.
+    in_c = [("C3", "E4", "G5"), ("F2", "A3", "C5"), ("G2", "F4", "B4")] * 2
+    in_g = [("G2", "B3", "D5"), ("C3", "E4", "G4"), ("D3", "C4", "F#4")] * 2
+    chords = in_c + in_g + in_c[:4]
+    found = analyse(texture(*((name, [[(chord[voice], 4.0)] for chord in chords])
+                              for voice, name in enumerate(("Tuba", "Clarinet", "Flute")))))
+    [section] = found["sections"]
+    assert section["key"] == {"tonic": "C", "mode": "major"}
+    [modulation] = section["modulations"]
+    assert (modulation["key"], modulation["relation"]) == ({"tonic": "G", "mode": "major"}, "dominant")
+    assert 6 <= modulation["measure"] <= 8
