@@ -19,7 +19,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v3"   # v3 (2026-11-18): phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v4"   # v4 (2026-11-19): texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -305,6 +305,142 @@ def _phrases(part: ScorePart | None, span: list[int], cadences: dict, skyline: d
     return phrases, periods
 
 
+UNISON_SHARE = 0.6      # share of the measures in unison or octaves for a unison section
+OSTINATO_MEASURES = 4   # a figure repeated this many measures in a row is an ostinato
+
+
+def _onsets_of(measure) -> frozenset:
+    return frozenset(round(note.offset_quarters or 0.0, 4) for note in measure.notes
+                     if not note.is_rest and note.tie not in ("stop", "continue") and not note.is_grace)
+
+
+def _texture(span: list[int], lines: dict[str, dict[int, object]], attacks: dict) -> str | None:
+    """unison, homorhythmic, melody_and_accompaniment or polyphonic: the kind most measures of the section have. A line
+    moves when it plays three pitches or more in the measure; two moving lines in their own rhythms are polyphony."""
+    kinds = []
+    for number in span:
+        active = {name: _onsets_of(bars[number]) for name, bars in lines.items() if number in bars and _onsets_of(bars[number])}
+        if len(active) < 2:
+            continue
+        if len(set(active.values())) == 1:
+            pitches = {name: tuple(frozenset(attacks[name][0].get((number, offset), ())) for offset in sorted(onsets))
+                       for name, onsets in active.items() if name in attacks}
+            kinds.append("unison" if len(set(pitches.values())) <= 1 else "homorhythmic")
+            continue
+        moving = {name: onsets for name, onsets in active.items()
+                  if len({note.pitch for note in lines[name][number].notes if not note.is_rest and note.pitch}) >= 3}
+        kinds.append("polyphonic" if len(set(moving.values())) >= 2 else "melody_and_accompaniment")
+    if not kinds:
+        return None
+    if kinds.count("unison") >= UNISON_SHARE * len(kinds):
+        return "unison"
+    counted = Counter(kind for kind in kinds if kind != "unison") or Counter(kinds)
+    return counted.most_common(1)[0][0]
+
+
+def _line(part: ScorePart, span: list[int]) -> list[tuple[float, int, int]]:
+    """(time, sounding MIDI, measure) of the attacks of a part in a section, the highest at each time."""
+    events, _ = part_events(part)
+    top: dict[float, tuple[int, int]] = {}
+    inside = set(span)
+    for event in events:
+        if event.measure in inside and (event.start not in top or event.midi > top[event.start][0]):
+            top[event.start] = (event.midi, event.measure)
+    return [(time, midi, number) for time, (midi, number) in sorted(top.items())]
+
+
+MOTIF_NOTES = 5         # the opening of the tune an imitation repeats, in notes
+IMITATION_DELAY = 8.0   # an answer enters at most this many quarters after the voice it imitates
+
+
+def _motifs(line: list[tuple[float, int, int]]) -> dict[tuple, list[tuple[float, int]]]:
+    """(time, measure) of every run of MOTIF_NOTES notes of a line, keyed by its intervals."""
+    found: dict[tuple, list[tuple[float, int]]] = {}
+    for at in range(len(line) - MOTIF_NOTES + 1):
+        notes = line[at:at + MOTIF_NOTES]
+        found.setdefault(tuple(b[1] - a[1] for a, b in zip(notes, notes[1:])), []).append((notes[0][0], notes[0][2]))
+    return found
+
+
+def _imitations(melody: str | None, span: list[int], parts: dict[str, ScorePart]) -> list[dict]:
+    """Parts that answer the opening of the tune shortly after it, in any octave or key, without doubling it: a canon
+    or a fugal entry, not the tune played again later."""
+    if melody not in parts:
+        return []
+    tune = _line(parts[melody], span)
+    if len(tune) < MOTIF_NOTES:
+        return []
+    motif = tuple(b[1] - a[1] for a, b in zip(tune[:MOTIF_NOTES], tune[1:MOTIF_NOTES]))
+    if len(set(motif)) < 2:
+        return []
+    leads = [time for time, _ in _motifs(tune)[motif]]
+    found = []
+    for name, part in parts.items():
+        if name == melody:
+            continue
+        entries = _motifs(_line(part, span)).get(motif, [])
+        played = {time for time, _ in entries}
+        answer = next(((time, measure) for time, measure in entries
+                       if any(lead < time <= lead + IMITATION_DELAY and lead not in played for lead in leads)), None)
+        if answer:
+            found.append({"part": name, "imitates": melody, "measure": answer[1]})
+    return found
+
+
+def _beat(meter: str | None) -> float:
+    """The beat in quarters: a dotted quarter in compound meters (6/8, 9/8, 12/8)."""
+    try:
+        beats, unit = (int(value) for value in (meter or "4/4").split("/"))
+    except ValueError:
+        return 1.0
+    return 1.5 if unit == 8 and beats % 3 == 0 and beats > 3 else 4.0 / unit
+
+
+def _syncopation(span: list[int], lines: dict[str, dict[int, object]], meters: dict[int, str | None]) -> float:
+    """The share of attacks that start off the beat and hold over the next one, in the most syncopated line."""
+    shares = []
+    for bars in lines.values():
+        attacks = syncopated = 0
+        for number in span:
+            if number not in bars:
+                continue
+            beat = _beat(meters.get(number))
+            for note in bars[number].notes:
+                if note.is_rest or note.is_grace or note.tie in ("stop", "continue"):
+                    continue
+                offset = note.offset_quarters or 0.0
+                attacks += 1
+                next_beat = (int(offset / beat + 1e-9) + 1) * beat
+                if offset % beat > 1e-6 and offset + note.duration_quarters > next_beat + 1e-6:
+                    syncopated += 1
+        if attacks:
+            shares.append(syncopated / attacks)
+    return round(max(shares, default=0.0), 2)
+
+
+def _ostinatos(span: list[int], lines: dict[str, dict[int, object]], melody: str | None) -> list[dict]:
+    """A figure of three attacks or more and two pitches or more repeated measure after measure, outside the tune."""
+    found = []
+    for name, bars in lines.items():
+        if name == melody:
+            continue
+        run: list[int] = []
+        previous = None
+        for number in span + [None]:
+            bar = bars.get(number) if number is not None else None
+            figure = tuple((round(note.offset_quarters or 0.0, 4), note.duration_quarters, note.pitch)
+                           for note in bar.notes) if bar is not None else None
+            sounding = [item for item in (bar.notes if bar is not None else ()) if not item.is_rest]
+            figured = len(sounding) >= 3 and len({item.pitch for item in sounding}) >= 2
+            if figured and figure == previous:
+                run.append(number)
+                continue
+            if len(run) >= OSTINATO_MEASURES:
+                found.append({"part": name, "first": run[0], "last": run[-1]})
+            run, previous = ([number] if figured else []), (figure if figured else None)
+    return found
+
+
 def _climax(score: Score, numbers: list[int], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
     """The loudest moment with the most parts playing: the dynamic in force in each part, carried from its last mark."""
     in_force: dict[str, str] = {}
@@ -351,6 +487,12 @@ def analyse(score: Score) -> dict:
             histograms[event.measure][event.midi % 12] += event.end - event.start
     skyline = _skyline(score)
     attacks = _attacks(score)
+    tuned = {part.name: part for part in score.parts if _pitched(part) and not _no_tune(part)}
+    lines = {name: {measure.number: measure for measure in part.measures} for name, part in tuned.items()}
+    meters, meter = {}, None
+    for number in numbers:
+        meter = next((item.time_signature for item in measures[number] if item.time_signature), meter)
+        meters[number] = meter
     order = [part.name for part in score.parts]
     sounding = [name for name in order if any(name in playing[number] for number in numbers)]
 
@@ -382,6 +524,9 @@ def analyse(score: Score) -> dict:
             "dynamics": list(dict.fromkeys(mark for number in span for item in measures[number] for mark in item.dynamics)),
         })
         phrases, periods = _phrases(next((item for item in score.parts if item.name == melody), None), span, cadences, skyline)
+        sections[-1].update({"texture_kind": _texture(span, lines, attacks), "imitations": _imitations(melody, span, tuned),
+                             "syncopation": _syncopation(span, lines, meters),
+                             "ostinatos": _ostinatos(span, lines, melody)})
         sections[-1].update({"phrases": phrases, "periods": periods,
                              "structure": " + ".join(str(phrase["measures"]) for phrase in phrases)})
     section_of = {number: section["id"] for section in sections for number in inside(section["first"], section["last"])}
