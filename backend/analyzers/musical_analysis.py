@@ -20,7 +20,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v9"   # v9 (2026-11-19): harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v10"   # v10 (2026-11-19): hemiolas, displaced accents; v9: harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -725,6 +725,71 @@ def _pedals(span: list[int], beats: dict, key: tuple[int, bool]) -> list[dict]:
     return found
 
 
+HEMIOLA_PARTS = 2           # parts that must regroup the same measures for a hemiola
+ACCENTS = {"accent", "strong accent"}
+DISPLACED_SHARE = 0.5       # share of the accents off the beat for displaced accents
+MIN_ACCENTS = 4
+
+
+def _meter_parts(meter: str | None) -> tuple[int, float]:
+    """(beats written, length in quarters) of a meter: 6/8 → (6, 3.0)."""
+    try:
+        count, unit = (int(value) for value in (meter or "4/4").split("/"))
+    except ValueError:
+        return 4, 4.0
+    return count, count * 4.0 / unit
+
+
+def _attack_offsets(measure) -> set[float]:
+    return {round(note.offset_quarters or 0.0, 4) for note in measure.notes
+            if not note.is_rest and not note.is_grace and note.tie not in ("stop", "continue")}
+
+
+def _hemiolas(span: list[int], bars: dict[str, dict[int, object]], meters: dict) -> list[int]:
+    """Measures where two parts or more regroup a triple meter in twos: a 6/8 measure in three quarters, or two 3/4
+    measures in three halves (the middle one tied over the barline). The first measure of each."""
+    found = []
+    for at, number in enumerate(span):
+        count, length = _meter_parts(meters.get(number))
+        third, half = round(length / 3, 4), round(length / 2, 4)
+        following = span[at + 1] if at + 1 < len(span) else None
+        parts = 0
+        for measures in bars.values():
+            if number not in measures:
+                continue
+            onsets = _attack_offsets(measures[number])
+            if count == 6 and {0.0, third, round(2 * third, 4)} <= onsets and half not in onsets:
+                parts += 1
+            elif count == 3 and following in measures:
+                after = _attack_offsets(measures[following])
+                held = [note for note in measures[number].notes if round(note.offset_quarters or 0.0, 4) == round(2 * third, 4)]
+                if ({0.0, round(2 * third, 4)} <= onsets and third not in onsets and held and held[0].tie == "start"
+                        and third in after and 0.0 not in after and round(2 * third, 4) not in after):
+                    parts += 1
+        if parts >= HEMIOLA_PARTS:
+            found.append(number)
+    return found
+
+
+def _displaced_accents(span: list[int], bars: dict[str, dict[int, object]], meters: dict) -> list[int]:
+    """The measures with accents off the beat, when most of the accents of the section are there."""
+    off, total, where = 0, 0, []
+    for number in span:
+        beat = _beat(meters.get(number))
+        for measures in bars.values():
+            if number not in measures:
+                continue
+            for note in measures[number].notes:
+                if note.is_rest or not ACCENTS & set(note.articulations):
+                    continue
+                total += 1
+                if (note.offset_quarters or 0.0) % beat > 1e-6:
+                    off += 1
+                    if number not in where:
+                        where.append(number)
+    return where if total >= MIN_ACCENTS and off >= DISPLACED_SHARE * total else []
+
+
 def _climax(score: Score, numbers: list[int], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
     """The loudest moment with the most parts playing: the dynamic in force in each part, carried from its last mark."""
     in_force: dict[str, str] = {}
@@ -816,6 +881,7 @@ def analyse(score: Score) -> dict:
         main = _relative(main)
     labels = _labels([_material(inside(first, last), skyline) for first, last in spans])
     beats = _beat_chords(events, bounds, numbers, meters)
+    every_bar = {part.name: {measure.number: measure for measure in part.measures} for part in score.parts}
     sections = []
     for at, ((first, last), key, (label, like, likeness)) in enumerate(zip(spans, keys, labels), 1):
         span = inside(first, last)
@@ -838,6 +904,8 @@ def analyse(score: Score) -> dict:
                              "ostinatos": _ostinatos(span, lines, melody), "solos": _solos(span, score),
                              "percussion": _percussion(span, score, playing), "registers": _registers(span, ranges),
                              "modulations": _modulations(span, key, histograms)})
+        sections[-1].update({"hemiolas": _hemiolas(span, every_bar, meters),
+                             "displaced_accents": _displaced_accents(span, every_bar, meters)})
         chords = _chords(span, beats)
         sections[-1].update({"harmonic_rhythm": _harmonic_rhythm(span, chords),
                              "secondary_dominants": _secondary_dominants(chords, key), "pedals": _pedals(span, beats, key)})

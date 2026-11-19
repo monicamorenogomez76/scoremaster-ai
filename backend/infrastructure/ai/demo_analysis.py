@@ -30,7 +30,8 @@ TEXTS = {
                                                              "melody_and_accompaniment": "la melodía acompañada",
                                                              "polyphonic": "la polifonía"},
         "high": " Llegan al agudo extremo {parts}.",
-        "rhythm_none": "No hay síncopas, ostinatos ni imitaciones destacados.", "syncopated": "Hay síncopas en {labels}.",
+        "rhythm_none": "No hay síncopas, ostinatos ni imitaciones destacados.",
+        "hemiola": " Hay hemiolias en {labels}.", "displaced": " Los acentos caen a contratiempo en {labels}.", "syncopated": "Hay síncopas en {labels}.",
         "ostinato": " {part} hace un ostinato en {places}.", "imitation": " {part} imita la melodía en {places}.",
         "at": "c. {measure}", "span": "cc. {first}–{last}",
         "climax": "El clímax llega en el c. {measure} (sección {label}), en {dynamic}, con {count} partes tocando.",
@@ -69,7 +70,8 @@ TEXTS = {
                                                                    "melody_and_accompaniment": "melody and accompaniment",
                                                                    "polyphonic": "polyphonic"},
         "high": " {parts} reach the extreme high register.",
-        "rhythm_none": "There are no salient syncopations, ostinatos or imitations.", "syncopated": "There are syncopations in {labels}.",
+        "rhythm_none": "There are no salient syncopations, ostinatos or imitations.",
+        "hemiola": " There are hemiolas in {labels}.", "displaced": " The accents fall off the beat in {labels}.", "syncopated": "There are syncopations in {labels}.",
         "ostinato": " {part} plays an ostinato in {places}.", "imitation": " {part} imitates the melody at {places}.",
         "at": "m. {measure}", "span": "mm. {first}–{last}",
         "climax": "The climax comes at m. {measure} (section {label}), at {dynamic}, with {count} parts playing.",
@@ -191,7 +193,11 @@ def analysis_commentary(evidence: dict) -> dict:
                 grouped.setdefault(item["part"], []).append(where(item))
         for part, places in list(grouped.items())[:4]:
             rhythm += say[kind].format(part=part, places=_joined(places[:5], say["and"]))
-    rhythm_sections = [section["id"] for section in sections if section in syncopated or section["ostinatos"] or section["imitations"]]
+    for kind, field in (("hemiola", "hemiolas"), ("displaced", "displaced_accents")):
+        marked = [placed(section) for section in sections if section.get(field)]
+        rhythm += say[kind].format(labels=_joined(marked[:5], say["and"])) if marked else ""
+    rhythm_sections = [section["id"] for section in sections if section in syncopated or section["ostinatos"] or section["imitations"]
+                       or section.get("hemiolas") or section.get("displaced_accents")]
     rhythm_topic = _topic(rhythm.strip() or say["rhythm_none"], rhythm_sections)
 
     climax = evidence["climax"]

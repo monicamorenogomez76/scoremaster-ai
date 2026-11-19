@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.explanations import InvalidExplanation, run_explanation
 from backend.domain.text import evidence_text
 
-PROMPT_VERSION = "musical-analysis-text-v2"   # v2 (2026-11-19): harmonic rhythm, secondary dominants, pedals
-EVIDENCE_VERSION = "musical-analysis-evidence-v2"   # v2 (2026-11-19): harmonic rhythm, secondary dominants, pedals
+PROMPT_VERSION = "musical-analysis-text-v3"   # v3 (2026-11-19): meter; v2: harmonic rhythm, secondary dominants, pedals
+EVIDENCE_VERSION = "musical-analysis-evidence-v3"   # v3 (2026-11-19): hemiolas, displaced accents; v2: harmonic rhythm…
 # The topics of the commentary, in the order of a conservatory analysis; the interpretation, last, is the only opinion.
 TOPICS = ("form", "themes", "harmony", "texture", "rhythm", "dynamics", "interpretation")
 MAX_SECTIONS = 30
@@ -85,6 +85,7 @@ def _section(section: dict, language: str, name) -> dict:
         "percussion": [{**item, "part": name(item["part"])} for item in section["percussion"][:MAX_LISTED]],
         "extreme_high_register": names([item["part"] for item in section["registers"]]),
         "harmonic_rhythm": section.get("harmonic_rhythm"),
+        "hemiolas": section.get("hemiolas", [])[:8], "displaced_accents": section.get("displaced_accents", [])[:8],
         "secondary_dominants": section.get("secondary_dominants", [])[:MAX_LISTED],
         "pedals": [{**item, "note": _note(item["note"], language)} for item in section.get("pedals", [])[:MAX_LISTED]],
     }
