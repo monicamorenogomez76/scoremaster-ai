@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, meterText, modulationText,
+import { articulationText, cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, meterText, modulationText,
   orchestrationText, periodText, phrasesText, relationText, rhythmText, sectionShares, tempoText, textureKindText, textureText,
   themeShapeText, themeText } from './musicalAnalysis.js';
 import { sourceText } from './explanations.js';
@@ -144,12 +144,12 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         ]} />
       </Topic>
 
-      <Topic id="analysis-dynamics" title={t('Dinámicas y clímax')} commentary={comment?.dynamics}>
+      <Topic id="analysis-dynamics" title={t('Dinámicas, articulación y clímax')} commentary={comment?.dynamics}>
         {result.climax && <p>{t('Clímax: c. {measure}, sección {section}, {dynamic}, {count} partes', {
           measure: result.climax.measure, dynamic: result.climax.dynamic, count: result.climax.playing,
           section: labelOf(result.climax.section) })}</p>}
-        <SectionTable caption={t('Dinámicas por secciones')} sections={result.sections} columns={[
-          [t('Dinámicas'), section => section.dynamics.join(' ')]]} />
+        <SectionTable caption={t('Dinámicas y articulación por secciones')} sections={result.sections} columns={[
+          [t('Dinámicas'), section => section.dynamics.join(' ')], [t('Articulación'), articulationText]]} />
       </Topic>
 
       {comment && <>

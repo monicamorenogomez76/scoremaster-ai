@@ -20,7 +20,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v11"   # v11 (2026-11-19): range and contour of the themes; v10: hemiolas, displaced accents; v9: harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v12"   # v12 (2026-11-19): articulation; v11: range and contour of the themes; v10: hemiolas, displaced accents; v9: harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -821,6 +821,25 @@ def _displaced_accents(span: list[int], bars: dict[str, dict[int, object]], mete
     return where if total >= MIN_ACCENTS and off >= DISPLACED_SHARE * total else []
 
 
+ARTICULATIONS = {"staccato": {"staccato", "staccatissimo", "spiccato"}, "accent": {"accent", "strong accent"},
+                 "tenuto": {"tenuto", "detached legato"}}
+
+
+def _articulation(span: list[int], bars: dict[str, dict[int, object]]) -> dict[str, float]:
+    """The share of the attacked notes of a section that carry each articulation (staccato, accent, tenuto)."""
+    counts, total = {name: 0 for name in ARTICULATIONS}, 0
+    for measures in bars.values():
+        for number in span:
+            for note in measures[number].notes if number in measures else ():
+                if note.is_rest or note.is_grace or note.tie in ("stop", "continue"):
+                    continue
+                total += 1
+                marks = set(note.articulations)
+                for name, names in ARTICULATIONS.items():
+                    counts[name] += bool(marks & names)
+    return {name: round(count / total, 2) if total else 0.0 for name, count in counts.items()}
+
+
 def _climax(score: Score, numbers: list[int], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
     """The loudest moment with the most parts playing: the dynamic in force in each part, carried from its last mark."""
     in_force: dict[str, str] = {}
@@ -936,7 +955,8 @@ def analyse(score: Score) -> dict:
                              "percussion": _percussion(span, score, playing), "registers": _registers(span, ranges),
                              "modulations": _modulations(span, key, histograms)})
         sections[-1].update({"hemiolas": _hemiolas(span, every_bar, meters),
-                             "displaced_accents": _displaced_accents(span, every_bar, meters)})
+                             "displaced_accents": _displaced_accents(span, every_bar, meters),
+                             "articulation": _articulation(span, every_bar)})
         chords = _chords(span, beats)
         sections[-1].update({"harmonic_rhythm": _harmonic_rhythm(span, chords),
                              "secondary_dominants": _secondary_dominants(chords, key), "pedals": _pedals(span, beats, key)})

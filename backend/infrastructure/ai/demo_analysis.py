@@ -38,7 +38,8 @@ TEXTS = {
         "ostinato": " {part} hace un ostinato en {places}.", "imitation": " {part} imita la melodía en {places}.",
         "at": "c. {measure}", "span": "cc. {first}–{last}",
         "climax": "El clímax llega en el c. {measure} (sección {label}), en {dynamic}, con {count} partes tocando.",
-        "no_climax": "No hay dinámicas escritas que marquen un clímax.", "dynamics_used": " Las dinámicas van de {low} a {high}.",
+        "no_climax": "No hay dinámicas escritas que marquen un clímax.",
+        "articulated": " Predomina {kind} en {labels}.", "articulations": {"staccato": "el staccato", "accent": "la articulación acentuada"}, "dynamics_used": " Las dinámicas van de {low} a {high}.",
         "section": "Cc. {first}–{last}, en {key}", "section_melody": "; melodía en {part}", "section_kind": "; {kind}",
         "section_phrases": "; frases {phrases}",
         "interpretation": "Conviene {advice}.", "advice_balance": "equilibrar la melodía frente al acompañamiento",
@@ -81,7 +82,8 @@ TEXTS = {
         "ostinato": " {part} plays an ostinato in {places}.", "imitation": " {part} imitates the melody at {places}.",
         "at": "m. {measure}", "span": "mm. {first}–{last}",
         "climax": "The climax comes at m. {measure} (section {label}), at {dynamic}, with {count} parts playing.",
-        "no_climax": "No written dynamics mark a climax.", "dynamics_used": " The dynamics range from {low} to {high}.",
+        "no_climax": "No written dynamics mark a climax.",
+        "articulated": " {kind} prevails in {labels}.", "articulations": {"staccato": "Staccato", "accent": "Accented playing"}, "dynamics_used": " The dynamics range from {low} to {high}.",
         "section": "Mm. {first}–{last}, in {key}", "section_melody": "; melody in {part}", "section_kind": "; {kind}",
         "section_phrases": "; phrases {phrases}",
         "interpretation": "It is worth {advice}.", "advice_balance": "balancing the melody against the accompaniment",
@@ -213,6 +215,10 @@ def analysis_commentary(evidence: dict) -> dict:
     dynamics = say["climax"].format(measure=climax["measure"], label=label.get(climax["section"], "?"),
                                     dynamic=climax["dynamic"], count=climax["playing"]) if climax else say["no_climax"]
     dynamics += say["dynamics_used"].format(low=used[0], high=used[-1]) if len(used) > 1 else ""
+    for kind in ("staccato", "accent"):
+        marked = [placed(section) + " " + str(round(section["articulation"][kind] * 100)) + " %" for section in sections
+                  if (section.get("articulation") or {}).get(kind, 0) >= 0.3]
+        dynamics += say["articulated"].format(kind=say["articulations"][kind], labels=_joined(marked[:5], say["and"])) if marked else ""
     dynamics_topic = _topic(dynamics, [climax["section"]] if climax and climax["section"] else [])
 
     by_section = []
