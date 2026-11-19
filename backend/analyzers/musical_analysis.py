@@ -12,11 +12,13 @@ import re
 from collections import Counter
 
 from backend.analyzers.harmony import find_cadences, key_of, part_events
+from backend.analyzers.tempo import estimate_duration
+from backend.domain.timing import quarter_bpm_at
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v1"
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v2"   # v2 (2026-11-18): general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -31,6 +33,11 @@ SECTION_WORDS = re.compile(r"\b(trio|trío|coda|fine|introd|intro|maestoso|march
 MAJOR_NAMES = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
 MINOR_NAMES = ("C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B")
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# Words of tempo and its changes, as the score writes them.
+TEMPO_WORDS = re.compile(r"allegr|andant|adagio|largo|lento|presto|vivace|moderat|maestoso|grave|tempo|\brit|rall|accel|"
+                         r"stringendo|allarg|\bmeno\b|\bpi[uù]\b|mosso|calando|morendo|marcia|marcha", re.IGNORECASE)
+# How loud each dynamic is, for the dynamic plan and the climax.
+DYNAMIC_LEVELS = {"ppp": 1, "pp": 2, "p": 3, "mp": 4, "mf": 5, "f": 6, "ff": 7, "fff": 8}
 
 
 def _key(tonic: int, minor: bool) -> dict:
@@ -225,12 +232,57 @@ def _mark_names(measure_list: list, at_end: bool) -> list[str]:
     return list(dict.fromkeys(names))
 
 
+def _general(score: Score, numbers: list[int], measures: dict[int, list], sounding: list[str]) -> dict:
+    """How long the work is and how many play it, its meters and the tempos written in it."""
+    meters, last = [], None
+    for number in numbers:
+        meter = next((item.time_signature for item in measures[number] if item.time_signature), None)
+        if meter and meter != last:
+            meters.append({"measure": number, "meter": meter})
+            last = meter
+    marked = {mark.measure_number: mark for mark in score.tempo_marks}
+    tempos = []
+    for number in numbers:
+        words = list(dict.fromkeys(word for item in measures[number] for word in item.words if TEMPO_WORDS.search(word)))
+        mark = marked.get(number)
+        if mark or words:
+            tempos.append({"measure": number, "bpm": round(mark.beats_per_minute * mark.beat_unit_quarters) if mark else None,
+                           "words": words})
+    duration = estimate_duration(score)
+    return {"measures": len(numbers), "seconds": duration["seconds"], "assumed_tempo": duration["assumed_tempo"],
+            "parts": len(sounding), "meters": meters, "tempos": tempos}
+
+
+def _climax(score: Score, numbers: list[int], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
+    """The loudest moment with the most parts playing: the dynamic in force in each part, carried from its last mark."""
+    in_force: dict[str, str] = {}
+    best = None
+    by_part = {part.name: {measure.number: measure for measure in part.measures} for part in score.parts}
+    for number in numbers:
+        for name, measures in by_part.items():
+            marks = [mark for mark in (measures[number].dynamics if number in measures else ()) if mark in DYNAMIC_LEVELS]
+            if marks:
+                in_force[name] = marks[-1]
+        loudest = max((in_force[name] for name in playing[number] if name in in_force),
+                      key=lambda mark: DYNAMIC_LEVELS[mark], default=None)
+        if loudest is None:
+            continue
+        rank = (DYNAMIC_LEVELS[loudest], len(playing[number]))
+        if best is None or rank > best[0]:
+            best = (rank, number, loudest)
+    if best is None:
+        return None
+    _, number, loudest = best
+    return {"measure": number, "section": section_of.get(number), "dynamic": loudest, "playing": len(playing[number])}
+
+
 def analyse(score: Score) -> dict:
     """The analysis of the work: main key, sections (S1…) with their label, key, relation, marks, tune and players, and
     cadences (C1…) placed in their sections."""
     numbers = _numbers(score)
     if not numbers:
-        return {"version": MUSICAL_ANALYSIS_VERSION, "main_key": None, "form": "", "sections": [], "cadences": []}
+        return {"version": MUSICAL_ANALYSIS_VERSION, "general": None, "main_key": None, "form": "", "sections": [],
+                "cadences": [], "climax": None}
     measures = _marks(score)
     starts = _starts(numbers, measures)
     spans = [(start, numbers[numbers.index(starts[at + 1]) - 1] if at + 1 < len(starts) else numbers[-1])
@@ -273,10 +325,15 @@ def analyse(score: Score) -> dict:
             "marks": _mark_names(measures[first], at_end=False), "marks_at_end": _mark_names(measures[last], at_end=True),
             "melody": melody, "doubled_by": doubled_by, "playing": in_section,
             "texture": "tutti" if share >= TUTTI_SHARE else "solo" if len(in_section) == 1 else "reduced",
+            "meter": next((item.time_signature for item in measures[first] if item.time_signature), None),
+            "tempo": round(bpm) if (bpm := quarter_bpm_at(score.tempo_marks, first)) else None,
+            "dynamics": list(dict.fromkeys(mark for number in span for item in measures[number] for mark in item.dynamics)),
         })
     section_of = {number: section["id"] for section in sections for number in inside(section["first"], section["last"])}
     return {
         "version": MUSICAL_ANALYSIS_VERSION,
+        "general": _general(score, numbers, measures, sounding),
+        "climax": _climax(score, numbers, playing, section_of),
         "main_key": _key(*main),
         "form": " ".join(section["label"] for section in sections),
         "sections": sections,

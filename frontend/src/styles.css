@@ -769,6 +769,10 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .analysis-summary div { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .analysis-summary dt { color: var(--muted); font-size: .85rem; }
 .analysis-summary dd { margin: 0; font-weight: 600; }
+.analysis-facts { display: grid; gap: 4px; margin: 0; }
+.analysis-facts div { display: flex; flex-wrap: wrap; gap: 0 8px; line-height: 1.5; }
+.analysis-facts dt { font-weight: 600; }
+.analysis-facts dd { margin: 0; }
 .analysis-timeline { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .analysis-block { display: flex; flex: 1 1 0; flex-direction: column; gap: 2px; min-width: 64px; padding: 8px; border-top: 4px solid var(--line-strong); border-radius: 6px; background: var(--panel-alt); font-size: .85rem; line-height: 1.5; }
 .analysis-block--tonic { border-top-color: var(--primary); }

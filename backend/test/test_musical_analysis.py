@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v1" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v2" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -154,3 +154,37 @@ def test_the_timpani_never_carry_the_tune():
     timpani = part("Timpani", [[("C6", 4.0)]] * 24)
     first = analyse(replace(score, parts=score.parts + (timpani,)))["sections"][0]
     assert first["melody"] == "Flute"
+
+
+# The second block (2026-11-18): general data, tempo and meter, dynamics and the climax.
+def with_tempo_and_dynamics() -> Score:
+    from backend.domain.models import TempoMark
+    score = aba()
+    marks = {1: {"words": ("Allegro",), "dynamics": ("mf",)}, 9: {"dynamics": ("p",)}, 16: {"words": ("rit.",)},
+             17: {"words": ("a tempo",), "dynamics": ("ff",)}}
+
+    def marked(bar):
+        extra = marks.get(bar.number, {})
+        return replace(bar, words=bar.words + extra.get("words", ()), dynamics=bar.dynamics + extra.get("dynamics", ()))
+    parts = tuple(replace(item, measures=tuple(marked(bar) for bar in item.measures)) for item in score.parts)
+    return replace(score, parts=parts, tempo_marks=(TempoMark(1, 0.0, 120.0, 1.0), TempoMark(9, 0.0, 96.0, 1.0)))
+
+
+def test_the_general_data_of_the_work():
+    general = analyse(with_tempo_and_dynamics())["general"]
+    assert general["measures"] == 24 and general["parts"] == 3
+    assert general["seconds"] == 8 * 4 * 60 // 120 + 16 * 4 * 60 // 96, "8 measures at 120 and 16 at 96"
+    assert general["meters"] == [], "the example writes no meter"
+    assert general["tempos"] == [{"measure": 1, "bpm": 120, "words": ["Allegro"]}, {"measure": 9, "bpm": 96, "words": []},
+                                 {"measure": 16, "bpm": None, "words": ["rit."]}, {"measure": 17, "bpm": None, "words": ["a tempo"]}]
+
+
+def test_each_section_has_its_tempo_and_dynamics():
+    first, middle, last = analyse(with_tempo_and_dynamics())["sections"]
+    assert (first["tempo"], middle["tempo"], last["tempo"]) == (120, 96, 96)
+    assert (first["dynamics"], middle["dynamics"], last["dynamics"]) == (["mf"], ["p"], ["ff"])
+
+
+def test_the_climax_is_the_loudest_fullest_moment():
+    climax = analyse(with_tempo_and_dynamics())["climax"]
+    assert (climax["measure"], climax["section"], climax["dynamic"]) == (17, "S3", "ff")
