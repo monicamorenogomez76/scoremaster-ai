@@ -16,6 +16,9 @@ TEXTS = {
         "harmony": "La tonalidad principal es {key}.", "other_key": " La sección {label} está en {key} ({relation}).",
         "modulation": " Dentro de {label} modula a {key} en el c. {measure}.",
         "cadences": " Hay {list}.", "no_cadences": " No se detectan cadencias claras.",
+        "secondary": " Aparecen dominantes secundarias: {list}.", "pedal": " Hay una pedal en {note} en la sección {label} (cc. {first}–{last}).",
+        "harmonic_rhythm": " El ritmo armónico va de {low} a {high} acordes por compás.",
+        "harmonic_rhythm_one": " El ritmo armónico es de {low} acordes por compás.",
         "cadence_names": {"authentic": ("una cadencia auténtica", "{} cadencias auténticas"),
                           "half": ("una semicadencia", "{} semicadencias"), "plagal": ("una cadencia plagal", "{} cadencias plagales"),
                           "deceptive": ("una cadencia rota", "{} cadencias rotas")},
@@ -52,6 +55,9 @@ TEXTS = {
         "harmony": "The main key is {key}.", "other_key": " Section {label} is in {key} ({relation}).",
         "modulation": " Within {label} it modulates to {key} at m. {measure}.",
         "cadences": " There are {list}.", "no_cadences": " No clear cadences are found.",
+        "secondary": " Secondary dominants appear: {list}.", "pedal": " There is a pedal on {note} in section {label} (mm. {first}–{last}).",
+        "harmonic_rhythm": " The harmonic rhythm goes from {low} to {high} chords per measure.",
+        "harmonic_rhythm_one": " The harmonic rhythm is {low} chords per measure.",
         "cadence_names": {"authentic": ("one authentic cadence", "{} authentic cadences"),
                           "half": ("one half cadence", "{} half cadences"), "plagal": ("one plagal cadence", "{} plagal cadences"),
                           "deceptive": ("one deceptive cadence", "{} deceptive cadences")},
@@ -148,6 +154,16 @@ def analysis_commentary(evidence: dict) -> dict:
     names = [(one if count == 1 else many.format(count)) for kind, (one, many) in say["cadence_names"].items()
              if (count := counts.get(kind))]
     harmony += say["cadences"].format(list=_joined(names, say["and"])) if names else say["no_cadences"]
+    rhythms = [section["harmonic_rhythm"] for section in sections if section.get("harmonic_rhythm")]
+    if rhythms:
+        low, high = (str(value).replace(".", ",") if say is TEXTS["es"] else str(value) for value in (min(rhythms), max(rhythms)))
+        harmony += say["harmonic_rhythm" if low != high else "harmonic_rhythm_one"].format(low=low, high=high)
+    secondary = ["V/" + item["of"] + " (" + say["at"].format(measure=item["measure"]) + ")"
+                 for section in sections for item in section.get("secondary_dominants", [])]
+    harmony += say["secondary"].format(list=_joined(secondary[:5], say["and"])) if secondary else ""
+    for section in sections:
+        for pedal in section.get("pedals", [])[:1]:
+            harmony += say["pedal"].format(note=pedal["note"], label=section["label"], first=pedal["first"], last=pedal["last"])
     harmony_topic = _topic(harmony[:900], [section["id"] for section in keyed[:6]],
                            [cadence["id"] for cadence in evidence["cadences"]])
 

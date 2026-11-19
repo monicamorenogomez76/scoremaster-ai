@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v8" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v9" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -337,3 +337,34 @@ def test_a_final_chord_of_another_key_changes_nothing():
     # ABA closes on its C major chord: the key it already had is confirmed.
     found = analyse(aba())
     assert found["main_key"] == {"tonic": "C", "mode": "major"}
+
+
+def chorale_of(chords, duration=4.0):
+    """One chord per measure (or two with half notes): bass, tenor, alto and soprano."""
+    per_bar = int(4.0 / duration)
+    bars = [chords[at:at + per_bar] for at in range(0, len(chords), per_bar)]
+    return texture(*((name, [[(chord[voice], duration) for chord in bar] for bar in bars])
+                     for voice, name in enumerate(("Tuba", "Horn in F", "Clarinet", "Flute"))))
+
+
+C, F, G7, A_MINOR = ("C3", "E4", "G4", "C5"), ("F2", "F4", "A4", "C5"), ("G2", "F4", "B4", "D5"), ("A2", "E4", "A4", "C5")
+
+
+def test_the_harmonic_rhythm_is_the_chords_per_measure():
+    assert analyse(chorale_of([C, F, G7, A_MINOR] * 2))["sections"][0]["harmonic_rhythm"] == 1.0
+    assert analyse(chorale_of([C, F, G7, A_MINOR] * 4, duration=2.0))["sections"][0]["harmonic_rhythm"] == 2.0
+
+
+def test_a_chromatic_dominant_of_another_degree_is_a_secondary_dominant():
+    # I  V7/V  V  I, twice: D7 brings an F sharp foreign to C major and resolves to G.
+    d7 = ("D3", "F#4", "A4", "C5")
+    found = analyse(chorale_of([C, d7, G7, C] * 2))
+    assert found["sections"][0]["secondary_dominants"] == [{"measure": 2, "of": "V"}]
+    assert analyse(chorale_of([C, F, G7, C] * 2))["sections"][0]["secondary_dominants"] == []
+
+
+def test_a_bass_held_under_changing_chords_is_a_pedal():
+    over_c = [("C3", "E4", "G4", "C5"), ("C3", "F4", "A4", "C5"), ("C3", "F4", "B4", "D5"), ("C3", "E4", "G4", "C5")]
+    found = analyse(chorale_of(over_c + [F, G7, C, C]))
+    assert found["sections"][0]["pedals"] == [{"first": 1, "last": 4, "note": "C", "degree": "tonic"}]
+    assert analyse(chorale_of([C, F, G7, C] * 2))["sections"][0]["pedals"] == []

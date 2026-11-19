@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { cadenceText, durationText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, modulationText,
+import { cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, modulationText,
   orchestrationText, periodText, phrasesText, relationText, rhythmText, sectionShares, tempoText, textureKindText, textureText,
   themeText } from './musicalAnalysis.js';
 import { sourceText } from './explanations.js';
@@ -119,6 +119,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         <SectionTable caption={t('Armonía por secciones')} sections={result.sections} columns={[
           [t('Tonalidad'), section => [keyName(section.key) + ' · ' + relationText(section.relation),
             ...section.modulations.map(modulationText)].join('; ')],
+          [t('Ritmo armónico y colores'), harmonyDetailsText],
           [t('Cadencias'), section => result.cadences.filter(cadence => cadence.section === section.id)
             .map(cadence => t('{kind} (c. {measure})', { kind: cadenceText(cadence.kind), measure: cadence.measure })).join(', ')],
         ]} />

@@ -95,3 +95,16 @@ test('plagal and deceptive cadences and modulations read as words', async () => 
   assert.equal(cadenceText('deceptive'), 'deceptive cadence');
   setLanguage('es');
 });
+
+test('harmonic rhythm, secondary dominants and pedals read as words', async () => {
+  const { harmonyDetailsText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(harmonyDetailsText({ harmonic_rhythm: 1.5, secondary_dominants: [{ measure: 2, of: 'V' }],
+    pedals: [{ first: 1, last: 4, note: 'Bb', degree: 'tonic' }] }),
+    '1,5 acordes por compás · V/V (c. 2) · pedal de tónica en Si♭ (cc. 1–4)');
+  assert.equal(harmonyDetailsText({ harmonic_rhythm: null, secondary_dominants: [], pedals: [] }), '');
+  setLanguage('en');
+  assert.equal(harmonyDetailsText({ harmonic_rhythm: 2, secondary_dominants: [],
+    pedals: [{ first: 9, last: 12, note: 'G', degree: 'other' }] }), '2 chords per measure · pedal on G (mm. 9–12)');
+  setLanguage('es');
+});

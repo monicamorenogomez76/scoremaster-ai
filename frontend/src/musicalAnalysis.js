@@ -130,3 +130,23 @@ export function orchestrationText(section) {
 // «modula a Sol mayor (dominante, c. 7)»: a key a section moves to, related to the section's own.
 export const modulationText = modulation => t('modula a {key} ({relation}, c. {measure})', { key: keyName(modulation.key),
   relation: relationText(modulation.relation), measure: modulation.measure });
+
+// «Si♭», «B♭»: a note as a musician names it.
+const noteName = note => (currentLanguage() === 'en' ? note[0] : SOLFEGE[note[0]]) + (ACCIDENTALS[note.slice(1)] || '');
+
+const PEDALS = values => ({ tonic: () => t('pedal de tónica en {note} ({measures})', values),
+  dominant: () => t('pedal de dominante en {note} ({measures})', values),
+  subdominant: () => t('pedal de subdominante en {note} ({measures})', values), other: () => t('pedal en {note} ({measures})', values) });
+
+// «1,5 acordes por compás · V/V (c. 2) · pedal de tónica en Si♭ (cc. 1–4)».
+export function harmonyDetailsText(section) {
+  const items = [];
+  if (section.harmonic_rhythm) items.push(t('{count} acordes por compás', {
+    count: section.harmonic_rhythm.toLocaleString(currentLanguage() === 'en' ? 'en' : 'es') }));
+  for (const item of section.secondary_dominants) items.push(t('V/{degree} (c. {measure})', { degree: item.of, measure: item.measure }));
+  for (const item of section.pedals) {
+    const pedals = PEDALS({ note: noteName(item.note), measures: t('cc. {first}–{last}', item) });
+    items.push((pedals[item.degree] || pedals.other)());
+  }
+  return items.join(' · ');
+}

@@ -20,7 +20,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v8"   # v8 (2026-11-19): the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v9"   # v9 (2026-11-19): harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -616,6 +616,115 @@ def _between_relatives(key: tuple[int, bool], arrivals: list[tuple[set[int], int
     return votes
 
 
+PEDAL_MEASURES = 3          # a bass held this many measures under changing chords is a pedal
+MAJOR_SCALE = {0, 2, 4, 5, 7, 9, 11}
+MINOR_SCALE = {0, 2, 3, 5, 7, 8, 10, 11}   # natural and harmonic minor
+SECONDARY_TARGETS = {False: {2: "ii", 4: "iii", 5: "IV", 7: "V", 9: "vi"},
+                     True: {3: "III", 5: "iv", 7: "V", 8: "VI", 10: "VII"}}
+DEGREES = {0: "tonic", 7: "dominant", 5: "subdominant"}
+
+
+def _beat_chords(events: list, bounds: dict, numbers: list[int], meters: dict) -> dict[int, list[tuple[frozenset, int]]]:
+    """The notes sounding at every beat of each measure: (pitch classes, bass pitch class)."""
+    times = []
+    for number in numbers:
+        if number not in bounds:
+            continue
+        start, length = bounds[number]
+        beat, at = _beat(meters.get(number)), 0.0
+        while at < length - 1e-9:
+            times.append((start + at, number))
+            at += beat
+    times.sort()
+    pending, active, next_event = sorted(events, key=lambda event: event.start), [], 0
+    found: dict[int, list[tuple[frozenset, int]]] = {}
+    for time, number in times:
+        while next_event < len(pending) and pending[next_event].start <= time + 1e-9:
+            active.append(pending[next_event])
+            next_event += 1
+        active = [event for event in active if event.end > time + 1e-9]
+        if active:
+            found.setdefault(number, []).append((frozenset(event.midi % 12 for event in active),
+                                                 min(event.midi for event in active) % 12))
+    return found
+
+
+TRIADS = [(root, minor, frozenset({root, (root + (3 if minor else 4)) % 12, (root + 7) % 12}))
+          for root in range(12) for minor in (False, True)]
+
+
+def _fit(classes: frozenset, bass: int, triad) -> int:
+    """How well the notes of a beat fit a triad: one point per note in it (its seventh counts), one less per note out of
+    it, one more with its root in the bass."""
+    root, minor, notes = triad
+    seventh = (root + 10) % 12
+    return sum(1 if pc in notes or pc == seventh else -1 for pc in classes) + (1 if bass == root else 0)
+
+
+def _chords(span: list[int], beats: dict) -> list[tuple[int, frozenset, int, tuple[int, bool]]]:
+    """The chords of a section in order: (measure, pitch classes, bass, (root, minor)). Each beat takes the triad its notes
+    fit best, and keeps the chord before while it still fits as well: a passing note or an oom-pah after-beat is no new
+    chord."""
+    chords = []
+    for number in span:
+        for classes, bass in beats.get(number, ()):
+            best = max(TRIADS, key=lambda triad: _fit(classes, bass, triad))
+            if chords:
+                previous = next(triad for triad in TRIADS if triad[:2] == chords[-1][3])
+                if _fit(classes, bass, previous) >= _fit(classes, bass, best):
+                    continue
+            chords.append((number, classes, bass, best[:2]))
+    return chords
+
+
+def _harmonic_rhythm(span: list[int], chords: list) -> float | None:
+    """Chords per measure, to a tenth."""
+    return max(0.1, round(len(chords) / len(span), 1)) if chords else None
+
+
+def _secondary_dominants(chords: list, key: tuple[int, bool]) -> list[dict]:
+    """Major chords (with their seventh) foreign to the key that resolve a fifth down to one of its degrees: V/V, V/vi…"""
+    tonic, minor = key
+    scale = {(tonic + step) % 12 for step in (MINOR_SCALE if minor else MAJOR_SCALE)}
+    found, named = [], set()
+    for (number, classes, bass, _), following in zip(chords, chords[1:]):
+        if classes <= scale:
+            continue
+        for root in classes:
+            third = (root + 4) % 12
+            if third not in classes or not classes <= {root, third, (root + 7) % 12, (root + 10) % 12} or bass not in (root, third):
+                continue
+            target = (root + 5) % 12
+            name = SECONDARY_TARGETS[minor].get((target - tonic) % 12)
+            _, next_classes, next_bass, _ = following
+            resolves = target in next_classes and next_bass in (target, (target + 3) % 12, (target + 4) % 12)
+            if name and resolves and name not in named:
+                named.add(name)
+                found.append({"measure": number, "of": name})
+    return found
+
+
+def _pedals(span: list[int], beats: dict, key: tuple[int, bool]) -> list[dict]:
+    """A bass note held measure after measure while the chords above it change."""
+    found, run = [], []
+
+    def close():
+        uppers = {classes for number in run for classes, _ in beats.get(number, ())}
+        if len(run) >= PEDAL_MEASURES and len(uppers) >= 2:
+            note = beats[run[0]][0][1]
+            found.append({"first": run[0], "last": run[-1], "note": MAJOR_NAMES[note],
+                          "degree": DEGREES.get((note - key[0]) % 12, "other")})
+    for number in span:
+        basses = {bass for _, bass in beats.get(number, ())}
+        if len(basses) == 1 and run and basses == {beats[run[0]][0][1]}:
+            run.append(number)
+            continue
+        close()
+        run = [number] if len(basses) == 1 else []
+    close()
+    return found
+
+
 def _climax(score: Score, numbers: list[int], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
     """The loudest moment with the most parts playing: the dynamic in force in each part, carried from its last mark."""
     in_force: dict[str, str] = {}
@@ -706,6 +815,7 @@ def analyse(score: Score) -> dict:
         keys = [_relative(key) if key == main and vote == 0 else key for key, vote in zip(keys, votes)]
         main = _relative(main)
     labels = _labels([_material(inside(first, last), skyline) for first, last in spans])
+    beats = _beat_chords(events, bounds, numbers, meters)
     sections = []
     for at, ((first, last), key, (label, like, likeness)) in enumerate(zip(spans, keys, labels), 1):
         span = inside(first, last)
@@ -728,6 +838,9 @@ def analyse(score: Score) -> dict:
                              "ostinatos": _ostinatos(span, lines, melody), "solos": _solos(span, score),
                              "percussion": _percussion(span, score, playing), "registers": _registers(span, ranges),
                              "modulations": _modulations(span, key, histograms)})
+        chords = _chords(span, beats)
+        sections[-1].update({"harmonic_rhythm": _harmonic_rhythm(span, chords),
+                             "secondary_dominants": _secondary_dominants(chords, key), "pedals": _pedals(span, beats, key)})
         sections[-1].update({"phrases": phrases, "periods": periods,
                              "structure": " + ".join(str(phrase["measures"]) for phrase in phrases)})
     heads = [_theme_notes(next((item for item in score.parts if item.name == section["melody"]), None),
