@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v2" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v3" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -188,3 +188,27 @@ def test_each_section_has_its_tempo_and_dynamics():
 def test_the_climax_is_the_loudest_fullest_moment():
     climax = analyse(with_tempo_and_dynamics())["climax"]
     assert (climax["measure"], climax["section"], climax["dynamic"]) == (17, "S3", "ff")
+
+
+# The third block (2026-11-18): phrases and periods of the tune of each section.
+def period() -> Score:
+    """A period in C major: 4 measures ending on the dominant, 4 more on the tonic."""
+    opening = [[("C5", Q), ("E5", Q), ("G5", Q), ("E5", Q)], [("F5", Q), ("A5", Q), ("F5", Q), ("D5", Q)],
+               [("C5", Q), ("E5", Q), ("D5", Q), ("C5", Q)]]
+    tune = opening + [[("D5", 4.0)]] + opening[:2] + [[("D5", 2.0), ("B4", 2.0)], [("C5", 4.0)]]
+    bass = [[("C3", 4.0)], [("F2", 4.0)], [("C3", 4.0)], [("G2", 4.0)], [("C3", 4.0)], [("F2", 4.0)], [("G2", 4.0)], [("C3", 4.0)]]
+    middle = [[("E4", 4.0)], [("A3", 4.0)], [("E4", 4.0)], [("B3", 4.0)], [("E4", 4.0)], [("A3", 4.0)], [("D4", 4.0)], [("E4", 4.0)]]
+    return Score("Periodo", (part("Flute", tune), part("Clarinet", middle), part("Tuba", bass)))
+
+
+def test_a_period_is_an_antecedent_and_a_consequent():
+    [section] = analyse(period())["sections"]
+    assert [(phrase["first"], phrase["last"], phrase["ending"]) for phrase in section["phrases"]] == \
+        [(1, 4, "suspensive"), (5, 8, "conclusive")]
+    assert section["structure"] == "4 + 4"
+    assert section["periods"] == [{"first": 1, "last": 8, "kind": "period", "symmetric": True}]
+
+
+def test_phrases_never_cross_the_sections():
+    for section in analyse(aba())["sections"]:
+        assert all(section["first"] <= phrase["first"] <= phrase["last"] <= section["last"] for phrase in section["phrases"])

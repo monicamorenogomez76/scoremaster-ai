@@ -62,3 +62,16 @@ export const tempoText = entry => t('c. {measure}: {tempo}', { measure: entry.me
 // The first items of a long list and how many more there are.
 export const listText = (items, shown) => items.length > shown
   ? t('{items} y {count} más', { items: items.slice(0, shown).join(', '), count: items.length - shown }) : items.join(', ');
+
+const ENDINGS = () => ({ conclusive: t('conclusiva'), suspensive: t('suspensiva'), open: t('abierta') });
+
+// «4 + 4 (suspensiva, conclusiva)»: the phrases of the tune of a section and how each ends.
+export const phrasesText = section => (section.phrases.length
+  ? section.structure + ' (' + section.phrases.map(phrase => ENDINGS()[phrase.ending] || phrase.ending).join(', ') + ')' : '—');
+
+// «periodo simétrico, cc. 1–8».
+export function periodText(period) {
+  const kind = period.kind === 'period' ? (period.symmetric ? t('periodo simétrico') : t('periodo'))
+    : (period.symmetric ? t('frase repetida') : t('frase repetida'));
+  return t('{kind}, cc. {first}–{last}', { kind, first: period.first, last: period.last });
+}
