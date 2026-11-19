@@ -1,0 +1,144 @@
+"""The teacher's commentary of the musical analysis (2026-11-19): the AI writes, topic by topic, about the facts
+ScoreMaster calculated (backend/analyzers/musical_analysis.py), citing the sections, cadences and themes it leans on;
+only the interpretation is opinion. On any failure the demo writes it from the same evidence and the page says why."""
+import pytest
+
+from backend.analyzers.musical_analysis import analyse
+from backend.application.ai import ProviderFailure, ProviderInfo
+from backend.application.explanations import InvalidExplanation
+from backend.application.musical_analysis_text import (EVIDENCE_VERSION, PROMPT_VERSION, TOPICS, analysis_evidence,
+                                                       explain_analysis, validate_text)
+from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
+from backend.test.test_musical_analysis import aba
+
+
+def evidence(language="es"):
+    return analysis_evidence(analyse(aba()), "ABA", language)
+
+
+def topic(text, **cited):
+    return {"text": text, "sections": [], "cadences": [], "themes": [], **cited}
+
+
+def answer(**changes):
+    found = {"summary": "Obra breve en forma ternaria.",
+             **{name: topic("Texto de " + name + ".") for name in TOPICS},
+             "by_section": [{"section": "S1", "text": "Expone el primer tema."}]}
+    found["form"] = topic("Forma A B A: la sección central contrasta.", sections=["S1", "S2", "S3"])
+    found["themes"] = topic("El primer tema vuelve igual.", themes=["T1"], sections=["S3"])
+    found["harmony"] = topic("La central pasa a la dominante.", cadences=["C1"])
+    return {**found, **changes}
+
+
+class Fake:
+    info = ProviderInfo("llm", "fake", "fake-model")
+
+    def __init__(self, reply=None, failure=None):
+        self.reply, self.failure, self.seen = reply, failure, []
+
+    def explain_musical_analysis(self, data):
+        self.seen.append(data)
+        if self.failure:
+            raise self.failure
+        return self.reply
+
+
+def test_the_evidence_is_the_calculated_analysis_with_its_ids():
+    data = evidence()
+    assert data["version"] == EVIDENCE_VERSION and data["title"] == "ABA" and data["form"] == "A B A"
+    assert [section["id"] for section in data["sections"]] == ["S1", "S2", "S3"]
+    assert data["sections"][1]["key"] == "Sol mayor" and data["sections"][1]["relation"] == "dominant"
+    assert data["sections"][2]["theme"] == {"id": "T1", "statement": "return"}
+    assert [theme["id"] for theme in data["themes"]] == ["T1", "T2"]
+    assert all(cadence["id"].startswith("C") for cadence in data["cadences"])
+    assert "language" not in data
+    assert evidence("en")["language"] == "en" and evidence("en")["sections"][1]["key"] == "G major"
+    named = analysis_evidence(analyse(aba()), "ABA", "es", {"Flute": "Flauta"})
+    assert named["sections"][0]["melody"] == "Flauta" and named["themes"][0]["part"] == "Flauta"
+
+
+def test_a_valid_answer_cites_only_what_the_evidence_has():
+    data = evidence()
+    assert validate_text(answer(), data).form.sections == ["S1", "S2", "S3"]
+    with pytest.raises(InvalidExplanation):
+        validate_text(answer(form=topic("Forma.", sections=["S9"])), data)
+    with pytest.raises(InvalidExplanation):
+        validate_text(answer(themes=topic("Tema.", themes=["T7"])), data)
+    with pytest.raises(InvalidExplanation):
+        validate_text(answer(by_section=[{"section": "S1", "text": "a"}, {"section": "S1", "text": "b"}]), data)
+    with pytest.raises(InvalidExplanation, match="ids"):
+        validate_text(answer(harmony=topic("En S2 modula.")), data)
+    with pytest.raises(InvalidExplanation):
+        validate_text({"summary": "Sin apartados."}, data)
+
+
+def test_the_ai_commentary_is_shown_with_who_wrote_it():
+    fake = Fake(answer())
+    shown = explain_analysis(analyse(aba()), "ABA", fake, DemoExplanationProvider(), None, "es")
+    assert (shown["mode"], shown["provider"], shown["prompt_version"], shown["fallback_reason"]) == \
+        ("llm", "fake", PROMPT_VERSION, None)
+    assert shown["commentary"]["form"]["text"].startswith("Forma A B A")
+    assert fake.seen[0]["version"] == EVIDENCE_VERSION
+
+
+@pytest.mark.parametrize("fake, reason", [(Fake(failure=ProviderFailure("timeout")), "timeout"),
+                                          (Fake(answer(form=topic("x", sections=["S9"]))), "invalid")])
+def test_on_any_failure_the_demo_writes_every_topic_and_says_why(fake, reason):
+    shown = explain_analysis(analyse(aba()), "ABA", fake, DemoExplanationProvider(), None, "es")
+    assert (shown["mode"], shown["fallback_reason"]) == ("demo", reason)
+    commentary = shown["commentary"]
+    assert all(commentary[name]["text"] for name in TOPICS)
+    assert "A B A" in commentary["form"]["text"] and "Sol mayor" in commentary["harmony"]["text"]
+    assert [item["section"] for item in commentary["by_section"]] == ["S1", "S2", "S3"]
+
+
+def test_the_demo_writes_in_english():
+    shown = explain_analysis(analyse(aba()), "ABA", DemoExplanationProvider(), DemoExplanationProvider(), None, "en")
+    assert "G major" in shown["commentary"]["harmony"]["text"]
+    assert "mayor" not in shown["commentary"]["summary"]
+
+
+def test_an_empty_work_never_asks_the_ai():
+    fake = Fake(answer())
+    shown = explain_analysis(analyse(type(aba())("Vacía", ())), "Vacía", fake, DemoExplanationProvider(), None, "es")
+    assert shown["mode"] == "demo" and not fake.seen
+
+
+def test_the_prompt_is_versioned_and_gemini_uses_it():
+    from backend.infrastructure.ai.gemini_provider import GeminiExplanationProvider
+    from backend.infrastructure.ai.prompts import MUSICAL_ANALYSIS_PROMPT, in_language
+    assert MUSICAL_ANALYSIS_PROMPT.version == PROMPT_VERSION
+    assert "en inglés" in in_language(MUSICAL_ANALYSIS_PROMPT, "en").system
+    seen = []
+
+    class Chat:
+        def invoke(self, messages):
+            seen.append(messages)
+            return answer()
+    provider = GeminiExplanationProvider("k", "m", chat_factory=lambda schema: Chat())
+    assert provider.explain_musical_analysis(evidence()) == answer()
+    assert "S1" in seen[0][1][1] and "interpretation" in seen[0][0][1]
+
+
+# --- API -----------------------------------------------------------------------------------------------------------
+
+from backend.app.dependencies import get_explanation_cache, get_explanation_provider  # noqa: E402
+from backend.app.main import app  # noqa: E402
+from backend.test.test_library_api import analyze, clients  # noqa: E402,F401 (pytest fixture)
+
+
+@pytest.mark.real_auth
+def test_over_http_the_commentary_of_a_work_is_its_owners(clients):
+    ana, berta = clients
+    work_id = analyze(ana).json()["work_id"]
+    saved = dict(app.dependency_overrides)
+    app.dependency_overrides[get_explanation_provider] = DemoExplanationProvider
+    app.dependency_overrides[get_explanation_cache] = lambda: None
+    try:
+        reply = ana.get("/works/" + work_id + "/musical-analysis/commentary")
+        assert reply.status_code == 200, reply.text
+        assert reply.json()["mode"] == "demo" and reply.json()["commentary"]["summary"]
+        assert berta.get("/works/" + work_id + "/musical-analysis/commentary").status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(saved)

@@ -6,6 +6,10 @@ import { currentLanguage, t } from './i18n.js';
 export const loadMusicalAnalysis = workId => apiJson('/works/' + encodeURIComponent(workId) + '/musical-analysis', {},
   t('No se pudo cargar el análisis musical.'));
 
+// The commentary written about the analysis (2026-11-19): by the AI, or by the demo when it fails.
+export const loadAnalysisCommentary = workId => apiJson('/works/' + encodeURIComponent(workId) + '/musical-analysis/commentary', {},
+  t('No se pudo redactar el comentario del análisis.'));
+
 const SOLFEGE = { C: 'Do', D: 'Re', E: 'Mi', F: 'Fa', G: 'Sol', A: 'La', B: 'Si' };
 const ACCIDENTALS = { b: '♭', '#': '♯' };
 

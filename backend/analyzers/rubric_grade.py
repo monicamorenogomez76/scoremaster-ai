@@ -55,6 +55,12 @@ def _label_es(part: ScorePart) -> str:
     return identity.label_es + (" " + number.group(1) if number else "")
 
 
+def part_label(part: ScorePart, language: str = "es") -> str:
+    """The catalog's name of a part in the language of the interface, with its number (Flauta 2, Flute 2)."""
+    spanish = _label_es(part)
+    return english_label(spanish, part.name) if language == "en" else spanish
+
+
 def _qualifies(count: int, active: int) -> bool:
     return count >= R.MIN_MEASURES and count >= R.LIMITED_SHARE * active
 

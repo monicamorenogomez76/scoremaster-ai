@@ -132,6 +132,10 @@ def _texts(evidence: dict) -> dict:
 class DemoExplanationProvider:
     info = ProviderInfo("demo", "demo")
 
+    def explain_musical_analysis(self, evidence: dict) -> dict:
+        from backend.infrastructure.ai.demo_analysis import analysis_commentary
+        return analysis_commentary(evidence)
+
     def explain_difficulty(self, evidence: dict) -> dict:
         say = _texts(evidence)
         joined = lambda items: _joined(items, say["and"])

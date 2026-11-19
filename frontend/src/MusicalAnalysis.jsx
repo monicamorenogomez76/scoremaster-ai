@@ -1,97 +1,161 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { cadenceText, durationText, keyName, listText, loadMusicalAnalysis, markText, modulationText, orchestrationText, periodText, phrasesText, relationText,
-  rhythmText, sectionShares, tempoText, textureKindText, textureText, themeText } from './musicalAnalysis.js';
+import { cadenceText, durationText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, modulationText,
+  orchestrationText, periodText, phrasesText, relationText, rhythmText, sectionShares, tempoText, textureKindText, textureText,
+  themeText } from './musicalAnalysis.js';
+import { sourceText } from './explanations.js';
 import { t } from './i18n.js';
 
-// The analysis of the work as in a conservatory (2026-11-18): its form, keys, cadences and who plays what, calculated by
-// ScoreMaster. Asked when the tab is first opened.
-export function MusicalAnalysis({ workId, visible, fromPdf }) {
+// One answer per work: asked once, and an answer for another work is dropped.
+function useWorkRequest(workId, enabled, load) {
   const [state, setState] = useState({ status: 'idle', result: null, error: '' });
-  // The work whose analysis was asked for: once per work, and an answer for another work is dropped.
   const asked = useRef(null);
   useEffect(() => { asked.current = null; setState({ status: 'idle', result: null, error: '' }); }, [workId]);
   useEffect(() => {
-    if (!visible || !workId || asked.current === workId) return;
+    if (!enabled || !workId || asked.current === workId) return;
     asked.current = workId;
     setState({ status: 'loading', result: null, error: '' });
-    loadMusicalAnalysis(workId)
+    load(workId)
       .then(result => { if (asked.current === workId) setState({ status: 'done', result, error: '' }); })
       .catch(failure => { if (asked.current === workId) setState({ status: 'error', result: null, error: failure.message }); });
-  }, [visible, workId]);
+  }, [enabled, workId, load]);
+  return state;
+}
 
-  const { result } = state;
-  return <section id="musical-analysis" className="musical-analysis" aria-labelledby="musical-analysis-title" aria-busy={state.status === 'loading'}>
+// A small table of the sections for one topic; on a phone each row is a card (data-label).
+function SectionTable({ caption, columns, sections }) {
+  return <div className="analysis-table-wrap" tabIndex={0} role="region" aria-label={caption}>
+    <table className="analysis-table">
+      <caption className="visually-hidden">{caption}</caption>
+      <thead><tr><th scope="col">{t('Sección')}</th>{columns.map(([title]) => <th key={title} scope="col">{title}</th>)}</tr></thead>
+      <tbody>{sections.map(section => <tr key={section.id}>
+        <th scope="row">{section.label}<span className="result-supporting"> · {t('cc. {first}–{last}', { first: section.first, last: section.last })}</span></th>
+        {columns.map(([title, value]) => <td key={title} data-label={title}>{value(section) || '—'}</td>)}
+      </tr>)}</tbody>
+    </table>
+  </div>;
+}
+
+// A topic of the analysis: ScoreMaster's facts and, once asked, the commentary written about them.
+function Topic({ id, title, commentary, opinion, children }) {
+  return <section className="analysis-topic" aria-labelledby={id}>
+    <h3 id={id}>{title}</h3>
+    {children}
+    {commentary && <div className={'analysis-commentary' + (opinion ? ' analysis-commentary--opinion' : '')}>
+      <p className="analysis-commentary-label">{opinion ? t('Opinión del comentario') : t('Comentario')}</p>
+      <p>{commentary.text}</p>
+    </div>}
+  </section>;
+}
+
+// The analysis of the work as in a conservatory (2026-11-18), topic by topic: the facts ScoreMaster calculates and,
+// when the director asks for it, the commentary the AI (or the demo) writes about them (2026-11-19).
+export function MusicalAnalysis({ workId, visible, fromPdf }) {
+  const analysis = useWorkRequest(workId, visible, loadMusicalAnalysis);
+  const [asking, setAsking] = useState(false);
+  useEffect(() => setAsking(false), [workId]);
+  const commentary = useWorkRequest(workId, asking, loadAnalysisCommentary);
+  const { result } = analysis;
+  const comment = commentary.result?.commentary;
+  const labelOf = id => result.sections.find(section => section.id === id)?.label || id;
+
+  return <section id="musical-analysis" className="musical-analysis" aria-labelledby="musical-analysis-title" aria-busy={analysis.status === 'loading'}>
     <h2 id="musical-analysis-title">{t('Análisis musical')}</h2>
     <p className="result-supporting">{t('Calculado por ScoreMaster a partir de la partitura: forma, temas, tonalidades, cadencias, textura, ritmo, orquestación y quién toca qué. La melodía, las frases y los temas son una aproximación.')}</p>
     {fromPdf && <p className="pdf-provisional" role="note">{t('Leída de PDF: el análisis es provisional, porque la lectura puede tener errores.')}</p>}
-    {state.status === 'loading' && <p className="result-supporting">{t('Analizando la obra…')}</p>}
-    {state.error && <p className="result-supporting" role="alert">{state.error}</p>}
+    {analysis.status === 'loading' && <p className="result-supporting">{t('Analizando la obra…')}</p>}
+    {analysis.error && <p className="result-supporting" role="alert">{analysis.error}</p>}
     {result && !result.sections.length && <p className="result-supporting">{t('La obra no tiene notas que analizar.')}</p>}
     {result && result.sections.length > 0 && <>
-      <dl className="analysis-summary">
-        <div><dt>{t('Tonalidad principal')}</dt><dd>{keyName(result.main_key)}</dd></div>
-        <div><dt>{t('Forma')}</dt><dd>{result.form}</dd></div>
-        <div><dt>{t('Secciones')}</dt><dd>{result.sections.length}</dd></div>
-        <div><dt>{t('Temas')}</dt><dd>{result.themes.length}</dd></div>
-        <div><dt>{t('Cadencias')}</dt><dd>{result.cadences.length}</dd></div>
-        <div><dt>{t('Duración')}</dt><dd>{durationText(result.general.seconds)}{result.general.assumed_tempo &&
-          <span className="result-supporting"> · {t('sin tempo escrito')}</span>}</dd></div>
-        <div><dt>{t('Compases')}</dt><dd>{result.general.measures}</dd></div>
-        <div><dt>{t('Partes')}</dt><dd>{result.general.parts}</dd></div>
-      </dl>
-      <dl className="analysis-facts">
-        {result.climax && <div><dt>{t('Clímax')}</dt><dd>{t('c. {measure}, sección {section}, {dynamic}, {count} partes', {
-          measure: result.climax.measure, dynamic: result.climax.dynamic, count: result.climax.playing,
-          section: result.sections.find(section => section.id === result.climax.section)?.label || '—' })}</dd></div>}
-        {result.general.tempos.length > 0 && <div><dt>{t('Tempos')}</dt><dd>{listText(result.general.tempos.map(tempoText), 8)}</dd></div>}
-        {result.general.meters.length > 0 && <div><dt>{t('Compás')}</dt><dd>{listText(result.general.meters.map(item =>
-          t('{meter} (c. {measure})', item)), 8)}</dd></div>}
-      </dl>
-      <ol className="analysis-timeline" aria-label={t('Secciones de la obra en orden')}>
-        {result.sections.map((section, index) => <li key={section.id} className={'analysis-block analysis-block--' + section.relation}
-          style={{ flexGrow: sectionShares(result.sections)[index] }}>
-          <strong>{section.label}</strong>
-          <span>{t('cc. {first}–{last}', { first: section.first, last: section.last })}</span>
-          <span>{keyName(section.key)}</span>
-        </li>)}
-      </ol>
-      {/* Scrolled sideways on a phone: reachable with the keyboard (WCAG 2.1.1). */}
-      <div className="analysis-table-wrap" tabIndex={0} role="region" aria-label={t('Análisis por secciones')}>
-        <table className="analysis-table">
-          <caption className="visually-hidden">{t('Análisis por secciones')}</caption>
-          <thead><tr>
-            <th scope="col">{t('Sección')}</th><th scope="col">{t('Compases')}</th><th scope="col">{t('Tonalidad')}</th>
-            <th scope="col">{t('Tempo')}</th><th scope="col">{t('Melodía')}</th><th scope="col">{t('Tema')}</th><th scope="col">{t('Frases')}</th><th scope="col">{t('Textura')}</th>
-            <th scope="col">{t('Ritmo y contrapunto')}</th>
-            <th scope="col">{t('Orquestación')}</th>
-            <th scope="col">{t('Dinámicas')}</th><th scope="col">{t('Marcas')}</th>
-            <th scope="col">{t('Cadencias')}</th>
-          </tr></thead>
-          <tbody>{result.sections.map(section => {
-            const cadences = result.cadences.filter(cadence => cadence.section === section.id);
-            const marks = [...section.marks, ...section.marks_at_end].map(markText);
-            return <tr key={section.id}>
-              <th scope="row">{section.label}{section.like && <span className="result-supporting">
-                {' '}{t('(vuelve el material de {section})', { section: result.sections.find(other => other.id === section.like)?.label || section.like })}</span>}</th>
-              <td data-label={t('Compases')}>{t('{first}–{last}', { first: section.first, last: section.last })}</td>
-              <td data-label={t('Tonalidad')}>{keyName(section.key)}<span className="result-supporting"> · {relationText(section.relation)}
-                {section.modulations.length > 0 && <>{' · '}{section.modulations.map(modulationText).join('; ')}</>}</span></td>
-              <td data-label={t('Tempo')}>{[section.tempo ? '♩ = ' + section.tempo : '', section.meter].filter(Boolean).join(' · ') || '—'}</td>
-              <td data-label={t('Melodía')}>{section.melody || '—'}{section.doubled_by.length > 0 && <span className="result-supporting">
-                {' '}{t('(doblada por {parts})', { parts: section.doubled_by.join(', ') })}</span>}</td>
-              <td data-label={t('Tema')}>{themeText(section)}</td>
-              <td data-label={t('Frases')}>{phrasesText(section)}{section.periods.length > 0 && <span className="result-supporting">
-                {' · '}{section.periods.map(periodText).join('; ')}</span>}</td>
-              <td data-label={t('Textura')}>{[textureKindText(section.texture_kind), textureText(section.texture)].filter(Boolean).join(', ')}<span className="result-supporting"> · {t('{count} partes', { count: section.playing.length })}</span></td>
-              <td data-label={t('Ritmo y contrapunto')}>{rhythmText(section)}</td>
-              <td data-label={t('Orquestación')}>{orchestrationText(section)}</td>
-              <td data-label={t('Dinámicas')}>{section.dynamics.join(' ') || '—'}</td>
-              <td data-label={t('Marcas')}>{marks.join(', ') || '—'}</td>
-              <td data-label={t('Cadencias')}>{cadences.map(cadence => t('{kind} (c. {measure})', { kind: cadenceText(cadence.kind), measure: cadence.measure })).join(', ') || '—'}</td>
-            </tr>;
-          })}</tbody>
-        </table>
+      <div className="analysis-commentary-bar" aria-live="polite">
+        <button type="button" className="secondary-action" disabled={asking} onClick={() => setAsking(true)}>
+          {commentary.status === 'loading' ? t('Redactando el comentario…') : t('Redactar el comentario')}</button>
+        {commentary.error && <p className="result-supporting" role="alert">{commentary.error}</p>}
+        {commentary.result && <p className={'explanation-source' + (commentary.result.mode === 'llm' ? ' is-ai' : ' is-demo')}>
+          {sourceText(commentary.result)}</p>}
       </div>
+
+      <Topic id="analysis-general" title={t('Datos generales')} commentary={comment && { text: comment.summary }}>
+        <dl className="analysis-summary">
+          <div><dt>{t('Tonalidad principal')}</dt><dd>{keyName(result.main_key)}</dd></div>
+          <div><dt>{t('Forma')}</dt><dd>{result.form}</dd></div>
+          <div><dt>{t('Duración')}</dt><dd>{durationText(result.general.seconds)}{result.general.assumed_tempo &&
+            <span className="result-supporting"> · {t('sin tempo escrito')}</span>}</dd></div>
+          <div><dt>{t('Compases')}</dt><dd>{result.general.measures}</dd></div>
+          <div><dt>{t('Partes')}</dt><dd>{result.general.parts}</dd></div>
+        </dl>
+        <dl className="analysis-facts">
+          {result.general.tempos.length > 0 && <div><dt>{t('Tempos')}</dt><dd>{listText(result.general.tempos.map(tempoText), 8)}</dd></div>}
+          {result.general.meters.length > 0 && <div><dt>{t('Compás')}</dt><dd>{listText(result.general.meters.map(item =>
+            t('{meter} (c. {measure})', item)), 8)}</dd></div>}
+        </dl>
+      </Topic>
+
+      <Topic id="analysis-form" title={t('Forma')} commentary={comment?.form}>
+        <ol className="analysis-timeline" aria-label={t('Secciones de la obra en orden')}>
+          {result.sections.map((section, index) => <li key={section.id} className={'analysis-block analysis-block--' + section.relation}
+            style={{ flexGrow: sectionShares(result.sections)[index] }}>
+            <strong>{section.label}</strong>
+            <span>{t('cc. {first}–{last}', { first: section.first, last: section.last })}</span>
+            <span>{keyName(section.key)}</span>
+          </li>)}
+        </ol>
+        <SectionTable caption={t('Forma por secciones')} sections={result.sections} columns={[
+          [t('Material'), section => section.like ? t('vuelve el material de {section}', { section: labelOf(section.like) }) : t('nuevo')],
+          [t('Frases'), section => phrasesText(section) + (section.periods.length ? ' · ' + section.periods.map(periodText).join('; ') : '')],
+          [t('Marcas'), section => [...section.marks, ...section.marks_at_end].map(markText).join(', ')],
+        ]} />
+      </Topic>
+
+      <Topic id="analysis-themes" title={t('Temas')} commentary={comment?.themes}>
+        {result.themes.length > 0
+          ? <ul className="analysis-themes">{result.themes.map(theme => <li key={theme.id}>
+            <strong>{theme.id}</strong>{' '}{t('sección {section}, cc. {first}–{last}', { section: labelOf(theme.section), first: theme.first, last: theme.last })}
+            {theme.part && <span className="result-supporting"> · {theme.part}</span>}</li>)}</ul>
+          : <p className="result-supporting">{t('No se distinguen temas claros.')}</p>}
+        <SectionTable caption={t('Temas por secciones')} sections={result.sections} columns={[[t('Tema'), themeText]]} />
+      </Topic>
+
+      <Topic id="analysis-harmony" title={t('Armonía')} commentary={comment?.harmony}>
+        <SectionTable caption={t('Armonía por secciones')} sections={result.sections} columns={[
+          [t('Tonalidad'), section => [keyName(section.key) + ' · ' + relationText(section.relation),
+            ...section.modulations.map(modulationText)].join('; ')],
+          [t('Cadencias'), section => result.cadences.filter(cadence => cadence.section === section.id)
+            .map(cadence => t('{kind} (c. {measure})', { kind: cadenceText(cadence.kind), measure: cadence.measure })).join(', ')],
+        ]} />
+      </Topic>
+
+      <Topic id="analysis-texture" title={t('Textura y orquestación')} commentary={comment?.texture}>
+        <SectionTable caption={t('Textura y orquestación por secciones')} sections={result.sections} columns={[
+          [t('Textura'), section => [textureKindText(section.texture_kind), textureText(section.texture)].filter(Boolean).join(', ')
+            + ' · ' + t('{count} partes', { count: section.playing.length })],
+          [t('Melodía'), section => section.melody && section.melody + (section.doubled_by.length
+            ? ' ' + t('(doblada por {parts})', { parts: section.doubled_by.join(', ') }) : '')],
+          [t('Orquestación'), orchestrationText],
+        ]} />
+      </Topic>
+
+      <Topic id="analysis-rhythm" title={t('Ritmo')} commentary={comment?.rhythm}>
+        <SectionTable caption={t('Ritmo por secciones')} sections={result.sections} columns={[
+          [t('Tempo'), section => [section.tempo ? '♩ = ' + section.tempo : '', section.meter].filter(Boolean).join(' · ')],
+          [t('Ritmo y contrapunto'), rhythmText],
+        ]} />
+      </Topic>
+
+      <Topic id="analysis-dynamics" title={t('Dinámicas y clímax')} commentary={comment?.dynamics}>
+        {result.climax && <p>{t('Clímax: c. {measure}, sección {section}, {dynamic}, {count} partes', {
+          measure: result.climax.measure, dynamic: result.climax.dynamic, count: result.climax.playing,
+          section: labelOf(result.climax.section) })}</p>}
+        <SectionTable caption={t('Dinámicas por secciones')} sections={result.sections} columns={[
+          [t('Dinámicas'), section => section.dynamics.join(' ')]]} />
+      </Topic>
+
+      {comment && <>
+        <Topic id="analysis-by-section" title={t('Sección por sección')}>
+          <dl className="analysis-facts">{comment.by_section.map(item => <div key={item.section}>
+            <dt>{labelOf(item.section)}</dt><dd>{item.text}</dd></div>)}</dl>
+        </Topic>
+        <Topic id="analysis-interpretation" title={t('Interpretación')} commentary={comment.interpretation} opinion />
+      </>}
     </>}
   </section>;
 }

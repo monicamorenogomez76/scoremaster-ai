@@ -13,7 +13,7 @@ from typing import Optional
 from backend.application import ai_usage
 from backend.application.ai import ProviderFailure, ProviderInfo
 from backend.infrastructure.ai.prompts import (DIFFICULTY_PROMPT, INSTRUMENT_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT,
-                                              SUBSTITUTES_PROMPT, human_message, in_language)
+                                              MUSICAL_ANALYSIS_PROMPT, SUBSTITUTES_PROMPT, human_message, in_language)
 
 # 2026-10-13: gemini-2.5-flash answered NotFound for a new key (Google keeps it only for accounts that
 # used it before); 3.8 Flash is free on the standard tier.
@@ -43,7 +43,8 @@ def _langchain_chat(api_key: str, model: str):
 
 # What each answer schema is for, in the usage panel.
 PURPOSES = {"DifficultyExplanation": "difficulty", "RehearsalExplanation": "rehearsal", "PassageReview": "passage_review",
-            "InstrumentProposals": "instrument_proposal", "SubstitutesExplanation": "substitutes"}
+            "InstrumentProposals": "instrument_proposal", "SubstitutesExplanation": "substitutes",
+            "MusicalAnalysisText": "musical_analysis"}
 
 
 def _structured(answer):
@@ -115,6 +116,10 @@ class GeminiExplanationProvider:
     def explain_substitutes(self, evidence: dict) -> dict:
         from backend.application.substitutes_explanation import SubstitutesExplanation
         return self._ask(SubstitutesExplanation, SUBSTITUTES_PROMPT, evidence)
+
+    def explain_musical_analysis(self, evidence: dict) -> dict:
+        from backend.application.musical_analysis_text import MusicalAnalysisText
+        return self._ask(MusicalAnalysisText, MUSICAL_ANALYSIS_PROMPT, evidence)
 
 
 _shared: Optional[GeminiExplanationProvider] = None

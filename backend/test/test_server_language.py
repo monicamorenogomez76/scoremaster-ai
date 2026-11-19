@@ -17,7 +17,8 @@ SPANISH = re.compile(r"[áéíóúñ¿¡]|\b(el|la|los|las|de|del|no|un|una|ya|s
 # Messages for the logs or for whoever deploys the app, never shown in the interface.
 INTERNAL = {"No se pudo crear {} de la demo: {} {}", "DEMO_USER_PASSWORD debe tener al menos 10 caracteres.",
             "Compila el frontend: npm --prefix frontend ci y npm --prefix frontend run build.",
-            "Valoración de pasajes (demostración)"}  # the title of the demo campaign, data of the account
+            "Valoración de pasajes (demostración)",  # the title of the demo campaign, data of the account
+            "Los ids van solo en las citas, no en el texto."}  # a discarded AI answer: only logged, the demo answers
 
 
 def test_the_language_comes_from_accept_language_and_is_spanish_by_default():
