@@ -41,3 +41,13 @@ test('duration, tempos and meters read as a musician writes them', async () => {
   assert.equal(listText(['a', 'b', 'c', 'd'], 2), 'a, b y 2 más');
   assert.equal(listText(['a', 'b'], 3), 'a, b');
 });
+
+test('phrases and periods read as a musician says them', async () => {
+  const { phrasesText, periodText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(phrasesText({ structure: '4 + 4', phrases: [{ ending: 'suspensive' }, { ending: 'conclusive' }] }),
+    '4 + 4 (suspensiva, conclusiva)');
+  assert.equal(phrasesText({ structure: '', phrases: [] }), '—');
+  assert.equal(periodText({ first: 1, last: 8, kind: 'period', symmetric: true }), 'periodo simétrico, cc. 1–8');
+  assert.equal(periodText({ first: 9, last: 20, kind: 'repetition', symmetric: false }), 'frase repetida, cc. 9–20');
+});

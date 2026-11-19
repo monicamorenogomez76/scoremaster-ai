@@ -12,13 +12,14 @@ import re
 from collections import Counter
 
 from backend.analyzers.harmony import find_cadences, key_of, part_events
+from backend.analyzers.phrases import find_phrases
 from backend.analyzers.tempo import estimate_duration
 from backend.domain.timing import quarter_bpm_at
 from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v2"   # v2 (2026-11-18): general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v3"   # v3 (2026-11-18): phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -253,6 +254,57 @@ def _general(score: Score, numbers: list[int], measures: dict[int, list], soundi
             "parts": len(sounding), "meters": meters, "tempos": tempos}
 
 
+ENDINGS = {"authentic": "conclusive", "half": "suspensive"}
+HELD_QUARTERS = 2.0   # a phrase whose last note lasts this long has ended before the next measure
+
+
+def _phrases(part: ScorePart | None, span: list[int], cadences: dict, skyline: dict) -> tuple[list[dict], list[dict]]:
+    """The phrases of the tune of a section, found within it (phrases.py), each with how it ends: conclusive on an
+    authentic cadence, suspensive on a half cadence, open otherwise. A tonic that arrives on the first beat of the next
+    measure closes the phrase when its last note is short (an elided cadence); after a held last note the phrase ended on
+    the dominant, and the tonic opens the next one: a half cadence, as in an antecedent. Pairs of phrases make a period (a
+    suspensive or open antecedent and a conclusive consequent) or a repetition (the same material twice)."""
+    if part is None:
+        return [], []
+    inside = set(span)
+    found = find_phrases(ScorePart(part.name, tuple(measure for measure in part.measures if measure.number in inside),
+                                   part.metadata), cadences.keys())
+    measures_of = {measure.number: measure for measure in part.measures}
+    by_measure: dict[int, list[tuple[float, str]]] = {}
+    for (number, offset), kind in cadences.items():
+        by_measure.setdefault(number, []).append((offset, kind))
+    phrases = []
+    for phrase in found:
+        after = span[span.index(phrase.last_measure) + 1] if phrase.last_measure in span[:-1] else None
+        ending = [kind for _, kind in by_measure.get(phrase.last_measure, [])]
+        arrival = [kind for offset, kind in by_measure.get(after, []) if offset == 0.0] if after is not None else []
+        if arrival:
+            last = measures_of[phrase.last_measure].notes if phrase.last_measure in measures_of else ()
+            sounding = [note for note in last if not note.is_rest]
+            held = bool(sounding) and sounding[-1].duration_quarters >= HELD_QUARTERS
+            ending += ["half"] if held and "authentic" in arrival else arrival
+        kind = "authentic" if "authentic" in ending else "half" if "half" in ending else None
+        phrases.append({"first": phrase.first_measure, "last": phrase.last_measure,
+                        "measures": len([number for number in span if phrase.first_measure <= number <= phrase.last_measure]),
+                        "ending": ENDINGS.get(kind, "open")})
+    periods, at = [], 0
+    while at + 1 < len(phrases):
+        first, second = phrases[at], phrases[at + 1]
+        material = [_material([number for number in span if item["first"] <= number <= item["last"]], skyline)
+                    for item in (first, second)]
+        if first["ending"] != "conclusive" and second["ending"] == "conclusive":
+            kind = "period"
+        elif _likeness(*material) >= SAME_MATERIAL:
+            kind = "repetition"
+        else:
+            at += 1
+            continue
+        periods.append({"first": first["first"], "last": second["last"], "kind": kind,
+                        "symmetric": first["measures"] == second["measures"]})
+        at += 2
+    return phrases, periods
+
+
 def _climax(score: Score, numbers: list[int], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
     """The loudest moment with the most parts playing: the dynamic in force in each part, carried from its last mark."""
     in_force: dict[str, str] = {}
@@ -329,6 +381,9 @@ def analyse(score: Score) -> dict:
             "tempo": round(bpm) if (bpm := quarter_bpm_at(score.tempo_marks, first)) else None,
             "dynamics": list(dict.fromkeys(mark for number in span for item in measures[number] for mark in item.dynamics)),
         })
+        phrases, periods = _phrases(next((item for item in score.parts if item.name == melody), None), span, cadences, skyline)
+        sections[-1].update({"phrases": phrases, "periods": periods,
+                             "structure": " + ".join(str(phrase["measures"]) for phrase in phrases)})
     section_of = {number: section["id"] for section in sections for number in inside(section["first"], section["last"])}
     return {
         "version": MUSICAL_ANALYSIS_VERSION,
