@@ -31,13 +31,36 @@ def _timeout() -> int:
 logger = logging.getLogger(__name__)
 
 
+# 2026-11-19: Google answered GoogleInvalidRequestError (400) to the musical analysis commentary: seven nested topics,
+# each with bounded lists and a bounded text, are too complex for its structured output. For these schemas Gemini gets
+# them without bounds, pattern or defaults and with every field required; the server still validates the bounds.
+LEAN_SCHEMAS = {"MusicalAnalysisText"}
+_BOUNDS = {"maxLength", "minLength", "maxItems", "minItems", "pattern", "default"}
+
+
+def _lean(node):
+    if isinstance(node, list):
+        return [_lean(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+    lean = {key: _lean(value) for key, value in node.items() if key not in _BOUNDS}
+    if isinstance(lean.get("properties"), dict):
+        lean["required"] = list(lean["properties"])
+    return lean
+
+
+def answer_schema(schema):
+    """What Gemini is asked to fill: the Pydantic schema, or its lean JSON schema for the complex ones."""
+    return _lean(schema.model_json_schema()) if schema.__name__ in LEAN_SCHEMAS else schema
+
+
 def _langchain_chat(api_key: str, model: str):
     def factory(schema):
         from langchain_google_genai import ChatGoogleGenerativeAI
         chat = ChatGoogleGenerativeAI(model=model, google_api_key=api_key, temperature=0,
                                       timeout=_timeout(), max_retries=1)
         # With the raw message too: its usage metadata gives the tokens of the call (M5, 2026-10-30).
-        return chat.with_structured_output(schema, include_raw=True)
+        return chat.with_structured_output(answer_schema(schema), include_raw=True)
     return factory
 
 
