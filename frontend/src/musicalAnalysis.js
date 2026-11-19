@@ -27,7 +27,8 @@ export const relationText = code => RELATIONS()[code] || code;
 const TEXTURES = () => ({ tutti: t('tutti'), reduced: t('plantilla reducida'), solo: t('solo') });
 export const textureText = code => TEXTURES()[code] || code;
 
-const CADENCES = () => ({ authentic: t('cadencia auténtica'), half: t('semicadencia') });
+const CADENCES = () => ({ authentic: t('cadencia auténtica'), half: t('semicadencia'), plagal: t('cadencia plagal'),
+  deceptive: t('cadencia rota') });
 export const cadenceText = kind => CADENCES()[kind] || kind;
 
 // The server names each mark in English words with its value after them: «rehearsal B», «words Trio».
@@ -121,3 +122,7 @@ export function orchestrationText(section) {
     t('{part} (c. {measure})', item)).join(', ') }));
   return items.join(' · ') || '—';
 }
+
+// «modula a Sol mayor (dominante, c. 7)»: a key a section moves to, related to the section's own.
+export const modulationText = modulation => t('modula a {key} ({relation}, c. {measure})', { key: keyName(modulation.key),
+  relation: relationText(modulation.relation), measure: modulation.measure });

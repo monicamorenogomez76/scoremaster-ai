@@ -22,7 +22,8 @@ MAJOR_PROFILE = (6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.2
 MINOR_PROFILE = (6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17)
 KEY_CONTEXT_MEASURES = 4    # the key of a measure comes from the measures around it
 CHORD_SHARE = 0.75          # share of the sounding notes that must belong to the chord
-HALF_CADENCE_BEATS = 2.0    # a half cadence holds the dominant at least this long
+HALF_CADENCE_BEATS = 2.0    # a half cadence holds the dominant at least this long; a plagal one, the tonic
+PRIORITY = ("authentic", "half", "plagal", "deceptive")   # the kind kept when the two key readings differ
 
 
 @dataclass(frozen=True)
@@ -82,7 +83,7 @@ def _key(histogram: list[float]) -> tuple[int, bool]:
 
 
 def _function(midis: list[int], tonic: int, minor: bool) -> str | None:
-    """"I", "V" or "other" for the notes sounding together."""
+    """"I", "V", "IV", "vi" (VI in minor) or "other" for the notes sounding together."""
     if not midis:
         return None
     bass = min(midis) % 12
@@ -97,11 +98,18 @@ def _function(midis: list[int], tonic: int, minor: bool) -> str | None:
         return "I"
     if bass == dominant and (dominant + 4) % 12 in classes and fits(dominant_chord):
         return "V"
+    subdominant, submediant = (tonic + 5) % 12, (tonic + (8 if minor else 9)) % 12
+    if bass == subdominant and fits({subdominant, (subdominant + (3 if minor else 4)) % 12, tonic}):
+        return "IV"
+    if bass == submediant and fits({submediant, (submediant + (4 if minor else 3)) % 12, (submediant + 7) % 12}):
+        return "vi"
     return "other"
 
 
-def find_cadences(score: Score) -> dict[tuple[int, float], str]:
-    """(measure, offset in the measure) of each cadential arrival → "authentic" or "half"."""
+def find_cadences(score: Score, every_kind: bool = False) -> dict[tuple[int, float], str]:
+    """(measure, offset in the measure) of each cadential arrival → "authentic" or "half"; with every_kind (the musical
+    analysis) also "plagal" (IV to a held I) and "deceptive" (V to vi), and a held V that moves to vi is then the
+    deceptive cadence, not a half one."""
     events, measures = [], {}
     for part in score.parts:
         part_events, part_measures = _part_events(part)
@@ -138,13 +146,13 @@ def find_cadences(score: Score) -> dict[tuple[int, float], str]:
     # The profiles often confuse a key with its relative (G major / E minor): look in both.
     relative = {number: ((tonic + 3) % 12, False) if minor else ((tonic + 9) % 12, True)
                 for number, (tonic, minor) in keys.items()}
-    found = [_cadences(slices, keys, measures), _cadences(slices, relative, measures)]
+    found = [_cadences(slices, keys, measures, every_kind), _cadences(slices, relative, measures, every_kind)]
     # A closing (authentic) reading wins over a half cadence at the same arrival.
-    return {where: "authentic" if any(item.get(where) == "authentic" for item in found) else "half"
+    return {where: next(kind for kind in PRIORITY if any(item.get(where) == kind for item in found))
             for where in sorted(set(found[0]) | set(found[1]))}
 
 
-def _cadences(slices, keys, measures) -> dict[tuple[int, float], str]:
+def _cadences(slices, keys, measures, every_kind: bool = False) -> dict[tuple[int, float], str]:
     regions: list[dict] = []   # consecutive time slices with the same harmonic function
     for start, end, number, midis in slices:
         function = _function(midis, *keys[number])
@@ -171,6 +179,14 @@ def _cadences(slices, keys, measures) -> dict[tuple[int, float], str]:
         if region["function"] == "I" and previous and previous["function"] == "V":
             cadences[where(region)] = "authentic"
         elif (region["function"] == "V" and region["end"] - region["start"] >= HALF_CADENCE_BEATS
-              and previous is not None and (following is None or following["function"] != "I")):
+              and previous is not None and (following is None or following["function"] != "I")
+              and not (every_kind and following is not None and following["function"] == "vi")):
             cadences[where(region)] = "half"
+        elif not every_kind or previous is None:
+            continue
+        elif (region["function"] == "I" and previous["function"] == "IV"
+              and region["end"] - region["start"] >= HALF_CADENCE_BEATS):
+            cadences[where(region)] = "plagal"
+        elif region["function"] == "vi" and previous["function"] == "V":
+            cadences[where(region)] = "deceptive"
     return cadences

@@ -83,3 +83,15 @@ test('solos, percussion and extreme registers read as words', async () => {
     'solo: Flute (c. 9) · percusión: Caja (continua), Platos (puntual) · agudo extremo: Oboe (c. 22)');
   assert.equal(orchestrationText({ solos: [], percussion: [], registers: [] }), '—');
 });
+
+test('plagal and deceptive cadences and modulations read as words', async () => {
+  const { cadenceText, modulationText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(cadenceText('plagal'), 'cadencia plagal');
+  assert.equal(cadenceText('deceptive'), 'cadencia rota');
+  assert.equal(modulationText({ measure: 7, key: { tonic: 'G', mode: 'major' }, relation: 'dominant' }),
+    'modula a Sol mayor (dominante, c. 7)');
+  setLanguage('en');
+  assert.equal(cadenceText('deceptive'), 'deceptive cadence');
+  setLanguage('es');
+});

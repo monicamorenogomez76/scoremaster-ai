@@ -83,3 +83,23 @@ def test_a_cadence_is_found_even_when_the_key_looks_like_its_relative_minor():
     score = Score("Relative", (voice("Tuba", whole(*bass)), voice("Trombone", whole(*tenor)),
                                voice("Horn in F", whole(*alto)), voice("Flute", whole(*soprano))))
     assert find_cadences(score).get((8, 0.0)) == "authentic"
+
+
+# The musical analysis (2026-11-19) also names the plagal and the deceptive cadences; the critical passages and the
+# phrases keep only the authentic and half cadences.
+def test_subdominant_to_a_held_tonic_is_a_plagal_cadence():
+    # I  vi  IV  I (held a whole bar)
+    score = chorale(["C3", "A2", "F2", "C3"], ["E3", "E3", "F3", "E3"], ["G3", "C4", "A3", "G3"], ["C5", "C5", "C5", "C5"])
+    assert find_cadences(score, every_kind=True) == {(4, 0.0): "plagal"}
+    assert find_cadences(score) == {}
+
+
+def test_dominant_to_the_submediant_is_a_deceptive_cadence():
+    # I  IV  V  vi
+    score = chorale(["C3", "F2", "G2", "A2"], ["E3", "F3", "D3", "E3"], ["G3", "A3", "B3", "C4"], ["C5", "C5", "B4", "C5"])
+    assert find_cadences(score, every_kind=True) == {(4, 0.0): "deceptive"}
+    assert find_cadences(score) == {(3, 0.0): "half"}, "without every kind, the held dominant stays a half cadence"
+
+
+def test_every_kind_keeps_the_authentic_cadence():
+    assert find_cadences(chorale(*AUTHENTIC), every_kind=True) == {(4, 0.0): "authentic"}
