@@ -20,7 +20,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v7"   # v7 (2026-11-19): plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v8"   # v8 (2026-11-19): the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -585,6 +585,37 @@ def _ostinatos(span: list[int], lines: dict[str, dict[int, object]], melody: str
     return found
 
 
+def _sonority(events: list, time: float | None) -> tuple[set[int], int] | None:
+    """(pitch classes, bass pitch class) sounding at a time, or at the very end of the work with None."""
+    if time is None:
+        end = max((event.end for event in events), default=None)
+        sounding = [event for event in events if end is not None and event.end >= end - 1e-6]
+    else:
+        sounding = [event for event in events if event.start <= time + 1e-9 < event.end]
+    if not sounding:
+        return None
+    return {event.midi % 12 for event in sounding}, min(event.midi for event in sounding) % 12
+
+
+def _tonic_chord(key: tuple[int, bool]) -> set[int]:
+    """The tonic triad of a key, with its seventh."""
+    tonic, minor = key
+    return {tonic, (tonic + (3 if minor else 4)) % 12, (tonic + 7) % 12, (tonic + (10 if minor else 11)) % 12}
+
+
+def _between_relatives(key: tuple[int, bool], arrivals: list[tuple[set[int], int]]) -> int:
+    """How strongly the arrivals (the final chord, the chords that close cadences) point to the relative of a key
+    (positive) or to the key itself (negative): a tonic chord over its tonic in the bass is one vote. The key profiles
+    cannot tell them apart, since they share every note."""
+    relative, votes = _relative(key), 0
+    for classes, bass in arrivals:
+        if bass == relative[0] and classes <= _tonic_chord(relative):
+            votes += 1
+        elif bass == key[0] and classes <= _tonic_chord(key):
+            votes -= 1
+    return votes
+
+
 def _climax(score: Score, numbers: list[int], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
     """The loudest moment with the most parts playing: the dynamic in force in each part, carried from its last mark."""
     in_force: dict[str, str] = {}
@@ -621,13 +652,18 @@ def analyse(score: Score) -> dict:
              for at, start in enumerate(starts)]
     histograms: dict[int, list[float]] = {number: [0.0] * 12 for number in numbers}
     playing: dict[int, set[str]] = {number: set() for number in numbers}
+    events, bounds = [], {}
     for part in score.parts:
         for measure in part.measures:
             if any(not note.is_rest for note in measure.notes):
                 playing[measure.number].add(part.name)
         if not _pitched(part):
             continue
-        for event in part_events(part)[0]:
+        part_found, part_bounds = part_events(part)
+        events += part_found
+        for number, where in part_bounds.items():
+            bounds.setdefault(number, where)
+        for event in part_found:
             histograms[event.measure][event.midi % 12] += event.end - event.start
     skyline = _skyline(score)
     attacks = _attacks(score)
@@ -646,13 +682,30 @@ def analyse(score: Score) -> dict:
 
     keys = [key_of([sum(histograms[number][pc] for number in inside(first, last)) for pc in range(12)])
             for first, last in spans]
+    cadences = find_cadences(score)
+    every_cadence = find_cadences(score, every_kind=True)
+    # A key and its relative share every note: the chords that close the cadences of a section, and the final chord of
+    # the work, choose between them (2026-11-19, «March of the Toys» read as E minor and closing on G major).
+    final = _sonority(events, None)
+    votes = []
+    for at, ((first, last), key) in enumerate(zip(spans, keys)):
+        closing = [sonority for (number, offset), kind in every_cadence.items()
+                   if kind in ("authentic", "plagal") and number in set(inside(first, last)) and number in bounds
+                   and (sonority := _sonority(events, bounds[number][0] + offset))]
+        if at == len(spans) - 1 and final:
+            closing.append(final)
+        votes.append(_between_relatives(key, closing))
+        if votes[-1] > 0:
+            keys[at] = _relative(key)
     lengths = Counter()
     for (first, last), key in zip(spans, keys):
         lengths[key] += len(inside(first, last))
     main = max(lengths, key=lambda key: (lengths[key], -keys.index(key)))
+    if final and _between_relatives(main, [final]) > 0:
+        # The work closes in the relative of what most of it looked like: the undecided sections were the same mistake.
+        keys = [_relative(key) if key == main and vote == 0 else key for key, vote in zip(keys, votes)]
+        main = _relative(main)
     labels = _labels([_material(inside(first, last), skyline) for first, last in spans])
-    cadences = find_cadences(score)
-    every_cadence = find_cadences(score, every_kind=True)
     sections = []
     for at, ((first, last), key, (label, like, likeness)) in enumerate(zip(spans, keys, labels), 1):
         span = inside(first, last)
