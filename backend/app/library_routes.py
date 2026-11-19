@@ -20,6 +20,8 @@ from backend.app.i18n import language, translate
 from backend.app.stored_scores import stored_score
 from backend.application.ai import ProviderFailure
 from backend.application.instrument_proposals import InvalidProposals, NotAvailable, propose_instruments
+from backend.analyzers.rubric_grade import part_label
+from backend.application.musical_analysis_text import explain_analysis
 from backend.application.substitutes_explanation import explain_substitutes
 from backend.analyzers.musical_analysis import analyse
 from backend.analyzers.substitutes import substitute_candidates
@@ -214,6 +216,20 @@ def work_musical_analysis(work_id: str, user: User = Depends(authenticated_user)
     if found is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return analyse(found[1])
+
+
+@router.get("/works/{work_id}/musical-analysis/commentary")
+def work_musical_commentary(work_id: str, user: User = Depends(authenticated_user),
+                            library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store),
+                            provider=Depends(get_explanation_provider), cache=Depends(get_explanation_cache),
+                            accept_language: Optional[str] = Header(None)):
+    """The teacher's commentary of the musical analysis (2026-11-19), written by the AI about the calculated facts."""
+    found = stored_score(library, user.id, _work_id(work_id), score_store)
+    if found is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    lang = language(accept_language)
+    labels = {part.name: part_label(part, lang) for part in found[1].parts}
+    return explain_analysis(analyse(found[1]), found[1].title, provider, DemoExplanationProvider(), cache, lang, labels)
 
 
 @router.get("/works/{work_id}/file")
