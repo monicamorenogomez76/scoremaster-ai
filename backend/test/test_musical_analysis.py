@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v10" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v11" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -409,3 +409,20 @@ def test_accents_written_off_the_beat_are_displaced():
     on = [[("C5", 1.0, None, ("accent",)), ("D5", 1.0, None, ()), ("E5", 2.0, None, ("accent",))]] * 4
     assert analyse(Score("Off", (bars_of("Flute", off, "4/4", 4.0),)))["sections"][0]["displaced_accents"] == [1, 2, 3, 4]
     assert analyse(Score("On", (bars_of("Flute", on, "4/4", 4.0),)))["sections"][0]["displaced_accents"] == []
+
+
+def test_each_theme_has_its_range_contour_and_motion():
+    [first, second] = analyse(aba())["themes"]
+    # A: C D E C | E F G | G A G F E C | D B, rising to the A and falling back: an arch, by steps.
+    assert (first["lowest"], first["highest"], first["range"], first["contour"], first["motion"]) == \
+        ("B4", "A5", 10, "arch", "conjunct")
+    assert second["range"] == 9
+
+
+def test_a_theme_that_climbs_is_ascending_and_one_by_leaps_is_disjunct():
+    scale = [[("C5", Q), ("D5", Q), ("E5", Q), ("F5", Q)], [("G5", Q), ("A5", Q), ("B5", Q), ("C6", Q)], [("C6", 4.0)], [("C6", 4.0)]]
+    [theme] = analyse(texture(("Flute", scale)))["themes"]
+    assert (theme["contour"], theme["motion"]) == ("ascending", "conjunct")
+    leaps = [[("C5", Q), ("G5", Q), ("D5", Q), ("A5", Q)], [("E5", Q), ("B5", Q), ("F5", Q), ("C6", Q)], [("C6", 4.0)], [("C6", 4.0)]]
+    [theme] = analyse(texture(("Flute", leaps)))["themes"]
+    assert theme["motion"] == "disjunct"

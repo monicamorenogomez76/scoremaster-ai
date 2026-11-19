@@ -9,7 +9,10 @@ TEXTS = {
         "summary_untitled": "La obra está en {key}, tiene {measures} compases y {count} secciones: {form}.",
         "form": "La forma es {form}, en {count} secciones.", "returns": " {label} (cc. {first}–{last}) vuelve al material de {like}.",
         "single": " Es una sola sección sin repeticiones de material.",
-        "themes": "Hay {count} temas.", "exposed": " {theme} se expone en la sección {label}{part}.",
+        "themes": "Hay {count} temas.", "exposed": " {theme} se expone en la sección {label}{part}{shape}.",
+        "shape": " ({range} semitonos, {contour}, {motion})",
+        "contours": {"arch": "en arco", "inverted_arch": "en arco invertido", "ascending": "ascendente",
+                     "descending": "descendente", "level": "plano"}, "motions": {"conjunct": "por grados", "disjunct": "por saltos"},
         "by_part": ", en {part}", "statement": {"return": "vuelve en {labels}", "transposed": "vuelve en otro tono en {labels}",
                                                "varied": "vuelve variado en {labels}"},
         "heads": " La cabeza de {theme} reaparece en {labels}.", "no_themes": "No se distinguen temas claros.",
@@ -49,7 +52,10 @@ TEXTS = {
         "summary_untitled": "The work is in {key}, has {measures} measures and {count} sections: {form}.",
         "form": "The form is {form}, in {count} sections.", "returns": " {label} (mm. {first}–{last}) brings back the material of {like}.",
         "single": " It is a single section with no return of material.",
-        "themes": "There are {count} themes.", "exposed": " {theme} is stated in section {label}{part}.",
+        "themes": "There are {count} themes.", "exposed": " {theme} is stated in section {label}{part}{shape}.",
+        "shape": " ({range} semitones, {contour}, {motion})",
+        "contours": {"arch": "arch-shaped", "inverted_arch": "inverted arch", "ascending": "ascending",
+                     "descending": "descending", "level": "level"}, "motions": {"conjunct": "by steps", "disjunct": "by leaps"},
         "by_part": ", in {part}", "statement": {"return": "returns in {labels}", "transposed": "returns in another key in {labels}",
                                                "varied": "returns varied in {labels}"},
         "heads": " The head of {theme} comes back in {labels}.", "no_themes": "No clear themes stand out.",
@@ -130,7 +136,9 @@ def analysis_commentary(evidence: dict) -> dict:
                 if places:
                     later.append(say["statement"][statement].format(labels=_joined(places, say["and"])))
             part = say["by_part"].format(part=theme["part"]) if theme["part"] else ""
-            text += say["exposed"].format(theme=theme["id"], label=label.get(theme["section"], "?"), part=part)
+            shape = say["shape"].format(range=theme["range"], contour=say["contours"][theme["contour"]],
+                                        motion=say["motions"][theme["motion"]]) if "contour" in theme else ""
+            text += say["exposed"].format(theme=theme["id"], label=label.get(theme["section"], "?"), part=part, shape=shape)
             text = text[:-1] + ("; " + "; ".join(later) + "." if later else ".")
             cited_themes.append(theme["id"])
             theme_sections.append(theme["section"])

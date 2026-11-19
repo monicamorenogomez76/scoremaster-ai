@@ -20,7 +20,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v10"   # v10 (2026-11-19): hemiolas, displaced accents; v9: harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v11"   # v11 (2026-11-19): range and contour of the themes; v10: hemiolas, displaced accents; v9: harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -413,6 +413,37 @@ def _theme_notes(part: ScorePart | None, span: list[int], phrases: list[dict]) -
     return _line(part, [number for number in span if number <= last])
 
 
+CONTOUR_SPAN = 3        # semitones between the ends of a theme for it to rise or fall
+STEP = 2                # semitones of a step; more is a leap
+CONJUNCT = 0.6          # share of steps (and repeated notes) of a conjunct theme
+
+
+def _pitch_name(midi: int) -> str:
+    return MAJOR_NAMES[midi % 12] + str(midi // 12 - 1)
+
+
+def _melodic_shape(notes: list[tuple[float, int, int]]) -> dict:
+    """The range of a theme (sounding pitch), its contour and its motion."""
+    pitches = [midi for _, midi, _ in notes]
+    low, high = min(pitches), max(pitches)
+    first, last, inner = pitches[0], pitches[-1], pitches[1:-1] or pitches
+    peak, trough = max(inner), min(inner)
+    if peak - max(first, last) >= CONTOUR_SPAN and last - first < CONTOUR_SPAN:
+        contour = "arch"
+    elif min(first, last) - trough >= CONTOUR_SPAN and first - last < CONTOUR_SPAN:
+        contour = "inverted_arch"
+    elif last - first >= CONTOUR_SPAN:
+        contour = "ascending"
+    elif first - last >= CONTOUR_SPAN:
+        contour = "descending"
+    else:
+        contour = "level"
+    moves = [abs(b - a) for a, b in zip(pitches, pitches[1:])]
+    steps = sum(move <= STEP for move in moves) / len(moves) if moves else 1.0
+    return {"lowest": _pitch_name(low), "highest": _pitch_name(high), "range": high - low, "contour": contour,
+            "motion": "conjunct" if steps >= CONJUNCT else "disjunct"}
+
+
 def _themes(sections: list[dict], heads: list[list[tuple[float, int, int]]]) -> list[dict]:
     """Each section's theme (T1…): a new one (exposition), an earlier one again (return), again in another key
     (transposed) or changed (varied). Sets "theme" on each section and gives the themes in order of exposition."""
@@ -431,7 +462,7 @@ def _themes(sections: list[dict], heads: list[list[tuple[float, int, int]]]) -> 
             continue
         themes.append({"id": f"T{len(themes) + 1}", "section": section["id"], "part": section["melody"],
                        "first": notes[0][2], "last": notes[-1][2], "start": notes[0][1] % 12,
-                       "motif": tuple(shape[:MOTIF_NOTES - 1])})
+                       "motif": tuple(shape[:MOTIF_NOTES - 1]), **_melodic_shape(notes)})
         shapes.append(shape)
         section["theme"] = {"id": themes[-1]["id"], "statement": "exposition"}
     return themes

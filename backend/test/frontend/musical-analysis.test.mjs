@@ -116,3 +116,14 @@ test('hemiolas and displaced accents read as words', async () => {
     'hemiolia (cc. 3, 11) · acentos a contratiempo (cc. 17, 18, 22, 23, 32 y 1 más)');
   assert.equal(meterText({ hemiolas: [], displaced_accents: [] }), '');
 });
+
+test('the range and contour of a theme read as words', async () => {
+  const { themeShapeText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(themeShapeText({ lowest: 'Bb4', highest: 'A5', range: 11, contour: 'arch', motion: 'conjunct' }),
+    'Si♭4–La5 (11 semitonos), en arco, por grados');
+  setLanguage('en');
+  assert.equal(themeShapeText({ lowest: 'C4', highest: 'G5', range: 19, contour: 'descending', motion: 'disjunct' }),
+    'C4–G5 (19 semitones), descending, by leaps');
+  setLanguage('es');
+});

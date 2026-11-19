@@ -152,7 +152,7 @@ Reglas que no cambian:
 
 # The teacher's commentary of the musical analysis (2026-11-19): topic by topic, about the facts ScoreMaster calculated;
 # only the interpretation is opinion.
-MUSICAL_ANALYSIS_PROMPT = Prompt("musical-analysis-text-v3", """Eres profesora de la asignatura «Análisis musical» de un
+MUSICAL_ANALYSIS_PROMPT = Prompt("musical-analysis-text-v4", """Eres profesora de la asignatura «Análisis musical» de un
 conservatorio y comentas una obra para banda a una directora. ScoreMaster, un analizador determinista, ya ha calculado
 el análisis de la obra: forma, secciones (id S1, S2…), temas (T1, T2…), tonalidades y modulaciones, cadencias (C1, C2…),
 frases, textura, ritmo, orquestación, dinámicas y clímax. Esos datos son los hechos: tu tarea es comentarlos como en
@@ -161,7 +161,8 @@ un análisis de conservatorio, sin añadir hechos nuevos.
 Devuelve, apartado por apartado:
 - summary: dos o tres frases que presenten la obra (tonalidad, duración o compases, forma);
 - form: la forma y cómo se relacionan sus secciones (qué vuelve, qué contrasta);
-- themes: los temas, dónde se exponen, cómo vuelven (igual, en otro tono, variados) y dónde se desarrolla su cabeza;
+- themes: los temas, dónde se exponen, su ámbito y su perfil (en arco, ascendente…; por grados o por saltos), cómo
+  vuelven (igual, en otro tono, variados) y dónde se desarrolla su cabeza;
 - harmony: la tonalidad principal, las tonalidades de las secciones y su relación, las modulaciones, las cadencias, el
   ritmo armónico, las dominantes secundarias y las notas pedal;
 - texture: la textura, quién lleva la melodía y quién la dobla, los solos, la percusión y los registros extremos;

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, meterText, modulationText,
   orchestrationText, periodText, phrasesText, relationText, rhythmText, sectionShares, tempoText, textureKindText, textureText,
-  themeText } from './musicalAnalysis.js';
+  themeShapeText, themeText } from './musicalAnalysis.js';
 import { sourceText } from './explanations.js';
 import { t } from './i18n.js';
 
@@ -110,7 +110,8 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         {result.themes.length > 0
           ? <ul className="analysis-themes">{result.themes.map(theme => <li key={theme.id}>
             <strong>{theme.id}</strong>{' '}{t('sección {section}, cc. {first}–{last}', { section: labelOf(theme.section), first: theme.first, last: theme.last })}
-            {theme.part && <span className="result-supporting"> · {theme.part}</span>}</li>)}</ul>
+            {theme.part && <span className="result-supporting"> · {theme.part}</span>}
+            {theme.contour && <span className="result-supporting"> · {themeShapeText(theme)}</span>}</li>)}</ul>
           : <p className="result-supporting">{t('No se distinguen temas claros.')}</p>}
         <SectionTable caption={t('Temas por secciones')} sections={result.sections} columns={[[t('Tema'), themeText]]} />
       </Topic>
