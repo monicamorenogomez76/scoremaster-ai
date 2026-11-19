@@ -159,3 +159,14 @@ export function meterText(section) {
     measures: listText(section.displaced_accents.map(String), 5) }));
   return items.join(' · ');
 }
+
+const CONTOURS = () => ({ arch: t('en arco'), inverted_arch: t('en arco invertido'), ascending: t('ascendente'),
+  descending: t('descendente'), level: t('plano') });
+const MOTIONS = () => ({ conjunct: t('por grados'), disjunct: t('por saltos') });
+
+// «Si♭4–La5 (11 semitonos), en arco, por grados»: the range of a theme (sounding) and its shape.
+export function themeShapeText(theme) {
+  const pitch = name => noteName(name.replace(/-?\d+$/, '')) + name.match(/-?\d+$/)[0];
+  return t('{lowest}–{highest} ({range} semitonos)', { lowest: pitch(theme.lowest), highest: pitch(theme.highest), range: theme.range })
+    + ', ' + (CONTOURS()[theme.contour] || theme.contour) + ', ' + (MOTIONS()[theme.motion] || theme.motion);
+}

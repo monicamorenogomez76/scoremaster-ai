@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.explanations import InvalidExplanation, run_explanation
 from backend.domain.text import evidence_text
 
-PROMPT_VERSION = "musical-analysis-text-v3"   # v3 (2026-11-19): meter; v2: harmonic rhythm, secondary dominants, pedals
-EVIDENCE_VERSION = "musical-analysis-evidence-v3"   # v3 (2026-11-19): hemiolas, displaced accents; v2: harmonic rhythm…
+PROMPT_VERSION = "musical-analysis-text-v4"   # v4 (2026-11-19): range and contour of the themes; v3: meter; v2: harmony
+EVIDENCE_VERSION = "musical-analysis-evidence-v4"   # v4 (2026-11-19): range and contour of the themes; v3: meter…
 # The topics of the commentary, in the order of a conservatory analysis; the interpretation, last, is the only opinion.
 TOPICS = ("form", "themes", "harmony", "texture", "rhythm", "dynamics", "interpretation")
 MAX_SECTIONS = 30
@@ -107,7 +107,9 @@ def analysis_evidence(analysis: dict, title: str, language: str = "es", labels: 
         "sections": [_section(section, language, name) for section in analysis["sections"][:MAX_SECTIONS]],
         "themes": [{"id": theme["id"], "section": theme["section"],
                     "part": name(theme["part"]) if theme["part"] else None,
-                    "first": theme["first"], "last": theme["last"]} for theme in analysis.get("themes", [])],
+                    "first": theme["first"], "last": theme["last"],
+                    **{key: theme[key] for key in ("lowest", "highest", "range", "contour", "motion") if key in theme}}
+                   for theme in analysis.get("themes", [])],
         "cadences": [{"id": cadence["id"], "measure": cadence["measure"], "kind": cadence["kind"],
                       "section": cadence["section"]} for cadence in analysis["cadences"][:MAX_CADENCES]],
     }
