@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v11" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v12" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -426,3 +426,14 @@ def test_a_theme_that_climbs_is_ascending_and_one_by_leaps_is_disjunct():
     leaps = [[("C5", Q), ("G5", Q), ("D5", Q), ("A5", Q)], [("E5", Q), ("B5", Q), ("F5", Q), ("C6", Q)], [("C6", 4.0)], [("C6", 4.0)]]
     [theme] = analyse(texture(("Flute", leaps)))["themes"]
     assert theme["motion"] == "disjunct"
+
+
+def test_each_section_gives_the_share_of_its_articulations():
+    score = aba()
+    flute = score.parts[0]
+    detached = tuple(replace(bar, notes=tuple(replace(item, articulations=("staccato",)) for item in bar.notes))
+                     if 9 <= bar.number <= 16 else bar for bar in flute.measures)
+    found = analyse(replace(score, parts=(replace(flute, measures=detached),) + score.parts[1:]))
+    first, middle, _ = found["sections"]
+    assert first["articulation"] == {"staccato": 0.0, "accent": 0.0, "tenuto": 0.0}
+    assert middle["articulation"]["staccato"] > 0.5 and middle["articulation"]["accent"] == 0.0

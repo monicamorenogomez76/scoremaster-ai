@@ -127,3 +127,10 @@ test('the range and contour of a theme read as words', async () => {
     'C4–G5 (19 semitones), descending, by leaps');
   setLanguage('es');
 });
+
+test('the articulation of a section reads as its shares', async () => {
+  const { articulationText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(articulationText({ articulation: { staccato: 0.83, accent: 0.12, tenuto: 0.02 } }), 'staccato 83 % · acentos 12 %');
+  assert.equal(articulationText({ articulation: { staccato: 0.01, accent: 0, tenuto: 0 } }), '');
+});

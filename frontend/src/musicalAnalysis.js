@@ -170,3 +170,13 @@ export function themeShapeText(theme) {
   return t('{lowest}–{highest} ({range} semitonos)', { lowest: pitch(theme.lowest), highest: pitch(theme.highest), range: theme.range })
     + ', ' + (CONTOURS()[theme.contour] || theme.contour) + ', ' + (MOTIONS()[theme.motion] || theme.motion);
 }
+
+// Below this share an articulation is not named.
+const ARTICULATED = 0.1;
+const ARTICULATIONS = share => ({ staccato: () => t('staccato {share} %', { share }), accent: () => t('acentos {share} %', { share }),
+  tenuto: () => t('tenuto {share} %', { share }) });
+
+// «staccato 83 % · acentos 12 %»: the share of the notes of a section with each articulation.
+export const articulationText = section => Object.entries(section.articulation || {})
+  .filter(([name, share]) => share >= ARTICULATED && ARTICULATIONS(0)[name])
+  .map(([name, share]) => ARTICULATIONS(Math.round(share * 100))[name]()).join(' · ');
