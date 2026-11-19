@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v9" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v10" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -368,3 +368,44 @@ def test_a_bass_held_under_changing_chords_is_a_pedal():
     found = analyse(chorale_of(over_c + [F, G7, C, C]))
     assert found["sections"][0]["pedals"] == [{"first": 1, "last": 4, "note": "C", "degree": "tonic"}]
     assert analyse(chorale_of([C, F, G7, C] * 2))["sections"][0]["pedals"] == []
+
+
+def bars_of(name, bars, meter, length):
+    """bars: one list of (pitch, quarters, tie, articulations) per measure, in a given meter."""
+    built = []
+    for number, notes in enumerate(bars, 1):
+        offsets, position = [], 0.0
+        for item in notes:
+            offsets.append(position)
+            position += item[1]
+        built.append(ScoreMeasure(number, tuple(
+            ScoreNote(pitch, duration, pitch is None, offset, tie=tie, articulations=marks)
+            for (pitch, duration, tie, marks), offset in zip(notes, offsets)), length,
+            time_signature=meter if number == 1 else None))
+    return ScorePart(name, tuple(built), PartMetadata(part_name=name))
+
+
+def test_a_compound_measure_grouped_in_three_quarters_is_a_hemiola():
+    plain = [("C5", 1.5, None, ()), ("D5", 1.5, None, ())]
+    hemiola = [("E5", 1.0, None, ()), ("F5", 1.0, None, ()), ("G5", 1.0, None, ())]
+    bars = [plain, plain, hemiola, plain]
+    low = [[(pitch[:-1] + "4", *rest) for pitch, *rest in bar] for bar in bars]
+    score = Score("6/8", (bars_of("Flute", bars, "6/8", 3.0), bars_of("Clarinet", low, "6/8", 3.0)))
+    assert analyse(score)["sections"][0]["hemiolas"] == [3]
+
+
+def test_two_triple_measures_in_three_halves_are_a_hemiola():
+    plain = [("C5", 1.0, None, ()), ("D5", 1.0, None, ()), ("E5", 1.0, None, ())]
+    first = [("F5", 2.0, None, ()), ("G5", 1.0, "start", ())]
+    second = [("G5", 1.0, "stop", ()), ("A5", 2.0, None, ())]
+    bars = [plain, first, second, plain]
+    low = [[(pitch[:-1] + "4", *rest) for pitch, *rest in bar] for bar in bars]
+    score = Score("3/4", (bars_of("Flute", bars, "3/4", 3.0), bars_of("Clarinet", low, "3/4", 3.0)))
+    assert analyse(score)["sections"][0]["hemiolas"] == [2]
+
+
+def test_accents_written_off_the_beat_are_displaced():
+    off = [[(None, 0.5, None, ()), ("C5", 1.0, None, ("accent",)), ("D5", 1.0, None, ("accent",)), ("E5", 1.5, None, ())]] * 4
+    on = [[("C5", 1.0, None, ("accent",)), ("D5", 1.0, None, ()), ("E5", 2.0, None, ("accent",))]] * 4
+    assert analyse(Score("Off", (bars_of("Flute", off, "4/4", 4.0),)))["sections"][0]["displaced_accents"] == [1, 2, 3, 4]
+    assert analyse(Score("On", (bars_of("Flute", on, "4/4", 4.0),)))["sections"][0]["displaced_accents"] == []

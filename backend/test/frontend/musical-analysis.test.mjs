@@ -108,3 +108,11 @@ test('harmonic rhythm, secondary dominants and pedals read as words', async () =
     pedals: [{ first: 9, last: 12, note: 'G', degree: 'other' }] }), '2 chords per measure · pedal on G (mm. 9–12)');
   setLanguage('es');
 });
+
+test('hemiolas and displaced accents read as words', async () => {
+  const { meterText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(meterText({ hemiolas: [3, 11], displaced_accents: [17, 18, 22, 23, 32, 40] }),
+    'hemiolia (cc. 3, 11) · acentos a contratiempo (cc. 17, 18, 22, 23, 32 y 1 más)');
+  assert.equal(meterText({ hemiolas: [], displaced_accents: [] }), '');
+});

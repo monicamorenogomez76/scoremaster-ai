@@ -150,3 +150,12 @@ export function harmonyDetailsText(section) {
   }
   return items.join(' · ');
 }
+
+// «hemiolia (cc. 3, 11) · acentos a contratiempo (cc. 17, 18…)»: where the meter is regrouped or contradicted.
+export function meterText(section) {
+  const items = [];
+  if (section.hemiolas.length) items.push(t('hemiolia (cc. {measures})', { measures: listText(section.hemiolas.map(String), 5) }));
+  if (section.displaced_accents.length) items.push(t('acentos a contratiempo (cc. {measures})', {
+    measures: listText(section.displaced_accents.map(String), 5) }));
+  return items.join(' · ');
+}

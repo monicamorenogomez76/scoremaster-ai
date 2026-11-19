@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, modulationText,
+import { cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, meterText, modulationText,
   orchestrationText, periodText, phrasesText, relationText, rhythmText, sectionShares, tempoText, textureKindText, textureText,
   themeText } from './musicalAnalysis.js';
 import { sourceText } from './explanations.js';
@@ -139,6 +139,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         <SectionTable caption={t('Ritmo por secciones')} sections={result.sections} columns={[
           [t('Tempo'), section => [section.tempo ? '♩ = ' + section.tempo : '', section.meter].filter(Boolean).join(' · ')],
           [t('Ritmo y contrapunto'), rhythmText],
+          [t('Métrica'), meterText],
         ]} />
       </Topic>
 
