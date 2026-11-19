@@ -63,3 +63,13 @@ test('texture and rhythm read as a musician says them', async () => {
     'síncopas (50 %) · ostinato: Tuba (cc. 1–4) · imitación: Clarinet (c. 2)');
   assert.equal(rhythmText({ syncopation: 0.05, ostinatos: [], imitations: [] }), '—');
 });
+
+test('the theme of a section and the themes it develops read as words', async () => {
+  const { themeText } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  assert.equal(themeText({ theme: { id: 'T1', statement: 'exposition' }, motifs: [] }), 'T1 (exposición)');
+  assert.equal(themeText({ theme: { id: 'T1', statement: 'transposed' }, motifs: [] }), 'T1 (vuelve en otro tono)');
+  assert.equal(themeText({ theme: { id: 'T2', statement: 'return' }, motifs: [{ theme: 'T1', part: 'Tuba', measure: 9 }] }),
+    'T2 (vuelve) · cabeza de T1: Tuba (c. 9)');
+  assert.equal(themeText({ theme: null, motifs: [] }), '—');
+});

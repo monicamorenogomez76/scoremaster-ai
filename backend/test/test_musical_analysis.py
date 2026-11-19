@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v4" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v5" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -251,3 +251,34 @@ def test_syncopations_and_ostinatos_are_found():
     assert section["ostinatos"] == [{"part": "Tuba", "first": 1, "last": 4}]
     [plain] = analyse(texture(("Flute", CHORDS), ("Tuba", HELD)))["sections"]
     assert plain["syncopation"] == 0.0
+
+
+def test_each_section_states_its_theme_or_brings_one_back():
+    found = analyse(aba())
+    assert [(theme["id"], theme["section"], theme["part"]) for theme in found["themes"]] == [("T1", "S1", "Flute"),
+                                                                                            ("T2", "S2", "Flute")]
+    assert [section["theme"] for section in found["sections"]] == [
+        {"id": "T1", "statement": "exposition"}, {"id": "T2", "statement": "exposition"},
+        {"id": "T1", "statement": "return"}]
+
+
+FIFTH_UP = {"C5": "G5", "D5": "A5", "E5": "B5", "F5": "C6", "G5": "D6", "A5": "E6", "G4": "D5", "B4": "F#5"}
+
+
+def test_a_theme_that_comes_back_in_another_key_is_transposed():
+    score = aba()
+    flute = score.parts[0]
+    moved = tuple(replace(bar, notes=tuple(replace(item, pitch=FIFTH_UP.get(item.pitch, item.pitch)) for item in bar.notes))
+                  if bar.number >= 17 else bar for bar in flute.measures)
+    found = analyse(replace(score, parts=(replace(flute, measures=moved),) + score.parts[1:]))
+    assert found["sections"][2]["theme"] == {"id": "T1", "statement": "transposed"}
+
+
+def test_the_head_of_a_theme_heard_in_another_section_develops_it():
+    score = aba()
+    tuba = score.parts[2]
+    head = {9: [("C3", Q), ("D3", Q), ("E3", Q), ("C3", Q)], 10: [("E3", Q), ("F3", Q), ("G3", 2.0)]}
+    bars = tuple(measure(bar.number, head[bar.number], **{}) if bar.number in head else bar for bar in tuba.measures)
+    found = analyse(replace(score, parts=score.parts[:2] + (replace(tuba, measures=bars),)))
+    assert found["sections"][1]["motifs"] == [{"theme": "T1", "part": "Tuba", "measure": 9}]
+    assert found["sections"][0]["motifs"] == [] and found["sections"][2]["motifs"] == []
