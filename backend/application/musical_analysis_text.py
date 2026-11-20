@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.explanations import InvalidExplanation, run_explanation
 from backend.domain.text import evidence_text
 
-PROMPT_VERSION = "musical-analysis-text-v5"   # v5 (2026-11-19): articulation; v4: themes; v3: meter; v2: harmony
+PROMPT_VERSION = "musical-analysis-text-v6"   # v6 (2026-11-20): lengths in the prompt; v5 (2026-11-19): articulation; v4: themes; v3: meter; v2: harmony
 EVIDENCE_VERSION = "musical-analysis-evidence-v5"   # v5 (2026-11-19): articulation; v4: themes; v3: meter…
 # The topics of the commentary, in the order of a conservatory analysis; the interpretation, last, is the only opinion.
 TOPICS = ("form", "themes", "harmony", "texture", "rhythm", "dynamics", "interpretation")
@@ -23,20 +23,22 @@ SOLFEGE = {"C": "Do", "D": "Re", "E": "Mi", "F": "Fa", "G": "Sol", "A": "La", "B
 ACCIDENTALS = {"es": {"b": " bemol", "#": " sostenido"}, "en": {"b": "♭", "#": "♯"}}
 
 
+# Gemini gets the schema without bounds (LEAN_SCHEMAS in gemini_provider.py) and the lengths in the prompt (2026-11-20):
+# the bounds here leave room for a model that counts characters badly, and a topic may cite every id of the evidence.
 class Topic(BaseModel):
-    text: str = Field(min_length=1, max_length=900)
+    text: str = Field(min_length=1, max_length=1200)
     sections: list[str] = Field(default_factory=list, max_length=MAX_SECTIONS)
-    cadences: list[str] = Field(default_factory=list, max_length=20)
-    themes: list[str] = Field(default_factory=list, max_length=10)
+    cadences: list[str] = Field(default_factory=list, max_length=MAX_CADENCES)
+    themes: list[str] = Field(default_factory=list, max_length=MAX_SECTIONS)   # at most one theme per section
 
 
 class SectionComment(BaseModel):
     section: str = Field(pattern=r"^S\d{1,2}$")
-    text: str = Field(min_length=1, max_length=400)
+    text: str = Field(min_length=1, max_length=500)
 
 
 class MusicalAnalysisText(BaseModel):
-    summary: str = Field(min_length=1, max_length=500)
+    summary: str = Field(min_length=1, max_length=600)
     form: Topic
     themes: Topic
     harmony: Topic
@@ -122,7 +124,9 @@ def validate_text(answer, evidence: dict) -> MusicalAnalysisText:
     try:
         text = MusicalAnalysisText.model_validate(answer)
     except ValidationError as error:
-        fields = sorted({str(item["loc"][0]) for item in error.errors() if item.get("loc")})
+        # Where and why, never the text: «themes.text (string_too_long)».
+        fields = sorted({".".join(str(part) for part in item["loc"]) + f" ({item['type']})"
+                         for item in error.errors() if item.get("loc")})[:6]
         raise InvalidExplanation("Respuesta fuera del esquema: " + ", ".join(fields or ["?"])) from None
     known = {"sections": {item["id"] for item in evidence["sections"]},
              "cadences": {item["id"] for item in evidence["cadences"]},
