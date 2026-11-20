@@ -145,7 +145,7 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     answer = ana.get("/works/" + work_id + "/musical-analysis")
     assert answer.status_code == 200, answer.text
     body = answer.json()
-    assert body["version"] == "musical-analysis-v12" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
+    assert body["version"] == "musical-analysis-v13" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
 
 
@@ -188,6 +188,18 @@ def test_each_section_has_its_tempo_and_dynamics():
 def test_the_climax_is_the_loudest_fullest_moment():
     climax = analyse(with_tempo_and_dynamics())["climax"]
     assert (climax["measure"], climax["section"], climax["dynamic"]) == (17, "S3", "ff")
+
+
+# The map of the work (2026-11-20): measure by measure, the dynamic in force and how many parts play.
+def test_the_timeline_gives_the_dynamic_and_the_parts_of_each_measure():
+    timeline = analyse(with_tempo_and_dynamics())["timeline"]
+    assert [item["measure"] for item in timeline] == list(range(1, 25))
+    assert timeline[0] == {"measure": 1, "dynamic": "mf", "playing": 3}
+    assert timeline[8] == {"measure": 9, "dynamic": "p", "playing": 2}, "B is flute and tuba alone"
+    assert timeline[15]["dynamic"] == "p", "carried from its last mark"
+    assert timeline[16] == {"measure": 17, "dynamic": "ff", "playing": 3}
+    unmarked = analyse(aba())["timeline"]
+    assert unmarked[0] == {"measure": 1, "dynamic": None, "playing": 3}
 
 
 # The third block (2026-11-18): phrases and periods of the tune of each section.

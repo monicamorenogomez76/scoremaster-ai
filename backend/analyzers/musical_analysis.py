@@ -20,7 +20,7 @@ from backend.domain.instrument_resolver import resolve_part
 from backend.domain.models import Score, ScorePart
 
 # Bump when what the analysis says changes: the AI's texts about it are kept by version.
-MUSICAL_ANALYSIS_VERSION = "musical-analysis-v12"   # v12 (2026-11-19): articulation; v11: range and contour of the themes; v10: hemiolas, displaced accents; v9: harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
+MUSICAL_ANALYSIS_VERSION = "musical-analysis-v13"   # v13 (2026-11-20): timeline of dynamics and parts; v12 (2026-11-19): articulation; v11: range and contour of the themes; v10: hemiolas, displaced accents; v9: harmonic rhythm, secondary dominants, pedals; v8: the final chord and the cadences choose between relatives; v7: plagal and deceptive cadences, modulations; v6: orchestration; v5: themes; v4: texture and rhythm; v3: phrases and periods; v2: general data, tempo, meter, dynamics and climax
 MIN_SECTION_MEASURES = 4
 SAME_MATERIAL = 0.85     # likeness of two sections to share a letter
 VARIED_MATERIAL = 0.5    # likeness of a varied return (A′)
@@ -840,27 +840,34 @@ def _articulation(span: list[int], bars: dict[str, dict[int, object]]) -> dict[s
     return {name: round(count / total, 2) if total else 0.0 for name, count in counts.items()}
 
 
-def _climax(score: Score, numbers: list[int], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
-    """The loudest moment with the most parts playing: the dynamic in force in each part, carried from its last mark."""
+def _loudest(score: Score, numbers: list[int], playing: dict[int, set[str]]) -> dict[int, str | None]:
+    """Measure → the loudest dynamic in force among the parts playing it, each carried from its last mark."""
     in_force: dict[str, str] = {}
-    best = None
+    loudest = {}
     by_part = {part.name: {measure.number: measure for measure in part.measures} for part in score.parts}
     for number in numbers:
         for name, measures in by_part.items():
             marks = [mark for mark in (measures[number].dynamics if number in measures else ()) if mark in DYNAMIC_LEVELS]
             if marks:
                 in_force[name] = marks[-1]
-        loudest = max((in_force[name] for name in playing[number] if name in in_force),
-                      key=lambda mark: DYNAMIC_LEVELS[mark], default=None)
-        if loudest is None:
+        loudest[number] = max((in_force[name] for name in playing[number] if name in in_force),
+                              key=lambda mark: DYNAMIC_LEVELS[mark], default=None)
+    return loudest
+
+
+def _climax(loudest: dict[int, str | None], playing: dict[int, set[str]], section_of: dict[int, str]) -> dict | None:
+    """The loudest moment with the most parts playing."""
+    best = None
+    for number, mark in loudest.items():
+        if mark is None:
             continue
-        rank = (DYNAMIC_LEVELS[loudest], len(playing[number]))
+        rank = (DYNAMIC_LEVELS[mark], len(playing[number]))
         if best is None or rank > best[0]:
-            best = (rank, number, loudest)
+            best = (rank, number, mark)
     if best is None:
         return None
-    _, number, loudest = best
-    return {"measure": number, "section": section_of.get(number), "dynamic": loudest, "playing": len(playing[number])}
+    _, number, mark = best
+    return {"measure": number, "section": section_of.get(number), "dynamic": mark, "playing": len(playing[number])}
 
 
 def analyse(score: Score) -> dict:
@@ -869,7 +876,7 @@ def analyse(score: Score) -> dict:
     numbers = _numbers(score)
     if not numbers:
         return {"version": MUSICAL_ANALYSIS_VERSION, "general": None, "main_key": None, "form": "", "sections": [],
-                "cadences": [], "climax": None, "themes": []}
+                "cadences": [], "climax": None, "themes": [], "timeline": []}
     measures = _marks(score)
     starts = _starts(numbers, measures)
     spans = [(start, numbers[numbers.index(starts[at + 1]) - 1] if at + 1 < len(starts) else numbers[-1])
@@ -968,10 +975,13 @@ def analyse(score: Score) -> dict:
     for section in sections:
         section["motifs"] = _development(section, inside(section["first"], section["last"]), tuned, themes)
     section_of = {number: section["id"] for section in sections for number in inside(section["first"], section["last"])}
+    loudest = _loudest(score, numbers, playing)
     return {
         "version": MUSICAL_ANALYSIS_VERSION,
         "general": _general(score, numbers, measures, sounding),
-        "climax": _climax(score, numbers, playing, section_of),
+        "climax": _climax(loudest, playing, section_of),
+        # The map of the work (2026-11-20): what the dynamic and the number of parts do, measure by measure.
+        "timeline": [{"measure": number, "dynamic": loudest[number], "playing": len(playing[number])} for number in numbers],
         "main_key": _key(*main),
         "form": " ".join(section["label"] for section in sections),
         "sections": sections,

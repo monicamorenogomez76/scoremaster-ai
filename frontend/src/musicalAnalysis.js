@@ -180,3 +180,58 @@ const ARTICULATIONS = share => ({ staccato: () => t('staccato {share} %', { shar
 export const articulationText = section => Object.entries(section.articulation || {})
   .filter(([name, share]) => share >= ARTICULATED && ARTICULATIONS(0)[name])
   .map(([name, share]) => ARTICULATIONS(Math.round(share * 100))[name]()).join(' · ');
+
+// The map of the work (2026-11-20): every lane on one axis of measures, in percent of the work. Colours are indices of a
+// small palette: a section that comes back takes the colour of its material, each key its own.
+const COLOURS = 5;
+const DYNAMIC_LEVELS = { ppp: 1, pp: 2, p: 3, mp: 4, mf: 5, f: 6, ff: 7, fff: 8 };
+const CADENCE_SYMBOLS = { authentic: '●', half: '◐', plagal: '○', deceptive: '◇' };
+export const cadenceSymbol = kind => CADENCE_SYMBOLS[kind] || '•';
+const TICKS = 8;
+
+export function workMap(analysis) {
+  const { sections } = analysis;
+  const timeline = analysis.timeline || [];
+  const numbers = timeline.length ? timeline.map(item => item.measure)
+    : Array.from({ length: sections.at(-1).last - sections[0].first + 1 }, (_, at) => sections[0].first + at);
+  const index = new Map(numbers.map((number, at) => [number, at]));
+  const at = measure => index.get(measure) ?? Math.max(0, numbers.findIndex(number => number >= measure));
+  const percent = value => Math.round(value * 10000 / numbers.length) / 100;
+  const span = (first, last) => ({ left: percent(at(first)), width: percent(at(last) - at(first) + 1) });
+  const middle = measure => percent(at(measure) + 0.5);
+  const colours = new Map();
+  const colourOf = name => { if (!colours.has(name)) colours.set(name, colours.size % COLOURS); return colours.get(name); };
+
+  const byId = new Map(sections.map(section => [section.id, section]));
+  const material = section => { let found = section; while (found.like && byId.has(found.like)) found = byId.get(found.like); return found.id; };
+  const materials = new Map();
+  const materialColour = id => { if (!materials.has(id)) materials.set(id, materials.size % COLOURS); return materials.get(id); };
+
+  const keys = [];
+  for (const section of sections) {
+    const changes = [{ measure: section.first, key: section.key }, ...section.modulations.filter(item => item.measure > section.first)];
+    changes.forEach((change, step) => {
+      const last = step + 1 < changes.length ? numbers[at(changes[step + 1].measure) - 1] : section.last;
+      const name = keyName(change.key);
+      if (keys.at(-1)?.name === name) keys.at(-1).last = last;
+      else keys.push({ name, first: change.measure, last });
+    });
+  }
+  let level = 0;
+  const dynamics = timeline.some(item => item.dynamic)
+    ? timeline.map(item => (level = item.dynamic ? DYNAMIC_LEVELS[item.dynamic] / 8 : level)) : [];
+  const most = Math.max(0, ...timeline.map(item => item.playing));
+  const step = [1, 2, 4, 8, 16, 32, 64, 128].find(size => numbers.length / size <= TICKS) || 256;
+  return {
+    sections: sections.map(section => ({ ...section, ...span(section.first, section.last), colour: materialColour(material(section)) })),
+    keys: keys.map(item => ({ name: item.name, ...span(item.first, item.last), colour: colourOf(item.name) })),
+    phrases: sections.flatMap(section => section.phrases.map(phrase => span(phrase.first, phrase.last))),
+    themes: analysis.themes.map(theme => ({ id: theme.id, left: percent(at(theme.first)),
+      label: theme.id + (theme.part ? ' · ' + theme.part : '') })),
+    cadences: analysis.cadences.map(cadence => ({ ...cadence, left: middle(cadence.measure), symbol: cadenceSymbol(cadence.kind) })),
+    dynamics,
+    playing: timeline.map(item => (most ? item.playing / most : 0)),
+    climax: analysis.climax && timeline.length ? { ...analysis.climax, left: middle(analysis.climax.measure) } : null,
+    ticks: numbers.filter((_, place) => place % step === 0).map(measure => ({ measure, left: percent(at(measure)) })),
+  };
+}

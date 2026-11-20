@@ -178,6 +178,13 @@ try {
   await english.locator('#work-tab-analysis').click();
   await english.locator('#musical-analysis .analysis-summary').getByText('Main key').waitFor({ timeout: 60000 });
   await audit(english, 'Work › Analysis (English)');
+  // The map of the work (2026-11-20): another section chosen, its sheet, and the tables opened.
+  const sections = english.locator('#musical-analysis .work-map-section');
+  await sections.nth((await sections.count()) - 1).click();
+  assert.equal(await sections.last().getAttribute('aria-pressed'), 'true');
+  await english.locator('#musical-analysis .analysis-tables summary').click();
+  await english.locator('#analysis-harmony').waitFor();
+  await audit(english, 'Work › Analysis › map, sheet and tables (English)');
   // Its commentary topic by topic (2026-11-19): without a key, the demo writes it and says so.
   await english.locator('#musical-analysis').getByRole('button', { name: 'Write the commentary' }).click();
   await english.locator('#analysis-interpretation').waitFor({ timeout: 60000 });
