@@ -192,7 +192,10 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 - **Páginas de la partitura con menos pentagramas:** cada pentagrama de la partitura toma el nombre impreso a su lado
   en el margen («Perc. 2»), que se lee junto a su clave en el texto del PDF. Una página con menos pentagramas que la
   completa, como la sección de percusión impresa sola de «Arabian Dances», se coloca por esos nombres; si no los trae,
-  por la clave y la armadura, como antes. La partitura conserva los nombres, y cada particella se alinea primero con el
+  por la clave y la armadura, como antes. Si esa sección ocupa varios sistemas por página (en «Arabian Dances», los
+  compases 95 a 147 en dos páginas), tiene muchos más compases que una página normal y un margen tan largo como el del
+  guion, pero no se toma por una página mal leída: su margen solo nombra los pentagramas leídos, sistema tras sistema.
+  La partitura conserva los nombres, y cada particella se alinea primero con el
   pentagrama de su nombre («Percussion 2» con «Perc. 2») y, si no hay ninguno, por el ritmo. Una particella en clave de
   percusión solo se alinea con pentagramas de percusión.
 - **Percusión de varios instrumentos:** si el PDF trae la página de plantilla («Instrumentation»), el lector toma qué
