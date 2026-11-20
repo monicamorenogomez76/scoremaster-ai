@@ -4,21 +4,24 @@ import { articulationText, cadenceText, durationText, harmonyDetailsText, keyNam
   orchestrationText, periodText, phrasesText, relationText, rhythmText, tempoText, textureKindText, textureText,
   themeShapeText, themeText, workMap } from './musicalAnalysis.js';
 import { sourceText } from './explanations.js';
-import { t } from './i18n.js';
+import { currentLanguage, t } from './i18n.js';
 
 // One answer per work: asked once, and an answer for another work is dropped.
+// Asked again in a new language: the server names the parts and writes the commentary in it.
 function useWorkRequest(workId, enabled, load) {
   const [state, setState] = useState({ status: 'idle', result: null, error: '' });
   const asked = useRef(null);
+  const language = currentLanguage();
   useEffect(() => { asked.current = null; setState({ status: 'idle', result: null, error: '' }); }, [workId]);
   useEffect(() => {
-    if (!enabled || !workId || asked.current === workId) return;
-    asked.current = workId;
+    const key = workId + '|' + language;
+    if (!enabled || !workId || asked.current === key) return;
+    asked.current = key;
     setState({ status: 'loading', result: null, error: '' });
     load(workId)
-      .then(result => { if (asked.current === workId) setState({ status: 'done', result, error: '' }); })
-      .catch(failure => { if (asked.current === workId) setState({ status: 'error', result: null, error: failure.message }); });
-  }, [enabled, workId, load]);
+      .then(result => { if (asked.current === key) setState({ status: 'done', result, error: '' }); })
+      .catch(failure => { if (asked.current === key) setState({ status: 'error', result: null, error: failure.message }); });
+  }, [enabled, workId, load, language]);
   return state;
 }
 

@@ -22,7 +22,7 @@ from backend.app.stored_scores import stored_score
 from backend.application.ai import ProviderFailure
 from backend.application.instrument_proposals import InvalidProposals, NotAvailable, propose_instruments
 from backend.analyzers.rubric_grade import part_label
-from backend.application.musical_analysis_text import analysis_evidence, explain_analysis
+from backend.application.musical_analysis_text import analysis_evidence, explain_analysis, labelled
 from backend.application.difficulty_explanation import difficulty_evidence
 from backend.application.work_questions import MAX_QUESTION, SUGGESTIONS, WorkTools, ask_work, band_tool, schedule_tool
 from backend.application.substitutes_explanation import explain_substitutes
@@ -229,12 +229,15 @@ def work_substitutes(work_id: str, user: User = Depends(authenticated_user),
 
 @router.get("/works/{work_id}/musical-analysis")
 def work_musical_analysis(work_id: str, user: User = Depends(authenticated_user),
-                          library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store)):
-    """The analysis of the work as in a conservatory (2026-11-18): form, keys, cadences and who plays what, calculated."""
+                          library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store),
+                          accept_language: Optional[str] = Header(None)):
+    """The analysis of the work as in a conservatory (2026-11-18): form, keys, cadences and who plays what, calculated;
+    the parts by their catalog name in the language of the interface."""
     found = stored_score(library, user.id, _work_id(work_id), score_store)
     if found is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
-    return analyse(found[1])
+    lang = language(accept_language)
+    return labelled(analyse(found[1]), {part.name: part_label(part, lang) for part in found[1].parts})
 
 
 @router.get("/works/{work_id}/musical-analysis/commentary")
