@@ -162,3 +162,45 @@ def test_the_independent_review_can_use_its_own_model(monkeypatch):
     gemini_provider.reset_shared_provider()
     assert isinstance(get_review_provider(), DemoExplanationProvider), "without a key there is no review (409)"
     gemini_provider.reset_shared_provider()
+
+
+# 2026-11-19: on Render Gemini answered GoogleInvalidRequestError to the musical analysis commentary: its schema (seven
+# nested topics, each with three bounded lists and a bounded text, and a pattern for the section ids) is too complex for
+# Google's structured output. Gemini gets that schema without the bounds; the server still validates them.
+def _walk(node):
+    if isinstance(node, dict):
+        yield node
+        for value in node.values():
+            yield from _walk(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _walk(value)
+
+
+def test_gemini_gets_the_analysis_commentary_schema_without_bounds_and_with_every_field_required():
+    from backend.application.difficulty_explanation import DifficultyExplanation
+    from backend.application.musical_analysis_text import MusicalAnalysisText
+    sent = gemini_provider.answer_schema(MusicalAnalysisText)
+    assert isinstance(sent, dict) and sent["title"] == "MusicalAnalysisText"
+    for node in _walk(sent):
+        assert not {"maxLength", "minLength", "maxItems", "minItems", "pattern", "default"} & node.keys(), node
+        if "properties" in node:
+            assert sorted(node["required"]) == sorted(node["properties"])
+    assert gemini_provider.answer_schema(DifficultyExplanation) is DifficultyExplanation, "the others are not changed"
+
+
+def test_langchain_is_asked_for_the_schema_gemini_gets(monkeypatch):
+    import sys, types
+    from backend.application.musical_analysis_text import MusicalAnalysisText
+    asked = []
+
+    class Chat:
+        def __init__(self, **options):
+            pass
+
+        def with_structured_output(self, schema, include_raw):
+            asked.append(schema)
+            return self
+    monkeypatch.setitem(sys.modules, "langchain_google_genai", types.SimpleNamespace(ChatGoogleGenerativeAI=Chat))
+    gemini_provider._langchain_chat("key", "gemini-test")(MusicalAnalysisText)
+    assert asked == [gemini_provider.answer_schema(MusicalAnalysisText)]
