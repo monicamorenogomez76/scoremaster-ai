@@ -66,8 +66,28 @@ class _Copista:
         from copisteria.vision.page.scan import from_pdf
         if cls.model is None:
             cls.model = read.load_model(str(EVIDENCE), "cpu")
-        png = from_pdf(pdf_path, number, Path(out_dir)).path
+        png = page_image(pdf_path, number, out_dir, extract=lambda *place: from_pdf(place[0], place[1], Path(place[2])))
         return transcribe(png, cls.model).encode("utf-8")
+
+
+# Narrower than any page of music: at copisteria's 300 ppi an A4 page is 2480 pixels wide, a scan at 150 ppi 1240.
+WHOLE_PAGE_PIXELS = 1000
+
+
+def _drawn(pdf_path: str, number: int, out_dir: str) -> Path:
+    """The page drawn whole at 300 ppi in grey, as copisteria draws a page without one embedded scan."""
+    prefix = Path(out_dir) / f"whole-{number}"
+    subprocess.run(["pdftoppm", "-f", str(number), "-l", str(number), "-r", "300", "-gray", "-png", "-singlefile",
+                    pdf_path, str(prefix)], check=True)
+    return prefix.with_suffix(".png")
+
+
+def page_image(pdf_path: str, number: int, out_dir: str, extract, render=_drawn) -> Path:
+    """The image copista reads of a page. copisteria takes a page with one embedded image for a scan and reads that image
+    (2026-11-20, «Arabian Dances» page 4: the code of «Hear and download» at its foot, 90 × 61 pixels, so the first page
+    of the score had no staves); an image smaller than any page is not the page, which is then drawn whole."""
+    page = extract(pdf_path, number, out_dir)
+    return render(pdf_path, number, out_dir) if min(page.size) < WHOLE_PAGE_PIXELS else page.path
 
 
 def _timed_out(signum, frame):

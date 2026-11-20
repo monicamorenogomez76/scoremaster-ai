@@ -1205,3 +1205,33 @@ def test_a_page_with_fewer_staves_and_its_measures_in_blocks_is_misread(full_cat
     assert measure_count(joined) == 15 and "D" not in re.findall(r"<step>([A-G])</step>", joined.decode())
     joined, _ = worker._score([(good, "texto"), (page(3, 5, "D"), "texto"), (good, "texto")], "Obra")
     assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode()), "a page that shows fewer staves keeps its notes"
+
+
+# --- a page of drawings with one small picture (2026-11-20, «Arabian Dances» page 4, the first of its score) ----------
+# copisteria takes a page with a single embedded image for a scan and reads that image: the code of «Hear and download»
+# at its foot, 90 × 61 pixels. The page came out without staves and measures 1-6 were lost.
+
+class _Page:
+    def __init__(self, path, size):
+        self.path, self.size = path, size
+
+
+def test_a_page_whose_only_picture_is_small_is_drawn_whole(tmp_path):
+    drawn = []
+
+    def render(pdf_path, number, out_dir):
+        drawn.append(number)
+        return tmp_path / "whole.png"
+
+    found = worker.page_image("obra.pdf", 4, str(tmp_path), extract=lambda *_: _Page(tmp_path / "qr.png", (90, 61)),
+                              render=render)
+    assert found == tmp_path / "whole.png" and drawn == [4]
+
+
+def test_a_scanned_page_keeps_its_scan(tmp_path):
+    def render(*_):
+        raise AssertionError("a scan is never drawn again")
+
+    found = worker.page_image("obra.pdf", 5, str(tmp_path), extract=lambda *_: _Page(tmp_path / "scan.png", (2480, 3509)),
+                              render=render)
+    assert found == tmp_path / "scan.png"
