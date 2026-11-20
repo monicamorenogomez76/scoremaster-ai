@@ -135,3 +135,30 @@ test('actions answer to the pointer: hover, keyboard focus and a pressed state',
     assert.ok(new RegExp('\\' + action + '[^{,]*:active').test(css), action + ':active');
   }
 });
+
+// The rehearsal calendar writes white text at 90 % on each section's colour (2026-11-20: the saxophones' amber gave
+// 4.3:1, under WCAG's 4.5:1, and the CI's demo data never showed a saxophone block to axe).
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16) / 255)
+    .map(value => value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(left, right) {
+  const [light, dark] = [luminance(left), luminance(right)].sort((a, b) => b - a);
+  return (light + 0.05) / (dark + 0.05);
+}
+function blend(top, bottom, alpha) {
+  const channel = (hex, at) => parseInt(hex.slice(at, at + 2), 16);
+  return '#' + [1, 3, 5].map(at => Math.round(alpha * channel(top, at) + (1 - alpha) * channel(bottom, at))
+    .toString(16).padStart(2, '0')).join('');
+}
+
+test('the text of every rehearsal block has enough contrast on its section colour', () => {
+  const slots = [...css.matchAll(/\.calendar-slot--(\w+) \{ --slot: (#[0-9a-f]{6}); \}/g)];
+  assert.ok(slots.length >= 10);
+  const onFill = /--on-fill: (#[0-9a-f]{6})/.exec(css)[1];
+  for (const [, section, colour] of slots) {
+    const ratio = contrast(blend(onFill, colour, 0.9), colour);
+    assert.ok(ratio >= 4.5, `${section}: ${ratio.toFixed(2)}:1`);
+  }
+});

@@ -1116,6 +1116,7 @@ export const en = {
   '{part} (c. {measure})': '{part} (m. {measure})',
   'Ritmo y contrapunto': 'Rhythm and counterpoint',
   'Mapa de la obra': 'Map of the work',
+  'Mapa de la obra desplazable': 'Scrollable map of the work',
   'Pulsa una sección para ver su ficha. Todo va en el mismo eje de compases.': 'Press a section to see its sheet. Everything shares one axis of measures.',
   'compás': 'measure',
   'Sección {label}, cc. {first}–{last}, {key}': 'Section {label}, mm. {first}–{last}, {key}',

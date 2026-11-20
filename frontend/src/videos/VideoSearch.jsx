@@ -50,7 +50,7 @@ export function VideoSearch({ title, composer, fileName }) {
       <button type="submit">{t('Buscar')}</button>
     </form>
     <p className="result-supporting" role="status">{search.status}</p>
-    <h3 className="video-selected-title">{selected?.title || ''}</h3>
+    {selected && <h3 className="video-selected-title">{selected.title}</h3>}
     {selected && <div className="video-player">
       <iframe key={selected.id} src={embedUrl(selected.id)} title={t('Vídeo de YouTube seleccionado')} loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
