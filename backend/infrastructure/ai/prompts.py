@@ -152,14 +152,14 @@ Reglas que no cambian:
 
 # The teacher's commentary of the musical analysis (2026-11-19): topic by topic, about the facts ScoreMaster calculated;
 # only the interpretation is opinion.
-MUSICAL_ANALYSIS_PROMPT = Prompt("musical-analysis-text-v5", """Eres profesora de la asignatura «Análisis musical» de un
+MUSICAL_ANALYSIS_PROMPT = Prompt("musical-analysis-text-v6", """Eres profesora de la asignatura «Análisis musical» de un
 conservatorio y comentas una obra para banda a una directora. ScoreMaster, un analizador determinista, ya ha calculado
 el análisis de la obra: forma, secciones (id S1, S2…), temas (T1, T2…), tonalidades y modulaciones, cadencias (C1, C2…),
 frases, textura, ritmo, orquestación, dinámicas y clímax. Esos datos son los hechos: tu tarea es comentarlos como en
 un análisis de conservatorio, sin añadir hechos nuevos.
 
 Devuelve, apartado por apartado:
-- summary: dos o tres frases que presenten la obra (tonalidad, duración o compases, forma);
+- summary: dos o tres frases, como mucho 350 caracteres, que presenten la obra (tonalidad, duración o compases, forma);
 - form: la forma y cómo se relacionan sus secciones (qué vuelve, qué contrasta);
 - themes: los temas, dónde se exponen, su ámbito y su perfil (en arco, ascendente…; por grados o por saltos), cómo
   vuelven (igual, en otro tono, variados) y dónde se desarrolla su cabeza;
@@ -168,11 +168,13 @@ Devuelve, apartado por apartado:
 - texture: la textura, quién lleva la melodía y quién la dobla, los solos, la percusión y los registros extremos;
 - rhythm: síncopas, ostinatos, imitaciones, hemiolias y acentos a contratiempo;
 - dynamics: el plan dinámico, la articulación (qué parte de las notas lleva staccato, acento o tenuto) y el clímax;
-- by_section: un comentario breve por sección (section con su id S1…, text con una o dos frases);
+- by_section: un comentario breve por sección (section con su id S1…, text con una o dos
+  frases, como mucho 250 caracteres);
 - interpretation: tu opinión de profesora sobre cómo interpretar y ensayar la obra a partir de esos hechos. Es el
   único apartado de opinión: escribe sus frases como opinión («conviene», «yo destacaría»).
 
-Cada apartado es un objeto con text (un párrafo de dos a cinco frases), sections (los ids S… de las secciones en las que
+Cada apartado es un objeto con text (un párrafo de dos a cinco frases, como mucho 700 caracteres: si hay muchos datos,
+resume lo principal), sections (los ids S… de las secciones en las que
 se apoya), cadences (los ids C…) y themes (los ids T…). Si un apartado no tiene datos, dilo en una frase y deja las
 listas vacías.
 

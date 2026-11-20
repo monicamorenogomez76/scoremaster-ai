@@ -72,6 +72,33 @@ def test_a_valid_answer_cites_only_what_the_evidence_has():
         validate_text({"summary": "Sin apartados."}, data)
 
 
+
+# 2026-11-20: Gemini's commentary of a long work was rejected («fuera del esquema: themes»): a work has up to one theme
+# per section, but a topic could cite only ten themes and twenty cadences.
+def test_a_topic_may_cite_every_section_theme_and_cadence_of_the_evidence():
+    data = evidence()
+    data["sections"] = [{"id": f"S{at}"} for at in range(1, 31)]
+    data["themes"] = [{"id": f"T{at}"} for at in range(1, 31)]
+    data["cadences"] = [{"id": f"C{at}"} for at in range(1, 61)]
+    every = topic("Todos los temas.", sections=[item["id"] for item in data["sections"]],
+                  themes=[item["id"] for item in data["themes"]], cadences=[item["id"] for item in data["cadences"]])
+    assert len(validate_text(answer(themes=every, harmony=every), data).themes.themes) == 30
+
+
+def test_an_answer_out_of_the_schema_says_which_field_and_why():
+    with pytest.raises(InvalidExplanation, match=r"themes\.text \(string_too_long\)"):
+        validate_text(answer(themes=topic("x" * 5000)), evidence())
+
+
+def test_the_prompt_gives_the_lengths_gemini_no_longer_gets_in_the_schema():
+    from backend.application.musical_analysis_text import MusicalAnalysisText, SectionComment, Topic
+    from backend.infrastructure.ai.prompts import MUSICAL_ANALYSIS_PROMPT
+    bound = lambda model, field: next(item.max_length for item in model.model_fields[field].metadata
+                                      if hasattr(item, "max_length"))
+    for asked, model, field in ((350, MusicalAnalysisText, "summary"), (700, Topic, "text"), (250, SectionComment, "text")):
+        assert f"{asked} caracteres" in MUSICAL_ANALYSIS_PROMPT.system
+        assert asked < bound(model, field), "room for a model that counts badly"
+
 def test_the_ai_commentary_is_shown_with_who_wrote_it():
     fake = Fake(answer())
     shown = explain_analysis(analyse(aba()), "ABA", fake, DemoExplanationProvider(), None, "es")
