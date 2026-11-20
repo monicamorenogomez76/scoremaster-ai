@@ -134,3 +134,52 @@ test('the articulation of a section reads as its shares', async () => {
   assert.equal(articulationText({ articulation: { staccato: 0.83, accent: 0.12, tenuto: 0.02 } }), 'staccato 83 % · acentos 12 %');
   assert.equal(articulationText({ articulation: { staccato: 0.01, accent: 0, tenuto: 0 } }), '');
 });
+
+// The map of the work (2026-11-20): every lane on one axis of measures, in percent of the work.
+test('the map places sections, keys, phrases, themes, cadences and the timeline on the measures', async () => {
+  const { workMap } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  const timeline = Array.from({ length: 20 }, (_, at) => ({ measure: at + 1, dynamic: at < 10 ? 'p' : at === 15 ? 'ff' : null,
+    playing: at < 10 ? 4 : 8 }));
+  const map = workMap({
+    sections: [
+      { id: 'S1', first: 1, last: 5, label: 'A', like: null, key: { tonic: 'G', mode: 'major' }, modulations: [],
+        phrases: [{ first: 1, last: 5 }] },
+      { id: 'S2', first: 6, last: 15, label: 'B', like: null, key: { tonic: 'E', mode: 'minor' },
+        modulations: [{ measure: 11, key: { tonic: 'B', mode: 'minor' } }], phrases: [{ first: 6, last: 10 }, { first: 11, last: 15 }] },
+      { id: 'S3', first: 16, last: 20, label: 'A', like: 'S1', key: { tonic: 'G', mode: 'major' }, modulations: [], phrases: [] },
+    ],
+    themes: [{ id: 'T1', section: 'S1', first: 1, last: 4, part: 'Clarinete' }],
+    cadences: [{ id: 'C1', measure: 5, kind: 'half' }, { id: 'C2', measure: 20, kind: 'authentic' }],
+    climax: { measure: 16, dynamic: 'ff' },
+    timeline,
+  });
+  assert.deepEqual(map.sections.map(item => [item.label, item.left, item.width, item.colour]),
+    [['A', 0, 25, 0], ['B', 25, 50, 1], ['A', 75, 25, 0]], 'a section that comes back keeps the colour of its material');
+  assert.deepEqual(map.keys.map(item => [item.name, item.left, item.width, item.colour]),
+    [['Sol mayor', 0, 25, 0], ['Mi menor', 25, 25, 1], ['Si menor', 50, 25, 2], ['Sol mayor', 75, 25, 0]]);
+  assert.deepEqual(map.phrases.map(item => [item.left, item.width]), [[0, 25], [25, 25], [50, 25]]);
+  assert.deepEqual(map.themes, [{ id: 'T1', left: 0, label: 'T1 · Clarinete' }]);
+  assert.deepEqual(map.cadences.map(item => [item.kind, item.left, item.symbol]), [['half', 22.5, '◐'], ['authentic', 97.5, '●']]);
+  assert.equal(map.dynamics.length, 20);
+  assert.equal(map.dynamics[0], 3 / 8, 'p on a scale of ppp to fff');
+  assert.equal(map.dynamics[12], 3 / 8, 'an unmarked measure keeps the last dynamic');
+  assert.equal(map.dynamics[15], 7 / 8);
+  assert.deepEqual([map.playing[0], map.playing[19]], [0.5, 1]);
+  assert.equal(map.climax.left, 77.5);
+  assert.deepEqual(map.ticks.slice(0, 3), [{ measure: 1, left: 0 }, { measure: 5, left: 20 }, { measure: 9, left: 40 }]);
+});
+
+test('a work without a timeline still has its map, without the curves', async () => {
+  const { workMap } = await import('../../../frontend/src/musicalAnalysis.js');
+  const map = workMap({ sections: [{ id: 'S1', first: 1, last: 8, label: 'A', like: null, key: { tonic: 'C', mode: 'major' },
+    modulations: [], phrases: [] }], themes: [], cadences: [], climax: null });
+  assert.deepEqual(map.sections.map(item => [item.left, item.width]), [[0, 100]]);
+  assert.deepEqual(map.dynamics, []);
+  assert.equal(map.climax, null);
+  const unmarked = workMap({ sections: [{ id: 'S1', first: 1, last: 2, label: 'A', like: null, key: { tonic: 'C', mode: 'major' },
+    modulations: [], phrases: [] }], themes: [], cadences: [], climax: null,
+    timeline: [{ measure: 1, dynamic: null, playing: 2 }, { measure: 2, dynamic: null, playing: 3 }] });
+  assert.deepEqual(unmarked.dynamics, [], 'a work that writes no dynamic has no curve of dynamics');
+  assert.equal(unmarked.playing.length, 2);
+});

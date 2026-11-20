@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { SectionSheet, WorkMap } from './AnalysisMap.jsx';
 import { articulationText, cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, meterText, modulationText,
-  orchestrationText, periodText, phrasesText, relationText, rhythmText, sectionShares, tempoText, textureKindText, textureText,
-  themeShapeText, themeText } from './musicalAnalysis.js';
+  orchestrationText, periodText, phrasesText, relationText, rhythmText, tempoText, textureKindText, textureText,
+  themeShapeText, themeText, workMap } from './musicalAnalysis.js';
 import { sourceText } from './explanations.js';
 import { t } from './i18n.js';
 
@@ -47,6 +48,10 @@ function Topic({ id, title, commentary, opinion, children }) {
   </section>;
 }
 
+// The topics of the commentary of the whole work, in the order of a conservatory analysis; the interpretation goes apart.
+const COMMENTARY_TOPICS = () => [['form', t('Forma')], ['themes', t('Temas')], ['harmony', t('Armonía')],
+  ['texture', t('Textura y orquestación')], ['rhythm', t('Ritmo')], ['dynamics', t('Dinámicas, articulación y clímax')]];
+
 // The analysis of the work as in a conservatory (2026-11-18), topic by topic: the facts ScoreMaster calculates and,
 // when the director asks for it, the commentary the AI (or the demo) writes about them (2026-11-19).
 export function MusicalAnalysis({ workId, visible, fromPdf }) {
@@ -57,6 +62,11 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
   const { result } = analysis;
   const comment = commentary.result?.commentary;
   const labelOf = id => result.sections.find(section => section.id === id)?.label || id;
+  // The map of the work and its chosen section (2026-11-20): the first one until the director picks another.
+  const map = useMemo(() => (result?.sections.length ? workMap(result) : null), [result]);
+  const [chosen, setChosen] = useState(null);
+  useEffect(() => setChosen(null), [workId]);
+  const section = map && (map.sections.find(item => item.id === chosen) || map.sections[0]);
 
   return <section id="musical-analysis" className="musical-analysis" aria-labelledby="musical-analysis-title" aria-busy={analysis.status === 'loading'}>
     <h2 id="musical-analysis-title">{t('Análisis musical')}</h2>
@@ -90,15 +100,20 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         </dl>
       </Topic>
 
-      <Topic id="analysis-form" title={t('Forma')} commentary={comment?.form}>
-        <ol className="analysis-timeline" aria-label={t('Secciones de la obra en orden')}>
-          {result.sections.map((section, index) => <li key={section.id} className={'analysis-block analysis-block--' + section.relation}
-            style={{ flexGrow: sectionShares(result.sections)[index] }}>
-            <strong>{section.label}</strong>
-            <span>{t('cc. {first}–{last}', { first: section.first, last: section.last })}</span>
-            <span>{keyName(section.key)}</span>
-          </li>)}
-        </ol>
+      <WorkMap map={map} selected={section.id} onSelect={setChosen} />
+      <SectionSheet analysis={result} section={section} onSelect={setChosen}
+        comment={comment?.by_section.find(item => item.section === section.id)?.text} />
+
+      {comment && <section className="analysis-topic" aria-labelledby="analysis-commentary-title">
+        <h3 id="analysis-commentary-title">{t('Comentario de la obra')}</h3>
+        {COMMENTARY_TOPICS().map(([name, title]) => <div key={name} className="analysis-commentary">
+          <p className="analysis-commentary-label">{title}</p><p>{comment[name].text}</p></div>)}
+      </section>}
+      {comment && <Topic id="analysis-interpretation" title={t('Interpretación')} commentary={comment.interpretation} opinion />}
+
+      <details className="analysis-tables">
+        <summary>{t('Ver los datos en tabla (forma, temas, armonía, textura, ritmo y dinámicas)')}</summary>
+      <Topic id="analysis-form" title={t('Forma')}>
         <SectionTable caption={t('Forma por secciones')} sections={result.sections} columns={[
           [t('Material'), section => section.like ? t('vuelve el material de {section}', { section: labelOf(section.like) }) : t('nuevo')],
           [t('Frases'), section => phrasesText(section) + (section.periods.length ? ' · ' + section.periods.map(periodText).join('; ') : '')],
@@ -106,7 +121,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         ]} />
       </Topic>
 
-      <Topic id="analysis-themes" title={t('Temas')} commentary={comment?.themes}>
+      <Topic id="analysis-themes" title={t('Temas')}>
         {result.themes.length > 0
           ? <ul className="analysis-themes">{result.themes.map(theme => <li key={theme.id}>
             <strong>{theme.id}</strong>{' '}{t('sección {section}, cc. {first}–{last}', { section: labelOf(theme.section), first: theme.first, last: theme.last })}
@@ -116,7 +131,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         <SectionTable caption={t('Temas por secciones')} sections={result.sections} columns={[[t('Tema'), themeText]]} />
       </Topic>
 
-      <Topic id="analysis-harmony" title={t('Armonía')} commentary={comment?.harmony}>
+      <Topic id="analysis-harmony" title={t('Armonía')}>
         <SectionTable caption={t('Armonía por secciones')} sections={result.sections} columns={[
           [t('Tonalidad'), section => [keyName(section.key) + ' · ' + relationText(section.relation),
             ...section.modulations.map(modulationText)].join('; ')],
@@ -126,7 +141,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         ]} />
       </Topic>
 
-      <Topic id="analysis-texture" title={t('Textura y orquestación')} commentary={comment?.texture}>
+      <Topic id="analysis-texture" title={t('Textura y orquestación')}>
         <SectionTable caption={t('Textura y orquestación por secciones')} sections={result.sections} columns={[
           [t('Textura'), section => [textureKindText(section.texture_kind), textureText(section.texture)].filter(Boolean).join(', ')
             + ' · ' + t('{count} partes', { count: section.playing.length })],
@@ -136,7 +151,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         ]} />
       </Topic>
 
-      <Topic id="analysis-rhythm" title={t('Ritmo')} commentary={comment?.rhythm}>
+      <Topic id="analysis-rhythm" title={t('Ritmo')}>
         <SectionTable caption={t('Ritmo por secciones')} sections={result.sections} columns={[
           [t('Tempo'), section => [section.tempo ? '♩ = ' + section.tempo : '', section.meter].filter(Boolean).join(' · ')],
           [t('Ritmo y contrapunto'), rhythmText],
@@ -144,7 +159,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
         ]} />
       </Topic>
 
-      <Topic id="analysis-dynamics" title={t('Dinámicas, articulación y clímax')} commentary={comment?.dynamics}>
+      <Topic id="analysis-dynamics" title={t('Dinámicas, articulación y clímax')}>
         {result.climax && <p>{t('Clímax: c. {measure}, sección {section}, {dynamic}, {count} partes', {
           measure: result.climax.measure, dynamic: result.climax.dynamic, count: result.climax.playing,
           section: labelOf(result.climax.section) })}</p>}
@@ -152,13 +167,7 @@ export function MusicalAnalysis({ workId, visible, fromPdf }) {
           [t('Dinámicas'), section => section.dynamics.join(' ')], [t('Articulación'), articulationText]]} />
       </Topic>
 
-      {comment && <>
-        <Topic id="analysis-by-section" title={t('Sección por sección')}>
-          <dl className="analysis-facts">{comment.by_section.map(item => <div key={item.section}>
-            <dt>{labelOf(item.section)}</dt><dd>{item.text}</dd></div>)}</dl>
-        </Topic>
-        <Topic id="analysis-interpretation" title={t('Interpretación')} commentary={comment.interpretation} opinion />
-      </>}
+      </details>
     </>}
   </section>;
 }
