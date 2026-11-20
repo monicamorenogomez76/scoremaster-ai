@@ -224,8 +224,9 @@ export function workMap(analysis) {
   const step = [1, 2, 4, 8, 16, 32, 64, 128].find(size => numbers.length / size <= TICKS) || 256;
   return {
     sections: sections.map(section => ({ ...section, ...span(section.first, section.last), colour: materialColour(material(section)) })),
-    keys: keys.map(item => ({ name: item.name, ...span(item.first, item.last), colour: colourOf(item.name) })),
-    phrases: sections.flatMap(section => section.phrases.map(phrase => span(phrase.first, phrase.last))),
+    keys: keys.map(item => ({ ...item, ...span(item.first, item.last), colour: colourOf(item.name) })),
+    phrases: sections.flatMap(section => section.phrases.map(phrase => ({ first: phrase.first, last: phrase.last,
+      ...span(phrase.first, phrase.last) }))),
     themes: analysis.themes.map(theme => ({ id: theme.id, left: percent(at(theme.first)),
       label: theme.id + (theme.part ? ' · ' + theme.part : '') })),
     cadences: analysis.cadences.map(cadence => ({ ...cadence, left: middle(cadence.measure), symbol: cadenceSymbol(cadence.kind) })),
@@ -234,4 +235,42 @@ export function workMap(analysis) {
     climax: analysis.climax && timeline.length ? { ...analysis.climax, left: middle(analysis.climax.measure) } : null,
     ticks: numbers.filter((_, place) => place % step === 0).map(measure => ({ measure, left: percent(at(measure)) })),
   };
+}
+
+// The map over the full score (2026-11-20): the lanes of the map cut to the measures of a page. cells are the measures of
+// the page as the engraving places them, [{measure, left, width}] in percent of the page; items are in the same units.
+export function pageLanes(analysis, cells) {
+  if (!cells.length || !analysis.sections.length) return null;
+  const map = workMap(analysis);
+  const first = cells[0].measure, last = cells.at(-1).measure;
+  const cell = new Map(cells.map(item => [item.measure, item]));
+  const inside = (from, to) => cells.filter(item => item.measure >= from && item.measure <= to);
+  const place = (from, to) => {
+    const covered = inside(from, to);
+    if (!covered.length) return null;
+    const left = covered[0].left, end = covered.at(-1).left + covered.at(-1).width;
+    return { left, width: Math.round((end - left) * 100) / 100 };
+  };
+  const open = (from, to) => (from < first ? ' work-map-phrase--open-start' : '') + (to > last ? ' work-map-phrase--open-end' : '');
+  const placed = (items, build) => items.map(item => { const where = place(item.first, item.last); return where && build(item, where); })
+    .filter(Boolean);
+  const timeline = (analysis.timeline || []).map(item => item.measure);
+  const lanes = [
+    { name: 'section', label: t('Sección'), items: placed(map.sections, (section, where) => ({
+      className: 'work-map-colour--' + section.colour, ...where,
+      text: section.label + ' · ' + t('cc. {first}–{last}', { first: section.first, last: section.last }) })) },
+    { name: 'key', label: t('Tonalidad'), items: placed(map.keys, (key, where) => ({
+      className: 'work-map-key work-map-tint--' + key.colour, ...where, text: key.name })) },
+    { name: 'phrase', label: t('Frase'), items: placed(map.phrases, (phrase, where) => ({
+      className: 'work-map-phrase' + open(phrase.first, phrase.last), ...where })) },
+    { name: 'theme', label: t('Tema'), items: analysis.themes.filter(theme => cell.has(theme.first)).map(theme => ({
+      className: 'work-map-theme', left: cell.get(theme.first).left, text: theme.id + (theme.part ? ' · ' + theme.part : '') })) },
+    { name: 'cadence', label: t('Cadencia'), items: analysis.cadences.filter(cadence => cell.has(cadence.measure)).map(cadence => ({
+      className: 'work-map-cadence', left: cell.get(cadence.measure).left + cell.get(cadence.measure).width / 2,
+      text: cadenceSymbol(cadence.kind), title: t('{kind} (c. {measure})', { kind: cadenceText(cadence.kind), measure: cadence.measure }) })) },
+    { name: 'dynamics', label: t('Dinámica'), items: map.dynamics.length ? cells.filter(item => timeline.includes(item.measure))
+      .map(item => ({ className: 'work-map-bar', left: item.left, width: item.width,
+        height: map.dynamics[timeline.indexOf(item.measure)] })) : [] },
+  ];
+  return { labelWidth: cells[0].left, lanes: lanes.filter(lane => lane.items.length) };
 }

@@ -183,3 +183,37 @@ test('a work without a timeline still has its map, without the curves', async ()
   assert.deepEqual(unmarked.dynamics, [], 'a work that writes no dynamic has no curve of dynamics');
   assert.equal(unmarked.playing.length, 2);
 });
+
+// The map over the full score (2026-11-20): the lanes of the map cut to the measures of the page, placed on the cells the
+// engraving gives each measure (percent of the page).
+test('the map over a page keeps the lanes of its measures, cut at the edges of the page', async () => {
+  const { pageLanes } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  const analysis = {
+    sections: [
+      { id: 'S1', first: 1, last: 5, label: 'A', like: null, key: { tonic: 'G', mode: 'major' }, modulations: [],
+        phrases: [{ first: 1, last: 5 }] },
+      { id: 'S2', first: 6, last: 15, label: 'B', like: null, key: { tonic: 'E', mode: 'minor' },
+        modulations: [{ measure: 11, key: { tonic: 'B', mode: 'minor' } }], phrases: [{ first: 6, last: 10 }, { first: 11, last: 15 }] },
+    ],
+    themes: [{ id: 'T1', section: 'S1', first: 1, last: 4, part: 'Clarinete' }, { id: 'T2', section: 'S2', first: 11, last: 15, part: 'Tuba' }],
+    cadences: [{ id: 'C1', measure: 5, kind: 'half' }, { id: 'C2', measure: 10, kind: 'authentic' }],
+    climax: null,
+    timeline: Array.from({ length: 15 }, (_, at) => ({ measure: at + 1, dynamic: at === 8 ? 'p' : at === 11 ? 'f' : null, playing: 4 })),
+  };
+  const cells = [9, 10, 11, 12].map((measure, at) => ({ measure, left: 10 + at * 20, width: 20 }));
+  const page = pageLanes(analysis, cells);
+  assert.equal(page.labelWidth, 10, 'the part names keep their room');
+  const lane = name => page.lanes.find(item => item.name === name)?.items;
+  assert.deepEqual(lane('section'), [{ className: 'work-map-colour--1', left: 10, width: 80, text: 'B · cc. 6–15' }]);
+  assert.deepEqual(lane('key'), [{ className: 'work-map-key work-map-tint--1', left: 10, width: 40, text: 'Mi menor' },
+    { className: 'work-map-key work-map-tint--2', left: 50, width: 40, text: 'Si menor' }]);
+  assert.deepEqual(lane('phrase').map(item => [item.className, item.left, item.width]),
+    [['work-map-phrase work-map-phrase--open-start', 10, 40], ['work-map-phrase work-map-phrase--open-end', 50, 40]]);
+  assert.deepEqual(lane('theme'), [{ className: 'work-map-theme', left: 50, text: 'T2 · Tuba' }]);
+  assert.deepEqual(lane('cadence'), [{ className: 'work-map-cadence', left: 40, text: '●', title: 'cadencia auténtica (c. 10)' }]);
+  assert.deepEqual(lane('dynamics').map(item => [item.left, item.width, item.height]),
+    [[10, 20, 3 / 8], [30, 20, 3 / 8], [50, 20, 3 / 8], [70, 20, 6 / 8]]);
+  assert.deepEqual(page.lanes.map(item => item.label), ['Sección', 'Tonalidad', 'Frase', 'Tema', 'Cadencia', 'Dinámica']);
+  assert.equal(pageLanes(analysis, []), null, 'nothing to place without measures');
+});

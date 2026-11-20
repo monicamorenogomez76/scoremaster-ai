@@ -193,6 +193,11 @@ try {
   await english.locator('#embedded-score').getByRole('heading', { name: 'Full score' }).waitFor();
   await english.locator('#full-score-status').getByText('All voices').waitFor({ timeout: 60000 });
   await audit(english, 'Work › Score (English)');
+  // The map of the work over the score (2026-11-20).
+  await english.locator('#score-analysis-toggle').click();
+  await english.locator('#full-score-rendering .score-map').waitFor({ timeout: 60000 });
+  await audit(english, 'Work › Score with the map (English)');
+  await english.locator('#score-analysis-toggle').click();
   // A PDF from the computer beside the score (2026-11-05): nothing uploaded.
   const chooser = english.locator('.score-compare-input');
   await chooser.setInputFiles({ name: 'not-a-pdf.pdf', mimeType: 'application/pdf', buffer: Buffer.from('<html></html>') });

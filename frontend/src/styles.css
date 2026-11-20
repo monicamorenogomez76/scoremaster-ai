@@ -1043,3 +1043,21 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .analysis-tables summary { display: flex; align-items: center; min-height: 44px; font-weight: 600; cursor: pointer; }
 .analysis-tables summary:hover { color: var(--primary); }
 .analysis-tables summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* The map over the score (2026-11-20): the lanes of the map of the work above the staves of the page, with the same
+   colours; each item is placed on the cells of the measures (percent of the page). */
+.score-analysis-toggle { min-height: 44px; cursor: pointer; }
+.score-analysis-toggle[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); }
+.score-analysis-toggle:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.score-analysis-toggle:active { transform: translateY(1px); }
+.score-map { display: grid; gap: 4px; margin-bottom: 8px; padding: 8px 0; }
+.score-map-lane { position: relative; height: 24px; }
+.score-map-lane > * { position: absolute; }
+.score-map-label { top: 0; bottom: 0; display: flex; align-items: center; padding-right: 8px; box-sizing: border-box; color: var(--text); font-size: .75rem; font-weight: 600; line-height: 1.5; }
+.score-map-lane--section { height: 32px; }
+.score-map-lane--section .score-map-label ~ * { top: 0; bottom: 0; display: flex; align-items: center; padding: 0 8px; box-sizing: border-box; border-radius: var(--radius-sm); overflow: hidden; font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.score-map-lane--theme .work-map-theme, .score-map-lane--cadence .work-map-cadence { top: 0; }
+.score-map-lane--dynamics { border-bottom: 1px solid var(--line-strong); }
+.score-map-lane--dynamics .work-map-bar { bottom: 0; box-sizing: border-box; border: 0 solid transparent; border-width: 0 2px; background-clip: padding-box; }
+.work-map-phrase--open-start { border-left: 0; border-top-left-radius: 0; }
+.work-map-phrase--open-end { border-right: 0; border-top-right-radius: 0; }

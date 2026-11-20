@@ -1128,4 +1128,11 @@ export const en = {
   'Siguiente →': 'Next →',
   'Comentario de la obra': 'Commentary of the work',
   'Ver los datos en tabla (forma, temas, armonía, textura, ritmo y dinámicas)': 'See the data in tables (form, themes, harmony, texture, rhythm and dynamics)',
+  'Cargando el análisis…': 'Loading the analysis…',
+  'Mapa de la obra en estos compases': 'Map of the work in these measures',
+  'Sobre la partitura, el mapa de la obra en estos compases: sección, tonalidad, frase, tema, cadencias y dinámica.': 'Above the score, the map of the work in these measures: section, key, phrase, theme, cadences and dynamics.',
+  'Ocultar el mapa': 'Hide the map',
+  'Ver el mapa de la obra': 'Show the map of the work',
+  'Frase': 'Phrase',
+  'Cadencia': 'Cadence',
 };

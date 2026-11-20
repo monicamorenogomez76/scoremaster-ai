@@ -164,7 +164,7 @@ export function App({ session }) {
       rehearsalReviewing={rehearsalReviewing} onReviewRehearsal={rehearsal => { setRehearsalEditing(null); setRehearsalReviewing(rehearsal); navigate('rehearsal'); }}
       onCloseReview={() => setRehearsalReviewing(null)} onUserChanged={setUser} onBandDraftChange={setBandDraft}
       minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onBandActivated={bandActivated} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock} onOpenEvaluationPassage={openEvaluationPassage}
-      scoreViewer={<FullScoreViewer ref={fullScore} session={session} />} />
+      scoreViewer={<FullScoreViewer ref={fullScore} session={session} workId={analysis?.data?.work_id} />} />
     <PassageDialog ref={passage} session={session} />
   </>;
 }

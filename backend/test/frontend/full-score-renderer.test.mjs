@@ -6,10 +6,11 @@ class Element {
   constructor() { this.style = {}; this.children = []; this.attributes = {}; this.clientWidth = 800; this.clientHeight = 600; this.ownerDocument = { createElement: () => new Element() }; }
   setAttribute(key, value) { this.attributes[key] = value; }
   getAttribute(key) { return this.attributes[key]; }
-  append(node) { this.children.push(node); }
+  append(node) { node.parent = this; this.children.push(node); }
+  prepend(node) { node.parent = this; this.children.unshift(node); }
   replaceChildren(...children) { this.children = children; }
   querySelectorAll() { return this.children; }
-  remove() { this.removed = true; }
+  remove() { this.removed = true; if (this.parent) this.parent.children = this.parent.children.filter(child => child !== this); }
 }
 
 function setup({ source = async () => '<score/>', last = 5 } = {}) {
@@ -107,4 +108,45 @@ test('a page shows only the measures that fit in one line, and the next one star
   assert.equal(view.canNext, false);
   renderer.previous(); await settle();
   assert.equal(view.page, 'Compases 4–6 de 9', 'back to where it was');
+});
+
+// The map over the score (2026-11-20): the lanes of the map above the staves, placed on the cells of the measures of the page.
+test('the map is drawn above the measures of the page, and removed when hidden', async () => {
+  const container = new Element();
+  const measure = (number, x, width) => [{ parentSourceMeasure: { MeasureNumberXML: number },
+    PositionAndShape: { AbsolutePosition: { x }, Size: { width } } }];
+  const renderer = createFullScoreRenderer({
+    container, session: { getVersion: () => 0, loadSource: async () => '<score/>' }, nextFrame: async () => {},
+    filter: () => '<page/>', bounds: () => ({ first: 1, last: 2 }),
+    createDisplay: target => ({ async load() {},
+      GraphicSheet: { MeasureList: [measure(1, 10, 40), measure(2, 50, 40)] },
+      render() { const svg = new Element(); svg.attributes = { width: '1000', height: '500' }; target.append(svg); } }),
+    onChange: () => {},
+  });
+  const seen = [];
+  renderer.setOverlay(cells => {
+    seen.push(cells);
+    return { labelWidth: cells[0].left, lanes: [
+      { name: 'cadence', label: 'Cadencia', items: [{ className: 'work-map-cadence', left: 70, text: '◐', title: 'semicadencia (c. 2)' }] },
+      { name: 'dynamics', label: 'Dinámica', items: [{ className: 'work-map-bar', left: 10, width: 40, height: 0.5 }] }] };
+  }, 'Análisis de estos compases');
+  await renderer.load();
+  assert.deepEqual(seen[0], [{ measure: 1, left: 10, width: 40 }, { measure: 2, left: 50, width: 40 }]);
+  const staging = container.children[0];
+  const strip = staging.children[0];
+  assert.equal(strip.className, 'score-map');
+  assert.equal(strip.attributes['aria-label'], 'Análisis de estos compases');
+  const [cadences, dynamics] = strip.children;
+  assert.equal(cadences.className, 'score-map-lane score-map-lane--cadence');
+  const [label, mark] = cadences.children;
+  assert.equal(label.textContent, 'Cadencia');
+  assert.equal(label.style.width, '10%', 'in the room of the part names');
+  assert.equal(mark.className, 'work-map-cadence');
+  assert.deepEqual([mark.style.left, mark.textContent, mark.attributes.title], ['70%', '◐', 'semicadencia (c. 2)']);
+  const bar = dynamics.children[1];
+  assert.deepEqual([bar.style.left, bar.style.width, bar.style.height], ['10%', '40%', '50%']);
+  assert.equal(bar.attributes['aria-hidden'], 'true');
+  assert.equal(staging.children[1].attributes.width, '1000', 'the staves follow the map');
+  renderer.setOverlay(null);
+  assert.equal(staging.children.length, 1);
 });
