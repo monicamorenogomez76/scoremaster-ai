@@ -1,5 +1,5 @@
 """Sounding-pitch timelines for solo passages and the full ensemble."""
-from bisect import bisect_right
+from bisect import bisect_left, bisect_right
 from collections import Counter, OrderedDict
 from concurrent.futures import Future, TimeoutError as FutureTimeout, wait
 from dataclasses import dataclass
@@ -85,7 +85,7 @@ def _scores_kept() -> int:
 # Beyond this the work is too large to keep (the whole-score playback already stops at 150 000 events).
 MAX_PREPARED_NOTES = 1_000_000
 # Stored timelines of another version are prepared again.
-TIMELINE_VERSION = 'playback-timeline-v6'   # v6 (2026-11-20): trills, mordents and turns sound as their notes; v5 (2026-11-17): a part that changes instrument sounds as each one; v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
+TIMELINE_VERSION = 'playback-timeline-v7'   # v7 (2026-11-20): every part keeps the band's measures; v6 (2026-11-20): trills, mordents and turns sound as their notes; v5 (2026-11-17): a part that changes instrument sounds as each one; v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
 # A grace note takes no time in the score: it sounds this long, just before its note, which stays on the beat (2026-11-05:
 # with no length it fell on the note and could hardly be heard).
 GRACE_QUARTERS = 0.125
@@ -337,6 +337,56 @@ def _ornament_notes(event, bpm: float) -> Optional[list]:
     return found or None
 
 
+class _BandMeasures:
+    """Where each measure starts for the whole band (2026-11-20). A part read from a PDF can have a measure a beat too
+    long or too short; timed on its own measures, it then sounded late or early until the end. Each measure lasts what
+    most parts give it (on a tie, its time signature, else the longest); a part's notes keep their place inside the
+    measure, a beat it has too many is left out and a missing one is a rest."""
+
+    def __init__(self, parts):
+        self.own = []   # where each part's measures start as written
+        lengths_by_index = []
+        for part in parts:
+            measures = list(part.getElementsByClass(stream.Measure))
+            starts = [float(m.offset) for m in measures]
+            lengths = [float(m.duration.quarterLength) for m in measures]
+            self.own.append(starts)
+            for index, measure in enumerate(measures):
+                if index == len(lengths_by_index):
+                    lengths_by_index.append((Counter(), float(measure.barDuration.quarterLength)))
+                lengths_by_index[index][0][lengths[index]] += 1
+        self.lengths, self.starts, at = [], [], 0.0
+        for votes, written in lengths_by_index:
+            most = max(votes.values())
+            tied = [length for length, count in votes.items() if count == most]
+            length = written if written in tied else max(tied)
+            self.starts.append(at)
+            self.lengths.append(length)
+            at += length
+        self.end = at
+
+    def onset(self, part: int, offset: float) -> Optional[float]:
+        """The band's time of a note starting there in the part; None for a beat the measure has too many."""
+        starts = self.own[part]
+        if not starts:
+            return offset
+        index = max(0, bisect_right(starts, offset) - 1)
+        inside = offset - starts[index]
+        return self.starts[index] + inside if inside < self.lengths[index] else None
+
+    def release(self, part: int, offset: float) -> float:
+        """The band's time of a note ending there in the part, cut at the end of its measure."""
+        starts = self.own[part]
+        if not starts:
+            return offset
+        index = max(0, bisect_left(starts, offset) - 1)
+        return self.starts[index] + min(offset - starts[index], self.lengths[index])
+
+    def measures(self, numbers) -> tuple:
+        """(number, band start) of a part's measures."""
+        return tuple((number, self.starts[index]) for index, number in enumerate(numbers))
+
+
 def _read_timeline(content: bytes) -> _Timeline:
     # From the bytes, as the analysis parser: music21 then does not write its own cache to disk.
     score = converter.parse(content, format='musicxml')
@@ -344,9 +394,13 @@ def _read_timeline(content: bytes) -> _Timeline:
     changes = note_instruments(content)
     raw_names = [part.partName or (part.id if isinstance(part.id, str) else f'Part {i}')
                  for i, part in enumerate(score.parts, 1)]
-    marks = {float(mark.getOffsetInHierarchy(score)): float(mark.getQuarterBPM())
-             for mark in score.recurse().getElementsByClass(tempo.MetronomeMark)
-             if mark.number is not None and mark.getQuarterBPM() > 0}
+    band = _BandMeasures(score.parts)
+    marks = {}
+    for index, part in enumerate(score.parts):
+        for mark in part.recurse().getElementsByClass(tempo.MetronomeMark):
+            at = band.onset(index, float(mark.getOffsetInHierarchy(part)))
+            if mark.number is not None and mark.getQuarterBPM() > 0 and at is not None:
+                marks.setdefault(at, float(mark.getQuarterBPM()))
     mark_offsets = sorted(marks)
 
     def bpm_at(offset: float) -> float:
@@ -355,7 +409,7 @@ def _read_timeline(content: bytes) -> _Timeline:
 
     counts, indexes = Counter(raw_names), Counter()
     parts, total = [], 0
-    for part, name in zip(score.parts, raw_names):
+    for part_index, (part, name) in enumerate(zip(score.parts, raw_names)):
         if counts[name] > 1:
             indexes[name] += 1
             staff = re.search(r'-Staff(\d+)$', str(part.id))
@@ -364,13 +418,14 @@ def _read_timeline(content: bytes) -> _Timeline:
         # saves the deep copies that took two thirds of the time (nobody else uses this parsed score).
         identity = _identity(part, name, declared)
         program = part.getInstrument().midiProgram
-        measures = tuple((int(m.number or i), float(m.offset))
-                         for i, m in enumerate(part.getElementsByClass(stream.Measure), 1))
-        highest_time = float(part.highestTime)
+        written_measures = [(int(m.number or i), float(m.offset))
+                            for i, m in enumerate(part.getElementsByClass(stream.Measure), 1)]
+        measures = band.measures([number for number, _ in written_measures])
+        highest_time = band.end
         metadata = metadata_for_part(part, declared)
         change = changes.get(metadata.part_id)
         instruments = change[0] if change else (None,)
-        starts = [offset for _, offset in measures]
+        starts = [offset for _, offset in written_measures]
 
         def played(event) -> Optional[str]:
             """The instrument of a note of a part that changes instrument (2026-11-17), by where the written note stands."""
@@ -390,8 +445,10 @@ def _read_timeline(content: bytes) -> _Timeline:
         for index, event in enumerate(events):
             instrument = written.get(id(event), instruments[0])
             notes, identity = by_instrument[instrument], identities[instrument]
-            onset = float(event.offset)
-            release = onset + float(event.duration.quarterLength)
+            onset = band.onset(part_index, float(event.offset))
+            if onset is None:
+                continue
+            release = band.release(part_index, float(event.offset) + float(event.duration.quarterLength))
             if event.duration.isGrace:
                 following = 0
                 while index + following + 1 < len(events) and events[index + following + 1].duration.isGrace:
@@ -418,7 +475,7 @@ def _read_timeline(content: bytes) -> _Timeline:
             parts.append(_Part(name if instrument is None else split_name(name, instrument), program,
                                identity.canonical_id if identity else None, identity.sound if identity else None, measures,
                                highest_time, tuple(notes)))
-    return _Timeline(tuple(parts), marks, float(score.highestTime))
+    return _Timeline(tuple(parts), marks, band.end)
 
 
 def build_playback(source, instrument_name, first: int, last: int, store: Optional[PreparedStore] = None,

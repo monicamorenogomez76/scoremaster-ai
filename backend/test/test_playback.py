@@ -268,7 +268,7 @@ def test_a_grace_note_at_the_very_start_never_sounds_before_the_work():
 
 def test_the_audio_prepared_before_is_prepared_again():
     from backend.parsers.playback import TIMELINE_VERSION
-    assert TIMELINE_VERSION == "playback-timeline-v6"
+    assert TIMELINE_VERSION == "playback-timeline-v7"
 
 
 # Ornaments (2026-11-20): a trill, a mordent or a turn sounds as the notes it stands for, in the key of the work;
@@ -322,3 +322,52 @@ def test_a_trill_is_as_fast_at_a_slow_tempo(tmp_path):
     events = build_playback(ornamented_score(tmp_path), 'Flute', 1, 1)['events']
     trill = [event for event in events if event['time'] < 2]
     assert len(trill) == 32 and all(event['duration'] == pytest.approx(0.0625) for event in trill)
+
+
+# Measures out of step (2026-11-20): a part read from a PDF can have a measure one beat too long or too short; each
+# part was timed on its own measures, so from there on it sounded late or early against the band until the end.
+
+def _parts_score(*parts) -> bytes:
+    """A 4/4 score whose parts give, measure by measure, the steps of their crotchets."""
+    crotchet = '<note><pitch><step>{}</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>'
+    names = ('Flute', 'Clarinet', 'Oboe')
+    listed = "".join(f'<score-part id="P{i}"><part-name>{names[i]}</part-name></score-part>' for i in range(len(parts)))
+    written = "".join(
+        f'<part id="P{i}">' + "".join(
+            f'<measure number="{number}">'
+            + ('<attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>'
+               if number == 1 else '')
+            + "".join(crotchet.format(step) for step in steps) + '</measure>'
+            for number, steps in enumerate(measures, 1)) + '</part>'
+        for i, measures in enumerate(parts))
+    return ('<?xml version="1.0"?><score-partwise version="4.0"><part-list>' + listed + '</part-list>' + written
+            + '</score-partwise>').encode()
+
+
+def _onsets(content: bytes):
+    from backend.parsers.playback import _read_timeline
+    return [[(note.onset, note.pitches[0]) for note in part.notes] for part in _read_timeline(content).parts]
+
+
+def test_a_measure_too_long_in_one_part_does_not_put_it_late_for_the_rest_of_the_work():
+    flute, clarinet, oboe = _onsets(_parts_score(['CCCC', 'EEEE'], ['CCCCD', 'EEEE'], ['CCCC', 'EEEE']))
+    assert [onset for onset, _ in clarinet] == [0, 1, 2, 3, 4, 5, 6, 7], "the beat it has too many is left out"
+    assert clarinet[4:] == flute[4:] == oboe[4:]
+
+
+def test_a_measure_too_short_in_one_part_does_not_put_it_early():
+    flute, clarinet = _onsets(_parts_score(['CCCC', 'EEEE'], ['CCC', 'EEEE']))
+    assert [onset for onset, _ in clarinet] == [0, 1, 2, 4, 5, 6, 7], "the missing beat is a rest"
+    assert clarinet[3:] == flute[4:]
+
+
+def test_a_short_measure_every_part_has_is_kept():
+    flute, clarinet = _onsets(_parts_score(['C', 'EEEE'], ['C', 'EEEE']))
+    assert [onset for onset, _ in flute] == [onset for onset, _ in clarinet] == [0, 1, 2, 3, 4]
+
+
+def test_the_measures_and_the_length_of_the_work_follow_the_band():
+    from backend.parsers.playback import _read_timeline
+    timeline = _read_timeline(_parts_score(['CCCC', 'EEEE'], ['CCCCD', 'EEEE'], ['CCCC', 'EEEE']))
+    assert [part.measures for part in timeline.parts] == [((1, 0.0), (2, 4.0))] * 3
+    assert {part.highest_time for part in timeline.parts} == {8.0} and timeline.highest_time == 8.0
