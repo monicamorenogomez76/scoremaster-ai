@@ -55,7 +55,7 @@ def test_a_call_to_gemini_is_recorded_with_its_tokens_latency_and_prompt(result,
     assert shown["mode"] == "llm"
     [event] = recorded.events
     assert (event.purpose, event.model, event.prompt_version, event.event, event.outcome) == \
-        ("difficulty", "gemini-test", "difficulty-explanation-v4", "call", "ok")
+        ("difficulty", "gemini-test", "difficulty-explanation-v5", "call", "ok")
     assert (event.input_tokens, event.output_tokens) == (1200, 300) and event.latency_ms >= 0
 
 
