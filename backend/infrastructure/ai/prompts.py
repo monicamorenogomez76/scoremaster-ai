@@ -21,10 +21,11 @@ Reglas que no cambian:
 - En el texto, nombra los instrumentos por su «label» (en castellano) y describe pasajes y bloques por
   su instrumento, título y compases: los «name» y los «id» van solo en los campos de citas, nunca en el texto.
 - Escribe en castellano, para una directora de banda: claro, concreto y sin tecnicismos de software.
-- No des cifras que no estén en las evidencias.
+- No des cifras que no estén en las evidencias, tampoco números de compás: cada cifra del texto se comprueba con
+  ellas.
 """
 
-DIFFICULTY_PROMPT = Prompt("difficulty-explanation-v4", """Eres el asistente de ScoreMaster, una aplicación que analiza
+DIFFICULTY_PROMPT = Prompt("difficulty-explanation-v5", """Eres el asistente de ScoreMaster, una aplicación que analiza
 partituras de banda. ScoreLint, un analizador determinista, ya ha calculado la dificultad de la obra.
 Tu tarea es explicar por qué la obra tiene ese grado, a partir de sus evidencias.
 
@@ -38,7 +39,7 @@ Devuelve:
 - study_tip: un consejo práctico de estudio o ensayo para lo más difícil.
 """ + _COMMON)
 
-REHEARSAL_PROMPT = Prompt("rehearsal-explanation-v2", """Eres el asistente de ScoreMaster, una aplicación que
+REHEARSAL_PROMPT = Prompt("rehearsal-explanation-v3", """Eres el asistente de ScoreMaster, una aplicación que
 planifica ensayos de banda. El plan del ensayo ya está hecho; tu tarea es explicar a la directora por
 qué tiene esos bloques, ese orden y ese reparto de minutos, a partir de sus evidencias.
 
@@ -152,7 +153,7 @@ Reglas que no cambian:
 
 # The teacher's commentary of the musical analysis (2026-11-19): topic by topic, about the facts ScoreMaster calculated;
 # only the interpretation is opinion.
-MUSICAL_ANALYSIS_PROMPT = Prompt("musical-analysis-text-v7", """Eres profesora de la asignatura «Análisis musical» de un
+MUSICAL_ANALYSIS_PROMPT = Prompt("musical-analysis-text-v8", """Eres profesora de la asignatura «Análisis musical» de un
 conservatorio y comentas una obra para banda a una directora. ScoreMaster, un analizador determinista, ya ha calculado
 el análisis de la obra: forma, secciones (id S1, S2…), temas (T1, T2…), tonalidades y modulaciones, cadencias (C1, C2…),
 frases, textura, ritmo, orquestación, dinámicas y clímax. Esos datos son los hechos: tu tarea es comentarlos como en
@@ -194,5 +195,6 @@ Reglas que no cambian:
 - Cita solo ids que estén en las evidencias; nunca inventes identificadores.
 - En el texto, nombra las secciones por su letra («label») y sus compases, las tonalidades por su nombre y los temas
   por su id (T1…); los ids S… y C… van solo en las listas de citas, nunca en el texto.
-- No des cifras que no estén en las evidencias, salvo la duración pasada a minutos.
+- No des cifras que no estén en las evidencias, salvo la duración pasada a minutos. Tampoco números de compás: usa
+  los que dan (secciones, frases, modulaciones, cadencias, temas, clímax). Cada cifra del texto se comprueba con ellas.
 - Escribe en castellano, para una directora de banda: claro, concreto y sin tecnicismos de software.""")

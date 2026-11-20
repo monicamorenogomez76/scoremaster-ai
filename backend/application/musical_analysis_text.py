@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.explanations import InvalidExplanation, run_explanation
 from backend.domain.text import evidence_text
 
-PROMPT_VERSION = "musical-analysis-text-v7"   # v7 (2026-11-20): a commentary, not a list of data, and longer; v6: lengths in the prompt; v5 (2026-11-19): articulation; v4: themes; v3: meter; v2: harmony
+PROMPT_VERSION = "musical-analysis-text-v8"   # v8: only the measures of the evidence; v7 (2026-11-20): a commentary, not a list of data, and longer; v6: lengths in the prompt; v5 (2026-11-19): articulation; v4: themes; v3: meter; v2: harmony
 EVIDENCE_VERSION = "musical-analysis-evidence-v5"   # v5 (2026-11-19): articulation; v4: themes; v3: meter…
 # The topics of the commentary, in the order of a conservatory analysis; the interpretation, last, is the only opinion.
 TOPICS = ("form", "themes", "harmony", "texture", "rhythm", "dynamics", "interpretation")
