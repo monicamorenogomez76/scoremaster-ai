@@ -14,11 +14,30 @@ test('the preset maps the nearest recordings to the notes of the part, splitting
   // Clarinet recordings include D4 (62), F4 (65) and A#4 (70).
   const preset = recordedPreset('clarinet', [61, 62, 66, 69]);
   assert.deepEqual(preset.samples, { baseUrl: RECORDED_BASE_URL + 'clarinet/', formats: ['mp3'] });
-  assert.deepEqual(regions(preset), [
+  assert.deepEqual(regions(preset).map(({ sample, pitch, keyRange }) => ({ sample, pitch, keyRange })), [
     { sample: 'D4', pitch: 62, keyRange: [0, 63] },
     { sample: 'F4', pitch: 65, keyRange: [64, 67] },
     { sample: 'As4', pitch: 70, keyRange: [68, 127] },
   ]);
+});
+
+// A natural attack (2026-11-20): many recordings swell for a while before they sound full (the low D of the clarinet
+// takes 0.43 s, some trombone notes 0.8 s), so a crotchet was only that soft start. Each note starts where its recording
+// already sounds full, with a short fade in so it does not click; a recording that starts at once is left as it is.
+test('a recording that swells slowly starts where it already sounds full', () => {
+  const low = regions(recordedPreset('clarinet', [50])).find(region => region.sample === 'D3');
+  assert.equal(low.offset, .43);
+  assert.ok(low.ampAttack > 0 && low.ampAttack <= .02);
+  const trombone = regions(recordedPreset('trombone', [48])).find(region => region.sample === 'C3');
+  assert.ok(trombone.offset > .5);
+});
+
+test('a recording that sounds at once keeps its own start', () => {
+  for (const [sound, note] of [['acoustic_grand_piano', 60], ['xylophone', 72], ['trumpet', 60]]) {
+    const [region] = regions(recordedPreset(sound, [note]));
+    assert.equal(region.offset, undefined, sound);
+    assert.equal(region.ampAttack, undefined, sound);
+  }
 });
 
 test('every note of the part falls in the region of its nearest recording', () => {

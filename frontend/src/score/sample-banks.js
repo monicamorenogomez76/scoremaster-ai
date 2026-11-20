@@ -38,6 +38,26 @@ const RECORDED = {
     notes: 'A1 A2 A3 A4 A5 A6 A7 As1 As2 As3 As4 As5 As6 As7 B1 B2 B3 B4 B5 B6 B7 C1 C2 C3 C4 C5 C6 C7 C8 Cs1 Cs2 Cs3 Cs4 Cs5 Cs6 Cs7 D1 D2 D3 D4 D5 D6 D7 Ds1 Ds2 Ds3 Ds4 Ds5 Ds6 Ds7 E1 E2 E3 E4 E5 E6 E7 F1 F2 F3 F4 F5 F6 F7 Fs1 Fs2 Fs3 Fs4 Fs5 Fs6 Fs7 G1 G2 G3 G4 G5 G6 G7 Gs1 Gs2 Gs3 Gs4 Gs5 Gs6 Gs7' },
 };
 
+// A natural attack (2026-11-20): many recordings swell for a while before they sound full (the low D of the clarinet
+// 0.43 s, some trombone notes 0.8 s), so a crotchet was only that soft start. Seconds where each recording reaches half
+// its steady level (RMS, 10 ms windows), measured on these files; recordings that sound at once are not listed.
+const ATTACKS = {
+  bassoon: 'A2:.03 A4:.25 C3:.03 C4:.3 C5:.21 E4:.18 G2:.03 G3:.09 G4:.2',
+  clarinet: 'As3:.11 As4:.14 As5:.07 D3:.43 D4:.09 D5:.07 D6:.11 F3:.12 F4:.12 F5:.26 Fs6:.06',
+  flute: 'A4:.07 A5:.04 A6:.04 C4:.22 C5:.03 C6:.06 C7:.09 E4:.14 E5:.04',
+  french_horn: 'A1:.09 A3:.05 C2:.06 C4:.11 D3:.14 Ds2:.03 F5:.15 G2:.04',
+  alto_sax: 'A5:.03 D3:.04 Ds3:.04 E3:.04 F3:.05',
+  tenor_sax: 'A5:.03 D3:.04 Ds3:.04 E3:.04 F3:.05',
+  trombone: 'As1:.04 As2:.03 As3:.53 C3:.84 C4:.07 Cs2:.03 Cs4:.06 D3:.07 D4:.37 Ds3:.69 Ds4:.1 F3:.04 F4:.04 Gs2:.46 Gs3:.49',
+  trumpet: 'C6:.06',
+  tuba: 'As2:.07 As3:.04 D3:.08 Ds2:.03 F1:.03 F2:.04 F3:.04',
+  contrabass: 'A2:.18 As1:.09 B3:.15 C2:.06 Cs3:.06 D2:.04 E2:.1 E3:.09 Fs1:.03 Fs2:.24 G1:.03 Gs2:.19 Gs3:.08',
+};
+// The note fades in this long from where it starts, so skipping the swell does not click.
+const ATTACK_FADE = .012;
+const attackOf = (sound, sample) => Number(new Map((ATTACKS[sound] || '').split(' ').filter(Boolean)
+  .map(item => item.split(':'))).get(sample) || 0);
+
 const STEPS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 // "As3" is A#3 in the file names: MIDI 58.
@@ -60,12 +80,16 @@ export function recordedPreset(sound, notes) {
     chosen.set(nearest.midi, nearest);
   }
   const ordered = [...chosen.values()].sort((left, right) => left.midi - right.midi);
-  const regions = ordered.map((sample, index) => ({
-    sample: sample.name,
-    pitch: sample.midi,
-    keyRange: [index === 0 ? 0 : Math.floor((ordered[index - 1].midi + sample.midi) / 2) + 1,
-      index === ordered.length - 1 ? 127 : Math.floor((sample.midi + ordered[index + 1].midi) / 2)],
-  }));
+  const regions = ordered.map((sample, index) => {
+    const offset = attackOf(sound, sample.name);
+    return {
+      sample: sample.name,
+      pitch: sample.midi,
+      keyRange: [index === 0 ? 0 : Math.floor((ordered[index - 1].midi + sample.midi) / 2) + 1,
+        index === ordered.length - 1 ? 127 : Math.floor((sample.midi + ordered[index + 1].midi) / 2)],
+      ...(offset ? { offset, ampAttack: ATTACK_FADE } : {}),
+    };
+  });
   return { samples: { baseUrl: RECORDED_BASE_URL + bank.folder + '/', formats: ['mp3'] }, groups: [{ regions }] };
 }
 

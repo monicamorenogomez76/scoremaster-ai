@@ -76,7 +76,7 @@ test('pause and seek restore held notes; speed adjusts remaining duration', asyn
   assert.equal(h.callbacks.size, 0);
   t.seek(3); t.setSpeed(.5); await t.play();
   const last = h.starts.at(-1);
-  assert.equal(last.instrument, 'flute'); assert.equal(last.duration + last.ampRelease, 2);
+  assert.equal(last.instrument, 'flute'); assert.equal(last.duration, 2);
   h.api.stopPlayback(); assert.equal(h.callbacks.size, 0);
   assert.ok(h.instruments.every((instrument) => instrument.disposeCount === 1));
 });
@@ -99,14 +99,26 @@ test('measure guide follows audio position including seek and speed changes', as
   t.stop(); assert.equal(current, 70);
 });
 
-test('sample release ends at the written note end without spilling into rests', async () => {
+// A natural ending (2026-11-20, chosen by ear): the note sounds its whole written length and then fades for 80 ms, as an
+// instrument does; before it was cut in 8 ms and sounded artificial. A very short note (a trill) fades in half its length.
+test('a note sounds its written length and then fades naturally', async () => {
   const h = harness(), t = await h.api.preparePlayback({}, null);
   await t.play();
   const flute = h.starts.find(e => e.instrument === 'flute');
   const clarinet = h.starts.find(e => e.instrument === 'clarinet');
-  assert.equal(flute.duration + flute.ampRelease, 4);
-  assert.equal(clarinet.duration + clarinet.ampRelease, 2);
-  assert.ok(clarinet.ampRelease <= .008);
+  assert.equal(flute.duration, 4);
+  assert.equal(clarinet.duration, 2);
+  assert.equal(clarinet.ampRelease, .08);
+  t.stop();
+});
+
+test('the notes of a trill fade within half their length, so they do not blur', async () => {
+  const h = harness();
+  h.setData({ duration: .5, tracks: [{ instrument: 'Clarinet', program: 71, sound: 'clarinet', events: [0, 1, 2, 3, 4].map(at => ({ note: 62 + at % 2, time: at * .1, duration: .1 })) }] });
+  const t = await h.api.preparePlayback({}, null);
+  await t.play();
+  const notes = h.starts.filter(e => e.instrument === 'clarinet');
+  assert.ok(notes.length > 0 && notes.every(e => e.duration === .1 && e.ampRelease === .05));
   t.stop();
 });
 
