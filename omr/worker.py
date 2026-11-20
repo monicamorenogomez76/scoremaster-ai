@@ -631,11 +631,20 @@ def title_pages(pdf_path: str, numbers: list[int], references: list[int]) -> set
 SPLIT_MEASURES = 1.8
 
 
+def _printed_alone(xml: bytes, text: str) -> bool:
+    """A section printed alone (2026-11-20, «Arabian Dances»: measures 95-147 for the percussion, five staves in several
+    systems a page): its margin names each staff read and no other, system after system (a staff may carry two names,
+    «Timp.» and «Shkr.»). A misread page leaves names of the margin without a staff."""
+    count = staves(xml)
+    labels = staff_labels(text, count)
+    return bool(labels) and all(labels) and len(set(_margin_lines(text))) <= count + 1
+
+
 def _misread(xml: bytes, text: str, joined: int, typical: float = 0) -> bool:
     """Copista saw fewer staves than the margin of the page has lines (2026-11-05, «The Lion King», 8 of 20): placed by
     their clefs, a clarinet took a bass line and the grade rose to 6. A page of a scan without text cannot say otherwise,
     nor a page whose measures came out in blocks."""
-    if staves(xml) >= joined:
+    if staves(xml) >= joined or _printed_alone(xml, text):
         return False
     if typical and measure_count(xml) >= SPLIT_MEASURES * typical:
         return True
