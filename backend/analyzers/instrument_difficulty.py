@@ -8,7 +8,7 @@ from music21 import pitch
 
 from backend.domain.difficulty_scale import grade_from_index, technical_index
 from backend.domain.instrument_resolver import resolve_part
-from backend.domain.models import ScorePart
+from backend.domain.models import PartMetadata, ScorePart
 from backend.domain.timing import (DEFAULT_QUARTER_BPM, attack_count, measure_length, melodic_lines, notes_per_second,
                                    quarter_bpm_at, sounding_pitches)
 from backend.analyzers.endurance import longest_active_run
@@ -207,6 +207,10 @@ def instrument_label_es(instrument: str) -> str:
         return "{} {}".format(label, part_number) if part_number else label
     if key.endswith(" drum"):
         return "Percusión"
+    # A name the table does not know is named by the catalog (2026-11-20: «Clarinet in Bb 1» was shown as is).
+    identity = resolve_part(ScorePart(instrument, (), PartMetadata(part_name=instrument))).identity
+    if identity is not None:
+        return "{} {}".format(identity.label_es, part_number) if part_number else identity.label_es
     return instrument
 
 
