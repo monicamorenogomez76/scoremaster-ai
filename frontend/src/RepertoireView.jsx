@@ -7,7 +7,7 @@ import { PdfCompare } from './score/PdfCompare.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
-import { WorkQuestions } from './WorkQuestions.jsx';
+import { RepertoireQuestions, WorkQuestions } from './WorkQuestions.jsx';
 import { WorksList } from './WorksView.jsx';
 import { t } from './i18n.js';
 import { gradeWarning } from './library.js';
@@ -32,6 +32,8 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
     </div>
 
     <div hidden={detail}>
+      {/* Asking the repertoire (M6, 2026-11-20), keyed by user like the list. */}
+      <RepertoireQuestions key={'questions-' + (user?.email ?? 'signed-out')} onOpenWork={onOpenWork} />
       {/* Keyed by user: a new session never shows the previous user's works. */}
       <WorksList key={user?.email ?? 'signed-out'} visible={!hidden && active === 'repertoire' && !detail}
         revision={analysis?.revision ?? 0} onOpen={onOpenWork} busy={busy} />

@@ -245,7 +245,7 @@ def test_gemini_chooses_the_functions_to_read_with_function_calling():
     bound, chat = [], ToolChat([{"name": "band", "args": {}, "id": "1"}, {"name": "schedule", "args": {}, "id": "2"}])
     chosen = GeminiExplanationProvider("secret-gemini-key", "gemini-test", chat_factory=lambda schema: None,
                                        tools_factory=lambda specs: bound.append(specs) or chat)
-    assert chosen.choose_tools("¿Me falta alguien?", tool_specs("es"), "es") == ["band", "schedule"]
+    assert chosen.choose_tools("¿Me falta alguien?", tool_specs("es"), "es") == [{"name": "band", "args": {}}, {"name": "schedule", "args": {}}]
     [specs] = bound
     assert [spec["function"]["name"] for spec in specs] == ["difficulty", "band", "analysis", "schedule"]
     assert all(spec["type"] == "function" and spec["function"]["description"] for spec in specs)
@@ -274,3 +274,28 @@ def test_gemini_answers_the_question_with_the_work_answer_schema():
     assert WORK_QUESTION_PROMPT.version == "work-question-v1"
     assert "question" in WORK_QUESTION_PROMPT.system and "results" in WORK_QUESTION_PROMPT.system
     assert gemini_provider.PURPOSES["WorkAnswer"] == "work_question"
+
+
+def test_for_the_repertoire_gemini_fills_the_arguments_of_the_functions():
+    from backend.application.repertoire_questions import tool_specs
+    from backend.infrastructure.ai.prompts import REPERTOIRE_TOOL_CHOICE_PROMPT
+    bound = []
+    chat = ToolChat([{"name": "find_works", "args": {"grade_max": 3, "band_ready": True}, "id": "1"}])
+    chosen = GeminiExplanationProvider("k", "m", chat_factory=lambda schema: None,
+                                       tools_factory=lambda specs: bound.append(specs) or chat)
+    assert chosen.choose_tools("¿Qué obras fáciles podemos tocar?", tool_specs("es"), "es", "repertoire") == \
+        [{"name": "find_works", "args": {"grade_max": 3, "band_ready": True}}]
+    [specs] = bound
+    assert specs[0]["function"]["parameters"]["properties"]["grade_max"]["type"] == "integer"
+    assert "parameters" not in specs[2]["function"], "a function without arguments sends none"
+    assert chat.seen[0][0] == ("system", REPERTOIRE_TOOL_CHOICE_PROMPT.system)
+    assert REPERTOIRE_TOOL_CHOICE_PROMPT.version == "repertoire-question-tools-v1"
+
+
+def test_gemini_answers_the_repertoire_question_with_its_prompt():
+    from backend.infrastructure.ai.prompts import REPERTOIRE_QUESTION_PROMPT
+    answer = {"answer": "Tienes dos obras.", "answered": True, "cites": []}
+    chat, schemas = FakeChat(answer), []
+    assert provider(chat, schemas).answer_repertoire_question({"version": "x", "question": "¿?", "results": []}) == answer
+    assert schemas == ["WorkAnswer"] and chat.calls[0][0] == ("system", REPERTOIRE_QUESTION_PROMPT.system)
+    assert REPERTOIRE_QUESTION_PROMPT.version == "repertoire-question-v1" and "W1" in REPERTOIRE_QUESTION_PROMPT.system

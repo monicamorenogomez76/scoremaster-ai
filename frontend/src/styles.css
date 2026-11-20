@@ -891,6 +891,12 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .work-question-asked { margin: 0; font-weight: 600; }
 .work-question-answer { display: grid; gap: 8px; line-height: 1.5; }
 .work-question-answer > p { margin: 0; }
+.repertoire-questions { margin-bottom: 16px; }
+.repertoire-questions > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; border-radius: 8px; }
+.repertoire-questions > summary:hover h2 { color: var(--primary); }
+.repertoire-questions > summary:active h2 { opacity: .8; }
+.repertoire-questions > summary h2 { display: inline; margin: 0; font-size: 1.15rem; }
+.repertoire-questions[open] > summary { margin-bottom: 8px; }
 .work-question-cite { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-alt); color: var(--text); font-size: .88rem; }
 .explanation-summary { margin: 0; color: var(--text); font-size: 1rem; }
 .explanation-factors { display: grid; gap: 10px; margin: 0; padding-left: 20px; }

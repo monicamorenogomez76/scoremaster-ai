@@ -166,6 +166,16 @@ try {
   await english.locator('#works-heading').getByText('Works').waitFor();
   await english.waitForLoadState('networkidle');
   await audit(english, 'Repertoire (English)');
+  // Asking the repertoire (M6, 2026-11-20): a suggested question and a free one; without a key the rules answer both.
+  const repertoireQuestions = english.locator('.repertoire-questions');
+  await repertoireQuestions.locator('summary').click();
+  await repertoireQuestions.getByRole('button', { name: 'Which are the easiest works?' }).click();
+  await repertoireQuestions.locator('.work-question-answer').first().waitFor({ timeout: 60000 });
+  await english.locator('#repertoire-question').fill('Which works of grade 3 do I have?');
+  await repertoireQuestions.getByRole('button', { name: 'Ask', exact: true }).click();
+  await repertoireQuestions.locator('.work-question-answer').nth(1).waitFor({ timeout: 60000 });
+  await audit(english, 'Repertoire › Ask the repertoire (English)');
+  await repertoireQuestions.locator('summary').click();
   await english.locator('.work-open').first().click();
   await english.locator('#work-tab-difficulty').click();
   await english.locator('#work-panel-difficulty').getByText('Grade of the work').waitFor();

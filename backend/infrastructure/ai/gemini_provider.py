@@ -13,7 +13,8 @@ from typing import Optional
 from backend.application import ai_usage
 from backend.application.ai import ProviderFailure, ProviderInfo
 from backend.infrastructure.ai.prompts import (DIFFICULTY_PROMPT, INSTRUMENT_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT,
-                                              MUSICAL_ANALYSIS_PROMPT, SUBSTITUTES_PROMPT, TOOL_CHOICE_PROMPT,
+                                              MUSICAL_ANALYSIS_PROMPT, REPERTOIRE_QUESTION_PROMPT,
+                                              REPERTOIRE_TOOL_CHOICE_PROMPT, SUBSTITUTES_PROMPT, TOOL_CHOICE_PROMPT,
                                               WORK_QUESTION_PROMPT, human_message, in_language)
 
 # 2026-10-13: gemini-2.5-flash answered NotFound for a new key (Google keeps it only for accounts that
@@ -120,34 +121,38 @@ class GeminiExplanationProvider:
             logger.warning("Google no encuentra el modelo %s: elige otro disponible con GEMINI_MODEL.", self.info.model)
         return ProviderFailure(reason)
 
-    def choose_tools(self, question: str, specs: list[dict], language: str) -> list[str]:
-        """The names of the functions Gemini calls to answer the question (M6); the caller runs only the known ones."""
-        functions = [{"type": "function", "function": {"name": spec["name"], "description": spec["description"]}}
-                     for spec in specs]
+    def choose_tools(self, question: str, specs: list[dict], language: str, scope: str = "work") -> list[dict]:
+        """The calls Gemini makes to answer the question (M6), with their arguments; the caller runs only the known
+        functions and ignores the arguments it does not understand."""
+        prompt = REPERTOIRE_TOOL_CHOICE_PROMPT if scope == "repertoire" else TOOL_CHOICE_PROMPT
+        functions = [{"type": "function", "function": {
+            "name": spec["name"], "description": spec["description"],
+            **({"parameters": spec["parameters"]} if "parameters" in spec else {})}} for spec in specs]
         with self._lock:
-            key = ("tools", language)
+            key = ("tools", scope, language)
             if key not in self._chats:
                 self._chats[key] = self._tools_factory(functions)
             chat = self._chats[key]
         started = time.monotonic()
         used = lambda outcome, tokens=(None, None): ai_usage.record(ai_usage.UsageEvent(
-            "work_question_tools", self.info.model, TOOL_CHOICE_PROMPT.version, "call", outcome,
+            scope + "_question_tools", self.info.model, prompt.version, "call", outcome,
             round((time.monotonic() - started) * 1000), *tokens))
         try:
-            message = chat.invoke([("system", TOOL_CHOICE_PROMPT.system), ("human", question)])
+            message = chat.invoke([("system", prompt.system), ("human", question)])
         except Exception as error:
-            failure = self._failed(error, TOOL_CHOICE_PROMPT)
+            failure = self._failed(error, prompt)
             used(str(failure))
             raise failure from None
         usage = getattr(message, "usage_metadata", None) or {}
         used("ok", (usage.get("input_tokens"), usage.get("output_tokens")))
-        return [call["name"] for call in getattr(message, "tool_calls", None) or [] if isinstance(call, dict) and "name" in call]
+        return [{"name": call["name"], "args": call.get("args") or {}} for call in getattr(message, "tool_calls", None) or []
+                if isinstance(call, dict) and "name" in call]
 
-    def _ask(self, schema, prompt, evidence: dict) -> dict:
+    def _ask(self, schema, prompt, evidence: dict, purpose: Optional[str] = None) -> dict:
         prompt = in_language(prompt, evidence.get("language", "es"))
         messages = [("system", prompt.system), ("human", human_message(evidence))]
         used = lambda outcome, started, tokens=(None, None): ai_usage.record(ai_usage.UsageEvent(
-            PURPOSES.get(schema.__name__, schema.__name__), self.info.model, prompt.version, "call", outcome,
+            purpose or PURPOSES.get(schema.__name__, schema.__name__), self.info.model, prompt.version, "call", outcome,
             round((time.monotonic() - started) * 1000), *tokens))
         started = time.monotonic()
         try:
@@ -178,6 +183,10 @@ class GeminiExplanationProvider:
     def explain_substitutes(self, evidence: dict) -> dict:
         from backend.application.substitutes_explanation import SubstitutesExplanation
         return self._ask(SubstitutesExplanation, SUBSTITUTES_PROMPT, evidence)
+
+    def answer_repertoire_question(self, evidence: dict) -> dict:
+        from backend.application.work_questions import WorkAnswer
+        return self._ask(WorkAnswer, REPERTOIRE_QUESTION_PROMPT, evidence, "repertoire_question")
 
     def answer_work_question(self, evidence: dict) -> dict:
         from backend.application.work_questions import WorkAnswer

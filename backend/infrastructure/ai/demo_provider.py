@@ -136,6 +136,10 @@ class DemoExplanationProvider:
         from backend.infrastructure.ai.demo_analysis import analysis_commentary
         return analysis_commentary(evidence)
 
+    def answer_repertoire_question(self, evidence: dict) -> dict:
+        from backend.infrastructure.ai.demo_questions import repertoire_answer
+        return repertoire_answer(evidence)
+
     def answer_work_question(self, evidence: dict) -> dict:
         from backend.infrastructure.ai.demo_questions import work_answer
         return work_answer(evidence)
