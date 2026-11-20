@@ -188,6 +188,9 @@ const DYNAMIC_LEVELS = { ppp: 1, pp: 2, p: 3, mp: 4, mf: 5, f: 6, ff: 7, fff: 8 
 const CADENCE_SYMBOLS = { authentic: '●', half: '◐', plagal: '○', deceptive: '◇' };
 export const cadenceSymbol = kind => CADENCE_SYMBOLS[kind] || '•';
 const TICKS = 8;
+// The cards of the map (2026-11-20): the shortest section gets this many pixels for its letter and measures, beside the
+// labels of the lanes; the map scrolls sideways when that needs more than its usual width, up to a limit.
+const CARD = 88, LABELS = 96, NARROWEST = 640, WIDEST = 4000;
 
 export function workMap(analysis) {
   const { sections } = analysis;
@@ -222,7 +225,9 @@ export function workMap(analysis) {
     ? timeline.map(item => (level = item.dynamic ? DYNAMIC_LEVELS[item.dynamic] / 8 : level)) : [];
   const most = Math.max(0, ...timeline.map(item => item.playing));
   const step = [1, 2, 4, 8, 16, 32, 64, 128].find(size => numbers.length / size <= TICKS) || 256;
+  const shortest = Math.min(...sections.map(section => at(section.last) - at(section.first) + 1));
   return {
+    minWidth: Math.min(WIDEST, Math.max(NARROWEST, Math.ceil(LABELS + numbers.length * CARD / shortest))),
     sections: sections.map(section => ({ ...section, ...span(section.first, section.last), colour: materialColour(material(section)) })),
     keys: keys.map(item => ({ ...item, ...span(item.first, item.last), colour: colourOf(item.name) })),
     phrases: sections.flatMap(section => section.phrases.map(phrase => ({ first: phrase.first, last: phrase.last,

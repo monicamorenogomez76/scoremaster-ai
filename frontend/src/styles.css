@@ -984,9 +984,10 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .work-map { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--shadow-1); }
 .work-map-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
 .work-map-heading h3, .work-map-heading p { margin: 0; }
-.work-map-scroll { min-width: 0; overflow-x: auto; padding: 16px 0 4px; }
+.work-map-scroll { min-width: 0; overflow-x: auto; padding: 16px 0 4px; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.work-map-more { margin: 0; color: var(--text-soft); font-size: .85rem; font-weight: 600; line-height: 1.5; }
 .work-map-scroll:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.work-map-lanes { display: grid; gap: 8px; min-width: 640px; }
+.work-map-lanes { display: grid; gap: 8px; }
 .work-map-lane { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; }
 .work-map-label { font-size: .85rem; font-weight: 600; line-height: 1.5; }
 .work-map-track { position: relative; margin: 0; padding: 0; list-style: none; }
@@ -996,18 +997,21 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .work-map-track--form li { position: absolute; top: 0; bottom: 0; padding-right: 2px; box-sizing: border-box; }
 .work-map-section { display: flex; flex-direction: column; justify-content: center; width: 100%; height: 100%; min-height: 44px; padding: 4px 8px; overflow: hidden; border: 0; border-radius: var(--radius-sm); text-align: left; line-height: 1.2; white-space: nowrap; cursor: pointer; transition: filter var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out); }
 .work-map-section strong { font-family: var(--font-display); font-size: 1.1rem; }
+.work-map-section strong, .work-map-section span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .work-map-section span { font-size: .75rem; }
 .work-map-section:hover { filter: brightness(1.08); }
+.work-map-track--form li:hover, .work-map-track--form li:focus-within { z-index: 2; }
+.work-map-section:hover, .work-map-section:focus-visible { width: max-content; min-width: 100%; box-shadow: var(--shadow-2); }
 .work-map-section:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
 .work-map-section:active { transform: translateY(1px); }
-.work-map-section[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--panel), 0 0 0 5px var(--text); }
+.work-map-section[aria-pressed="true"], .work-map-section[aria-pressed="true"]:hover { box-shadow: 0 0 0 2px var(--panel), 0 0 0 5px var(--text); }
 .work-map-colour--0 { background: var(--primary); color: var(--on-primary); }
 .work-map-colour--1 { background: var(--family-strings); color: var(--on-family); }
 .work-map-colour--2 { background: var(--family-woodwinds); color: var(--on-family); }
 .work-map-colour--3 { background: var(--family-percussion); color: var(--on-family); }
 .work-map-colour--4 { background: var(--family-brass); color: var(--on-family); }
 .work-map-track--keys { height: 28px; }
-.work-map-key { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; padding: 0 8px; overflow: hidden; border-right: 2px solid var(--panel); box-sizing: border-box; color: var(--text); font-size: .8rem; font-weight: 500; white-space: nowrap; }
+.work-map-key { position: absolute; top: 0; bottom: 0; display: block; padding: 0 8px; line-height: 28px; overflow: hidden; border-right: 2px solid var(--panel); box-sizing: border-box; color: var(--text); font-size: .8rem; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
 .work-map-tint--0 { background: color-mix(in srgb, var(--primary) 20%, var(--panel)); }
 .work-map-tint--1 { background: color-mix(in srgb, var(--family-strings) 20%, var(--panel)); }
 .work-map-tint--2 { background: color-mix(in srgb, var(--family-woodwinds) 20%, var(--panel)); }
@@ -1061,3 +1065,4 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .score-map-lane--dynamics .work-map-bar { bottom: 0; box-sizing: border-box; border: 0 solid transparent; border-width: 0 2px; background-clip: padding-box; }
 .work-map-phrase--open-start { border-left: 0; border-top-left-radius: 0; }
 .work-map-phrase--open-end { border-right: 0; border-top-right-radius: 0; }
+.score-map-lane .work-map-key { line-height: 24px; }

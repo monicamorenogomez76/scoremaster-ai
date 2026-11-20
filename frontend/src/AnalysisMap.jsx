@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { articulationText, cadenceText, harmonyDetailsText, keyName, markText, meterText, modulationText, orchestrationText,
   periodText, phrasesText, relationText, rhythmText, textureKindText, textureText, themeText } from './musicalAnalysis.js';
 import { t } from './i18n.js';
@@ -9,13 +9,27 @@ const spanned = item => ({ left: item.left + '%', width: item.width + '%' });
 // The map of the work (2026-11-20): the form as in a conservatory analysis, every lane on one axis of measures. The
 // sections are buttons that choose the sheet below; the other lanes are drawn, and the tables say the same in text.
 export function WorkMap({ map, selected, onSelect }) {
+  // When the map is wider than its box it scrolls sideways, and says so: overlay scrollbars hide until used.
+  const scroller = useRef(null);
+  const [wider, setWider] = useState(false);
+  useEffect(() => {
+    const box = scroller.current;
+    if (!box) return undefined;
+    const measure = () => setWider(box.scrollWidth > box.clientWidth + 1);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [map.minWidth]);
   return <section className="work-map" aria-labelledby="work-map-title">
     <div className="work-map-heading">
       <h3 id="work-map-title">{t('Mapa de la obra')}</h3>
       <p className="result-supporting">{t('Pulsa una sección para ver su ficha. Todo va en el mismo eje de compases.')}</p>
     </div>
-    <div className="work-map-scroll" tabIndex={0} role="region" aria-label={t('Mapa de la obra')}>
-      <div className="work-map-lanes">
+    {wider && <p className="work-map-more">{t('El mapa sigue a la derecha: desplázalo para ver toda la obra →')}</p>}
+    <div ref={scroller} className="work-map-scroll" tabIndex={0} role="region" aria-label={t('Mapa de la obra')}>
+      <div className="work-map-lanes" style={{ minWidth: map.minWidth + 'px' }}>
         <div className="work-map-lane" aria-hidden="true">
           <span className="work-map-label">{t('compás')}</span>
           <div className="work-map-track work-map-track--axis">
@@ -28,6 +42,7 @@ export function WorkMap({ map, selected, onSelect }) {
             {map.sections.map(section => <li key={section.id} style={spanned(section)}>
               <button type="button" className={'work-map-section work-map-colour--' + section.colour}
                 aria-pressed={section.id === selected} onClick={() => onSelect(section.id)}
+                title={section.label + ' · ' + t('cc. {first}–{last}', { first: section.first, last: section.last }) + ' · ' + keyName(section.key)}
                 aria-label={t('Sección {label}, cc. {first}–{last}, {key}', { label: section.label, first: section.first,
                   last: section.last, key: keyName(section.key) })}>
                 <strong>{section.label}</strong>
