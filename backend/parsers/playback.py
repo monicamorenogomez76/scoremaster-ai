@@ -7,6 +7,7 @@ import gzip
 from hashlib import sha256
 import json
 import logging
+import math
 import os
 import re
 from threading import RLock
@@ -14,7 +15,7 @@ from typing import Optional, Protocol
 
 from pathlib import Path
 
-from music21 import chord, converter, note, percussion as m21_percussion, stream, tempo
+from music21 import chord, converter, expressions, note, percussion as m21_percussion, stream, tempo
 
 from backend.domain.instrument_catalog import GENERIC_PERCUSSION, identity_by_id, match_instrument_name
 from backend.domain.instrument_resolver import resolve_part
@@ -84,7 +85,7 @@ def _scores_kept() -> int:
 # Beyond this the work is too large to keep (the whole-score playback already stops at 150 000 events).
 MAX_PREPARED_NOTES = 1_000_000
 # Stored timelines of another version are prepared again.
-TIMELINE_VERSION = 'playback-timeline-v5'   # v5 (2026-11-17): a part that changes instrument sounds as each one; v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
+TIMELINE_VERSION = 'playback-timeline-v6'   # v6 (2026-11-20): trills, mordents and turns sound as their notes; v5 (2026-11-17): a part that changes instrument sounds as each one; v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
 # A grace note takes no time in the score: it sounds this long, just before its note, which stays on the beat (2026-11-05:
 # with no length it fell on the note and could hardly be heard).
 GRACE_QUARTERS = 0.125
@@ -305,6 +306,37 @@ def timeline_has_parts(data: bytes) -> bool:
         return False
 
 
+# Each note of a trill, mordent or turn lasts about this long, as played (music21 writes 32nds at any tempo: at ♩=50 a
+# trill crawled); the nearest of these lengths keeps the trill filling its note.
+ORNAMENT_SECONDS = 0.07
+ORNAMENT_QUARTERS = (0.125, 0.0625, 0.03125)
+
+
+def _ornament_notes(event, bpm: float) -> Optional[list]:
+    """(start from the note, length, MIDI) of the notes a trill, mordent or turn stands for, in the key of the work and
+    at the speed of its tempo; None for a note without one, or one music21 cannot realise (it then sounds as written)."""
+    if type(event) is not note.Note:
+        return None
+    ornament = next((item for item in event.expressions if isinstance(item, expressions.Ornament)
+                     and hasattr(item, 'realize')), None)
+    if ornament is None:
+        return None
+    wanted = ORNAMENT_SECONDS * bpm / 60
+    ornament.quarterLength = min(ORNAMENT_QUARTERS, key=lambda length: abs(math.log2(length / wanted)))
+    try:
+        before, main, after = ornament.realize(event)
+    except Exception:
+        return None
+    found, at = [], 0.0
+    for item in [*before, *([main] if main is not None else []), *after]:
+        length = float(item.duration.quarterLength)
+        if length <= 0:
+            continue
+        found.append((at, length, float(item.pitch.midi)))
+        at += length
+    return found or None
+
+
 def _read_timeline(content: bytes) -> _Timeline:
     # From the bytes, as the analysis parser: music21 then does not write its own cache to disk.
     score = converter.parse(content, format='musicxml')
@@ -312,6 +344,15 @@ def _read_timeline(content: bytes) -> _Timeline:
     changes = note_instruments(content)
     raw_names = [part.partName or (part.id if isinstance(part.id, str) else f'Part {i}')
                  for i, part in enumerate(score.parts, 1)]
+    marks = {float(mark.getOffsetInHierarchy(score)): float(mark.getQuarterBPM())
+             for mark in score.recurse().getElementsByClass(tempo.MetronomeMark)
+             if mark.number is not None and mark.getQuarterBPM() > 0}
+    mark_offsets = sorted(marks)
+
+    def bpm_at(offset: float) -> float:
+        at = bisect_right(mark_offsets, offset) - 1
+        return marks[mark_offsets[at]] if at >= 0 else 120.0
+
     counts, indexes = Counter(raw_names), Counter()
     parts, total = [], 0
     for part, name in zip(score.parts, raw_names):
@@ -362,6 +403,8 @@ def _read_timeline(content: bytes) -> _Timeline:
                     else [event] if isinstance(event, note.Unpitched) else [])
             if hits:
                 notes.append(_Note(onset, release, drums=tuple(_drum_note(hit, part, name) for hit in hits)))
+            elif not event.duration.isGrace and (ornamented := _ornament_notes(event, bpm_at(onset))):
+                notes.extend(_Note(onset + start, onset + start + length, pitches=(midi,)) for start, length, midi in ornamented)
             else:
                 pitches = event.pitches if isinstance(event, chord.Chord) else (event.pitch,)
                 drums = tuple(key for key in (_unpitched_key(identity, pitch.midi) for pitch in pitches) if key is not None)
@@ -375,9 +418,6 @@ def _read_timeline(content: bytes) -> _Timeline:
             parts.append(_Part(name if instrument is None else split_name(name, instrument), program,
                                identity.canonical_id if identity else None, identity.sound if identity else None, measures,
                                highest_time, tuple(notes)))
-    marks = {float(mark.getOffsetInHierarchy(score)): float(mark.getQuarterBPM())
-             for mark in score.recurse().getElementsByClass(tempo.MetronomeMark)
-             if mark.number is not None and mark.getQuarterBPM() > 0}
     return _Timeline(tuple(parts), marks, float(score.highestTime))
 
 
