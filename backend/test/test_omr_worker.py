@@ -880,6 +880,19 @@ def test_a_page_with_few_staves_and_no_margin_to_tell_is_placed_as_before(full_c
     assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode())
 
 
+
+def test_a_section_printed_alone_in_several_systems_keeps_its_notes_and_measures(full_catalog):
+    """«Arabian Dances» prints measures 95-147 for the percussion alone, five staves in several systems a page (2026-11-20):
+    its margin, as long as the score's, and its many measures made it a misread page, so the percussion was silenced and
+    those measures cut to a few. Its margin names only the staves read, system after system."""
+    margin = "\n".join(f"     {name}    &" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))
+    alone = "\n".join(f"     {name}    ÷" for name in ("Timp.", "Perc. 1") * 3)
+    pages = [(page(5, 5, "C"), margin), (page(2, 15, "D"), alone), (page(5, 5, "E"), margin)]
+    joined, _ = worker._score(pages, "Obra")
+    from omr.merge import measure_count
+    assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode()), "the percussion plays"
+    assert measure_count(joined) == 25, "and keeps its measures"
+
 # --- ScoreMaster restarting (2026-11-05: a deploy answered 503 and a reading of minutes was lost) -----------------------
 
 def answering(*answers):
