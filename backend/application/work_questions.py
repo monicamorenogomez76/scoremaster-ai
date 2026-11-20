@@ -195,33 +195,63 @@ def _question(question: Optional[str], suggestion: Optional[str]) -> str:
     return text
 
 
-def ask_work(question: Optional[str], suggestion: Optional[str], tools: WorkTools, provider, demo, cache=None,
-             language: str = "es") -> dict:
-    """The answer shown to the director: who wrote it, which functions were read and what each cited id is."""
-    question = _question(question, suggestion)
-    topic, fallback_reason, writer = suggestion, None, demo
+def _calls(chosen) -> list[dict]:
+    """What the provider chose, as calls with their arguments; a bare name is a call without them."""
+    found = []
+    for call in chosen or []:
+        if isinstance(call, str):
+            call = {"name": call, "args": {}}
+        if isinstance(call, dict) and isinstance(call.get("name"), str):
+            found.append({"name": call["name"], "args": call.get("args") if isinstance(call.get("args"), dict) else {}})
+    return found
+
+
+def fallback_of(error: Exception) -> str:
+    return str(error) if isinstance(error, ProviderFailure) and str(error) in ("timeout", "rate_limit") else "error"
+
+
+def answer_with_tools(question: str, suggestion: Optional[str], *, scope: str, specs: list[dict], rules, recognise_topic,
+                      run, evidence: dict, answer, validate, cited_index, provider, demo, cache, language: str,
+                      prompt_version: str, purpose: str) -> dict:
+    """What asking the work and asking the repertoire share. The provider chooses the calls (function calling) unless
+    the question is a suggestion or there is no AI; then the rules choose them (rules(topic) → calls). run(calls) →
+    results; answer(who, evidence) → raw answer, validated and checked like every explanation."""
+    topic, fallback_reason, writer, calls = suggestion, None, demo, []
     if suggestion is None and provider.info.kind == "llm":
         try:
-            chosen = provider.choose_tools(question, tool_specs(language), language)
-            names, writer = tuple(dict.fromkeys(name for name in chosen if name in TOOLS)), provider
-        except ProviderFailure as failure:
-            fallback_reason = str(failure) if str(failure) in ("timeout", "rate_limit") else "error"
-        except Exception:
-            fallback_reason = "error"
+            calls, writer = _calls(provider.choose_tools(question, specs, language, scope)), provider
+        except Exception as error:
+            fallback_reason = fallback_of(error)
     if writer is demo:
-        topic = topic or recognise(question)
-        names = SUGGESTIONS.get(topic, ())
-    results = {name: getattr(tools, name)() for name in names}
-    evidence = {"version": EVIDENCE_VERSION, "title": evidence_text(tools.title), "question": question, "results": results}
+        topic = topic or recognise_topic(question)
+        calls = rules(topic) if topic else []
+    results, read = run(calls)
+    evidence = {**evidence, "question": question, "results": results}
     if writer is demo and topic:
         evidence["topic"] = topic
     if language == "en":
         evidence["language"] = "en"
-    version = PROMPT_VERSION + ("-en" if language == "en" else "")
-    shown = run_explanation(evidence, lambda who, data: who.answer_work_question(data), validate_answer, writer, demo,
-                            version, cache=cache, purpose="work_question")
+    version = prompt_version + ("-en" if language == "en" else "")
+    shown = run_explanation(evidence, answer, validate, writer, demo, version, cache=cache, purpose=purpose)
     if fallback_reason:
         shown["fallback_reason"] = fallback_reason
-    answer, index = shown.pop("explanation"), cited(results, language)
-    return {**shown, "question": question or None, "suggestion": suggestion, "tools": list(results), "answer": answer,
-            "cites": [index[code] for code in answer["cites"] if code in index]}
+    written, index = shown.pop("explanation"), cited_index(results, language)
+    return {**shown, "question": question or None, "suggestion": suggestion, "tools": read, "answer": written,
+            "cites": [index[code] for code in written["cites"] if code in index]}
+
+
+def ask_work(question: Optional[str], suggestion: Optional[str], tools: WorkTools, provider, demo, cache=None,
+             language: str = "es") -> dict:
+    """The answer shown to the director: who wrote it, which functions were read and what each cited id is."""
+    question = _question(question, suggestion)
+
+    def run(calls):
+        names = list(dict.fromkeys(call["name"] for call in calls if call["name"] in TOOLS))
+        return {name: getattr(tools, name)() for name in names}, names
+
+    return answer_with_tools(
+        question, suggestion, scope="work", specs=tool_specs(language),
+        rules=lambda topic: [{"name": name, "args": {}} for name in SUGGESTIONS.get(topic, ())],
+        recognise_topic=recognise, run=run, evidence={"version": EVIDENCE_VERSION, "title": evidence_text(tools.title)},
+        answer=lambda who, data: who.answer_work_question(data), validate=validate_answer, cited_index=cited,
+        provider=provider, demo=demo, cache=cache, language=language, prompt_version=PROMPT_VERSION, purpose="work_question")

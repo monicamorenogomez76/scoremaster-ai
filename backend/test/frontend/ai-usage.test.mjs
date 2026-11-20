@@ -41,8 +41,9 @@ test('purposes and outcomes are named in the language of the interface', () => {
     ['Explicación de la dificultad', 'Explicación del ensayo', 'Valoración con IA (método B)', 'Propuesta de instrumentos',
       'Sustitutos de instrumentos', 'other']);
   // Asking the work (M6, 2026-11-20): choosing the functions and answering are two calls.
-  assert.deepEqual(['work_question_tools', 'work_question'].map(purposeLabel),
-    ['Preguntar a la obra · elegir datos', 'Preguntar a la obra · respuesta']);
+  assert.deepEqual(['work_question_tools', 'work_question', 'repertoire_question_tools', 'repertoire_question'].map(purposeLabel),
+    ['Preguntar a la obra · elegir datos', 'Preguntar a la obra · respuesta', 'Preguntar al repertorio · elegir datos',
+      'Preguntar al repertorio · respuesta']);
   assert.deepEqual(['timeout', 'rate_limit', 'error', 'invalid'].map(outcomeLabel),
     ['Sin respuesta a tiempo', 'Límite de uso alcanzado', 'Error del proveedor', 'Respuesta descartada por la validación']);
   setLanguage('en');

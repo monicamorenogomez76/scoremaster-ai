@@ -143,3 +143,142 @@ def work_answer(evidence: dict) -> dict:
             texts.append(text)
             cites += cited
     return {"answer": " ".join(texts), "answered": True, "cites": cites[:12]}
+
+
+# Asking the repertoire (M6, 2026-11-20): the rules write from the results of the calls they made, or of the AI's.
+REPERTOIRE = {
+    "es": {
+        "intro": {"ready": "Tu banda cubre enteras {total} obras", "easiest": "Las obras más fáciles de tu repertorio",
+                  "hardest": "Las obras más difíciles de tu repertorio", "preparing": "Estáis preparando {total} obras",
+                  None: "Hay {total} obras que encajan"},
+        "work": "«{title}» ({details})", "grade": "grado {}", "minutes": "{} min", "more": " y {} más",
+        "short": "menos de 1 min",
+        "none": "Ninguna obra de tu repertorio encaja con eso.",
+        "detail": "«{title}» tiene grado {grade}.", "reasons": " Lo fijan: {}.",
+        "passage": " Su pasaje más exigente: {label} en {where} {measures}.", "measures": ("el compás", "los compases"),
+        "lacks": " A tu banda le falta: {}.", "covers": " Tu banda la cubre entera.",
+        "no_match": "No encuentro esa obra en tu repertorio.",
+        "concerts": "Próximos conciertos: {}.", "concert": "«{title}» el {date} ({days}){programme}",
+        "programme": ", con {}", "today": "es hoy", "tomorrow": "es mañana", "days": "faltan {} días",
+        "no_concerts": "No hay conciertos próximos.",
+        "rehearsals": " Próximos ensayos: {}.", "rehearsal": "el {date}{works}", "rehearsal_works": " ({})",
+        "band": "Tu banda tiene {musicians} músicos: {list}.", "player": "{count} de {label}",
+        "no_band": "Todavía no has indicado la plantilla de tu banda.",
+        "unknown": "Sin IA solo puedo responder a las preguntas sugeridas o a preguntas sobre el grado, la duración, la "
+                   "banda, la preparación o los conciertos de tus obras. Prueba con una de las sugeridas.",
+        "and": " y ",
+    },
+    "en": {
+        "intro": {"ready": "Your band covers {total} works entirely", "easiest": "The easiest works of your repertoire",
+                  "hardest": "The hardest works of your repertoire", "preparing": "You are preparing {total} works",
+                  None: "{total} works match"},
+        "work": "«{title}» ({details})", "grade": "grade {}", "minutes": "{} min", "more": " and {} more",
+        "short": "under 1 min",
+        "none": "No work of your repertoire matches that.",
+        "detail": "«{title}» is grade {grade}.", "reasons": " It is set by: {}.",
+        "passage": " Its most demanding passage: {label} in {where} {measures}.", "measures": ("measure", "measures"),
+        "lacks": " Your band lacks: {}.", "covers": " Your band covers it entirely.",
+        "no_match": "I cannot find that work in your repertoire.",
+        "concerts": "Coming concerts: {}.", "concert": "«{title}» on {date} ({days}){programme}",
+        "programme": ", with {}", "today": "today", "tomorrow": "tomorrow", "days": "in {} days",
+        "no_concerts": "There are no coming concerts.",
+        "rehearsals": " Coming rehearsals: {}.", "rehearsal": "{date}{works}", "rehearsal_works": " ({})",
+        "band": "Your band has {musicians} musicians: {list}.", "player": "{count} {label}",
+        "no_band": "You have not entered your band's lineup yet.",
+        "unknown": "Without the AI I can only answer the suggested questions, or questions about the grade, length, band, "
+                   "preparation or concerts of your works. Try one of the suggested ones.",
+        "and": " and ",
+    },
+}
+SHOWN = 6
+
+
+def _decimal(value, language: str) -> str:
+    text = ("{:.1f}".format(value)).rstrip("0").rstrip(".")
+    return text if language == "en" else text.replace(".", ",")
+
+
+def _found(result: dict, topic, say, language) -> tuple[str, list]:
+    works = result["works"][:SHOWN]
+    if not works:
+        return say["none"], []
+    described = []
+    for work in works:
+        details = [say["grade"].format(work["grade"])] if work.get("grade") is not None else []
+        if work.get("minutes") is not None:
+            details.append(say["short"] if work["minutes"] < 1 else say["minutes"].format(_decimal(work["minutes"], language)))
+        described.append(say["work"].format(title=work["title"], details=", ".join(details) or "—"))
+    intro = say["intro"].get(topic if topic in say["intro"] else None).format(total=result["total"])
+    more = say["more"].format(result["total"] - len(works)) if result["total"] > len(works) else ""
+    return intro + ": " + _joined(described, say["and"]) + more + ".", [work["id"] for work in works]
+
+
+def _work_details(result: dict, say) -> tuple[str, list]:
+    if not result["works"]:
+        return say["no_match"], []
+    texts = []
+    for work in result["works"]:
+        text = say["detail"].format(title=work["title"], grade=work.get("grade"))
+        if work.get("grade_reasons"):
+            text += say["reasons"].format("; ".join(work["grade_reasons"][:2]))
+        if work.get("passages"):
+            passage = work["passages"][0]
+            where = say["measures"][1 if "-" in str(passage["measures"]) else 0]
+            text += say["passage"].format(label=passage["label"], where=where, measures=passage["measures"])
+        band = work.get("band") or {}
+        if band.get("missing"):
+            text += say["lacks"].format(_joined([item["label"] for item in band["missing"]], say["and"]))
+        elif band.get("compatibility_percent") == 100:
+            text += say["covers"]
+        texts.append(text)
+    return " ".join(texts), [work["id"] for work in result["works"]]
+
+
+def _agenda(result: dict, say) -> tuple[str, list]:
+    cites, concerts = [], result.get("concerts") or []
+    days = lambda left: say["today"] if left == 0 else say["tomorrow"] if left == 1 else say["days"].format(left)
+    titles = lambda works: _joined(["«{}»".format(work["title"]) for work in works], say["and"])
+    if concerts:
+        text = say["concerts"].format(_joined([say["concert"].format(
+            title=item["title"], date=_date(item["date"]), days=days(item["days_left"]),
+            programme=say["programme"].format(titles(item["works"])) if item["works"] else "") for item in concerts],
+            say["and"]))
+        cites += [item["id"] for item in concerts] + [work["id"] for item in concerts for work in item["works"]]
+    else:
+        text = say["no_concerts"]
+    rehearsals = (result.get("rehearsals") or [])[:3]
+    if rehearsals:
+        text += say["rehearsals"].format(_joined([say["rehearsal"].format(
+            date=_date(item["date"]), works=say["rehearsal_works"].format(titles(item["works"])) if item["works"] else "")
+            for item in rehearsals], say["and"]))
+        cites += [item["id"] for item in rehearsals]
+    return text, list(dict.fromkeys(cites))
+
+
+def _lineup(result: dict, say) -> str:
+    instruments = result.get("instruments") or []
+    if not instruments:
+        return say["no_band"]
+    return say["band"].format(musicians=result.get("musicians"), list=_joined(
+        [say["player"].format(**item) for item in instruments[:12]], say["and"]))
+
+
+def repertoire_answer(evidence: dict) -> dict:
+    language = "en" if evidence.get("language") == "en" else "es"
+    say = REPERTOIRE[language]
+    if not evidence["results"]:
+        return {"answer": say["unknown"], "answered": False, "cites": []}
+    texts, cites = [], []
+    for item in evidence["results"]:
+        name, result = item["function"], item["result"]
+        if name == "find_works":
+            text, cited = _found(result, evidence.get("topic"), say, language)
+        elif name == "work_details":
+            text, cited = _work_details(result, say)
+        elif name == "schedule":
+            text, cited = _agenda(result, say)
+        else:
+            text, cited = _lineup(result, say), []
+        texts.append(text)
+        cites += cited
+    return {"answer": " ".join(texts), "answered": True, "cites": list(dict.fromkeys(cites))[:12]}

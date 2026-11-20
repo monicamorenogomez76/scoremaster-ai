@@ -45,7 +45,7 @@ class Fake:
     def __init__(self, chosen=(), reply=None, failure=None):
         self.chosen, self.reply, self.failure, self.asked, self.answered = list(chosen), reply, failure, [], []
 
-    def choose_tools(self, question, specs, language):
+    def choose_tools(self, question, specs, language, scope="work"):
         self.asked.append((question, [spec["name"] for spec in specs], language))
         if self.failure:
             raise self.failure

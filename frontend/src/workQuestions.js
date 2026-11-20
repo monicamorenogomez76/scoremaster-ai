@@ -9,6 +9,18 @@ export const askWork = (id, body) => apiJson('/works/' + encodeURIComponent(id) 
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
 }, t('No se pudo responder la pregunta.'));
 
+export const askRepertoire = body => apiJson('/repertoire/questions', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+}, t('No se pudo responder la pregunta.'));
+
+export const repertoireSuggestions = () => [
+  ['ready', t('¿Qué obras puede tocar ya mi banda?')],
+  ['easiest', t('¿Cuáles son las obras más fáciles?')],
+  ['hardest', t('¿Cuáles son las obras más difíciles?')],
+  ['preparing', t('¿Qué obras estamos preparando?')],
+  ['concerts', t('¿Qué tocamos en los próximos conciertos?')],
+];
+
 export const suggestions = () => [
   ['grade', t('¿Por qué tiene este grado?')],
   ['passages', t('¿Qué pasajes son los más difíciles?')],
@@ -18,7 +30,8 @@ export const suggestions = () => [
 ];
 
 const toolNames = () => ({ difficulty: t('dificultad'), band: t('banda'), analysis: t('análisis musical'),
-  schedule: t('ensayos y conciertos') });
+  schedule: t('ensayos y conciertos'), find_works: t('tus obras'), work_details: t('detalle de obras'),
+  repertoire_schedule: t('conciertos y ensayos'), repertoire_band: t('plantilla de la banda') });
 
 const fallbacks = () => ({
   timeout: t('La IA no respondió a tiempo'),
@@ -27,14 +40,15 @@ const fallbacks = () => ({
   error: t('La IA no está disponible'),
 });
 
-const listed = tools => {
+// The repertoire's schedule and band read other data than the work's, under the same names.
+const listed = (tools, scope) => {
   const names = toolNames();
-  const items = (tools || []).map(tool => names[tool] || tool);
+  const items = (tools || []).map(tool => names[(scope === 'repertoire' && (tool === 'schedule' || tool === 'band') ? 'repertoire_' : '') + tool] || tool);
   return new Intl.ListFormat(currentLanguage(), { type: 'conjunction' }).format(items);
 };
 
-export function answerSource(result) {
-  const read = listed(result.tools);
+export function answerSource(result, scope = 'work') {
+  const read = listed(result.tools, scope);
   if (result.mode === 'llm') {
     const provider = result.provider + (result.model ? ' · ' + result.model : '');
     if (!read) return t('Respondida con IA ({provider}) sin leer datos de la obra.', { provider });

@@ -18,7 +18,7 @@ class Llm:
     def __init__(self, chosen, reply):
         self.chosen, self.reply, self.evidence = chosen, reply, []
 
-    def choose_tools(self, question, specs, language):
+    def choose_tools(self, question, specs, language, scope="work"):
         return self.chosen
 
     def answer_work_question(self, evidence):

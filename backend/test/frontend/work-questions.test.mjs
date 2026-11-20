@@ -34,3 +34,24 @@ test('who answered is always said, with the data the AI chose to read', () => {
   assert.match(answerSource({ mode: 'demo', fallback_reason: 'rate_limit', tools: ['band'] }),
     /^La IA ha alcanzado su límite de uso: se responde con reglas, sin IA/);
 });
+
+// Asking the repertoire (M6, 2026-11-20): the same panel over all the works of the director.
+test('a question about the repertoire goes to its own address', async () => {
+  const { askRepertoire, repertoireSuggestions } = await import('../../../frontend/src/workQuestions.js');
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push([url, options.method, JSON.parse(options.body)]);
+    return new Response(JSON.stringify({ mode: 'demo' }), { status: 200 });
+  };
+  await askRepertoire({ suggestion: 'ready' });
+  assert.deepEqual(calls, [['/repertoire/questions', 'POST', { suggestion: 'ready' }]]);
+  assert.deepEqual(repertoireSuggestions().map(([id]) => id), ['ready', 'easiest', 'hardest', 'preparing', 'concerts']);
+});
+
+test('the data read for the repertoire are named too', () => {
+  assert.equal(answerSource({ mode: 'demo', fallback_reason: null, tools: ['find_works', 'schedule'] }, 'repertoire'),
+    'Respondida con reglas a partir de estos datos de ScoreMaster, sin IA: tus obras y conciertos y ensayos.');
+  assert.match(answerSource({ mode: 'llm', provider: 'gemini', model: 'm', tools: ['work_details', 'band'] }, 'repertoire'),
+    /datos de ScoreMaster: detalle de obras y plantilla de la banda\./);
+  assert.match(answerSource({ mode: 'demo', fallback_reason: null, tools: ['band'] }, 'repertoire'), /plantilla de la banda\.$/);
+});
