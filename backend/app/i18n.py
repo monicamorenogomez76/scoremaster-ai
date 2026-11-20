@@ -38,6 +38,9 @@ EN = {
     "No se pudo preparar el audio del pasaje.": "Could not prepare the audio of the passage.",
     "Estado de preparación desconocido.": "Unknown preparation status.",
     "Indica la editorial o el catálogo.": "Give the publisher or the catalogue.",
+    "Escribe una pregunta o elige una sugerida.": "Write a question or choose a suggested one.",
+    "Escribe una pregunta.": "Write a question.",
+    "Pregunta sugerida desconocida.": "Unknown suggested question.",
     "El enlace debe empezar por http:// o https://.": "The link must start with http:// or https://.",
     "Escala desconocida: grade o pepper.": "Unknown scale: grade or pepper.",
 

@@ -224,3 +224,53 @@ def test_langchain_is_asked_for_the_schema_gemini_gets(monkeypatch):
     monkeypatch.setitem(sys.modules, "langchain_google_genai", types.SimpleNamespace(ChatGoogleGenerativeAI=Chat))
     gemini_provider._langchain_chat("key", "gemini-test")(MusicalAnalysisText)
     assert asked == [gemini_provider.answer_schema(MusicalAnalysisText)]
+
+
+# M6 (2026-11-20): asking the work. Gemini chooses among the read-only functions with function calling, then answers
+# from their results with the same structured output as every explanation.
+class ToolChat:
+    def __init__(self, calls=(), failure=None):
+        self.calls, self.failure, self.seen = list(calls), failure, []
+
+    def invoke(self, messages):
+        self.seen.append(messages)
+        if self.failure:
+            raise self.failure
+        return type("Message", (), {"tool_calls": self.calls, "usage_metadata": {"input_tokens": 5, "output_tokens": 1}})()
+
+
+def test_gemini_chooses_the_functions_to_read_with_function_calling():
+    from backend.application.work_questions import tool_specs
+    from backend.infrastructure.ai.prompts import TOOL_CHOICE_PROMPT
+    bound, chat = [], ToolChat([{"name": "band", "args": {}, "id": "1"}, {"name": "schedule", "args": {}, "id": "2"}])
+    chosen = GeminiExplanationProvider("secret-gemini-key", "gemini-test", chat_factory=lambda schema: None,
+                                       tools_factory=lambda specs: bound.append(specs) or chat)
+    assert chosen.choose_tools("¿Me falta alguien?", tool_specs("es"), "es") == ["band", "schedule"]
+    [specs] = bound
+    assert [spec["function"]["name"] for spec in specs] == ["difficulty", "band", "analysis", "schedule"]
+    assert all(spec["type"] == "function" and spec["function"]["description"] for spec in specs)
+    [[(system_role, system), (human_role, human)]] = chat.seen
+    assert (system_role, system, human_role, human) == ("system", TOOL_CHOICE_PROMPT.system, "human", "¿Me falta alguien?")
+    assert TOOL_CHOICE_PROMPT.version.startswith("work-question-tools-")
+    chosen.choose_tools("Otra", tool_specs("es"), "es")
+    assert len(bound) == 1, "one bound chat per language"
+
+
+def test_a_failed_choice_is_a_provider_failure():
+    from backend.application.work_questions import tool_specs
+    chosen = GeminiExplanationProvider("k", "m", chat_factory=lambda schema: None,
+                                       tools_factory=lambda specs: ToolChat(failure=Exception("429 RESOURCE_EXHAUSTED")))
+    with pytest.raises(ProviderFailure, match="^rate_limit$"):
+        chosen.choose_tools("¿Qué?", tool_specs("es"), "es")
+
+
+def test_gemini_answers_the_question_with_the_work_answer_schema():
+    from backend.infrastructure.ai.prompts import WORK_QUESTION_PROMPT
+    answer = {"answer": "Te falta un oboe.", "answered": True, "cites": []}
+    chat, schemas = FakeChat(answer), []
+    evidence = {"version": "work-question-evidence-v1", "question": "¿Me falta alguien?", "results": {"band": {}}}
+    assert provider(chat, schemas).answer_work_question(evidence) == answer
+    assert schemas == ["WorkAnswer"] and chat.calls[0][0] == ("system", WORK_QUESTION_PROMPT.system)
+    assert WORK_QUESTION_PROMPT.version == "work-question-v1"
+    assert "question" in WORK_QUESTION_PROMPT.system and "results" in WORK_QUESTION_PROMPT.system
+    assert gemini_provider.PURPOSES["WorkAnswer"] == "work_question"

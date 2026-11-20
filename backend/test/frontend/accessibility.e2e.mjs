@@ -189,6 +189,15 @@ try {
   await english.locator('#musical-analysis').getByRole('button', { name: 'Write the commentary' }).click();
   await english.locator('#analysis-interpretation').waitFor({ timeout: 60000 });
   await audit(english, 'Work › Analysis with its commentary (English)');
+  // Asking the work (M6, 2026-11-20): a suggested question and a free one; without a key the rules answer both.
+  await english.locator('#work-tab-questions').click();
+  await english.locator('#work-panel-questions').getByRole('button', { name: 'Which passages are the hardest?' }).click();
+  await english.locator('#work-panel-questions .work-question-answer').first().waitFor({ timeout: 60000 });
+  await english.locator('#work-question').fill('When do we rehearse it?');
+  await english.locator('#work-panel-questions').getByRole('button', { name: 'Ask', exact: true }).click();
+  await english.locator('#work-panel-questions .work-question-answer').nth(1).waitFor({ timeout: 60000 });
+  assert.match(await english.locator('#work-panel-questions .work-question-answer').nth(1).innerText(), /rehearsal/);
+  await audit(english, 'Work › Ask (English)');
   await english.locator('#work-tab-score').click();
   await english.locator('#embedded-score').getByRole('heading', { name: 'Full score' }).waitFor();
   await english.locator('#full-score-status').getByText('All voices').waitFor({ timeout: 60000 });

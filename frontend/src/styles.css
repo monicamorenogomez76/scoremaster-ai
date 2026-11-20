@@ -878,6 +878,20 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .explanation-body { display: grid; gap: 10px; }
 .explanation-source { margin: 0; padding: 8px 12px; border-left: 3px solid var(--muted); border-radius: 4px; background: var(--panel-alt); color: var(--text); font-size: .85rem; }
 .explanation-source.is-ai { border-left-color: var(--accent); }
+/* Asking the work (M6, 2026-11-20). */
+.work-questions { display: grid; gap: 16px; }
+.work-questions h2 { margin: 0; }
+.work-question-suggestions { display: flex; flex-wrap: wrap; gap: 8px; }
+.work-question-form { display: grid; gap: 8px; }
+.work-question-form label { font-weight: 600; }
+.work-question-form textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; line-height: 1.5; resize: vertical; }
+.work-question-form button { justify-self: start; }
+.work-question-log { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.work-question-item { display: grid; gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+.work-question-asked { margin: 0; font-weight: 600; }
+.work-question-answer { display: grid; gap: 8px; line-height: 1.5; }
+.work-question-answer > p { margin: 0; }
+.work-question-cite { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-alt); color: var(--text); font-size: .88rem; }
 .explanation-summary { margin: 0; color: var(--text); font-size: 1rem; }
 .explanation-factors { display: grid; gap: 10px; margin: 0; padding-left: 20px; }
 .explanation-factors p { margin: 0 0 6px; color: var(--text); }

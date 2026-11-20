@@ -7,11 +7,13 @@ import { PdfCompare } from './score/PdfCompare.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
+import { WorkQuestions } from './WorkQuestions.jsx';
 import { WorksList } from './WorksView.jsx';
 import { t } from './i18n.js';
 import { gradeWarning } from './library.js';
 
-const tabs = () => [['score', t('Partitura')], ['difficulty', t('Dificultad')], ['analysis', t('Análisis')], ['recordings', t('Grabaciones')]];
+const tabs = () => [['score', t('Partitura')], ['difficulty', t('Dificultad')], ['analysis', t('Análisis')], ['questions', t('Preguntar')],
+  ['recordings', t('Grabaciones')]];
 
 // Repertoire: the list of works (and the form to add one), or the detail of the open work.
 // The detail stays mounted while hidden: the score viewer keeps its renderer between tabs and modes.
@@ -61,6 +63,10 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
       <div id="work-panel-analysis" role="tabpanel" aria-labelledby="work-tab-analysis" hidden={tab !== 'analysis'}>
         {data?.work_id && <MusicalAnalysis workId={data.work_id} fromPdf={data.source_format === 'pdf'}
           visible={!hidden && active === 'repertoire' && detail && tab === 'analysis'} />}
+      </div>
+      <div id="work-panel-questions" role="tabpanel" aria-labelledby="work-tab-questions" hidden={tab !== 'questions'}>
+        {/* Keyed by work: the answers of another work are never shown. */}
+        {data?.work_id && <WorkQuestions key={data.work_id} workId={data.work_id} onOpenPassage={onOpenPassage} />}
       </div>
       <div id="work-panel-recordings" role="tabpanel" aria-labelledby="work-tab-recordings" hidden={tab !== 'recordings'}>
         {data && <div id="videos-content" className="view-content">
