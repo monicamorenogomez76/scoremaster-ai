@@ -217,3 +217,17 @@ test('the map over a page keeps the lanes of its measures, cut at the edges of t
   assert.deepEqual(page.lanes.map(item => item.label), ['Sección', 'Tonalidad', 'Frase', 'Tema', 'Cadencia', 'Dinámica']);
   assert.equal(pageLanes(analysis, []), null, 'nothing to place without measures');
 });
+
+// The cards of the map (2026-11-20): the map widens, with a scroll, until its shortest section has room for its text.
+test('the map is wide enough for the text of its shortest section', async () => {
+  const { workMap } = await import('../../../frontend/src/musicalAnalysis.js');
+  const sections = lengths => {
+    let first = 1;
+    return lengths.map((length, at) => { const section = { id: 'S' + (at + 1), first, last: first + length - 1, label: 'A', like: null,
+      key: { tonic: 'C', mode: 'major' }, modulations: [], phrases: [] }; first += length; return section; });
+  };
+  const width = lengths => workMap({ sections: sections(lengths), themes: [], cadences: [], climax: null }).minWidth;
+  assert.equal(width([8, 8]), 640, 'short works keep the usual width');
+  assert.equal(width([28, 4, 28]), 96 + 60 * 22, 'a section of 4 measures gets 88 px');
+  assert.equal(width([196, 2, 2]), 4000, 'never wider than this');
+});

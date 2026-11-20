@@ -1135,4 +1135,5 @@ export const en = {
   'Ver el mapa de la obra': 'Show the map of the work',
   'Frase': 'Phrase',
   'Cadencia': 'Cadence',
+  'El mapa sigue a la derecha: desplázalo para ver toda la obra →': 'The map goes on to the right: scroll it to see the whole work →',
 };
