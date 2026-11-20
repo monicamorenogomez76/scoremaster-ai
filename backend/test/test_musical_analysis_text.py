@@ -95,7 +95,7 @@ def test_the_prompt_gives_the_lengths_gemini_no_longer_gets_in_the_schema():
     from backend.infrastructure.ai.prompts import MUSICAL_ANALYSIS_PROMPT
     bound = lambda model, field: next(item.max_length for item in model.model_fields[field].metadata
                                       if hasattr(item, "max_length"))
-    for asked, model, field in ((350, MusicalAnalysisText, "summary"), (700, Topic, "text"), (250, SectionComment, "text")):
+    for asked, model, field in ((500, MusicalAnalysisText, "summary"), (1200, Topic, "text"), (400, SectionComment, "text")):
         assert f"{asked} caracteres" in MUSICAL_ANALYSIS_PROMPT.system
         assert asked < bound(model, field), "room for a model that counts badly"
 
@@ -131,6 +131,15 @@ def test_an_empty_work_never_asks_the_ai():
     assert shown["mode"] == "demo" and not fake.seen
 
 
+# 2026-11-20: Gemini's commentary read as a list of data («dura 337 segundos y consta de 253 compases»). The prompt asks
+# for a conservatory commentary: relate the facts, say what they do in the work, cite measures, no raw figures.
+def test_the_prompt_asks_for_a_commentary_not_a_list_of_data():
+    from backend.infrastructure.ai.prompts import MUSICAL_ANALYSIS_PROMPT
+    system = MUSICAL_ANALYSIS_PROMPT.system
+    for asked in ("relaciona", "función", "compases", "minutos", "no enumeres"):
+        assert asked in system, asked
+
+
 def test_the_prompt_is_versioned_and_gemini_uses_it():
     from backend.infrastructure.ai.gemini_provider import GeminiExplanationProvider
     from backend.infrastructure.ai.prompts import MUSICAL_ANALYSIS_PROMPT, in_language
@@ -149,7 +158,7 @@ def test_the_prompt_is_versioned_and_gemini_uses_it():
 
 # --- API -----------------------------------------------------------------------------------------------------------
 
-from backend.app.dependencies import get_explanation_cache, get_explanation_provider  # noqa: E402
+from backend.app.dependencies import get_analysis_provider, get_explanation_cache  # noqa: E402
 from backend.app.main import app  # noqa: E402
 from backend.test.test_library_api import analyze, clients  # noqa: E402,F401 (pytest fixture)
 
@@ -159,7 +168,7 @@ def test_over_http_the_commentary_of_a_work_is_its_owners(clients):
     ana, berta = clients
     work_id = analyze(ana).json()["work_id"]
     saved = dict(app.dependency_overrides)
-    app.dependency_overrides[get_explanation_provider] = DemoExplanationProvider
+    app.dependency_overrides[get_analysis_provider] = DemoExplanationProvider
     app.dependency_overrides[get_explanation_cache] = lambda: None
     try:
         reply = ana.get("/works/" + work_id + "/musical-analysis/commentary")

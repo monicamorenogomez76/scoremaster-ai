@@ -180,7 +180,25 @@ def shared_review_provider() -> Optional[GeminiExplanationProvider]:
         return _shared_review
 
 
-def reset_shared_provider() -> None:
-    global _shared, _shared_review
+_shared_analysis: Optional[GeminiExplanationProvider] = None
+
+
+def shared_analysis_provider() -> Optional[GeminiExplanationProvider]:
+    """The commentary of the musical analysis (2026-11-20) is the longest writing of the app: with the lite model it read as
+    a list of data. It is asked for rarely and cached, so it uses the capable model unless GEMINI_ANALYSIS_MODEL says
+    otherwise, whatever GEMINI_MODEL is."""
+    global _shared_analysis
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key:
+        return None
+    model = os.environ.get("GEMINI_ANALYSIS_MODEL", "").strip() or DEFAULT_MODEL
     with _shared_lock:
-        _shared = _shared_review = None
+        if _shared_analysis is None or _shared_analysis.info.model != model:
+            _shared_analysis = GeminiExplanationProvider(key, model)
+        return _shared_analysis
+
+
+def reset_shared_provider() -> None:
+    global _shared, _shared_review, _shared_analysis
+    with _shared_lock:
+        _shared = _shared_review = _shared_analysis = None

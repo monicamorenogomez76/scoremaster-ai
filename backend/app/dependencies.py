@@ -28,7 +28,7 @@ from backend.infrastructure.ai_usage_repository import PostgresAiUsageRepository
 from backend.infrastructure.omr_dispatcher import configured_dispatcher
 from backend.infrastructure.pdf_import_repository import PostgresPdfImportRepository
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
-from backend.infrastructure.ai.gemini_provider import shared_provider, shared_review_provider
+from backend.infrastructure.ai.gemini_provider import shared_provider, shared_analysis_provider, shared_review_provider
 from backend.infrastructure.explanation_cache import PostgresExplanationCache
 from backend.infrastructure.prepared_store import PostgresPreparedStore
 from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
@@ -105,6 +105,11 @@ def get_review_provider():
     """The provider of the independent review (method B): GEMINI_REVIEW_MODEL or the same as the explanations.
     Without a key it is the demo, which cannot review: the campaign answers 409."""
     return shared_review_provider() or DemoExplanationProvider()
+
+
+def get_analysis_provider():
+    """The provider of the commentary of the musical analysis: GEMINI_ANALYSIS_MODEL or the capable model (2026-11-20)."""
+    return shared_analysis_provider() or DemoExplanationProvider()
 
 
 def get_explanation_cache() -> Optional[PostgresExplanationCache]:

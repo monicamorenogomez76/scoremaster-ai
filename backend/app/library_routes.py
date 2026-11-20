@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from backend.application.accounts import User
 from backend.application.library import PREPARATION_STATUSES, ExternalGrade, LibraryRepository, Work
 from backend.domain.difficulty_scale import external_grade
-from backend.app.dependencies import (authenticated_user, get_explanation_cache, get_explanation_provider, get_library_repository,
+from backend.app.dependencies import (authenticated_user, get_analysis_provider, get_explanation_cache, get_explanation_provider, get_library_repository,
                                       get_playback_store, get_score_store)
 from backend.analyzers.rubric_grade import english_reasons
 from backend.app.i18n import language, translate
@@ -221,7 +221,7 @@ def work_musical_analysis(work_id: str, user: User = Depends(authenticated_user)
 @router.get("/works/{work_id}/musical-analysis/commentary")
 def work_musical_commentary(work_id: str, user: User = Depends(authenticated_user),
                             library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store),
-                            provider=Depends(get_explanation_provider), cache=Depends(get_explanation_cache),
+                            provider=Depends(get_analysis_provider), cache=Depends(get_explanation_cache),
                             accept_language: Optional[str] = Header(None)):
     """The teacher's commentary of the musical analysis (2026-11-19), written by the AI about the calculated facts."""
     found = stored_score(library, user.id, _work_id(work_id), score_store)
