@@ -14,7 +14,7 @@ from backend.application.explanations import InvalidExplanation, evidence_text, 
 from backend.domain.instrument_catalog import english_label
 
 EVIDENCE_VERSION = "difficulty-evidence-v5"   # v3 (2026-10-25): grade_reasons from the publishers' guides; v4-v5 (2026-10-27): from the Galician table first
-PROMPT_VERSION = "difficulty-explanation-v4"
+PROMPT_VERSION = "difficulty-explanation-v5"   # v5 (2026-11-20): every figure is checked
 DIMENSIONS = ("range", "register", "intervals", "density", "endurance", "tempo")
 MAX_INSTRUMENTS, MAX_PASSAGES, MAX_REASONS = 8, 8, 6
 # Aligned with the Grade 1-6 scale of band publishers (decided 2026-10-13); orientative.

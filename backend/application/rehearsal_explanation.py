@@ -14,7 +14,7 @@ from backend.application.explanations import InvalidExplanation, evidence_text, 
 from backend.domain.instrument_catalog import english_label
 
 EVIDENCE_VERSION = "rehearsal-evidence-v2"
-PROMPT_VERSION = "rehearsal-explanation-v2"
+PROMPT_VERSION = "rehearsal-explanation-v3"   # v3 (2026-11-20): every figure is checked
 PHASES = {"reading": "Lectura y pasajes", "passages": "Pasajes e integración", "integration": "Integración",
           "general": "Ensayo general"}
 KINDS = {"warmup": "Calentamiento", "common": "Línea o ritmo común", "tutti": "Tutti", "other": "Otro",
