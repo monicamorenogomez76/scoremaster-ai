@@ -7,7 +7,7 @@ from backend.analyzers.musical_analysis import analyse
 from backend.application.ai import ProviderFailure, ProviderInfo
 from backend.application.explanations import InvalidExplanation
 from backend.application.musical_analysis_text import (EVIDENCE_VERSION, PROMPT_VERSION, TOPICS, analysis_evidence,
-                                                       explain_analysis, validate_text)
+                                                       explain_analysis, labelled, validate_text)
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.test.test_musical_analysis import aba
 
@@ -55,6 +55,20 @@ def test_the_evidence_is_the_calculated_analysis_with_its_ids():
     assert evidence("en")["language"] == "en" and evidence("en")["sections"][1]["key"] == "G major"
     named = analysis_evidence(analyse(aba()), "ABA", "es", {"Flute": "Flauta"})
     assert named["sections"][0]["melody"] == "Flauta" and named["themes"][0]["part"] == "Flauta"
+
+
+def test_the_analysis_shown_names_every_part_as_the_catalog():
+    """The map and the cards of the analysis show «Clarinete en Si bemol 1», never the file's «Clarinet in Bb 1»."""
+    import json
+    analysis = analyse(aba())
+    shown = labelled(analysis, {"Flute": "Flauta", "Clarinet": "Clarinete"})
+    first = shown["sections"][0]
+    assert first["melody"] == "Flauta" and set(first["playing"]) <= {"Flauta", "Clarinete", "Tuba"}
+    assert shown["themes"][0]["part"] == "Flauta"
+    text = json.dumps(shown)
+    assert '"Flute"' not in text and '"Clarinet"' not in text
+    assert analysis["sections"][0]["melody"] == "Flute"     # the calculated analysis is not changed
+    assert labelled(analysis, {})["sections"][0]["melody"] == "Flute"
 
 
 def test_a_valid_answer_cites_only_what_the_evidence_has():

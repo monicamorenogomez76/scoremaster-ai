@@ -37,13 +37,14 @@ export function FullScoreViewer({ ref, session, workId }) {
   useEffect(() => {
     if (!showAnalysis || !workId) { renderer.current.setOverlay(null); setAnalysisStatus(''); return; }
     let current = true;
-    if (!analyses.current.has(workId)) {
+    const key = workId + '|' + language;   // the parts are named in the language of the interface
+    if (!analyses.current.has(key)) {
       const pending = loadMusicalAnalysis(workId);
-      pending.catch(() => analyses.current.delete(workId));
-      analyses.current.set(workId, pending);
+      pending.catch(() => analyses.current.delete(key));
+      analyses.current.set(key, pending);
     }
     setAnalysisStatus(t('Cargando el análisis…'));
-    analyses.current.get(workId).then(analysis => {
+    analyses.current.get(key).then(analysis => {
       if (!current) return;
       renderer.current.setOverlay(cells => pageLanes(analysis, cells), t('Mapa de la obra en estos compases'));
       setAnalysisStatus(t('Sobre la partitura, el mapa de la obra en estos compases: sección, tonalidad, frase, tema, cadencias y dinámica.'));

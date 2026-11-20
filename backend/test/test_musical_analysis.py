@@ -147,6 +147,9 @@ def test_over_http_the_analysis_of_a_work_is_its_owners(clients):
     body = answer.json()
     assert body["version"] == "musical-analysis-v13" and body["sections"] and body["main_key"]["mode"] in ("major", "minor")
     assert berta.get("/works/" + work_id + "/musical-analysis").status_code == 404
+    assert body["sections"][0]["playing"] == ["Clarinete en Si bemol"]
+    english = ana.get("/works/" + work_id + "/musical-analysis", headers={"Accept-Language": "en"}).json()
+    assert english["sections"][0]["playing"] == ["B♭ Clarinet"]
 
 
 def test_the_timpani_never_carry_the_tune():

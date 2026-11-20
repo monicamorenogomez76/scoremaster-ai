@@ -93,6 +93,23 @@ def _section(section: dict, language: str, name) -> dict:
     }
 
 
+PART_FIELDS = ("imitations", "ostinatos", "solos", "percussion", "registers", "motifs")
+
+
+def labelled(analysis: dict, labels: dict) -> dict:
+    """The analysis as the page shows it (2026-11-20): every part by its catalog name in the language of the interface
+    (labels), else by its own; the calculated analysis is not changed."""
+    name = lambda part: labels.get(part, part) if part else part
+    rename = lambda item: {**item, **{key: name(item[key]) for key in ("part", "imitates") if key in item}}
+
+    def section(found: dict) -> dict:
+        return {**found, "melody": name(found["melody"]), "doubled_by": [name(item) for item in found["doubled_by"]],
+                "playing": [name(item) for item in found["playing"]],
+                **{key: [rename(item) for item in found[key]] for key in PART_FIELDS if key in found}}
+    return {**analysis, "sections": [section(found) for found in analysis["sections"]],
+            "themes": [rename(theme) for theme in analysis["themes"]]}
+
+
 def analysis_evidence(analysis: dict, title: str, language: str = "es", labels: dict | None = None) -> dict:
     """The calculated analysis, bounded and with its ids: what the AI may write about, and nothing else. Parts go by
     their catalog name in the language of the interface (labels), else by their own."""
