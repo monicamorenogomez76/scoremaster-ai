@@ -657,7 +657,9 @@ def _printed_alone(xml: bytes, text: str) -> bool:
     «Timp.» and «Shkr.»). A misread page leaves names of the margin without a staff."""
     count = staves(xml)
     labels = staff_labels(text, count)
-    return bool(labels) and all(labels) and len(set(_margin_lines(text))) <= count + 1
+    # A line of notes in the margin («÷ œœ œœ», 2026-11-20) is no name.
+    names = {line for line in _margin_lines(text) if not re.search(r"[÷œ∑&?]", line)}
+    return bool(labels) and all(labels) and len(names) <= count + 1
 
 
 def _misread(xml: bytes, text: str, joined: int, typical: float = 0) -> bool:

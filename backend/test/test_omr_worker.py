@@ -886,12 +886,15 @@ def test_a_section_printed_alone_in_several_systems_keeps_its_notes_and_measures
     its margin, as long as the score's, and its many measures made it a misread page, so the percussion was silenced and
     those measures cut to a few. Its margin names only the staves read, system after system."""
     margin = "\n".join(f"     {name}    &" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))
-    alone = "\n".join(f"     {name}    ÷" for name in ("Timp.", "Perc. 1") * 3)
-    pages = [(page(5, 5, "C"), margin), (page(2, 15, "D"), alone), (page(5, 5, "E"), margin)]
-    joined, _ = worker._score(pages, "Obra")
+    # «Shkr.» is printed under «Timp.», on the same staff.
+    alone = "\n".join(f"     Timp.    ÷\n     Shkr.\n     Perc. 1    ÷" for _ in range(3))
     from omr.merge import measure_count
-    assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode()), "the percussion plays"
-    assert measure_count(joined) == 25, "and keeps its measures"
+    # Its second page also had a line of notes in the margin («÷ œœ œœ œœ»), which is no name.
+    for text in (alone, alone + "\n÷ œœ œœ œœ"):
+        pages = [(page(5, 5, "C"), margin), (page(2, 15, "D"), text), (page(5, 5, "E"), margin)]
+        joined, _ = worker._score(pages, "Obra")
+        assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode()), "the percussion plays"
+        assert measure_count(joined) == 25, "and keeps its measures"
 
 # --- ScoreMaster restarting (2026-11-05: a deploy answered 503 and a reading of minutes was lost) -----------------------
 
