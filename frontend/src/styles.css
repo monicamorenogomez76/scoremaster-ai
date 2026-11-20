@@ -267,7 +267,7 @@ input[type=range] { background: transparent; }
 
 .embedded-score:fullscreen { overflow: auto; padding: 24px; }
 .embedded-score h2 { margin: 0 0 14px; }
-.instrument-assignment { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.instrument-assignment { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; }
 .instrument-assignment[hidden] { display: none; }
 .instrument-assignment p { grid-column: 1 / -1; }
 .instrument-assignment select { background: var(--panel); color: var(--ink); }
@@ -532,7 +532,7 @@ button:disabled { opacity: 0.65; cursor: default; }
 .calendar-slot--flutes { --slot: #0f766e; }
 .calendar-slot--double_reeds { --slot: #166534; }
 .calendar-slot--clarinets { --slot: #3f6212; }
-.calendar-slot--saxophones { --slot: #a16207; }
+.calendar-slot--saxophones { --slot: #854d0e; }
 .calendar-slot--high_brass { --slot: #9a3412; }
 .calendar-slot--low_voices { --slot: #9f1239; }
 .calendar-slot--percussion { --slot: #7c3aed; }
@@ -639,7 +639,7 @@ button:disabled { opacity: 0.65; cursor: default; }
 .rehearsal-editor { display: grid; gap: 16px; margin-bottom: 18px; }
 .rehearsal-editor h2 { margin: 0; font-size: 1.15rem; }
 .rehearsal-editor h2:focus { outline: none; }
-.editor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.editor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 12px; }
 .rehearsal-editor label { display: grid; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
 .rehearsal-editor input:not([type=checkbox]), .rehearsal-editor select, .rehearsal-editor textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; font-weight: 400; }
 .rehearsal-editor fieldset { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; }
@@ -740,7 +740,7 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .band-select-field { display: grid; gap: 4px; font-size: .82rem; font-weight: 600; }
 .band-select-field select { min-width: 260px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .template-family h3 { margin: 8px 0 6px; font-size: .9rem; }
-.template-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 14px; }
+.template-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 6px 14px; }
 .rehearsal-editor .template-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 500; }
 .rehearsal-editor .template-row input { width: 80px; }
 .rehearsal-editor .template-row select { width: min(160px, 60%); }
@@ -765,7 +765,7 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .band-substitutes { display: grid; gap: 8px; margin-top: 16px; }
 /* The musical analysis of a work (2026-11-18): summary, a timeline of its sections and a table by section. */
 .musical-analysis { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.analysis-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 0; }
+.analysis-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 8px; margin: 0; }
 .analysis-summary div { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .analysis-summary dt { color: var(--muted); font-size: .85rem; }
 .analysis-summary dd { margin: 0; font-weight: 600; }
@@ -815,7 +815,7 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 @media (min-width: 900px) { .instrument-new-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .instrument-new-form label:has(textarea) { grid-column: 1 / -1; } }
 .text-size-options { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
 .text-size-options legend { margin-bottom: 6px; font-size: .85rem; font-weight: 600; }
-.text-size-options .weekday-option { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.text-size-options .weekday-option { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; }
 
 /* A slow action in progress: what it is doing and for how long (no invented percentage). */
 .activity-status { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0; font-size: .85rem; color: var(--muted); }
@@ -863,8 +863,8 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .rating-form label { display: grid; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
 .rating-form textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; font-weight: 400; }
 .rating-passage { margin: 0; color: var(--text); font-weight: 600; }
-.rating-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-.rating-grades { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.rating-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 8px; }
+.rating-grades { grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); }
 .rating-form .rating-choice { position: relative; display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; font-weight: 400; transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-base) var(--ease-out); }
 .rating-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .rating-choice span { color: var(--muted); font-size: .8rem; }
@@ -920,21 +920,21 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .app-shell .tree-node:active { transform: scale(.99); }
 .link-action:active { opacity: .7; }
 .nav-item:active { transform: scale(.98); }
-/* Touch screens: the links that act on a block, a rated passage or a search reach 44 px. */
+/* Touch screens: the links that act on a block, a rated passage, a row of the overview or a search reach 44 px. */
 @media (pointer: coarse), (max-width: 640px) {
   button.agenda-title, button.agenda-work { display: flex; align-items: center; min-height: 44px; }
-  .campaign-passages .link-action { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+  .campaign-passages .link-action, .summary-table .link-action { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
   .video-search-link { display: inline-flex; align-items: center; min-height: 44px; }
 }
 
 /* Publisher grades of a work (PR 5): list with sources and a compact form. */
-.published-grades { display: grid; gap: 10px; margin-bottom: 18px; }
+.published-grades { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 18px; }
 .published-grade-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .published-grade-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .published-grade-list .table-supporting { display: inline; margin-left: 8px; }
 .published-grade-list a { color: var(--primary); }
-.published-grade-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: end; gap: 12px; }
-.published-grade-form label { display: grid; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
+.published-grade-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); align-items: end; gap: 12px; }
+.published-grade-form label { display: grid; min-width: 0; gap: 5px; color: var(--text); font-size: .85rem; font-weight: 600; }
 .published-grade-form input, .published-grade-form select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-weight: 400; }
 
 /* Director's dashboard (2026-10-26): where to work by section, the family colours and the programme of the concert.
@@ -1059,7 +1059,7 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .section-sheet-heading h3 { margin: 0; }
 .section-sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .section-sheet-actions button { min-height: 44px; }
-.section-sheet-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin: 0; }
+.section-sheet-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 8px; margin: 0; }
 .section-sheet-facts div { padding: 8px 12px; border-radius: var(--radius-md); background: var(--panel-alt); }
 .section-sheet-facts dt { color: var(--muted); font-size: .75rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .section-sheet-facts dd { margin: 0; line-height: 1.5; }

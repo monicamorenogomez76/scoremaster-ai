@@ -28,7 +28,7 @@ export function WorkMap({ map, selected, onSelect }) {
       <p className="result-supporting">{t('Pulsa una sección para ver su ficha. Todo va en el mismo eje de compases.')}</p>
     </div>
     {wider && <p className="work-map-more">{t('El mapa sigue a la derecha: desplázalo para ver toda la obra →')}</p>}
-    <div ref={scroller} className="work-map-scroll" tabIndex={0} role="region" aria-label={t('Mapa de la obra')}>
+    <div ref={scroller} className="work-map-scroll" tabIndex={0} role="region" aria-label={t('Mapa de la obra desplazable')}>
       <div className="work-map-lanes" style={{ minWidth: map.minWidth + 'px' }}>
         <div className="work-map-lane" aria-hidden="true">
           <span className="work-map-label">{t('compás')}</span>

@@ -149,6 +149,31 @@ try {
   await phone.locator('#mobile-menu-button').click();
   await audit(phone, 'phone with the menu open');
   await phone.close();
+  // Reflow (WCAG 1.4.10, 2026-11-20): at 320 px no view scrolls sideways. The form of the published grades took four
+  // columns of 170 px and the tab Difficulty of a work grew to 751 px.
+  const narrow = await browser.newPage({ locale: 'es-ES', viewport: { width: 320, height: 844 }, reducedMotion: 'reduce', bypassCSP: true });
+  await narrow.goto(url);
+  await login(narrow);
+  const reflows = async where => {
+    await narrow.waitForLoadState('networkidle');
+    const wide = await narrow.evaluate(() => document.scrollingElement.scrollWidth - document.scrollingElement.clientWidth);
+    if (wide > 1) violations.push(`${where} at 320 px: the page scrolls ${wide} px sideways (WCAG 1.4.10)`);
+    else console.log('PASS: no sideways scroll at 320 px in ' + where);
+  };
+  for (const view of ['summary', 'repertoire', 'band', 'concerts', 'rehearsal', 'evaluation', 'settings']) {
+    await narrow.locator('#mobile-menu-button').click();
+    await narrow.locator(`[data-view-target=${view}]:visible`).first().click();
+    await narrow.locator(`[data-view=${view}]`).waitFor({ state: 'visible' });
+    await reflows(view);
+  }
+  await narrow.locator('#mobile-menu-button').click();
+  await narrow.locator('[data-view-target=repertoire]:visible').first().click();
+  await narrow.locator('.work-open').first().click();
+  for (const tab of await narrow.locator('.work-tabs [role=tab]').evaluateAll(tabs => tabs.map(found => found.id))) {
+    await narrow.locator('#' + tab).click();
+    await reflows(tab);
+  }
+  await narrow.close();
   // The interface in English (2026-10-30): the page declares its language, which stays on this device.
   const english = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', bypassCSP: true });
   await english.goto(url);
