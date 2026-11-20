@@ -268,4 +268,57 @@ def test_a_grace_note_at_the_very_start_never_sounds_before_the_work():
 
 def test_the_audio_prepared_before_is_prepared_again():
     from backend.parsers.playback import TIMELINE_VERSION
-    assert TIMELINE_VERSION == "playback-timeline-v5"
+    assert TIMELINE_VERSION == "playback-timeline-v6"
+
+
+# Ornaments (2026-11-20): a trill, a mordent or a turn sounds as the notes it stands for, in the key of the work;
+# before they played only the main note.
+def ornamented_score(tmp_path, part_name='Flute', player=instrument.Flute):
+    from music21 import expressions, key
+    score = stream.Score()
+    part = stream.Part()
+    part.partName = part_name
+    part.insert(0, player())
+    measure = stream.Measure(number=1)
+    measure.append([key.KeySignature(2), meter.TimeSignature('4/4'), tempo.MetronomeMark(number=60)])
+    trilled, mordent, inverted = note.Note('E5', quarterLength=2), note.Note('D5', quarterLength=1), note.Note('C#5', quarterLength=1)
+    trilled.expressions.append(expressions.Trill())
+    mordent.expressions.append(expressions.Mordent())
+    inverted.expressions.append(expressions.InvertedMordent())
+    measure.append([trilled, mordent, inverted])
+    part.append(measure)
+    score.insert(0, part)
+    path = tmp_path / 'ornaments.musicxml'
+    score.write('musicxml', fp=path)
+    return path
+
+
+def test_a_trill_alternates_with_the_note_above_in_the_key(tmp_path):
+    events = build_playback(ornamented_score(tmp_path), 'Flute', 1, 1)['events']
+    trill = [event for event in events if event['time'] < 2]
+    assert {event['note'] for event in trill} == {76, 78}          # E5 and F♯5: D major
+    assert [event['note'] for event in trill[:4]] == [76, 78, 76, 78]
+    assert sum(event['duration'] for event in trill) == pytest.approx(2)
+    assert len(trill) >= 8
+
+
+def test_mordents_play_the_neighbour_note_and_come_back(tmp_path):
+    events = build_playback(ornamented_score(tmp_path), 'Flute', 1, 1)['events']
+    mordent = [event for event in events if 2 <= event['time'] < 3]
+    inverted = [event for event in events if 3 <= event['time'] < 4]
+    assert [event['note'] for event in mordent] == [74, 73, 74]       # D, C♯ below, D
+    assert [event['note'] for event in inverted] == [73, 74, 73]      # C♯, D above, C♯
+    assert sum(event['duration'] for event in mordent) == pytest.approx(1)
+    assert mordent[-1]['duration'] > mordent[0]['duration']          # the main note keeps most of the beat
+
+
+def test_the_trill_of_a_transposing_instrument_sounds_where_it_is_heard(tmp_path):
+    events = build_playback(ornamented_score(tmp_path, 'Clarinet', instrument.Clarinet), 'Clarinet', 1, 1)['events']
+    assert {event['note'] for event in events if event['time'] < 2} == {74, 76}   # written E5–F♯5, heard D5–E5
+
+
+def test_a_trill_is_as_fast_at_a_slow_tempo(tmp_path):
+    """At ♩=60 each note of the trill is a 64th (~60 ms), not a 32nd that would crawl; it still fills its note."""
+    events = build_playback(ornamented_score(tmp_path), 'Flute', 1, 1)['events']
+    trill = [event for event in events if event['time'] < 2]
+    assert len(trill) == 32 and all(event['duration'] == pytest.approx(0.0625) for event in trill)
