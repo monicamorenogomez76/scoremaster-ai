@@ -36,6 +36,14 @@ def test_numbered_clarinet_parts_keep_family_and_part_number_label():
     assert instrument_label_es("B♭ Clarinet 2") == "Clarinete en Si bemol 2"
 
 
+
+def test_a_part_the_table_does_not_know_is_named_by_the_catalog():
+    """«Clarinet in Bb 1» was shown as is beside «Flauta» and «Oboe» (2026-11-20, the README's difficulty screen)."""
+    assert instrument_label_es("Clarinet in Bb 1") == "Clarinete en Si bemol 1"
+    assert instrument_label_es("Trumpet in Bb 2") == "Trompeta en Si bemol 2"
+    assert instrument_label_es("Clarinet") == "Clarinete"
+    assert instrument_label_es("Kazoo of my own") == "Kazoo of my own"
+
 def test_instrument_difficulty_uses_each_instruments_register_profile():
     high_tuba = compute_instrument_difficulty(_part("Tuba", ("C6", "D6")))
     high_flute = compute_instrument_difficulty(_part("Flute", ("C6", "D6")))

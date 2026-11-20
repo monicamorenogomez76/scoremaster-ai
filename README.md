@@ -1,7 +1,7 @@
 # ScoreMasterAI
 
-Asistente para **directores de banda**. Analiza la dificultad de una partitura, la analiza musicalmente como en
-la asignatura de Análisis del conservatorio, comprueba si encaja con la plantilla real de la banda y ayuda a planificar
+Asistente para **directores de banda**. Analiza la dificultad de una partitura, hace un análisis
+musical profesional, comprueba si encaja con la plantilla real de la banda y ayuda a planificar
 los ensayos hasta el concierto. Los hechos los calcula un motor **determinista y reproducible** (ScoreLint y el
 análisis musical); la IA generativa solo **explica** esos resultados y responde preguntas a partir de ellos, y nunca
 sustituye los datos musicales.
