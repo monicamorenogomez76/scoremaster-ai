@@ -164,6 +164,26 @@ def test_the_independent_review_can_use_its_own_model(monkeypatch):
     gemini_provider.reset_shared_provider()
 
 
+def test_the_commentary_of_the_analysis_uses_the_capable_model(monkeypatch):
+    """2026-11-20: with GEMINI_MODEL set to the lite model the commentary read as a list of data. It is asked for rarely and
+    cached, so it uses gemini-3.8-flash unless GEMINI_ANALYSIS_MODEL says otherwise."""
+    from backend.app.dependencies import get_analysis_provider
+    gemini_provider.reset_shared_provider()
+    monkeypatch.setenv("GEMINI_API_KEY", "secret-gemini-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    monkeypatch.delenv("GEMINI_ANALYSIS_MODEL", raising=False)
+    assert get_analysis_provider().info.model == gemini_provider.DEFAULT_MODEL
+    assert get_explanation_provider().info.model == "gemini-3.5-flash-lite"
+    assert get_analysis_provider() is get_analysis_provider()
+    gemini_provider.reset_shared_provider()
+    monkeypatch.setenv("GEMINI_ANALYSIS_MODEL", "gemini-9-pro")
+    assert get_analysis_provider().info.model == "gemini-9-pro"
+    monkeypatch.delenv("GEMINI_API_KEY")
+    gemini_provider.reset_shared_provider()
+    assert isinstance(get_analysis_provider(), DemoExplanationProvider)
+    gemini_provider.reset_shared_provider()
+
+
 # 2026-11-19: on Render Gemini answered GoogleInvalidRequestError to the musical analysis commentary: its schema (seven
 # nested topics, each with three bounded lists and a bounded text, and a pattern for the section ids) is too complex for
 # Google's structured output. Gemini gets that schema without the bounds; the server still validates them.

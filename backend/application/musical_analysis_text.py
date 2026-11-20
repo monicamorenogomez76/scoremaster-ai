@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 from backend.application.explanations import InvalidExplanation, run_explanation
 from backend.domain.text import evidence_text
 
-PROMPT_VERSION = "musical-analysis-text-v6"   # v6 (2026-11-20): lengths in the prompt; v5 (2026-11-19): articulation; v4: themes; v3: meter; v2: harmony
+PROMPT_VERSION = "musical-analysis-text-v7"   # v7 (2026-11-20): a commentary, not a list of data, and longer; v6: lengths in the prompt; v5 (2026-11-19): articulation; v4: themes; v3: meter; v2: harmony
 EVIDENCE_VERSION = "musical-analysis-evidence-v5"   # v5 (2026-11-19): articulation; v4: themes; v3: meter…
 # The topics of the commentary, in the order of a conservatory analysis; the interpretation, last, is the only opinion.
 TOPICS = ("form", "themes", "harmony", "texture", "rhythm", "dynamics", "interpretation")
@@ -26,7 +26,7 @@ ACCIDENTALS = {"es": {"b": " bemol", "#": " sostenido"}, "en": {"b": "♭", "#":
 # Gemini gets the schema without bounds (LEAN_SCHEMAS in gemini_provider.py) and the lengths in the prompt (2026-11-20):
 # the bounds here leave room for a model that counts characters badly, and a topic may cite every id of the evidence.
 class Topic(BaseModel):
-    text: str = Field(min_length=1, max_length=1200)
+    text: str = Field(min_length=1, max_length=2000)
     sections: list[str] = Field(default_factory=list, max_length=MAX_SECTIONS)
     cadences: list[str] = Field(default_factory=list, max_length=MAX_CADENCES)
     themes: list[str] = Field(default_factory=list, max_length=MAX_SECTIONS)   # at most one theme per section
@@ -34,11 +34,11 @@ class Topic(BaseModel):
 
 class SectionComment(BaseModel):
     section: str = Field(pattern=r"^S\d{1,2}$")
-    text: str = Field(min_length=1, max_length=500)
+    text: str = Field(min_length=1, max_length=700)
 
 
 class MusicalAnalysisText(BaseModel):
-    summary: str = Field(min_length=1, max_length=600)
+    summary: str = Field(min_length=1, max_length=800)
     form: Topic
     themes: Topic
     harmony: Topic
