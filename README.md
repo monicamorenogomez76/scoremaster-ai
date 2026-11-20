@@ -230,7 +230,7 @@ migrations/        migraciones Alembic
 evaluation/        baseline e informe de las campañas
 demo/              obras originales CC0 de la demo y la obra para subir en directo
 scripts/           generador de las obras de la demo y copia de la base
-docs/              recorrido por la demo, despliegue, dificultad y seguridad
+docs/              recorrido por la demo, despliegue, dificultad, seguridad y la presentación del TFM
 ```
 
 Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](AGENTS.md) orienta al
