@@ -21,6 +21,50 @@ function measuresInFirstLine(display) {
   return systems?.length > 1 ? systems[0].GraphicalMeasures?.length || null : null;
 }
 
+// OpenSheetMusicDisplay measures in units of ten pixels.
+const UNIT = 10;
+
+// The map over the score (2026-11-20): above the staves, the lanes of the map of the work cut to the measures of the
+// page. The cells of the measures are given in percent of the page, so the lanes follow the zoom; overlay.lanes(cells)
+// says what goes in them (pageLanes in musicalAnalysis.js).
+function drawOverlay(staging, display, overlay) {
+  if (!overlay) return null;
+  const svg = Array.from(staging.querySelectorAll('svg')).find(item => Number.parseFloat(item.getAttribute('width')));
+  const pageWidth = svg && Number.parseFloat(svg.getAttribute('width'));
+  const measures = (display?.GraphicSheet?.MeasureList || []).map(staves => staves.find(Boolean)).filter(Boolean);
+  if (!pageWidth || !measures.length) return null;
+  const share = value => Math.round(value * UNIT * 10000 / pageWidth) / 100;
+  const cells = measures.map((measure, at) => {
+    const box = measure.PositionAndShape, next = measures[at + 1]?.PositionAndShape;
+    return { measure: Number(measure.parentSourceMeasure?.MeasureNumberXML ?? measure.MeasureNumber),
+      left: share(box.AbsolutePosition.x), width: share(next ? next.AbsolutePosition.x - box.AbsolutePosition.x : box.Size.width) };
+  });
+  const page = overlay.lanes(cells);
+  if (!page) return null;
+  const document = staging.ownerDocument;
+  const element = (className, text) => { const item = document.createElement(text === undefined ? 'div' : 'span'); item.className = className; if (text !== undefined) item.textContent = text; return item; };
+  const strip = element('score-map');
+  strip.setAttribute('role', 'group');
+  strip.setAttribute('aria-label', overlay.label);
+  for (const lane of page.lanes) {
+    const row = element('score-map-lane score-map-lane--' + lane.name);
+    const label = element('score-map-label', lane.label);
+    label.style.width = page.labelWidth + '%';
+    row.append(label);
+    for (const item of lane.items) {
+      const mark = element(item.className, item.text ?? '');
+      mark.style.left = item.left + '%';
+      if (item.width !== undefined) mark.style.width = item.width + '%';
+      if (item.height !== undefined) { mark.style.height = Math.round(item.height * 100) + '%'; mark.setAttribute('aria-hidden', 'true'); }
+      if (item.title) mark.setAttribute('title', item.title);
+      row.append(mark);
+    }
+    strip.append(row);
+  }
+  staging.prepend(strip);
+  return strip;
+}
+
 export const pageStartFor = (first, measure) => first + Math.floor((measure - first) / MEASURES_PER_PAGE) * MEASURES_PER_PAGE;
 
 const idle = { visible: false, status: '', busy: false, page: '', canPrevious: false, canNext: false, zoomLabel: 'Auto', loaded: false };
@@ -28,7 +72,7 @@ const idle = { visible: false, status: '', busy: false, page: '', canPrevious: f
 // Renders the whole ensemble with OpenSheetMusicDisplay, in pages of up to four measures in a single line.
 // React owns the controls; this object owns only the notation inside `container`.
 export function createFullScoreRenderer({ container, session, filter, bounds, createDisplay, onChange, nextFrame }) {
-  let score = null, rendering = 0, snapshot = idle;
+  let score = null, rendering = 0, snapshot = idle, overlay = null;
   const publish = changes => { snapshot = { ...snapshot, ...changes }; onChange(snapshot); };
   const frame = nextFrame || (() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
@@ -82,6 +126,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
       state.sizes = Array.from(staging.querySelectorAll('svg'))
         .map(svg => ({ svg, width: Number.parseFloat(svg.getAttribute('width')), height: Number.parseFloat(svg.getAttribute('height')) }))
         .filter(item => item.width && item.height);
+      state.strip = drawOverlay(staging, display, overlay);
       container.replaceChildren(staging); container.scrollTop = 0;
       publish({ status: t('Todas las voces · notación original · compases {first}–{last}', { first: state.pageStart, last: end }), busy: false });
       fit();
@@ -156,5 +201,12 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
       score.display?.cursor?.hide(); score.currentMeasure = undefined;
     },
     setStatus: status => publish({ status, busy: false }),
+    // lanes: cells → what to draw (pageLanes), or null to hide the map; label names it.
+    setOverlay(lanes, label = '') {
+      overlay = lanes ? { lanes, label } : null;
+      if (!score?.staging) return;
+      score.strip?.remove();
+      score.strip = drawOverlay(score.staging, score.display, overlay);
+    },
   };
 }
