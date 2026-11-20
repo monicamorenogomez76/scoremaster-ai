@@ -12,6 +12,7 @@ let library;
 const SMPLR_URL = 'https://unpkg.com/smplr@1.1.0/dist/index.mjs';
 // MusyngKite (CC BY-SA 3.0) sounds less synthetic than FluidR3_GM for winds; samples load from its CDN.
 const SOUNDFONT_KIT = 'MusyngKite';
+const RELEASE = .08;
 // Output was measured 10-20 times too quiet (-40 dB RMS): at the default 50 % volume the master
 // gain is 2/sqrt(voices) and a limiter keeps the summed band from clipping.
 const MASTER_GAIN = 4;
@@ -277,12 +278,12 @@ export async function preparePlayback(file, passage, onStatus = () => {}) {
     while (pointer < queue.length && queue[pointer].time <= horizon) {
       const event = queue[pointer++];
       const time = began + (event.time - base) / speed;
-      // smplr defaults to a 300 ms release AFTER duration, creating unintended
-      // overlapping pitches. Place a short anti-click release INSIDE the note.
+      // A natural ending (2026-11-20, chosen by ear): the note sounds its written length and then fades for 80 ms, as
+      // an instrument does (smplr's 300 ms default blurred the next notes; the 8 ms cut used since sounded artificial).
+      // A very short note, such as those of a trill, fades in half its length.
       const length = event.duration / speed;
-      const release = Math.min(.008, length * .1);
       event.player.start({ note: event.note, time: Math.max(ctx.currentTime, time),
-        duration: Math.max(0, length - release), ampRelease: release, loop: false, velocity: VELOCITY });
+        duration: length, ampRelease: Math.min(RELEASE, length / 2), loop: false, velocity: VELOCITY });
     }
     if (position >= duration) { playing = false; silence(); onStatus(t('Reproducción finalizada.')); }
     tell();
