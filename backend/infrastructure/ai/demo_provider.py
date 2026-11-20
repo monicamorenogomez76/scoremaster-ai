@@ -136,6 +136,10 @@ class DemoExplanationProvider:
         from backend.infrastructure.ai.demo_analysis import analysis_commentary
         return analysis_commentary(evidence)
 
+    def answer_work_question(self, evidence: dict) -> dict:
+        from backend.infrastructure.ai.demo_questions import work_answer
+        return work_answer(evidence)
+
     def explain_difficulty(self, evidence: dict) -> dict:
         say = _texts(evidence)
         joined = lambda items: _joined(items, say["and"])

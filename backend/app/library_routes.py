@@ -13,15 +13,18 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from backend.application.accounts import User
 from backend.application.library import PREPARATION_STATUSES, ExternalGrade, LibraryRepository, Work
 from backend.domain.difficulty_scale import external_grade
-from backend.app.dependencies import (authenticated_user, get_analysis_provider, get_explanation_cache, get_explanation_provider, get_library_repository,
-                                      get_playback_store, get_score_store)
+from backend.app.dependencies import (authenticated_user, get_analysis_provider, get_concert_repository, get_explanation_cache,
+                                      get_explanation_provider, get_library_repository, get_playback_store,
+                                      get_rehearsal_repository, get_score_store)
 from backend.analyzers.rubric_grade import english_reasons
 from backend.app.i18n import language, translate
 from backend.app.stored_scores import stored_score
 from backend.application.ai import ProviderFailure
 from backend.application.instrument_proposals import InvalidProposals, NotAvailable, propose_instruments
 from backend.analyzers.rubric_grade import part_label
-from backend.application.musical_analysis_text import explain_analysis
+from backend.application.musical_analysis_text import analysis_evidence, explain_analysis
+from backend.application.difficulty_explanation import difficulty_evidence
+from backend.application.work_questions import MAX_QUESTION, SUGGESTIONS, WorkTools, ask_work, band_tool, schedule_tool
 from backend.application.substitutes_explanation import explain_substitutes
 from backend.analyzers.musical_analysis import analyse
 from backend.analyzers.substitutes import substitute_candidates
@@ -88,6 +91,22 @@ class ExternalGradeIn(BaseModel):
     @model_validator(mode="after")
     def known_grade(self):
         external_grade(self.scale, self.value)   # ValueError → 422
+        return self
+
+
+class QuestionIn(BaseModel):
+    """A question in the director's words, or one of the suggested ones; never both."""
+    question: Optional[str] = Field(default=None, max_length=MAX_QUESTION)
+    suggestion: Optional[str] = None
+
+    @model_validator(mode="after")
+    def one_question(self):
+        if (self.question is None) == (self.suggestion is None):
+            raise ValueError("Escribe una pregunta o elige una sugerida.")
+        if self.question is not None and not self.question.strip():
+            raise ValueError("Escribe una pregunta.")
+        if self.suggestion is not None and self.suggestion not in SUGGESTIONS:
+            raise ValueError("Pregunta sugerida desconocida.")
         return self
 
 
@@ -230,6 +249,35 @@ def work_musical_commentary(work_id: str, user: User = Depends(authenticated_use
     lang = language(accept_language)
     labels = {part.name: part_label(part, lang) for part in found[1].parts}
     return explain_analysis(analyse(found[1]), found[1].title, provider, DemoExplanationProvider(), cache, lang, labels)
+
+
+@router.post("/works/{work_id}/questions")
+def ask_the_work(work_id: str, asked: QuestionIn, user: User = Depends(authenticated_user),
+                 library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store),
+                 rehearsals=Depends(get_rehearsal_repository), concerts=Depends(get_concert_repository),
+                 provider=Depends(get_explanation_provider), cache=Depends(get_explanation_cache),
+                 accept_language: Optional[str] = Header(None)):
+    """Asking the work (M6, 2026-11-20): the AI chooses among read-only functions over this work of the signed-in user
+    and answers from what they return; the suggested questions are answered by rules."""
+    work = _work_id(work_id)
+    record = library.latest_analysis(user.id, work)
+    if record is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    lang = language(accept_language)
+    title = record.result.get("title") or ""
+
+    def analysis() -> dict:
+        found = stored_score(library, user.id, work, score_store)
+        if found is None:
+            return {}
+        labels = {part.name: part_label(part, lang) for part in found[1].parts}
+        return analysis_evidence(analyse(found[1]), title, lang, labels)
+
+    tools = WorkTools(
+        title, lambda: difficulty_evidence(record.result, lang),
+        lambda: band_tool(record.result.get("band_fit") or {}, lang), analysis,
+        lambda: schedule_tool(work, rehearsals.list_rehearsals(user.id), concerts.list_concerts(user.id), date.today()))
+    return ask_work(asked.question, asked.suggestion, tools, provider, DemoExplanationProvider(), cache, lang)
 
 
 @router.get("/works/{work_id}/file")

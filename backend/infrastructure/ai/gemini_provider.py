@@ -13,7 +13,8 @@ from typing import Optional
 from backend.application import ai_usage
 from backend.application.ai import ProviderFailure, ProviderInfo
 from backend.infrastructure.ai.prompts import (DIFFICULTY_PROMPT, INSTRUMENT_PROMPT, PASSAGE_REVIEW_PROMPT, REHEARSAL_PROMPT,
-                                              MUSICAL_ANALYSIS_PROMPT, SUBSTITUTES_PROMPT, human_message, in_language)
+                                              MUSICAL_ANALYSIS_PROMPT, SUBSTITUTES_PROMPT, TOOL_CHOICE_PROMPT,
+                                              WORK_QUESTION_PROMPT, human_message, in_language)
 
 # 2026-10-13: gemini-2.5-flash answered NotFound for a new key (Google keeps it only for accounts that
 # used it before); 3.8 Flash is free on the standard tier.
@@ -64,10 +65,20 @@ def _langchain_chat(api_key: str, model: str):
     return factory
 
 
+def _langchain_tools(api_key: str, model: str):
+    """M6 (2026-11-20): the chat with the read-only functions it may call, in LangChain's function format."""
+    def factory(specs):
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        chat = ChatGoogleGenerativeAI(model=model, google_api_key=api_key, temperature=0,
+                                      timeout=_timeout(), max_retries=1)
+        return chat.bind_tools(specs)
+    return factory
+
+
 # What each answer schema is for, in the usage panel.
 PURPOSES = {"DifficultyExplanation": "difficulty", "RehearsalExplanation": "rehearsal", "PassageReview": "passage_review",
             "InstrumentProposals": "instrument_proposal", "SubstitutesExplanation": "substitutes",
-            "MusicalAnalysisText": "musical_analysis"}
+            "MusicalAnalysisText": "musical_analysis", "WorkAnswer": "work_question"}
 
 
 def _structured(answer):
@@ -89,9 +100,10 @@ def _reason(error: Exception) -> str:
 
 
 class GeminiExplanationProvider:
-    def __init__(self, api_key: str, model: str = DEFAULT_MODEL, chat_factory=None):
+    def __init__(self, api_key: str, model: str = DEFAULT_MODEL, chat_factory=None, tools_factory=None):
         self.info = ProviderInfo("llm", "gemini", model)
         self._factory = chat_factory or _langchain_chat(api_key, model)
+        self._tools_factory = tools_factory or _langchain_tools(api_key, model)
         self._chats, self._lock = {}, Lock()
 
     def _chat(self, schema):
@@ -99,6 +111,37 @@ class GeminiExplanationProvider:
             if schema not in self._chats:
                 self._chats[schema] = self._factory(schema)
             return self._chats[schema]
+
+    def _failed(self, error: Exception, prompt) -> ProviderFailure:
+        reason = _reason(error)
+        # Only the kind of failure: the exception text could carry request details.
+        logger.warning("Gemini no respondió (%s, %s) con el prompt %s.", reason, type(error).__name__, prompt.version)
+        if type(error).__name__ == "NotFound" or "not found" in str(error).lower():
+            logger.warning("Google no encuentra el modelo %s: elige otro disponible con GEMINI_MODEL.", self.info.model)
+        return ProviderFailure(reason)
+
+    def choose_tools(self, question: str, specs: list[dict], language: str) -> list[str]:
+        """The names of the functions Gemini calls to answer the question (M6); the caller runs only the known ones."""
+        functions = [{"type": "function", "function": {"name": spec["name"], "description": spec["description"]}}
+                     for spec in specs]
+        with self._lock:
+            key = ("tools", language)
+            if key not in self._chats:
+                self._chats[key] = self._tools_factory(functions)
+            chat = self._chats[key]
+        started = time.monotonic()
+        used = lambda outcome, tokens=(None, None): ai_usage.record(ai_usage.UsageEvent(
+            "work_question_tools", self.info.model, TOOL_CHOICE_PROMPT.version, "call", outcome,
+            round((time.monotonic() - started) * 1000), *tokens))
+        try:
+            message = chat.invoke([("system", TOOL_CHOICE_PROMPT.system), ("human", question)])
+        except Exception as error:
+            failure = self._failed(error, TOOL_CHOICE_PROMPT)
+            used(str(failure))
+            raise failure from None
+        usage = getattr(message, "usage_metadata", None) or {}
+        used("ok", (usage.get("input_tokens"), usage.get("output_tokens")))
+        return [call["name"] for call in getattr(message, "tool_calls", None) or [] if isinstance(call, dict) and "name" in call]
 
     def _ask(self, schema, prompt, evidence: dict) -> dict:
         prompt = in_language(prompt, evidence.get("language", "es"))
@@ -110,13 +153,9 @@ class GeminiExplanationProvider:
         try:
             answer, *tokens = _structured(self._chat(schema).invoke(messages))
         except Exception as error:
-            reason = _reason(error)
-            used(reason, started)
-            # Only the kind of failure: the exception text could carry request details.
-            logger.warning("Gemini no respondió (%s, %s) con el prompt %s.", reason, type(error).__name__, prompt.version)
-            if type(error).__name__ == "NotFound" or "not found" in str(error).lower():
-                logger.warning("Google no encuentra el modelo %s: elige otro disponible con GEMINI_MODEL.", self.info.model)
-            raise ProviderFailure(reason) from None
+            failure = self._failed(error, prompt)
+            used(str(failure), started)
+            raise failure from None
         used("ok", started, tokens)
         return answer.model_dump() if hasattr(answer, "model_dump") else answer
 
@@ -139,6 +178,10 @@ class GeminiExplanationProvider:
     def explain_substitutes(self, evidence: dict) -> dict:
         from backend.application.substitutes_explanation import SubstitutesExplanation
         return self._ask(SubstitutesExplanation, SUBSTITUTES_PROMPT, evidence)
+
+    def answer_work_question(self, evidence: dict) -> dict:
+        from backend.application.work_questions import WorkAnswer
+        return self._ask(WorkAnswer, WORK_QUESTION_PROMPT, evidence)
 
     def explain_musical_analysis(self, evidence: dict) -> dict:
         from backend.application.musical_analysis_text import MusicalAnalysisText

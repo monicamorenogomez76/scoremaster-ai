@@ -27,7 +27,8 @@ export const usageRows = summary => (summary?.models || []).map(item => ({
 
 const purposes = () => ({ difficulty: t('Explicación de la dificultad'), rehearsal: t('Explicación del ensayo'),
   passage_review: t('Valoración con IA (método B)'), instrument_proposal: t('Propuesta de instrumentos'),
-  substitutes: t('Sustitutos de instrumentos'), musical_analysis: t('Análisis musical') });
+  substitutes: t('Sustitutos de instrumentos'), musical_analysis: t('Análisis musical'),
+  work_question_tools: t('Preguntar a la obra · elegir datos'), work_question: t('Preguntar a la obra · respuesta') });
 export const purposeLabel = purpose => purposes()[purpose] || purpose;
 
 const outcomes = () => ({ timeout: t('Sin respuesta a tiempo'), rate_limit: t('Límite de uso alcanzado'),
