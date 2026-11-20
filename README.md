@@ -1,9 +1,10 @@
 # ScoreMasterAI
 
-Asistente para **directores de banda**. Analiza la dificultad de una partitura, comprueba si encaja con
-la plantilla real de la banda y ayuda a planificar los ensayos hasta el concierto. La dificultad la
-calcula un motor **determinista y reproducible** (ScoreLint); la IA generativa solo **explica** esos
-resultados y nunca sustituye los datos musicales.
+Asistente para **directores de banda**. Analiza la dificultad de una partitura, la analiza musicalmente como en
+la asignatura de Análisis del conservatorio, comprueba si encaja con la plantilla real de la banda y ayuda a planificar
+los ensayos hasta el concierto. Los hechos los calcula un motor **determinista y reproducible** (ScoreLint y el
+análisis musical); la IA generativa solo **explica** esos resultados y responde preguntas a partir de ellos, y nunca
+sustituye los datos musicales.
 
 Licencia [MIT](LICENSE).
 
@@ -15,7 +16,7 @@ sin ella, `docker compose up --build` la levanta en local. El [recorrido por la 
 
 ## Qué responde
 
-La pantalla de cada obra responde a las tres preguntas del director:
+La pantalla de cada obra responde a las preguntas del director:
 
 1. **¿Qué dificultad tiene esta obra?** Grado 1–6 (alineado con la escala Grade 1–6 de las editoriales),
    por obra, familia e instrumento, con sus pasajes críticos y el motivo de cada uno.
@@ -23,17 +24,22 @@ La pantalla de cada obra responde a las tres preguntas del director:
    comparadas con la plantilla de la banda activa.
 3. **¿Cómo debería ensayarla?** Una serie de ensayos hasta el concierto, con bloques por línea común,
    sección y tutti, que se replanifica tras revisar cada ensayo.
+4. **¿Cómo está construida?** Forma, tonalidades, cadencias, frases, temas, textura y orquestación, en un mapa de la
+   obra que se puede ver también encima de la partitura.
+
+Y a todo eso se le puede **preguntar** con sus palabras, sobre una obra o sobre todo el repertorio.
 
 ## Funcionalidades
 
 | Área | Qué hace |
 |---|---|
-| **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`) o de **PDF** (partitura general, particellas o las dos cosas en el mismo PDF, que se separan solas; leídas con copista-2m en GitHub Actions; grado provisional y fuera de la evaluación), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio, búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
+| **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`) o de **PDF** (partitura general, particellas o las dos cosas en el mismo PDF, que se separan solas; leídas con copista-2m en GitHub Actions; con guion, la obra sale del guion comprobado compás a compás con las particellas; grado provisional y fuera de la evaluación), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio, comparación de la partitura con un PDF del ordenador (sin subirlo), búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
+| **Análisis musical** | Pestaña «Análisis» de cada obra, calculada sin IA: datos generales, forma por secciones (con repeticiones, casillas y saltos), plan tonal con modulaciones, cadencias (auténtica, semicadencia, plagal y rota), ritmo armónico, dominantes secundarias y pedales, frases y periodos, temas con su ámbito, perfil, vueltas y desarrollo, textura, orquestación (melodía, doblajes, solos y registros), ritmo y métrica (síncopas, ostinatos, hemiolias), dinámicas, articulación y clímax. Se ve como un **mapa de la obra** en un solo eje de compases, con la ficha de cada sección, y el mismo mapa se puede mostrar **encima de la partitura completa**. «Redactar el comentario»: la IA escribe el comentario de cada apartado y de cada sección, como un profesor de Análisis, con las secciones, cadencias y temas que cita comprobados |
 | **Dificultad (ScoreLint)** | **Grado según las tablas de grados** (Federación Galega de Bandas de Música, American Band College y FJH): armadura, compás, tempo, duración, dinámicas y, por instrumento, tesitura, figuras, grupos irregulares, síncopas, articulaciones y adornos, con el criterio que fija el grado. Índice técnico con seis dimensiones (densidad rítmica, tempo, tesitura, registro, intervalos y resistencia), reglas SL002 registro agudo, SL003 alta densidad rítmica, SL004 intervalos amplios y SL005 pasaje prolongado sin descanso, y detector de **pasajes críticos** (puede no haber ninguno). Árbol de familia a instrumento y «Ver pasaje» con la notación y el audio de esa parte |
 | **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos, con la propuesta de la IA para las partes que el catálogo no reconoce; sustitutos para las partes sin músico: ScoreLint busca en la plantilla los instrumentos con músicos libres que alcanzan su tesitura y la IA (o, sin ella, la demo) elige y explica cómo adaptar la parte |
 | **Conciertos** | Programa, patrón semanal y propuesta de la serie de ensayos por fases (lectura y pasajes, integración y ensayo general); calendario mensual; en el Resumen, cobertura de la serie: ensayos hechos y, por obra, tiempo ensayado y pasajes resueltos |
 | **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen; hoja de cada ensayo para imprimir o guardar en PDF |
-| **IA explicativa** | «¿Por qué esta dificultad?» y «¿Por qué este plan?» redactadas por **Gemini** a partir de las evidencias del análisis, con citas y cifras comprobadas. **Preguntar a la obra**: la IA elige con *function calling* qué datos de solo lectura de la obra leer (dificultad, banda, análisis, ensayos y conciertos) y responde citándolos. **Preguntar al repertorio**: ScoreMaster elige las obras (filtra y ordena los análisis guardados) y la IA solo rellena los filtros y explica el resultado. En las dos, las preguntas sugeridas se responden con reglas. Sin clave responde un **modo demo identificado** como tal |
+| **IA explicativa** | «¿Por qué esta dificultad?», «¿Por qué este plan?» y el comentario del análisis musical, redactados por **Gemini** a partir de las evidencias del análisis, con citas y cifras comprobadas. **Preguntar a la obra**: la IA elige con *function calling* qué datos de solo lectura de la obra leer (dificultad, banda, análisis, ensayos y conciertos) y responde citándolos. **Preguntar al repertorio**: ScoreMaster elige las obras (filtra y ordena los análisis guardados) y la IA solo rellena los filtros y explica el resultado. En las dos, las preguntas sugeridas se responden con reglas. Sin clave responde un **modo demo identificado** como tal |
 | **Valoraciones** | Campañas en las que músicos invitados valoran pasajes (grado, criticidad y prioridad) sin ver la predicción ni las valoraciones de los demás; solo una cuenta administradora las crea y ve los resultados; valoración independiente con IA (método B); exportación anónima e informe reproducible |
 | **Configuración** | Nombre visible, **idioma (español o inglés)**, tamaño del texto y **tema claro, oscuro o automático** |
 
@@ -42,6 +48,8 @@ La pantalla de cada obra responde a las tres preguntas del director:
 <td><img src="docs/img/pasaje.png" alt="Diálogo de un pasaje: notación de la flauta con los controles de reproducción"></td></tr>
 <tr><td><img src="docs/img/conciertos.png" alt="Planificación de un concierto: serie de ensayos con bloques coloreados por sección"></td>
 <td><img src="docs/img/valoraciones.png" alt="Campaña de valoración con sus pasajes y la valoración independiente con IA"></td></tr>
+<tr><td><img src="docs/img/analisis.png" alt="Mapa de la obra: forma, tonalidades, frases, temas, dinámica y partes que tocan en un solo eje de compases"></td>
+<td><img src="docs/img/preguntar.png" alt="Preguntar a la obra: preguntas sugeridas, cuadro para preguntar y respuestas con los pasajes citados"></td></tr>
 </table>
 
 ## Arquitectura
@@ -55,7 +63,10 @@ flowchart LR
     C --> D[Reglas y detector<br/>grado 1–6 · pasajes críticos]
     D --> E[BandFit<br/>plantilla real]
     D --> F[Planificador<br/>ensayos y conciertos]
-    D --> G[IA generativa<br/>solo explica, con citas]
+    B --> M[Análisis musical<br/>forma · tonalidades · cadencias<br/>frases · temas · textura]
+    D --> G[IA generativa<br/>explica y responde, con citas<br/>y cifras comprobadas]
+    M --> G
+    M --> H
     E --> H[Interfaz React]
     F --> H
     G --> H
@@ -66,8 +77,11 @@ flowchart LR
 - **Aplicación con puertos** (`backend/application`): repositorios y proveedor de IA son interfaces; la
   infraestructura (`backend/infrastructure`) los implementa con PostgreSQL y con Gemini o la demo.
 - **La IA nunca es fuente de verdad**: recibe evidencias acotadas (grados, dimensiones, compases, bloques),
-  responde con un esquema validado por Pydantic y cada pasaje o bloque que cita se comprueba contra las
-  evidencias. Ante cualquier fallo responde la demo y la interfaz dice por qué.
+  responde con un esquema validado por Pydantic y cada pasaje, bloque o sección que cita, y cada cifra que escribe, se
+  comprueba contra las evidencias. Ante cualquier fallo responde la demo y la interfaz dice por qué.
+- **Preguntas con *function calling* de solo lectura**: para responder, la IA elige entre funciones que la aplicación
+  construye para la directora con la sesión iniciada (dificultad, banda, análisis, agenda; en el repertorio, buscar y
+  filtrar obras). No puede cambiar nada ni leer datos de otra cuenta, y las obras del repertorio las elige ScoreMaster.
 - **Cada obra se lee una sola vez**: music21 es lento con una partitura de banda (minutos en el plan
   gratuito), así que el modelo leído y la línea de tiempo del audio se guardan por el hash del archivo.
 
@@ -133,8 +147,8 @@ dependa de ellas.
 
 | Variable | Para qué | Sin ella |
 |---|---|---|
-| `GEMINI_API_KEY` | Explicaciones, valoración independiente y propuesta de instrumentos con Gemini ([crear clave](https://aistudio.google.com/apikey)) | Responde el modo demo, siempre identificado como «Modo demo · sin IA» |
-| `GEMINI_MODEL`, `GEMINI_REVIEW_MODEL` | Modelo de las explicaciones (por defecto `gemini-3.8-flash`) y, si se quiere, otro con más cupo para «Valorar con IA» | Se usa el modelo por defecto |
+| `GEMINI_API_KEY` | Explicaciones, comentario del análisis, preguntas, valoración independiente, propuesta de instrumentos y sustitutos con Gemini ([crear clave](https://aistudio.google.com/apikey)) | Responde el modo demo, siempre identificado como «Modo demo · sin IA»; las preguntas se responden con reglas |
+| `GEMINI_MODEL`, `GEMINI_REVIEW_MODEL`, `GEMINI_ANALYSIS_MODEL` | Modelo de las explicaciones y las preguntas (por defecto `gemini-3.8-flash`; cada pregunta libre gasta dos peticiones), otro con más cupo para «Valorar con IA» y el del comentario del análisis (por defecto `gemini-3.8-flash`, aunque `GEMINI_MODEL` sea otro) | Se usa el modelo por defecto |
 | `GEMINI_PRICE_INPUT_PER_MTOK`, `GEMINI_PRICE_OUTPUT_PER_MTOK` | Precio en dólares por millón de tokens de entrada y de salida, para el coste estimado de Configuración › Uso de la IA | El panel muestra «Sin precio» (el plan gratuito no cuesta) |
 | `GEMINI_REQUESTS_PER_MINUTE`, `GEMINI_TIMEOUT_SECONDS` | Pausa entre peticiones (5 por minuto) y tiempo máximo de respuesta (60 s) | Valores por defecto |
 | `YOUTUBE_API_KEY` | Búsqueda de grabaciones dentro de la aplicación (la usa el servidor, nunca el navegador) | Enlace a la búsqueda en YouTube y opción de pegar un enlace |
@@ -177,7 +191,7 @@ comprueba que el comportamiento heredado sigue siendo el capturado.
 
 ```sh
 export TEST_DATABASE_URL=$(grep ^DATABASE_URL .env | cut -d= -f2-)
-.venv/bin/python -m pytest -q backend/test        # más de 1.200 pruebas, con PostgreSQL real
+.venv/bin/python -m pytest -q backend/test        # más de 1.600 pruebas, con PostgreSQL real
 node --test backend/test/frontend/*.test.mjs       # módulos del frontend
 ```
 
@@ -205,9 +219,9 @@ pendiente en [docs/SECURITY.md](docs/SECURITY.md).
 backend/
   domain/          modelo musical, catálogo de instrumentos y escala de grados
   parsers/         MusicXML → modelo (music21), audio y caché de obras leídas
-  analyzers/       dificultad, pasajes críticos, BandFit, ensayos y conciertos
+  analyzers/       dificultad, pasajes críticos, BandFit, análisis musical, ensayos y conciertos
   rules/           reglas de ScoreLint
-  application/     casos de uso y puertos (repositorios, IA)
+  application/     casos de uso y puertos (repositorios, IA, preguntas con funciones de solo lectura)
   infrastructure/  PostgreSQL y proveedores de IA (Gemini y demo)
   app/             API FastAPI, seguridad y semilla de la demo
   test/            pruebas Python, de Node y recorridos Playwright
@@ -216,7 +230,7 @@ migrations/        migraciones Alembic
 evaluation/        baseline e informe de las campañas
 demo/              obras originales CC0 de la demo y la obra para subir en directo
 scripts/           generador de las obras de la demo y copia de la base
-docs/              recorrido por la demo, despliegue, dificultad y seguridad
+docs/              recorrido por la demo, despliegue, dificultad, seguridad y la presentación del TFM
 ```
 
 Las pautas de trabajo están en [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](AGENTS.md) orienta al
@@ -240,8 +254,12 @@ asistente de IA usado durante el desarrollo.
   grado. Por eso la obra leída de PDF lleva el grado como provisional y no entra en la evaluación. Sin OCR, las partes
   de una partitura general llegan sin nombre de instrumento y se confirman en «Mi banda». Cada lectura tarda 1–2
   minutos en arrancar.
-- **Pendiente u opcional**: pregunta libre a la IA,
-  búsqueda automática del grado publicado de una obra y segunda opinión con un modelo de pesos abiertos.
+- **Análisis musical aproximado**: la tonalidad, las cadencias, las frases y los temas salen de reglas sobre las notas,
+  sin un analista que las revise; en obras leídas de PDF el análisis es tan provisional como su grado.
+- **Preguntas acotadas**: la IA solo responde con lo que devuelven sus funciones (sin historial de conversación ni datos
+  de fuera de la aplicación); en el plan gratuito de Gemini cada pregunta libre gasta dos peticiones del cupo diario.
+- **Pendiente u opcional**: búsqueda automática del grado publicado de una obra y segunda opinión con un modelo de
+  pesos abiertos.
 
 ## Créditos
 

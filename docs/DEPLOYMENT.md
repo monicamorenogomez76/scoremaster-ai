@@ -55,7 +55,7 @@ qué este plan?» las redacta Gemini; sin ella responde la demo, identificada co
 
 | Variable | Uso |
 |---|---|
-| `GEMINI_MODEL` | Modelo de las explicaciones (por defecto `gemini-3.8-flash`) |
+| `GEMINI_MODEL` | Modelo de las explicaciones y de las preguntas a la obra y al repertorio (por defecto `gemini-3.8-flash`). Cada pregunta libre gasta dos peticiones: una para elegir los datos y otra para responder; las sugeridas no gastan ninguna |
 | `GEMINI_REVIEW_MODEL` | Modelo solo para «Valorar con IA» (método B), por ejemplo `gemini-3.5-flash-lite`: 15 peticiones por minuto y 500 al día, frente a 5 y 20 de `gemini-3.8-flash` |
 | `GEMINI_ANALYSIS_MODEL` | Modelo solo para «Redactar el comentario» del análisis musical (por defecto `gemini-3.8-flash`, aunque `GEMINI_MODEL` sea otro): es el texto más largo y se guarda en caché |
 | `GEMINI_REQUESTS_PER_MINUTE` | Pausa entre peticiones (5 por defecto) |

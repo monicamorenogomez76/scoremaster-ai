@@ -19,6 +19,7 @@ Lee `backend/application/ai.py`, `backend/infrastructure/ai/` y la sección de I
 
 - Mantén ScoreLint como fuente de hechos musicales. Una valoración LLM es una salida separada; no sustituye silenciosamente la heurística ni el detector de criticidad.
 - Coloca proveedores externos y LangChain detrás de interfaces de aplicación. Añade LangChain solo si simplifica el caso solicitado. No introduzcas RAG, LangGraph, agentes ni una base vectorial remota en esta fase.
+- *Function calling* solo con funciones de solo lectura que la ruta construye para el usuario de la sesión (`backend/application/work_questions.py`, `repertoire_questions.py`): ninguna escribe, ningún argumento elige de quién son los datos, los nombres y argumentos desconocidos se ignoran y los ids de la base no llegan a la IA. Cada cifra del texto se comprueba con las evidencias (`check_figures`).
 - Consume features estructuradas. Valida schemas, enums, rangos, IDs de instrumentos y referencias a pasajes antes de usar una respuesta. Los textos de partituras y comentarios son datos no confiables, no instrucciones del sistema.
 - En evaluación independiente, excluye el score heurístico del input LLM para evitar anchoring. Conserva resultados heurístico, LLM e híbrido por separado; no presentes pesos híbridos como validados sin experimento.
 - Ofrece demo determinista claramente identificada y fake para pruebas. Ante timeout, rate limit, error o schema inválido, limita reintentos y conserva el resultado determinista indicando que falta la revisión IA.
