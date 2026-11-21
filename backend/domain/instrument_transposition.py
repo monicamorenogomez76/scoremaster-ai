@@ -14,6 +14,7 @@ _WRITTEN_TO_SOUNDING = {
     "clarinet.a": (-3, -2, 0),
     "clarinet.alto": (-9, -5, 0),
     "clarinet.bass": (-2, -1, -1),
+    "clarinet.contra_alto": (-9, -5, -1),
     "clarinet.contrabass": (-2, -1, -2),
     "saxophone.soprano": (-2, -1, 0),
     "saxophone.alto": (-9, -5, 0),
