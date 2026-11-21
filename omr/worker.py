@@ -23,6 +23,7 @@ from xml.etree import ElementTree
 
 import httpx
 
+from omr.margin import PageText, names_by_staff, page_words, words_of
 from omr.merge import add_instrumentation, add_tempo, check_with_parts, combine_parts, fill_lost_rests, join_pages, measure_count, silent_page, staff_of
 
 try:
@@ -247,7 +248,11 @@ class Catalog:
         if self.ready:
             first, second = match_instrument_name(_flats(left)), match_instrument_name(_flats(right))
             if first.identity and second.identity:
-                return (first.identity.canonical_id, first.part_numbers) == (second.identity.canonical_id, second.part_numbers)
+                if first.identity.canonical_id != second.identity.canonical_id:
+                    return False
+                # A part and the staff it shares under a brace (2026-11-21): «Flute 1» plays on «Fls. 1 2».
+                numbers = [set(first.part_numbers), set(second.part_numbers)]
+                return numbers[0] == numbers[1] or (all(numbers) and (numbers[0] <= numbers[1] or numbers[1] <= numbers[0]))
         return " ".join(left.casefold().split()) == " ".join(right.casefold().split())
 
 
@@ -706,6 +711,11 @@ def _silent(xml: bytes, joined: int, typical: float) -> bytes:
     return silent_page(xml, joined, measures)
 
 
+def _all_known(names: list[str]) -> bool:
+    """Every staff named with an instrument of the catalog («Fls. 1 2», «Timp./Shkr.»)."""
+    return catalog.ready and all(catalog.names(name) for name in names)
+
+
 def _one_each(names: list[str]) -> bool:
     """A name written twice is no list of one name per staff (2026-11-20, «Arabian Dances» page 4: names over two lines
     and the instruments of each percussion part made as many names as staves by chance)."""
@@ -718,16 +728,21 @@ def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str]
     joined = max((staves(xml) for xml, _ in pages), default=0)
     full = sorted(measure_count(xml) for xml, _ in pages if staves(xml) == joined)
     typical = full[len(full) // 2] if full else 0
+    # The name beside each staff, read with its place (2026-11-21): a name under a brace covers several staves.
+    beside = [names_by_staff(words_of(text), staves(xml)) for xml, text in pages]
     pages = [(_silent(xml, joined, typical) if _misread(xml, text, joined, typical) else xml, text) for xml, text in pages]
     count = staves(pages[0][0]) if pages else 0
     names = score_names(pages[0][1]) if pages else []
-    named = names if names and len(names) == joined == count and _one_each(names) else None
+    named = next((found for found, (xml, _) in zip(beside, pages)
+                  if found and len(found) == joined == staves(xml) and _all_known(found)), None)
+    if named is None:
+        named = names if names and len(names) == joined == count and _one_each(names) else None
     if named is None and catalog.ready:
         # A scan's text: the first page of music whose margin has every staff.
         named = next((found for found in (margin_names(text, joined) for xml, text in pages if staves(xml) == joined)
                       if found and _one_each(found)), None)
     # The names beside the staves place the staves of a page that shows fewer of them (2026-11-02).
-    labels = [staff_labels(text, staves(xml)) for xml, text in pages]
+    labels = [found or staff_labels(text, staves(xml)) for found, (xml, text) in zip(beside, pages)]
     return join_pages([xml for xml, _ in pages], title, named, labels, same_part), named
 
 
@@ -967,6 +982,8 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                  for (_, path), count in zip(saved, pages) for number in range(1, count + 1)}
         named_parts = any(instrument_name(text) and not looks_like_score(text) for text in texts.values())
         score_like = {key: looks_like_score(text) for key, text in texts.items()}
+        # A score's page keeps its words with their place: the name beside each staff (2026-11-21).
+        texts = {key: PageText(text, page_words(*key)) if score_like[key] else text for key, text in texts.items()}
 
         def set_apart(path: str, number: int) -> bool:
             """A page naming several instruments between two part pages is a part's, not the score's (the percussion of

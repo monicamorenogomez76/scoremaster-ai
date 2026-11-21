@@ -190,6 +190,13 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   300 ppp y lee esa (`page_image`).
 - **Silencios con su compás:** los silencios de una página silenciada o de un pentagrama que falta en una página llevan
   la cifra de compás de esa página. Sin ella, music21 los escribía en 4/4 y dos compases de 4/2 se convertían en tres.
+- **Nombres al lado de cada pentagrama:** en un guion, un nombre del margen suele abarcar varios pentagramas bajo una
+  llave («Fls.» con «1» y «2» al lado de un pentagrama compartido; «Cls.» con «1» al lado de un pentagrama y «2 3» al
+  lado del siguiente). El lector lee las palabras del margen con su posición (`pdftotext -bbox`, `omr/margin.py`): cada
+  clave marca un pentagrama, cada línea de nombre va al pentagrama más cercano, uno sin nombre propio toma el de su
+  llave, y los números, al pentagrama que tienen al lado. Si todos se reconocen en el catálogo, el guion se nombra así
+  («Cls. 2 3» es el clarinete con las partes 2 y 3), y cada particella se empareja con el pentagrama que comparte
+  («Flute 1» con «Fls. 1 2»).
 - **Nombres repetidos:** si los nombres del margen del guion se repiten (los nombres largos ocupan dos líneas y las
   percusiones listan sus instrumentos), no son uno por pentagrama y no se usan. Los pentagramas se nombran entonces con
   las particellas.

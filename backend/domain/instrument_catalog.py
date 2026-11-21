@@ -98,7 +98,8 @@ def _keys(text: str) -> str:
 
 def _prepare(name: str) -> str:
     """Lowercase, accents removed, flats unified, keys read into one token; keeps & and / for part numbers."""
-    text = name.replace("&amp;", "&").replace("♭", "b").replace("♯", "#").casefold()
+    # Finale's music font writes the flat as «≤» in a PDF's text («B≤ Clarinets», 2026-11-21).
+    text = name.replace("&amp;", "&").replace("♭", "b").replace("≤", "b").replace("♯", "#").casefold()
     text = "".join(char for char in unicodedata.normalize("NFKD", text) if not unicodedata.combining(char))
     # "B flat", "B-flat" and "B♭" are the same tuning token: "bb". Tunings are never dropped.
     text = re.sub(r"\b([a-g])[\s-]*flat\b", r"\1b", text)
