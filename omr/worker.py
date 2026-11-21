@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from contextlib import ExitStack, contextmanager
 from difflib import SequenceMatcher
+import html
 import json
 import os
 import re
@@ -22,10 +23,11 @@ import time
 from pathlib import Path
 from urllib.parse import urlsplit
 from xml.etree import ElementTree
+from xml.sax.saxutils import escape
 
 import httpx
 
-from omr.margin import PageText, names_by_staff, page_words, words_of
+from omr.margin import PageText, names_at, names_by_staff, one_system, page_words, split_capitals, words_of
 from omr.merge import add_instrumentation, add_tempo, check_with_parts, combine_parts, fill_lost_rests, join_pages, measure_count, silent_page, staff_of
 
 try:
@@ -59,6 +61,7 @@ class _Copista:
     """copista-2m loaded once for the whole job (2026-10-28: a process per page loaded PyTorch and the model again
     for every page)."""
     model = None
+    systems = None
 
     @classmethod
     def read(cls, pdf_path: str, number: int, out_dir: str, detector: str = "2m") -> bytes:
@@ -69,8 +72,85 @@ class _Copista:
         from copisteria.vision.page.scan import from_pdf
         if cls.model is None:
             cls.model = read.load_model(str(EVIDENCE), "cpu")
+        import copisteria.front as front
+        if cls.systems is None:
+            cls.systems = front._systems
+        # The staves of a page named one by one are one system (2026-11-21, «1812»), and each staff read takes the name
+        # beside it: copisteria misses those resting, and by clef and key alone three clarinets are alike.
+        words = page_words(pdf_path, number)
+        found: list = []
+
+        def alone(staves) -> bool:
+            if one_system([(staff.y0 / PIXELS_PER_POINT, staff.y1 / PIXELS_PER_POINT, staff.x0 / PIXELS_PER_POINT)
+                           for staff in staves], words):
+                found[:] = staves
+                return True
+            return False
+        front._systems = whole_systems(front, alone, original=cls.systems)
         png = page_image(pdf_path, number, out_dir, extract=lambda *place: from_pdf(place[0], place[1], Path(place[2])))
-        return transcribe(png, cls.model).encode("utf-8")
+        xml = transcribe(png, cls.model).encode("utf-8")
+        if found and staves(xml) == len(found):
+            xml = with_names(xml, names_at(words, [(staff.y0 + staff.y1) / 2 / PIXELS_PER_POINT for staff in found],
+                                           min(staff.x0 for staff in found) / PIXELS_PER_POINT))
+        return xml
+
+
+# copisteria draws a digital PDF's page at 300 ppi; pdftotext places its words in points.
+PIXELS_PER_POINT = 300 / 72
+
+
+def whole_systems(front, alone, original=None):
+    """copisteria's grouping of staves into systems, with every staff joined to the one above it on a page where
+    alone(staves) says they are one system: the bar lines of a band score break between the families (woodwinds,
+    brass, percussion), and copisteria took each family for a system of its own."""
+    original = original or front._systems
+
+    def systems(syms, staves, *args, **kwargs):
+        if not alone(staves):
+            return original(syms, staves, *args, **kwargs)
+        saved = front._ink_links, front._braced
+        front._ink_links = lambda *_: (front.INK_LINK + 1, 1.0)
+        front._braced = lambda *_: True
+        try:
+            return original(syms, staves, *args, **kwargs)
+        finally:
+            front._ink_links, front._braced = saved
+    return systems
+
+
+_GENERIC_PART = re.compile(r"Part \d+")
+# The names of the staves of one part, when copisteria wrote several in one (the cymbals and the chimes of «1812»).
+STAFF_NAMES_JOIN = " / "
+
+
+def _staff_counts(xml: bytes) -> list[int]:
+    return [max([int(item.text) for item in part.iter("staves") if (item.text or "").isdigit()], default=1)
+            for part in ElementTree.fromstring(xml).findall("part")]
+
+
+def with_names(xml: bytes, names: list[str | None]) -> bytes:
+    """The page with each part named after the names of its staves, given one per staff in order; a part without one
+    keeps copisteria's «Part n»."""
+    found, at = [], 0
+    for count in _staff_counts(xml):
+        own = names[at:at + count]
+        at += count
+        found.append(STAFF_NAMES_JOIN.join(name or "" for name in own) if any(own) else None)
+    parts = iter(found)
+
+    def named(match: re.Match) -> str:
+        name = next(parts, None)
+        return f"<part-name>{escape(name)}</part-name>" if name else match.group(0)
+    return re.sub(r"<part-name>[^<]*</part-name>", named, xml.decode("utf-8")).encode("utf-8")
+
+
+def names_in(xml: bytes) -> list[str | None] | None:
+    """The name of each staff of a page given by with_names, None for a staff without; None when none has one."""
+    names: list[str | None] = []
+    for count, name in zip(_staff_counts(xml), re.findall(r"<part-name>([^<]*)</part-name>", xml.decode("utf-8"))):
+        own = [None] * count if _GENERIC_PART.fullmatch(name) else html.unescape(name).split(STAFF_NAMES_JOIN)
+        names += [item or None for item in own] if len(own) == count else [html.unescape(name)] * count
+    return names if any(names) else None
 
 
 # Narrower than any page of music: at copisteria's 300 ppi an A4 page is 2480 pixels wide, a scan at 150 ppi 1240.
@@ -291,13 +371,23 @@ def _load_catalog(client: httpx.Client, callback: str) -> Catalog:
         return Catalog()
 
 
+def mend_split_capitals(text: str, pairs: set[tuple[str, str]]) -> str:
+    """The text with each (capital, rest) printed apart on its page written whole («F l. 1» is «Fl. 1»)."""
+    for capital, rest in pairs:
+        text = re.sub(rf"(?<!\S){re.escape(capital)} {re.escape(rest)}(?!\S)", capital + rest, text)
+    return text
+
+
 def page_text(pdf_path: str, number: int) -> str:
-    """The text of a digital PDF's page (instrument names, titles); empty for a scan."""
+    """The text of a digital PDF's page (instrument names, titles); empty for a scan. A name whose capital was printed
+    apart is written whole (2026-11-21, «1812»)."""
     try:
-        return subprocess.run(["pdftotext", "-f", str(number), "-l", str(number), "-layout", pdf_path, "-"],
+        text = subprocess.run(["pdftotext", "-f", str(number), "-l", str(number), "-layout", pdf_path, "-"],
                               check=True, capture_output=True, text=True, timeout=30).stdout
     except (subprocess.SubprocessError, OSError):
         return ""
+    pairs = split_capitals(page_words(pdf_path, number, joined=False)) if text.strip() else set()
+    return mend_split_capitals(text, pairs) if pairs else text
 
 
 def _pieces(text: str) -> list[str]:
@@ -744,12 +834,23 @@ def _one_each(names: list[str]) -> bool:
 def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str] | None]:
     """The score's pages joined, its staves named after the instruments written beside them on its first page when
     there is one name per staff."""
-    joined = max((staves(xml) for xml, _ in pages), default=0)
+    # The name beside each staff, read with its place (2026-11-21): a name under a brace covers several staves; on a page
+    # without clefs in its text, the names copisteria's staves took from their place («1812»).
+    beside = [names_by_staff(words_of(text), staves(xml)) or names_in(xml) for xml, text in pages]
+    # The fullest page named, when there is one: a page with one staff more than those is misread («1812» page 41).
+    named_widths = [staves(xml) for (xml, _), found in zip(pages, beside) if found]
+    joined = max(named_widths or [staves(xml) for xml, _ in pages] or [0])
     full = sorted(measure_count(xml) for xml, _ in pages if staves(xml) == joined)
     typical = full[len(full) // 2] if full else 0
-    # The name beside each staff, read with its place (2026-11-21): a name under a brace covers several staves.
-    beside = [names_by_staff(words_of(text), staves(xml)) for xml, text in pages]
-    pages = [(_silent(xml, joined, typical) if _misread(xml, text, joined, typical) else xml, text) for xml, text in pages]
+
+    def misread(xml: bytes, text: str, found) -> bool:
+        """A page with more staves than the score, or whose measures came out in blocks; one with fewer staves only when
+        they have no names to place them."""
+        if staves(xml) > joined or (found and typical and measure_count(xml) >= SPLIT_MEASURES * typical):
+            return True
+        return not found and _misread(xml, text, joined, typical)
+    pages = [(_silent(xml, joined, typical) if misread(xml, text, found) else xml, text)
+             for (xml, text), found in zip(pages, beside)]
     count = staves(pages[0][0]) if pages else 0
     names = score_names(pages[0][1]) if pages else []
     named = next((found for found, (xml, _) in zip(beside, pages)
@@ -1063,12 +1164,15 @@ def read_short_pages_again(found: list, paths: dict, read_again) -> list:
     and its reading is kept unless it sees fewer staves (2026-11-18, «Pirates of the Caribbean»: 240 measures rereading 21
     pages, 237 rereading all 43, the work has 237; all of them took 10 minutes more). One or two staves are a part's;
     whatever fails leaves the first reading."""
-    widest = max((staves(xml) for _, xml, _ in found if xml is not None), default=0)
+    # The fullest page whose staves are named, when there is one: a page with more staves than it is misread (2026-11-21,
+    # «1812» page 41: 31 of 30, and the other 40 pages looked short beside it).
+    named = [staves(xml) for _, xml, _ in found if xml is not None and names_in(xml)]
+    widest = max(named or [staves(xml) for _, xml, _ in found if xml is not None] or [0])
     full = sorted(measure_count(xml) for _, xml, _ in found if xml is not None and staves(xml) == widest >= SCORE_STAVES)
     typical = full[len(full) // 2] if full else 0
     short = [place for place, xml, _ in found
              if xml is not None and 3 <= staves(xml)
-             and (staves(xml) < widest or (typical and staves(xml) >= SCORE_STAVES and measure_count(xml) >= typical + SUSPICIOUS_MEASURES))][:MAX_SECOND_READINGS]
+             and (staves(xml) != widest or (typical and staves(xml) >= SCORE_STAVES and measure_count(xml) >= typical + SUSPICIOUS_MEASURES))][:MAX_SECOND_READINGS]
     if not short:
         return found
     print(f"Se releen con el modelo grande {len(short)} páginas con menos pentagramas o más compases que las demás.", flush=True)
@@ -1084,6 +1188,9 @@ def read_short_pages_again(found: list, paths: dict, read_again) -> list:
             print(f"Archivo {place[0]}, página {place[1]}: de {staves(xml)} a {staves(second)} pentagramas.", flush=True)
             xml = second
         elif isinstance(second, bytes) and staves(second) == staves(xml) >= SCORE_STAVES:
+            xml = second
+        elif isinstance(second, bytes) and staves(second) >= SCORE_STAVES and names_in(second) and not names_in(xml):
+            print(f"Archivo {place[0]}, página {place[1]}: {staves(second)} pentagramas con nombre.", flush=True)
             xml = second
         better.append((place, xml, text))
     return better

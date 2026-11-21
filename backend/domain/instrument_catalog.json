@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v9",
+ "version": "instrument-catalog-v10",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -1235,6 +1235,7 @@
    "label_en": "Chimes",
    "aliases": [
     "chimes",
+    "chim",
     "tubular bells",
     "campanas tubulares",
     "campane tubolari",

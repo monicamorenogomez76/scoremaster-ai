@@ -1394,3 +1394,66 @@ def test_the_main_machine_joins_the_page_a_helping_one_reread(scoremaster):
                read_page=lambda path, number, out_dir: page(counts[number], 2, "C"), read_again=read_again, machines=2)
     assert asked == [], "page 2 is the other machine's"
     assert scoremaster["result"]["musicxml"].count("<step>E</step>") > 0, "its reading is in the work"
+
+
+def test_a_page_s_text_has_its_names_whole_when_the_capital_was_printed_apart():
+    text = "       F l. 1\n      H n. 1\n   P iccolo\n  Flute 1     F lat"
+    assert worker.mend_split_capitals(text, {("F", "l."), ("H", "n."), ("P", "iccolo")}) == \
+        "       Fl. 1\n      Hn. 1\n   Piccolo\n  Flute 1     F lat"
+
+
+def test_copisteria_keeps_the_staves_of_a_page_named_as_one_system_together():
+    """The wrapper makes every staff join the one above it while copisteria groups them, only on such a page."""
+    import types
+    front = types.SimpleNamespace(INK_LINK=0.85, _ink_links=lambda *args: (0.0, 0.0), _braced=lambda *args: False)
+
+    def systems(syms, staves, gray=None):
+        return [front._ink_links(None, syms, a, b, 0) for a, b in zip(staves, staves[1:])]
+    front._systems = systems
+    wrapped = worker.whole_systems(front, lambda staves: len(staves) == 3)
+    assert wrapped([], [1, 2, 3]) == [(1.85, 1.0), (1.85, 1.0)]
+    assert wrapped([], [1, 2]) == [(0.0, 0.0)], "another page, as copisteria reads it"
+    assert front._ink_links(None, [], 1, 2, 0) == (0.0, 0.0)
+
+
+def test_the_staves_of_a_page_carry_the_names_beside_them():
+    named = worker.with_names(page(2, 1), ["Fl. 1", None])
+    assert worker.names_in(named) == ["Fl. 1", None]
+    assert worker.names_in(page(2, 1)) is None, "copisteria's «Part 1» names nothing"
+
+
+
+def test_a_part_of_two_staves_keeps_the_name_of_each():
+    """«1812» page 1: copisteria wrote the cymbals and the chimes as one part of two staves."""
+    two = page(2, 1).decode().replace("</time>", "</time><staves>2</staves>", 1).encode()
+    assert worker.names_in(worker.with_names(two, ["Cym.", "Chim.", "Fl. 1"])) == ["Cym.", "Chim.", "Fl. 1"]
+    assert worker.names_in(worker.with_names(two, ["Cym.", None, None])) == ["Cym.", None, None]
+
+
+def test_the_staves_read_are_placed_by_their_names_and_a_page_with_one_more_is_silenced(full_catalog):
+    """«1812»: the staves resting were missing from most pages; placed by their names, not by clef."""
+    from backend.test.test_omr_merge import contents
+    full = worker.with_names(page(4, 1, "C"), ["Fl. 1", "Fl. 2", "Cl. 1", "Cl. 2"])
+    fewer = worker.with_names(page(2, 1, "E"), ["Fl. 1", "Cl. 2"])
+    more = page(5, 1, "G")
+    joined, names = worker._score([(full, ""), (fewer, ""), (more, "")], "Obra")
+    assert names == ["Fl. 1", "Fl. 2", "Cl. 1", "Cl. 2"]
+    staves = [re.findall(r"<step>([A-G])</step>|<rest", part) for part in
+              re.findall(r"<part id=.*?</part>", joined.decode(), re.S)]
+    assert [[found or "r" for found in staff] for staff in staves] == [
+        ["C", "E", "r"], ["C", "r", "r"], ["C", "r", "r"], ["C", "E", "r"]]
+
+
+def test_a_second_reading_with_its_staves_named_is_kept_over_one_without():
+    """«1812» page 41: copista-2m saw 35 staves (the ledger lines of the piccolo's top notes) and two systems, 31 staves
+    and 21 measures; copista-28m read its 30 staves, named, and 9 measures."""
+    names = ["Fl.", "Ob.", "Cl.", "Tpt.", "Tba."]
+    found = [((1, number), worker.with_names(page(5, 5, "C"), names), "") for number in range(1, 4)] + [
+        ((1, 4), page(6, 8, "C"), "")]
+
+    def read_again(pages):
+        return {("obra.pdf", 4): worker.with_names(page(5, 5, "D"), names)}
+
+    better = worker.read_short_pages_again(found, {1: "obra.pdf"}, read_again)
+    assert worker.measure_count(better[3][1]) == 5 and worker.names_in(better[3][1]) == names
+

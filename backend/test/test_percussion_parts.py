@@ -178,3 +178,22 @@ def test_a_database_created_before_gets_the_names_beside_the_staves_of_a_score(p
             command.upgrade(config, "0024_score_margin_names")
             assert connection.execute(sa.text("SELECT instrument_id FROM instrument_names WHERE name_key = :key"),
                                       {"key": key}).scalars().all() == ["trumpet.bb"]
+
+
+def test_a_database_created_before_gets_the_chimes_abbreviated(postgres_engine):
+    import sqlalchemy as sa
+    from alembic import command
+    from alembic.config import Config
+    from backend.domain.instrument_catalog import normalize_instrument_name
+    key = normalize_instrument_name("Chim.")
+    with postgres_engine.begin() as connection:
+        connection.execute(sa.text("DELETE FROM instrument_names WHERE name_key = :key"), {"key": key})
+        connection.execute(sa.text("UPDATE alembic_version SET version_num = '0025_pdf_import_pages'"))
+    with postgres_engine.begin() as connection:
+        config = Config("alembic.ini")
+        config.attributes["connection"] = connection
+        for _ in range(2):   # nothing twice
+            command.upgrade(config, "0026_chimes_abbreviated")
+            assert connection.execute(sa.text("SELECT instrument_id FROM instrument_names WHERE name_key = :key"),
+                                      {"key": key}).scalars().all() == ["chimes"]
+

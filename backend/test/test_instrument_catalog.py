@@ -378,3 +378,9 @@ def test_the_new_instruments_sound_where_they_should(canonical_id, semitones):
 def test_the_names_beside_the_staves_of_a_score(name, canonical_id, part_numbers):
     match = match_instrument_name(name)
     assert (match.identity.canonical_id if match.identity else None, match.part_numbers) == (canonical_id, part_numbers)
+
+
+def test_the_chimes_abbreviated_in_a_score():
+    """«Chim.» (2026-11-21, «1812»): the last staff of its score, the only name the catalog did not know."""
+    assert match_instrument_name("Chim.").identity.canonical_id == "chimes"
+
