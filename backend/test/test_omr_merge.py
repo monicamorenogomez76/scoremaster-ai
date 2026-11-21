@@ -455,3 +455,23 @@ def test_a_staff_numbered_like_a_part_is_not_its_by_the_name():
     score = work(list("hhqq"), list("qqhh"))
     checked = check_with_parts(score, [("Part 1", work(list("qqhh")))], "Obra", same=lambda left, right: left == right)
     assert checked.agreement == 1.0 and names_of(checked.musicxml)[1] == "Part 1"
+
+
+# Rests in the meter of their page (2026-11-20, «Arabian Dances» pages 32 and 33, two measures of 4/2 each): the rests of
+# a silenced page or of a staff missing from a page had no meter, music21 wrote them in 4/4 and each page came out with
+# three measures.
+
+def breve_page(parts: int, measures: int) -> bytes:
+    return (page(parts, measures).replace(b"<beats>2</beats><beat-type>4</beat-type>", b"<beats>4</beats><beat-type>2</beat-type>")
+            .replace(b"<duration>4</duration><type>half</type>", b"<duration>16</duration><type>breve</type>"))
+
+
+def test_a_silenced_page_keeps_its_measures_in_its_meter():
+    from omr.merge import silent_page
+    _, _, measures = parts_of(silent_page(breve_page(2, 2), 3))
+    assert [len(bars) for bars in measures] == [2, 2, 2]
+
+
+def test_a_staff_missing_from_a_page_rests_in_the_meter_of_the_page():
+    _, _, measures = parts_of(join_pages([page(2, 2), breve_page(1, 2)], title="Obra"))
+    assert [len(bars) for bars in measures] == [4, 4]

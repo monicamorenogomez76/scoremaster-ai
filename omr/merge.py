@@ -212,7 +212,7 @@ def join_pages(pages: list[bytes], title: str, names: list[str] | None = None, l
         model = max((_measures(staff) for staff in page), key=len, default=[])
         for index in range(len(reference)):
             found = [_measures(page[at]) for at, target in enumerate(mapping) if target == index]
-            joined[index].extend(found[0] if found else [_rest(measure) for measure in model])
+            joined[index].extend(found[0] if found else [_lost_rest(measure) for measure in model])
     if not (names and len(names) == len(joined)):
         # The names beside the reference page's staves, where it has them (a staff of a group has none).
         names = [(reference_names[number - 1] if reference_names and len(reference_names) == len(joined)
@@ -229,7 +229,7 @@ def silent_page(xml: bytes, count: int, measures: int | None = None) -> bytes:
     """The page's measures as rests, on `count` staves; only its first `measures` when the page repeats them."""
     page = _staves(xml)
     model = max((_measures(staff) for staff in page), key=len, default=[])[:measures]
-    return _write("", [_part(f"Parte {number}", [_rest(measure) for measure in model]) for number in range(1, count + 1)])
+    return _write("", [_part(f"Parte {number}", [_lost_rest(measure) for measure in model]) for number in range(1, count + 1)])
 
 
 def combine_parts(files: list[tuple[str, bytes]], title: str) -> bytes:
@@ -309,7 +309,9 @@ def _matched(part: list[frozenset], staff: list[frozenset]) -> tuple[float, list
 
 
 def _lost_rest(model: stream.Measure) -> stream.Measure:
-    """A rest for a measure the part lost, with the meter of the score when it changes there."""
+    """A rest for a measure the part lost, with the meter of the score when it changes there. Also the rests of a staff
+    missing from a page or of a silenced page: without their meter music21 wrote them in 4/4 (2026-11-20, «Arabian
+    Dances»: two measures of 4/2 became three)."""
     rest = _rest(model)
     if model.timeSignature is not None:
         rest.insert(0, copy.deepcopy(model.timeSignature))
