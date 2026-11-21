@@ -74,6 +74,8 @@ class PartMetadata:
 	confirmed_id: Optional[str] = None
 	# Players of the part, one <player> each (MusicXML 4.0): a percussion part may need two (2026-11-02).
 	players: Optional[int] = None
+	# The sign of its first clef («G», «F», «C», «percussion»): it tells a brass baritone from a saxophone (2026-11-21).
+	clef_sign: Optional[str] = None
 	# What coincides on the staff (2026-11-05): most instruments at once when its notes say which they are, most lines at
 	# once when that happens more than once (a reading from a PDF only has lines; once may be a misreading).
 	simultaneous_instruments: Optional[int] = None

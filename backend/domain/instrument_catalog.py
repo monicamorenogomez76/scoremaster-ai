@@ -303,3 +303,23 @@ def english_label(label: str, fallback: str = "") -> str:
     match = re.match(r"^(.*?)(\s+\d+)?$", label or "")
     english = {entry.label_es: entry.label_en for entry in catalog_entries()}.get(match.group(1))
     return english + (match.group(2) or "") if english else (fallback or label)
+
+
+# «Baritone» alone is the baritone saxophone in a concert band, the brass baritone in a brass band and in Alfred's editions
+# (2026-11-21). Saxophones are written only in treble clef, and the baritone saxophone sounds 21 semitones below what is
+# written, the brass baritone in treble clef 14. Against the instruments that sound as written, the saxophone (in E♭) has
+# three fifths more in its key signature, the brass baritone (in B♭) two. A «Baritone» in bass clef, transposing like the
+# brass one or with its key, is the euphonium («bombardino»).
+_SAXOPHONE_WORD = re.compile(r"sax", re.IGNORECASE)
+BRASS_BARITONE_SHIFT = -14
+BRASS_BARITONE_FIFTHS = 2
+
+
+def as_written(identity, name: str, clef_sign: str | None = None, shift: int | None = None, key_fifths: int | None = None):
+    """The instrument of a part told also by how it is written, when its name alone may mean two. key_fifths: how many
+    fifths its key signature has more than the instruments in C of the work."""
+    if identity is None or identity.canonical_id != "saxophone.baritone" or _SAXOPHONE_WORD.search(name or ""):
+        return identity
+    if clef_sign == "F" or shift == BRASS_BARITONE_SHIFT or (key_fifths is not None and key_fifths % 12 == BRASS_BARITONE_FIFTHS):
+        return identity_by_id("euphonium")
+    return identity
