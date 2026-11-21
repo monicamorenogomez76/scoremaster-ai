@@ -123,12 +123,23 @@ def normalize_instrument_name(name: str) -> str:
     return " ".join(_key_last(re.sub(r"[&/]", " ", _prepare(name)).split()))
 
 
+# Spanish parts write the number between the instrument and its key and as an ordinal (2026-11-21): «Trompa 1ª en Fa»,
+# «Clarinete 1 Sib», «Fliscorno 1º». The ordinal mark is dropped and the key goes before the numbers.
+_ORDINAL_MARK = re.compile(r"\b(\d+)(?:st|nd|rd|th|o|a)\b")
+_KEY_AFTER_PARTS = re.compile(r"\s+(" + _NUMBER + r"(?:(?:\s*(?:&|/|,|\band\b|\by\b|\bi\b|\bund\b|\bet\b)\s*|\s+)"
+                              + _NUMBER + r")*)\s+(k[a-g]b?)$")
+
+
 def _split_part_numbers(prepared: str) -> tuple[str, tuple[int, ...]]:
     numbers: list[int] = []
     leading = _LEADING_ORDINAL.match(prepared)
     if leading:
         numbers.append(int(leading.group(1)))
         prepared = prepared[leading.end():]
+    prepared = _ORDINAL_MARK.sub(r"\1", prepared)
+    key_after = _KEY_AFTER_PARTS.search(prepared)
+    if key_after:
+        prepared = prepared[:key_after.start()] + " " + key_after.group(2) + " " + key_after.group(1)
     trailing = _TRAILING_PARTS.search(prepared)
     if trailing:
         tokens = re.findall(_NUMBER, trailing.group(1))
