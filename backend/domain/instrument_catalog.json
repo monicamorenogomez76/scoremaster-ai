@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v5",
+ "version": "instrument-catalog-v6",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -263,6 +263,27 @@
     "cl bajo",
     "cl baix",
     "clarinete bajo sib"
+   ],
+   "sound": "clarinet",
+   "rehearsal_group": "low_voices"
+  },
+  {
+   "id": "clarinet.contra_alto",
+   "section": "woodwinds",
+   "family": "clarinet",
+   "variant": "contra_alto",
+   "transposition": "Eb",
+   "label_es": "Clarinete contraalto",
+   "label_en": "Contra-alto Clarinet",
+   "aliases": [
+    "contra alto clarinet",
+    "contra-alto clarinet",
+    "eb contra alto clarinet",
+    "eb contra-alto clarinet",
+    "clarinete contraalto",
+    "c a cl",
+    "ca cl",
+    "contra alto cl"
    ],
    "sound": "clarinet",
    "rehearsal_group": "low_voices"
@@ -579,7 +600,16 @@
     "bomb",
     "bombardinos",
     "euphonium sib",
-    "tenor tuba"
+    "tenor tuba",
+    "baritone/euphonium",
+    "baritone euphonium",
+    "euphonium/baritone",
+    "baritone t.c.",
+    "baritone b.c.",
+    "baritone tc",
+    "baritone bc",
+    "euphonium t.c.",
+    "euphonium b.c."
    ],
    "sound": "tuba",
    "rehearsal_group": "low_voices"

@@ -260,3 +260,23 @@ def test_every_instrument_belongs_to_a_rehearsal_group(name, group):
 def test_all_catalog_entries_declare_a_rehearsal_group():
     groups = {"flutes", "double_reeds", "clarinets", "saxophones", "high_brass", "low_voices", "percussion", "strings_rhythm"}
     assert all(entry.rehearsal_group in groups for entry in catalog_entries())
+
+
+# «Arabian Dances» (2026-11-20): three of its parts had no instrument and played as a piano.
+@pytest.mark.parametrize("name, canonical_id", [
+    ("E♭ Contra Alto Clarinet", "clarinet.contra_alto"),
+    ("Eb Contra-Alto Clarinet", "clarinet.contra_alto"),
+    ("C.A. Cl.", "clarinet.contra_alto"),
+    ("Clarinete contraalto", "clarinet.contra_alto"),
+    ("Baritone/ Euphonium", "euphonium"),
+    ("Baritone T.C.", "euphonium"),
+    ("Baritone B.C.", "euphonium"),
+    ("Baritone", "saxophone.baritone"),
+])
+def test_the_names_of_the_band_parts_of_arabian_dances(name, canonical_id):
+    assert match_instrument_name(name).identity.canonical_id == canonical_id
+
+
+def test_the_contra_alto_clarinet_sounds_an_octave_and_a_major_sixth_below():
+    from backend.domain.instrument_transposition import instrument_shift
+    assert instrument_shift("clarinet.contra_alto") == -21

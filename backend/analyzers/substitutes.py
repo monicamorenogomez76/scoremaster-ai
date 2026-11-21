@@ -30,6 +30,7 @@ USUAL = {
     "clarinet.a": ("clarinet.bb",),
     "clarinet.alto": ("saxophone.alto", "clarinet.bb", "horn.f", "saxophone.tenor"),
     "clarinet.bass": ("saxophone.tenor", "saxophone.baritone", "bassoon", "euphonium"),
+    "clarinet.contra_alto": ("saxophone.baritone", "clarinet.bass", "bassoon", "tuba"),
     "clarinet.contrabass": ("saxophone.baritone", "clarinet.bass", "tuba"),
     "saxophone.soprano": ("clarinet.bb", "oboe", "trumpet.bb"),
     "saxophone.alto": ("clarinet.alto", "horn.f", "clarinet.bb", "saxophone.tenor"),

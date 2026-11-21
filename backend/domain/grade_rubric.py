@@ -65,7 +65,7 @@ RANGE_ROW_BY_INSTRUMENT = {
     "bassoon": "bassoon",
     "clarinet.eb": "clarinet", "clarinet.bb": "clarinet", "clarinet.a": "clarinet",
     "clarinet.alto": "alto_bass_clarinet", "clarinet.bass": "alto_bass_clarinet",
-    "clarinet.contrabass": "alto_bass_clarinet",
+    "clarinet.contra_alto": "alto_bass_clarinet", "clarinet.contrabass": "alto_bass_clarinet",
     "saxophone.soprano": "saxophone", "saxophone.alto": "saxophone", "saxophone.tenor": "saxophone",
     "saxophone.baritone": "saxophone_baritone",
     "trumpet.bb": "trumpet", "trumpet.c": "trumpet", "cornet.bb": "trumpet", "flugelhorn.bb": "trumpet",
