@@ -254,6 +254,9 @@ asistente de IA usado durante el desarrollo.
   grado. Por eso la obra leída de PDF lleva el grado como provisional y no entra en la evaluación. Sin OCR, las partes
   de una partitura general llegan sin nombre de instrumento y se confirman en «Mi banda». Cada lectura tarda 1–2
   minutos en arrancar.
+- **Instrumentos populares**: el catálogo tiene 78 instrumentos de banda (de concierto, española y brass band, con la
+  percusión habitual), pero no la tenora, el tible, el txistu, la dolçaina ni la gaita: no hay una fuente fiable de cómo
+  se escriben en particella, así que las partes que los nombran se confirman en «Mi banda».
 - **Análisis musical aproximado**: la tonalidad, las cadencias, las frases y los temas salen de reglas sobre las notas,
   sin un analista que las revise; en obras leídas de PDF el análisis es tan provisional como su grado.
 - **Preguntas acotadas**: la IA solo responde con lo que devuelven sus funciones (sin historial de conversación ni datos

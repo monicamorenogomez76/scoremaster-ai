@@ -180,6 +180,22 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   compases. Si una página tiene menos pentagramas y casi el doble de compases que las demás, se toma como mal leída
   aunque el margen no lo diga, y se queda con sus compases reales (sin los vacíos y dividida entre los bloques), que se
   rellenan con las particellas.
+- **Páginas con un pentagrama de menos:** si a una página del guion solo le falta un pentagrama, no se silencia: se
+  coloca por clave y armadura y solo ese pentagrama queda en silencio. En «Arabian Dances», copista leyó 23 de 24
+  pentagramas en seis páginas, y silenciarlas enteras dejaba a toda la banda callada 26 compases. Con más pentagramas de
+  menos, la página se sigue silenciando.
+- **Primera página del guion:** copisteria toma una página con una sola imagen incrustada por un escaneo y lee esa
+  imagen. En la primera página del guion de «Arabian Dances», esa imagen era el código QR del pie (90 × 61 píxeles) y la
+  página salía sin pentagramas. Si la imagen mide menos de 1000 píxeles de lado, el lector dibuja la página entera a
+  300 ppp y lee esa (`page_image`).
+- **Silencios con su compás:** los silencios de una página silenciada o de un pentagrama que falta en una página llevan
+  la cifra de compás de esa página. Sin ella, music21 los escribía en 4/4 y dos compases de 4/2 se convertían en tres.
+- **Nombres repetidos:** si los nombres del margen del guion se repiten (los nombres largos ocupan dos líneas y las
+  percusiones listan sus instrumentos), no son uno por pentagrama y no se usan. Los pentagramas se nombran entonces con
+  las particellas.
+- **Escritura de la obra:** si music21 falla al retocar la notación (una figura imposible o un error al completar
+  tresillos), la obra se escribe tal como se leyó, con las figuras imposibles corregidas y las notas demasiado largas
+  partidas en figuras que MusicXML puede escribir.
 
 - **Tempo:** copista no lee las indicaciones de tempo, y sin ellas la obra sonaba a negra = 120. El lector toma la
   primera que encuentra en el texto del PDF («Marxa Mora q = 50»: en las fuentes de Finale y Sibelius, q es la negra,
@@ -194,7 +210,8 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   completa, como la sección de percusión impresa sola de «Arabian Dances», se coloca por esos nombres; si no los trae,
   por la clave y la armadura, como antes. Si esa sección ocupa varios sistemas por página (en «Arabian Dances», los
   compases 95 a 147 en dos páginas), tiene muchos más compases que una página normal y un margen tan largo como el del
-  guion, pero no se toma por una página mal leída: su margen solo nombra los pentagramas leídos, sistema tras sistema.
+  guion, pero no se toma por una página mal leída: su margen solo nombra los pentagramas leídos, sistema tras sistema
+  (las líneas de notas que se cuelan en el margen no cuentan como nombres).
   La partitura conserva los nombres, y cada particella se alinea primero con el
   pentagrama de su nombre («Percussion 2» con «Perc. 2») y, si no hay ninguno, por el ritmo. Una particella en clave de
   percusión solo se alinea con pentagramas de percusión.
@@ -204,18 +221,28 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   músico (MusicXML 4.0). ScoreMaster reconoce «Percussion», «Perc.» o «Percusión» como percusión, BandFit cuenta esos
   músicos y cada nota suena como un golpe según su línea, nunca como piano. Sin la página, nada cambia. Un papel que nombra varios instrumentos («Plato suspendido y triángulo», «Percusión 1 (Caja, Bombo)») es un solo papel de percusión, con un músico salvo que el PDF indique otra cosa o que dos de esos instrumentos suenen a la vez («Bombo y platos» en los mismos compases son dos). Una batería siempre es un músico, y los acordes de un instrumento con altura, como la marimba, no cuentan.
 - **Guion escaneado:** el OCR de un escaneado escribe nombres como «Oboe» junto a los pentagramas, y parecía una particella. Si al leer no aparece ninguna, las páginas apartadas se leen y la obra sale del guion completo, con cada página en su orden.
-- **Nombres en un guion escaneado:** el margen de la primera página de música suele traer todos los nombres. Si tiene uno por pentagrama, cada uno se corrige solo de los deslices típicos del OCR («B'Trumpetl») y únicamente si el catálogo lo reconoce exactamente; si no, se queda como está escrito para confirmarlo en Mi banda. «Baritone» después de un metal es el bombardino, no el saxo. Si copista ve menos pentagramas que líneas tiene el margen, sus notas no se colocan: los compases de esa página se quedan en silencio y el registro lo dice. Como esas páginas se leen con compases de más, la obra puede tener más compases que el PDF.
+- **Nombres en un guion escaneado:** el margen de la primera página de música suele traer todos los nombres. Si tiene uno por pentagrama, cada uno se corrige solo de los deslices típicos del OCR («B'Trumpetl») y únicamente si el catálogo lo reconoce exactamente; si no, se queda como está escrito para confirmarlo en Mi banda. «Baritone» después de un metal es el bombardino, no el saxo. Si copista ve menos pentagramas que líneas tiene el margen (dos o más de menos), sus notas no se colocan: los compases de esa página se quedan en silencio y el registro lo dice. Como esas páginas se leen con compases de más, la obra puede tener más compases que el PDF.
 - **Particellas de varias páginas:** el nombre de cada particella se lee en la cabecera de la página, no entre los
   pentagramas, donde aparecen las entradas de otros instrumentos. Las páginas que empiezan por «Título - nombre» siguen a
   la particella anterior cuando el nombre la abrevia con su mismo número («Fl. 1» de «Flute 1», «Hn. 1» de «F Horn 1»);
   una primera página siempre empieza particella. Una página que nombra varios instrumentos entre dos páginas de
   particella, como la percusión, es de esa particella y no de la partitura general.
-- **Instrumentos:** las particellas y los pentagramas de la partitura general se nombran con el catálogo. Si una
-  particella no se puede leer, toma su pentagrama de la partitura general.
+- **Instrumentos:** las particellas y los pentagramas de la partitura general se nombran con el catálogo (78
+  instrumentos, con los de las bandas de concierto, las españolas y las brass bands, la percusión habitual y las
+  abreviaturas de las particellas). El número de parte puede ir antes de la tonalidad («Trompa 1ª en Fa», «Clarinete 1
+  Sib»), y «T.C.» o «B.C.» solo indican la clave. Si una particella no se puede leer, toma su pentagrama de la partitura
+  general.
 - **Transposición:** copista lee las notas tal como están impresas, pero no escribe `<transpose>`. ScoreMaster añade
   la de cada instrumento que reconoce (`backend/parsers/pdf_transpositions.py`). Las particellas siempre se
   transponen; un guion en Do no, si su texto lo dice («Score in C», «Guion en Do», «sonidos reales») o si sus armaduras
-  lo indican.
+  lo indican. Algunos nombres no bastan y deciden la clave y la armadura, comparada con la de los instrumentos que
+  suenan como se escriben:
+  - **«Baritone»** a secas es el saxofón barítono, salvo que esté en clave de fa (los saxofones nunca se escriben en
+    ella) o que su armadura tenga dos quintas más que esos instrumentos (Si♭; el saxo, en Mi♭, tiene tres). Entonces es
+    el bombardino.
+  - **Las tubas en clave de sol** de las ediciones británicas y europeas («Tuba in E♭ (T.C.)», «Eb Bass», «Bb Bass»)
+    suenan una octava y una sexta más graves si están en Mi♭ y dos octavas y una segunda si están en Si♭. La
+    tonalidad sale del nombre o, si no la trae, de la armadura (tres quintas más es Mi♭, y dos, Si♭).
 - **Compases:** cada compás toma la duración de su compás (`backend/parsers/pdf_measures.py`). Si se pasa, se quita
   primero el silencio de compás entero leído junto a otras notas y después lo que sobrepasa la barra; si se queda
   corto, se completa con silencio (antes de las notas en el primer compás, que es una anacrusa).
