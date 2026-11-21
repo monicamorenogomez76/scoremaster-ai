@@ -163,11 +163,13 @@ def _write(title: str, parts: list[stream.Part]) -> bytes:
         score.insert(0, part)
     try:
         return _without_made_up_composer(GeneralObjectExporter(score).parse())
-    except MusicXMLExportException:
-        # music21 retouching the notation copista wrote may make up a 2048th (2026-10-28, «Paco el barba»): the
-        # notation is written as read, with only the impossible types fixed.
+    except (MusicXMLExportException, KeyError):
+        # music21 retouching the notation copista wrote may make up a 2048th (2026-10-28, «Paco el barba») or break
+        # completing triplets with a KeyError (2026-11-20, «Arabian Dances»): the notation is written as read, with only
+        # the impossible types fixed and the notes MusicXML cannot write in one (five quarters) split.
         for part in parts:
             _fix_unwritable(part)
+            part.splitAtDurations(recurse=True)
         exporter = GeneralObjectExporter(score)
         exporter.makeNotation = False
         return _without_made_up_composer(exporter.parse())

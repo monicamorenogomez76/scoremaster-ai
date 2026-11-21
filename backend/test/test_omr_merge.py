@@ -333,6 +333,22 @@ def test_a_work_music21_refuses_to_retouch_keeps_its_slurs(monkeypatch):
     assert slurs_of(join_pages([slurred()], "Obra")) == [("C", "start"), ("D", "stop")]
 
 
+def test_a_work_music21_breaks_on_while_retouching_is_written_as_read(monkeypatch):
+    """«Arabian Dances» (2026-11-20): completing its triplets music21 fails with a KeyError, not with its own exception,
+    and the whole reading failed. Written as read, a note of five quarters is split into notes MusicXML can write."""
+    from omr import merge
+
+    class Breaking(merge.GeneralObjectExporter):
+        def parse(self, *args, **kwargs):
+            if self.makeNotation:
+                raise KeyError(4629967312)
+            return super().parse(*args, **kwargs)
+
+    monkeypatch.setattr(merge, "GeneralObjectExporter", Breaking)
+    long_note = page(1, 1).replace(b"<duration>4</duration><type>half</type>", b"<duration>10</duration>")
+    root, _, measures = parts_of(join_pages([long_note], "Obra"))
+    assert len(measures[0]) == 1 and len(measures[0][0].findall("note")) >= 2
+
 def measure_lengths(xml: bytes) -> list[float]:
     """The length of each measure of each part, in quarters, voices overlapping."""
     found = []

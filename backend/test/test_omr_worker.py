@@ -880,6 +880,15 @@ def test_the_margin_of_a_misread_page_counts_even_if_its_abbreviations_are_unkno
     assert "D" not in re.findall(r"<step>([A-G])</step>", joined.decode())
 
 
+def test_a_page_with_one_staff_less_keeps_its_notes(full_catalog):
+    """«Arabian Dances» (2026-11-20): copista read 23 of the 24 staves of pages 5, 7, 11, 32 and 35, and each was silenced
+    whole, so the band was silent some 26 measures for one staff. Placed by clef and key, only that staff rests."""
+    margin = "\n".join(f"     {name}    tV" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))
+    pages = [(page(5, 2, "C"), margin), (page(4, 2, "D"), margin), (page(5, 2, "E"), margin)]
+    joined, _ = worker._score(pages, "Obra")
+    from omr.merge import measure_count
+    assert "D" in re.findall(r"<step>([A-G])</step>", joined.decode()) and measure_count(joined) == 6
+
 def test_a_page_with_few_staves_and_no_margin_to_tell_is_placed_as_before(full_catalog):
     """A section printed alone (the percussion of «Arabian Dances») is no misreading."""
     margin = "\n".join(f"     {name}    tV" for name in ("Oboe", "Bassoon", "Clarinet 1", "Trumpet 1", "Tuba"))

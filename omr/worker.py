@@ -670,6 +670,10 @@ def _misread(xml: bytes, text: str, joined: int, typical: float = 0) -> bool:
         return False
     if typical and measure_count(xml) >= SPLIT_MEASURES * typical:
         return True
+    # One staff less is no misreading (2026-11-20, «Arabian Dances»: 23 of 24 staves on six pages, each silenced whole):
+    # placed by clef and key, only that staff rests.
+    if staves(xml) == joined - 1:
+        return False
     # One line more than staves: the foot of the page. OCR may miss a line or two.
     return not (text or "").strip() or joined - 2 <= len(_margin_lines(text)) <= joined + 1
 
