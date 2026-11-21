@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shutil
+import time
 
 import httpx
 import pytest
@@ -64,7 +65,7 @@ def run(scoremaster, data, fail_on=None, pages=2):
 def test_a_score_is_read_and_sent_back_with_the_one_time_token(scoremaster):
     assert run(scoremaster, payload()) == 0
     assert scoremaster["auth"] == {"Bearer " + TOKEN}
-    assert scoremaster["progress"][-1] == {"pages_done": 2, "pages_total": 2}
+    assert scoremaster["progress"][-1] == {"pages_done": 2, "pages_total": 2, "stage": "joining"}
     assert "<part-name>Parte 1</part-name>" in scoremaster["result"]["musicxml"]
     assert not any(os.path.exists(folder) for folder in scoremaster["folders"]), "the PDFs are deleted"
 
@@ -225,7 +226,7 @@ def test_with_named_parts_the_score_pages_are_read_after_them(scoremaster):
                page_text=lambda path, number: pages[number - 1][1])
     assert read == [1, 4, 5, 2, 3], "the score's pages (2 and 3), told by their text, come last"
     assert part_names(scoremaster["result"]["musicxml"])[:2] == ["Flauta 1", "Trombón 1"], "the score, named by its parts"
-    assert scoremaster["progress"][-1] == {"pages_done": 5, "pages_total": 5}
+    assert scoremaster["progress"][-1] == {"pages_done": 5, "pages_total": 5, "stage": "joining"}
 
 
 def test_a_score_page_is_told_by_the_instruments_written_beside_its_staves():
@@ -752,7 +753,23 @@ def test_a_score_mistaken_for_parts_keeps_all_its_pages_in_their_order(scoremast
 
 def test_progress_ends_with_the_pages_set_apart_when_they_are_read(scoremaster):
     scanned_score(scoremaster, [MARGIN, "Oboe\n" + MUSIC, MARGIN])
-    assert scoremaster["progress"][-1] == {"pages_done": 3, "pages_total": 3}
+    assert {"pages_done": 3, "pages_total": 3} in scoremaster["progress"]
+
+
+def test_after_its_last_page_the_reader_tells_it_is_joining_the_work(scoremaster):
+    """2026-11-21, «1812»: 34 minutes rereading and joining with no news, and ScoreMaster gave the reading up."""
+    scanned_score(scoremaster, [MARGIN, "Oboe\n" + MUSIC, MARGIN])
+    assert scoremaster["progress"][-1] == {"pages_done": 3, "pages_total": 3, "stage": "joining"}
+
+
+def test_the_reader_keeps_saying_so_while_it_joins_the_work():
+    told = []
+    with worker.keep_telling(lambda: told.append(1), every=0.01):
+        time.sleep(0.1)
+    after = len(told)
+    time.sleep(0.05)
+    assert after >= 3, "it tells ScoreMaster again and again while the work is joined"
+    assert len(told) == after, "and stops when it is done"
 
 
 def test_the_score_pages_kept_for_the_parts_are_in_their_order_too(scoremaster):
