@@ -1100,6 +1100,18 @@ def test_the_second_reading_uses_the_big_detector_at_its_pinned_revision(monkeyp
     assert re.fullmatch(r"[0-9a-f]{40}", worker.BIG_DETECTOR_REVISION)
 
 
+def test_the_big_model_reads_on_every_processor_of_the_machine(monkeypatch):
+    """2026-11-21, «1812»: 40 pages reread at 46 s each. PyTorch takes by default the physical cores, half the
+    processors GitHub gives; the big model reads alone, so it may take them all."""
+    for name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+        monkeypatch.setenv(name, "1")
+    monkeypatch.setattr(worker.os, "cpu_count", lambda: 4)
+    asked = []
+    worker._all_processors(set_threads=asked.append)
+    assert asked == [4]
+    assert worker.os.environ["OMP_NUM_THREADS"] == "4" and worker.os.environ["MKL_NUM_THREADS"] == "4"
+
+
 # «Pirates of the Caribbean» (2026-11-17): every page of a part prints its name, and the scan's text reads it differently
 # from page to page («~b ALTO CLARINET», «EL ALTO CLARINET»; «TROMBONE l»; a page of the tuba read «B. Sax»). Each variant
 # opened a part of its own: 41 parts for some 30. Between consecutive pages, a misreading of the same name is the same part.

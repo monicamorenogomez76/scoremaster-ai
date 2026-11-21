@@ -146,6 +146,20 @@ def _one_thread() -> None:
         os.environ[name] = "1"
 
 
+def _torch_threads(count: int) -> None:
+    import torch
+    torch.set_num_threads(count)
+
+
+def _all_processors(set_threads=None) -> None:
+    """The big model reads alone in its process: on every processor of the machine. PyTorch takes by default only the
+    physical cores, half the processors of GitHub's machines (2026-11-21, «1812»: 46 s a page)."""
+    count = os.cpu_count() or 1
+    for name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+        os.environ[name] = str(count)
+    (set_threads or _torch_threads)(count)
+
+
 def _read_one(read_page, pdf_path: str, number: int, out_dir: str):
     """The page read, or why it could not be (an exception returned, so that it crosses between processes)."""
     try:
@@ -929,10 +943,13 @@ def read_with_big_detector(pages: list[tuple[str, int]]) -> dict:
     """{(path, number): MusicXML or the exception}, in a new process: copisteria keeps the first detector it loads."""
     import multiprocessing
     from concurrent.futures import ProcessPoolExecutor
+    started = time.monotonic()
     with tempfile.TemporaryDirectory() as out_dir, ProcessPoolExecutor(
-            max_workers=1, mp_context=multiprocessing.get_context("spawn")) as pool:
+            max_workers=1, mp_context=multiprocessing.get_context("spawn"), initializer=_all_processors) as pool:
         futures = {page: pool.submit(_read_one, read_page_big, page[0], page[1], out_dir) for page in pages}
-        return {page: future.result() for page, future in futures.items()}
+        found = {page: future.result() for page, future in futures.items()}
+    print(f"Releídas {len(pages)} páginas en {time.monotonic() - started:.0f} s con {os.cpu_count()} procesadores.", flush=True)
+    return found
 
 
 def read_short_pages_again(found: list, paths: dict, read_again) -> list:
