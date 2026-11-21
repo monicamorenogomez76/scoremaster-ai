@@ -702,6 +702,12 @@ def _silent(xml: bytes, joined: int, typical: float) -> bytes:
     return silent_page(xml, joined, measures)
 
 
+def _one_each(names: list[str]) -> bool:
+    """A name written twice is no list of one name per staff (2026-11-20, «Arabian Dances» page 4: names over two lines
+    and the instruments of each percussion part made as many names as staves by chance)."""
+    return len(set(names)) == len(names)
+
+
 def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str] | None]:
     """The score's pages joined, its staves named after the instruments written beside them on its first page when
     there is one name per staff."""
@@ -711,11 +717,11 @@ def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str]
     pages = [(_silent(xml, joined, typical) if _misread(xml, text, joined, typical) else xml, text) for xml, text in pages]
     count = staves(pages[0][0]) if pages else 0
     names = score_names(pages[0][1]) if pages else []
-    named = names if names and len(names) == joined == count else None
+    named = names if names and len(names) == joined == count and _one_each(names) else None
     if named is None and catalog.ready:
         # A scan's text: the first page of music whose margin has every staff.
         named = next((found for found in (margin_names(text, joined) for xml, text in pages if staves(xml) == joined)
-                      if found), None)
+                      if found and _one_each(found)), None)
     # The names beside the staves place the staves of a page that shows fewer of them (2026-11-02).
     labels = [staff_labels(text, staves(xml)) for xml, text in pages]
     return join_pages([xml for xml, _ in pages], title, named, labels, same_part), named

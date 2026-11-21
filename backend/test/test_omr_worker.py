@@ -285,6 +285,14 @@ def test_the_score_s_staves_take_the_names_written_beside_them(scoremaster):
     assert part_names(scoremaster["result"]["musicxml"]) == [f"Parte {n}" for n in range(1, 5)], "not one name per staff"
 
 
+def test_names_repeated_beside_a_score_are_not_one_per_staff(scoremaster):
+    """«Arabian Dances» page 4 (2026-11-20): its long names take two lines («E♭ Baritone» and «Saxophone») and its
+    percussion lists what each plays, so the names that matched the catalog were as many as its staves by chance."""
+    catalog_server(scoremaster)
+    run_pages(scoremaster, [(4, "Saxophone\nTimpani\nTuba\nTimpani"), (4, "")])
+    assert part_names(scoremaster["result"]["musicxml"]) == [f"Parte {n}" for n in range(1, 5)]
+
+
 def test_a_part_copista_cannot_read_comes_from_its_staff_in_the_score(scoremaster, capsys):
     catalog_server(scoremaster)
     pages = [(4, "Flauta\nClarinete\nTrompeta 1\nTuba"), (1, "Flauta"), (1, "Clarinete"), (0, "Trompeta 1"), (1, "Tuba")]
