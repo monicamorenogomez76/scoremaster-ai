@@ -371,3 +371,14 @@ def test_the_measures_and_the_length_of_the_work_follow_the_band():
     timeline = _read_timeline(_parts_score(['CCCC', 'EEEE'], ['CCCCD', 'EEEE'], ['CCCC', 'EEEE']))
     assert [part.measures for part in timeline.parts] == [((1, 0.0), (2, 4.0))] * 3
     assert {part.highest_time for part in timeline.parts} == {8.0} and timeline.highest_time == 8.0
+
+
+def test_each_new_percussion_instrument_plays_its_own_drum():
+    """General MIDI keys (2026-11-21): before, the percussion the catalog did not know sounded as a snare drum."""
+    from backend.domain.instrument_catalog import identity_by_id
+    from backend.parsers.playback import _unpitched_key
+    expected = {"wood_block": 76, "temple_blocks": 77, "tam_tam": 52, "toms": 45, "tenor_drum": 47, "hi_hat": 42,
+                "finger_cymbals": 80, "castanets": 75, "claves": 75, "maracas": 70, "guiro": 73, "cowbell": 56,
+                "cabasa": 69, "shaker": 70, "bongos": 60, "congas": 63, "vibraslap": 58, "whistle": 71,
+                "sleigh_bells": 54, "wind_chimes": 81, "whip": 39, "ratchet": 73}
+    assert {key: _unpitched_key(identity_by_id(key), 72) for key in expected} == expected

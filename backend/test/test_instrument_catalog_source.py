@@ -24,7 +24,7 @@ def test_a_catalog_handed_by_the_infrastructure_replaces_the_seed():
         use_catalog(items)
         assert match_instrument_name("Fiscornio 2").identity.canonical_id == "flugelhorn.bb"
         assert catalog_version() != json.loads(CATALOG_PATH.read_text(encoding="utf-8"))["version"]
-        assert catalog_version().startswith("instrument-catalog-v7+")
+        assert catalog_version().startswith("instrument-catalog-v8+")
     finally:
         use_catalog(None)
     assert match_instrument_name("Fiscornio 2").identity is None, "back to the seed"
@@ -37,7 +37,7 @@ def test_the_same_content_in_another_spelling_keeps_the_version():
         item["aliases"] = sorted((alias.upper() for alias in item["aliases"]), reverse=True)
     try:
         use_catalog(items)
-        assert catalog_version() == "instrument-catalog-v7"
+        assert catalog_version() == "instrument-catalog-v8"
         assert len(catalog_entries()) == len(_seed_items())
     finally:
         use_catalog(None)

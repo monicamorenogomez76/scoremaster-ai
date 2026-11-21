@@ -90,7 +90,8 @@ def test_close_names_never_take_another_instrument(name, not_expected):
     assert match.identity is None or match.identity.canonical_id != not_expected, name
 
 
-@pytest.mark.parametrize("name", ["Clarinete en Re", "Trompa en Mib", "Paco el barba", "Marxa Mora",
+# «Trompa en Mib» is the horn in E♭ since 2026-11-21.
+@pytest.mark.parametrize("name", ["Clarinete en Re", "Trompa en Re", "Paco el barba", "Marxa Mora",
                                   "Solo", "Tutti"])
 def test_what_the_catalog_does_not_know_stays_unknown(name):
     """Unknown keys or names are never forced onto a known instrument: they are asked (Mi banda)."""
