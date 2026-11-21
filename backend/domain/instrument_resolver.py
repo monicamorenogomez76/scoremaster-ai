@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from backend.domain.instrument_catalog import GENERIC_PERCUSSION, InstrumentIdentity, identity_by_id, match_instrument_name
+from backend.domain.instrument_catalog import GENERIC_PERCUSSION, InstrumentIdentity, as_written, identity_by_id, match_instrument_name
 from backend.domain.models import ScorePart
 
 # Initial thresholds, not calibrated yet: >= auto accept, review band below it.
@@ -19,7 +19,7 @@ AGREEMENT_CONFIDENCE = 0.97
 METADATA_ONLY_CONFIDENCE = 0.75
 
 # Bump when the resolution rules or confidences change.
-RESOLVER_VERSION = "instrument-resolver-v7"   # v7 (2026-11-20): a part the label table does not know is named by the catalog («Clarinet in Bb 1»), so stored analyses are made again; v6 (2026-11-17): a part that changes instrument is resolved per instrument; v5 (2026-11-05): percussion that coincides needs its players; v4: a part naming several percussion instruments is one percussion part
+RESOLVER_VERSION = "instrument-resolver-v8"   # v8 (2026-11-21): a «Baritone» in bass clef or transposing like the brass one is the euphonium; v7 (2026-11-20): a part the label table does not know is named by the catalog («Clarinet in Bb 1»), so stored analyses are made again; v6 (2026-11-17): a part that changes instrument is resolved per instrument; v5 (2026-11-05): percussion that coincides needs its players; v4: a part naming several percussion instruments is one percussion part
 RESOLVED, REVIEW, CONFLICT, UNKNOWN = "resolved", "review", "conflict", "unknown"
 SOURCE_ALIAS, SOURCE_MUSICXML, SOURCE_UNKNOWN, SOURCE_USER = "ALIAS", "MUSICXML", "UNKNOWN", "USER"
 
@@ -70,7 +70,9 @@ def resolve_part(part: ScorePart) -> InstrumentResolution:
     metadata = part.metadata
     name = metadata.part_name or part.name
     by_name = match_instrument_name(name)
-    named = by_name.identity
+    shift = (metadata.transposition.chromatic + 12 * metadata.transposition.octave_change
+             if metadata.transposition else None)
+    named = as_written(by_name.identity, name, metadata.clef_sign, shift)
     declared, metadata_evidence = _metadata_evidence(metadata.instrument_names)
     part_numbers = by_name.part_numbers or ((metadata.staff_number,) if metadata.staff_number else ())
     name_evidence = ("part-name '{}' → {}".format(name, named.canonical_id),) if named else ()

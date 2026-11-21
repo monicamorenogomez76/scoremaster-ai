@@ -106,6 +106,9 @@ def read_part_metadata(content: bytes) -> dict[str, PartMetadata]:
             instruments, lines = _coinciding(part)
             metadata[part.get("id")] = replace(metadata[part.get("id")], simultaneous_instruments=instruments,
                                                simultaneous_lines=lines)
+        sign = next((_text(found) for found in part.iter("sign")), None)
+        if part.get("id") in metadata and sign:
+            metadata[part.get("id")] = replace(metadata[part.get("id")], clef_sign=sign)
         transpose = next(part.iter("transpose"), None)
         if part.get("id") in metadata and transpose is not None:
             metadata[part.get("id")] = replace(metadata[part.get("id")], transposition=_transposition(transpose))

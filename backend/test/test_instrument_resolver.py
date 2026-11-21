@@ -16,7 +16,7 @@ from backend.domain.instrument_resolver import (
     UNKNOWN,
     resolve_part,
 )
-from backend.domain.models import PartMetadata, ScorePart
+from backend.domain.models import PartMetadata, PartTransposition, ScorePart
 
 
 def part(name, instruments=(), display=None, staff=None):
@@ -170,3 +170,28 @@ def test_a_name_that_is_not_all_percussion_stays_as_it_was(name):
 @pytest.mark.parametrize("name, expected", [("Caja", "snare_drum"), ("Platos", "crash_cymbals"), ("Percussion 1", "percussion")])
 def test_a_part_naming_one_instrument_keeps_it(name, expected):
     assert resolve_part(part(name)).identity.canonical_id == expected
+
+
+# «Baritone» (2026-11-21): the catalog takes it for the baritone saxophone, as concert bands mostly mean; brass bands and
+# Alfred's editions mean the brass baritone. Saxophones are only written in treble clef and the saxophone transposes
+# 21 semitones down, the brass baritone in treble clef 14.
+@pytest.mark.parametrize("name, clef, transposition, expected", [
+    ("Baritone", "F", None, "euphonium"),
+    ("1st Baritone", "F", None, "euphonium"),
+    ("Barítono", "F", None, "euphonium"),
+    ("Baritone", "G", PartTransposition(-2, -1, -1), "euphonium"),
+    ("Baritone", "G", None, "saxophone.baritone"),
+    ("Baritone", "G", PartTransposition(-9, -5, -1), "saxophone.baritone"),
+    ("Baritone Sax", "F", None, "saxophone.baritone"),
+])
+def test_a_baritone_is_told_by_how_it_is_written(name, clef, transposition, expected):
+    found = resolve_part(ScorePart(name, (), PartMetadata(part_name=name, clef_sign=clef, transposition=transposition)))
+    assert found.identity.canonical_id == expected
+
+
+def test_the_clef_of_a_part_is_read_from_its_first_measure():
+    from backend.parsers.musicxml_parser import read_part_metadata
+    content = (b'<score-partwise><part-list><score-part id="P1"><part-name>Baritone</part-name></score-part></part-list>'
+               b'<part id="P1"><measure number="1"><attributes><clef><sign>F</sign><line>4</line></clef></attributes>'
+               b'</measure></part></score-partwise>')
+    assert read_part_metadata(content)["P1"].clef_sign == "F"

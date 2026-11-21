@@ -46,6 +46,18 @@ def test_euphonium_and_trombone_in_treble_clef_are_in_b_flat_and_in_bass_clef_as
     assert sounding(add_transpositions(read)) == [C5 - 14, C5, C5 - 14, C5, C5]
 
 
+def test_a_baritone_in_bass_clef_is_the_euphonium_and_sounds_as_written():
+    """«Baritone» is taken for the baritone saxophone (2026-11-21); in bass clef it is the brass one: no saxophone is
+    written there."""
+    read = work(("Baritone", "F"), ("Baritone", "G"), ("Baritone Sax.", "G"))
+    assert sounding(add_transpositions(read)) == [C5, C5 - 21, C5 - 21]
+
+def test_a_baritone_in_treble_clef_is_told_by_its_key_against_the_instruments_in_c():
+    """In treble clef both are written: the baritone saxophone, in E♭, has three sharps more than the flute; the brass
+    baritone, in B♭, two (2026-11-21). The work is in B♭: the flute has two flats."""
+    read = work(("Flute", "G", -2), ("Oboe", "G", -2), ("Baritone", "G", 0), ("Baritone", "G", 1))
+    assert sounding(add_transpositions(read)) == [C5, C5, C5 - 14, C5 - 21]
+
 def test_unknown_parts_and_parts_that_already_say_their_transposition_are_left_alone():
     read = work(("Parte 1", "G"), ("Gaita de fole", "G"))
     assert add_transpositions(read) == read

@@ -10,15 +10,15 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
-from backend.domain.instrument_catalog import identity_by_id, instrument_name_key, match_instrument_name
+from backend.domain.instrument_catalog import as_written, identity_by_id, instrument_name_key, match_instrument_name
 from backend.domain.instrument_transposition import written_to_sounding
 
 # MusicXML's order inside <attributes>: <transpose> comes after these.
 _BEFORE_TRANSPOSE = ("divisions", "key", "time", "staves", "part-symbol", "instruments", "clef", "staff-details")
 
 
-def _instrument(name: str, learned: dict[str, str]) -> str | None:
-    identity = match_instrument_name(name).identity
+def _instrument(name: str, learned: dict[str, str], clef_sign: str | None = None, key_fifths: int | None = None) -> str | None:
+    identity = as_written(match_instrument_name(name).identity, name, clef_sign, key_fifths=key_fifths)
     return identity.canonical_id if identity else learned.get(instrument_name_key(name))
 
 
@@ -28,6 +28,19 @@ def _fifths(part) -> int | None:
         return int(found) if found is not None else None
     except ValueError:
         return None
+
+
+def _concert_fifths(root, names: dict, learned: dict[str, str]) -> int | None:
+    """The key signature most of the known instruments that sound as written share, in fifths; None without any."""
+    found = []
+    for part in root.findall("part"):
+        instrument = _instrument(names.get(part.get("id"), ""), learned)
+        identity = identity_by_id(instrument) if instrument else None
+        fifths = _fifths(part)
+        if identity is not None and identity.section != "percussion" and fifths is not None \
+                and written_to_sounding(instrument, part.findtext(".//clef/sign")) is None:
+            found.append(fifths)
+    return max(set(found), key=found.count) if found else None
 
 
 def _key_shift(interval: tuple[int, int, int]) -> int:
@@ -63,11 +76,14 @@ def add_transpositions(musicxml: bytes, learned: dict[str, str] | None = None, c
         return musicxml
     root = ET.fromstring(musicxml)
     names = {item.get("id"): item.findtext("part-name") or "" for item in root.iter("score-part")}
+    concert = _concert_fifths(root, names, learned or {})
     found = []
     for part in root.findall("part"):
         if part.find(".//transpose") is not None:
             continue
-        instrument = _instrument(names.get(part.get("id"), ""), learned or {})
+        fifths = _fifths(part)
+        instrument = _instrument(names.get(part.get("id"), ""), learned or {}, part.findtext(".//clef/sign"),
+                                 None if concert is None or fifths is None else fifths - concert)
         if instrument is None:
             continue
         identity = identity_by_id(instrument)
