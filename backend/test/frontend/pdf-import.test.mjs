@@ -51,6 +51,7 @@ test('the director follows the reading in words', async () => {
   assert.equal(pdfStatusText({ status: 'preparing' }), 'Preparando el lector (copista)…');
   assert.equal(pdfStatusText({ status: 'reading', pages_done: 0, pages_total: 0 }), 'Preparando la lectura…');
   assert.equal(pdfStatusText({ status: 'reading', pages_done: 7, pages_total: 20 }), 'Leyendo la página 7 de 20…');
+  assert.equal(pdfStatusText({ status: 'joining' }), 'Leyendo otra vez con más detalle las páginas incompletas y uniendo la obra: puede tardar media hora…');
   assert.equal(pdfStatusText({ status: 'analysing' }), 'Analizando la obra leída…');
   assert.equal(pdfStatusText({ status: 'done' }), 'Obra leída y analizada.');
   assert.equal(pdfStatusText({ status: 'failed', error: 'No se pudo leer la página 2 de Flauta 1.pdf.' }),

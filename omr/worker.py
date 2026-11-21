@@ -8,6 +8,7 @@ token is masked in the log. The job is read from GitHub's event file, never from
 prints in the log (2026-10-27)."""
 from __future__ import annotations
 
+from contextlib import ExitStack, contextmanager
 from difflib import SequenceMatcher
 import json
 import os
@@ -16,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -120,6 +122,9 @@ BIG_DETECTOR_REPOSITORY = "kobimusic/copista-28m"
 BIG_DETECTOR_REVISION = "44464d11234a22ba23634ec8eb1e31e3b012021a"
 BIG_DETECTOR_FILE = "small/v7_obj-recall-30m_best.pt"
 MAX_SECOND_READINGS = 40
+# After the last page, how often the reader tells ScoreMaster it is still joining the work, in seconds: ScoreMaster
+# gives a reading up after 30 minutes with no news (2026-11-21, «1812» took 34 minutes rereading and joining).
+JOINING_NEWS_EVERY = 300
 SUSPICIOUS_MEASURES = 2
 # Several processes of one processor each read faster than one process with all of them (2026-11-03, 12 pages on four
 # processors: 54 s one after another, 43 s with four threads, 29 s two by two, 22 s four processes of one). GitHub's
@@ -962,6 +967,23 @@ def read_short_pages_again(found: list, paths: dict, read_again) -> list:
     return better
 
 
+@contextmanager
+def keep_telling(tell, every: float = JOINING_NEWS_EVERY):
+    """Calls `tell` every `every` seconds in the background until the block ends."""
+    stop = threading.Event()
+
+    def loop():
+        while not stop.wait(every):
+            tell()
+    thread = threading.Thread(target=loop, daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        thread.join()
+
+
 def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count_pages, page_text=page_text,
         read_again=None) -> int:
     """Reads the job and reports to ScoreMaster. 0 when the work was sent back, 1 when the failure was."""
@@ -969,6 +991,8 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
     client.headers["Authorization"] = "Bearer " + data["token"]
     callback = data["callback"].rstrip("/")
     folder = tempfile.mkdtemp(prefix="omr-")
+    # The news while the work is joined, stopped before it is sent: news after it would undo its «analysing».
+    background = ExitStack()
     global catalog
     catalog = _load_catalog(client, callback)
     try:
@@ -1006,17 +1030,33 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         # The real copista reads several pages at once; a reading given by the tests, one after another.
         workers = page_workers() if read_page is DEFAULT_READ_PAGE else 1
 
+        # Reading pages, or joining the work once its pages are read: rereading the incomplete ones with the big model
+        # and putting them together, which can take half an hour with no page to count.
+        now = {"total": len(plan), "stage": "reading"}
+
+        def tell():
+            stage = {"stage": "joining"} if now["stage"] == "joining" else {}
+            try:
+                client.post(callback + "/progress", json={"pages_done": done, "pages_total": now["total"], **stage})
+            except httpx.HTTPError:
+                pass   # only information: the pages read are worth more
+
+        def joining():
+            now["stage"] = "joining"
+            tell()
+
         def page_done(total: int):
-            def tell():
+            now["total"], now["stage"] = total, "reading"
+
+            def one_more():
                 nonlocal done
                 done += 1
-                try:
-                    client.post(callback + "/progress", json={"pages_done": done, "pages_total": total})
-                except httpx.HTTPError:
-                    pass   # only information: the pages read are worth more
-            return tell
+                tell()
+            return one_more
 
         results = read_pages(plan, read_page, out_dirs, workers, page_done(len(plan)))
+        joining()
+        background.enter_context(keep_telling(tell))
         for name, path, number in plan:
             outcome = results[(name, path, number)]
             if isinstance(outcome, Exception):
@@ -1033,6 +1073,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             appears."""
             found = []
             results = read_pages(set_apart, read_page, out_dirs, workers, page_done(len(plan) + len(set_apart)))
+            joining()
             for name, path, number in set_apart:
                 outcome = results[(name, path, number)]
                 if isinstance(outcome, Exception):
@@ -1075,6 +1116,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         if tempo:
             musicxml = add_tempo(musicxml, *tempo)
             print(f"Tempo leído del texto del PDF: {tempo[0]} por minuto.", flush=True)
+        background.close()
         # ScoreMaster adds the transposition of each instrument, never to a score in C (2026-10-29).
         send_result(client, callback, {"musicxml": musicxml.decode("utf-8"), "source": source,
                                        "concert_pitch": concert_pitch})
@@ -1085,6 +1127,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         print(reason.logged, flush=True)
         return 1
     finally:
+        background.close()
         catalog = Catalog()
         shutil.rmtree(folder, ignore_errors=True)
 

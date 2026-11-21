@@ -347,6 +347,7 @@ export const en = {
   'Preparando el lector (copista)…': 'Preparing the reader (copista)…',
   'Leyendo la página {done} de {total}{left}…': 'Reading page {done} of {total}{left}…',
   'Preparando la lectura…': 'Preparing the reading…',
+  'Leyendo otra vez con más detalle las páginas incompletas y uniendo la obra: puede tardar media hora…': 'Reading the incomplete pages again in more detail and joining the work: it can take half an hour…',
   'Analizando la obra leída…': 'Analysing the work read…',
   'Obra leída y analizada.': 'Work read and analysed.',
   'No se pudo leer el PDF.': 'Could not read the PDF.',

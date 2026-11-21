@@ -111,6 +111,17 @@ def test_the_director_sees_the_reader_getting_ready(clients, reader):  # noqa: F
     assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "reading"
 
 
+def test_the_reader_keeps_telling_it_is_joining_the_pages_after_the_last_one(clients, reader):  # noqa: F811
+    """2026-11-21, «1812»: after its last page the reader spent 34 minutes rereading pages with the big model and
+    joining them; with no news for 30 minutes ScoreMaster gave the reading up and refused the work it then sent."""
+    ana, _ = clients
+    created = upload(ana)
+    job = reader.jobs[0]
+    machine(ana, job, "/progress", json={"pages_done": 9, "pages_total": 9})
+    assert machine(ana, job, "/progress", json={"pages_done": 9, "pages_total": 9, "stage": "joining"}).status_code == 204
+    assert ana.get("/pdf-imports/" + created.json()["id"]).json()["status"] == "joining"
+
+
 def test_the_reader_s_failure_reaches_the_director(clients, reader):  # noqa: F811
     ana, _ = clients
     created = upload(ana, files=(("Flauta 1.pdf", PDF),), kind="parts")

@@ -72,6 +72,7 @@ export function pdfStatusText(status, remaining = null) {
     case 'reading': return status.pages_total
       ? t('Leyendo la página {done} de {total}{left}…', { done: status.pages_done, total: status.pages_total, left: leftText(remaining) })
       : t('Preparando la lectura…');
+    case 'joining': return t('Leyendo otra vez con más detalle las páginas incompletas y uniendo la obra: puede tardar media hora…');
     case 'analysing': return t('Analizando la obra leída…');
     case 'done': return t('Obra leída y analizada.');
     case 'failed': return status.error || t('No se pudo leer el PDF.');

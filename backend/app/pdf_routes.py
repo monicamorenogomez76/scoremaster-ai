@@ -44,11 +44,12 @@ MAX_PREPARED_CHARACTERS = 20 * 1024 * 1024
 NOT_FOUND = "No se encontró la lectura del PDF."
 # A reading that stopped telling its progress, or an analysis that never ended, is given up.
 STALLED = {"queued": timedelta(minutes=30), "preparing": timedelta(minutes=30), "reading": timedelta(minutes=30),
-           "analysing": timedelta(minutes=15)}
+           "joining": timedelta(minutes=30), "analysing": timedelta(minutes=15)}
 STALLED_ERROR = {"analysing": "No se pudo analizar la obra leída. Vuelve a subir el PDF.",
                  "queued": "El lector de PDF no respondió a tiempo. Vuelve a intentarlo.",
                  "preparing": "El lector de PDF no respondió a tiempo. Vuelve a intentarlo.",
-                 "reading": "El lector de PDF no respondió a tiempo. Vuelve a intentarlo."}
+                 "reading": "El lector de PDF no respondió a tiempo. Vuelve a intentarlo.",
+                 "joining": "El lector de PDF no respondió a tiempo. Vuelve a intentarlo."}
 
 
 def _sha256(token: str) -> str:
@@ -143,8 +144,9 @@ def _reader(import_id: str, authorization: Optional[str], imports: PdfImportRepo
 class Progress(BaseModel):
     pages_done: int = Field(ge=0, le=10000)
     pages_total: int = Field(ge=0, le=10000)
-    # "preparing" while the reader installs copista (2026-10-28); pages read mean "reading".
-    stage: Optional[str] = Field(default=None, pattern="^(preparing|reading)$")
+    # "preparing" while the reader installs copista (2026-10-28); pages read mean "reading"; "joining" once they are
+    # all read, while it rereads the incomplete ones and joins the work, every few minutes (2026-11-21).
+    stage: Optional[str] = Field(default=None, pattern="^(preparing|reading|joining)$")
 
 
 class Result(BaseModel):
@@ -171,7 +173,7 @@ def reader_file(import_id: str, position: int, authorization: Optional[str] = He
 def reader_progress(import_id: str, progress: Progress, authorization: Optional[str] = Header(default=None),
                     imports: PdfImportRepository = Depends(get_pdf_import_repository)):
     imports.progress(_reader(import_id, authorization, imports).id, progress.pages_done, progress.pages_total,
-                     "preparing" if progress.stage == "preparing" else "reading")
+                     progress.stage if progress.stage in ("preparing", "joining") else "reading")
     return Response(status_code=204)
 
 
