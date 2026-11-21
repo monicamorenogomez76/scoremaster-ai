@@ -140,6 +140,40 @@ def test_only_the_job_s_token_opens_its_pdfs(clients, reader):  # noqa: F811
     assert machine(ana, job, "/result", json={"musicxml": "x"}).status_code == 401
 
 
+# Several machines read one work (2026-11-21, «1812»: 40 pages reread one after another took half an hour). The pages
+# they read go through ScoreMaster, with the job's token: a public repository's artifacts and logs are anyone's.
+def test_a_page_read_by_a_helping_machine_waits_in_scoremaster_for_the_main_one(clients, reader):  # noqa: F811
+    ana, _ = clients
+    upload(ana)
+    job = reader.jobs[0]
+    assert machine(ana, job, "/pages/1/5", method="GET").status_code == 404, "not read yet"
+    assert machine(ana, job, "/pages/1/5", method="PUT", content=b"<score-partwise/>").status_code == 204
+    found = machine(ana, job, "/pages/1/5", method="GET")
+    assert found.status_code == 200 and found.content == b"<score-partwise/>"
+    assert machine(ana, {**job, "token": "otro"}, "/pages/1/5", method="GET").status_code == 401
+    assert machine(ana, {**job, "token": "otro"}, "/pages/1/6", method="PUT", content=b"x").status_code == 401
+
+
+def test_a_page_too_big_is_refused(clients, reader):  # noqa: F811
+    from backend.app import pdf_routes
+    ana, _ = clients
+    upload(ana)
+    job = reader.jobs[0]
+    big = b"x" * (pdf_routes.MAX_PAGE_BYTES + 1)
+    assert machine(ana, job, "/pages/1/5", method="PUT", content=big).status_code == 413
+
+
+def test_the_pages_go_with_the_pdfs_once_the_work_arrives(clients, reader, postgres_engine):  # noqa: F811
+    from sqlalchemy import text
+    ana, _ = clients
+    upload(ana)
+    job = reader.jobs[0]
+    machine(ana, job, "/pages/1/5", method="PUT", content=b"<score-partwise/>")
+    machine(ana, job, "/result", json={"error": "No se encontró música en el PDF."})
+    with postgres_engine.connect() as connection:
+        assert connection.execute(text("SELECT count(*) FROM pdf_import_pages")).scalar() == 0
+
+
 def test_an_import_belongs_to_its_owner(clients, reader):  # noqa: F811
     ana, berta = clients
     created = upload(ana)

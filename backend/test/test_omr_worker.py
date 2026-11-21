@@ -29,13 +29,20 @@ def payload(kind="score", names=("obra.pdf",)):
 @pytest.fixture
 def scoremaster():
     """ScoreMaster as the reader sees it: the PDFs to download and what the reader reports."""
-    seen = {"progress": [], "result": None, "auth": set(), "files": {}, "folders": []}
+    seen = {"progress": [], "result": None, "auth": set(), "files": {}, "folders": [], "pages": {}}
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen["auth"].add(request.headers.get("authorization"))
         path = request.url.path
         if request.method == "GET" and "/files/" in path:
             return httpx.Response(200, content=seen["files"].get(path, PDF))
+        if "/pages/" in path:
+            place = tuple(int(number) for number in path.rsplit("/", 2)[1:])
+            if request.method == "PUT":
+                seen["pages"][place] = request.content
+                return httpx.Response(204)
+            found = seen["pages"].get(place)
+            return httpx.Response(200, content=found) if found else httpx.Response(404)
         if path.endswith("/progress"):
             seen["progress"].append(json.loads(request.content))
             return httpx.Response(204)
@@ -1305,3 +1312,85 @@ def test_the_staves_of_a_score_take_the_names_beside_them_with_their_place(full_
              word("Cls.", 43, 105), word("1", 57, 90), word("2", 56, 116), word("3", 56, 124)]
     joined, named = worker._score([(page(3, 2, "C"), PageText("Fls.\nCls.", words))], "Obra")
     assert named == ["Fls. 1 2", "Cls. 1", "Cls. 2 3"]
+
+
+# --- several machines read one work (2026-11-21, «1812»: 40 pages of the score reread with the big model, one after
+# another, took half an hour). The pages that look like the score are shared out the same way by every machine.
+SCORE_TEXTS = [MARGIN, MARGIN, MARGIN, "Oboe\n" + MUSIC, MARGIN, MARGIN, MARGIN]
+
+
+def test_the_score_pages_are_shared_out_among_the_machines():
+    places = [(1, number) for number in range(1, 8)]
+    texts = dict(zip(places, SCORE_TEXTS))
+    assert worker.shared_pages(places, texts, "auto", 0, 3) == [(1, 1), (1, 5)]
+    assert worker.shared_pages(places, texts, "auto", 1, 3) == [(1, 2), (1, 6)]
+    assert worker.shared_pages(places, texts, "auto", 2, 3) == [(1, 3), (1, 7)]
+    assert worker.shared_pages(places, texts, "parts", 1, 3) == [], "a part's page is never read again"
+    assert worker.shared_pages(places, {place: "" for place in places}, "score", 1, 3) == [(1, 2), (1, 5)], \
+        "a scan without text: every page"
+
+
+def test_a_helping_machine_leaves_its_pages_read_in_scoremaster(scoremaster):
+    read = []
+
+    def read_again(pages):
+        read.extend(number for _, number in pages)
+        return {page: f"<page {page[1]}/>".encode() for page in pages}
+
+    assert worker.help_read(payload("auto"), scoremaster["client"], 1, 3, read_again=read_again,
+                            count_pages=lambda path: 7, page_text=lambda path, number: SCORE_TEXTS[number - 1]) == 0
+    assert read == [2, 6]
+    assert scoremaster["pages"] == {(1, 2): b"<page 2/>", (1, 6): b"<page 6/>"}
+    assert scoremaster["result"] is None and scoremaster["progress"] == [], "only the main machine reports"
+
+
+def test_the_main_machine_takes_the_pages_the_helping_ones_read():
+    asked = []
+
+    def read_again(pages):
+        asked.extend(pages)
+        return {page: b"own" for page in pages}
+
+    helped = {("b.pdf", 2): b"helped"}
+    reading = worker.shared_reading(read_again, fetch=lambda page: helped.get(page),
+                                    helping={("b.pdf", 2), ("b.pdf", 3)}, patience=0.05, every=0.01)
+    helped[("b.pdf", 3)] = b"late"
+    found = reading([("b.pdf", 1), ("b.pdf", 2), ("b.pdf", 3)])
+    assert found == {("b.pdf", 1): b"own", ("b.pdf", 2): b"helped", ("b.pdf", 3): b"late"}
+    assert asked == [("b.pdf", 1)], "only its own pages"
+
+
+def test_the_main_machine_reads_itself_what_a_helping_one_never_sent():
+    asked = []
+
+    def read_again(pages):
+        asked.extend(pages)
+        return {page: b"own" for page in pages}
+
+    reading = worker.shared_reading(read_again, fetch=lambda page: None, helping={("b.pdf", 2)}, patience=0.05,
+                                    every=0.01)
+    assert reading([("b.pdf", 2)]) == {("b.pdf", 2): b"own"}
+    assert asked == [("b.pdf", 2)]
+
+
+def test_the_machine_comes_from_the_workflow(monkeypatch):
+    monkeypatch.setenv("OMR_MACHINE", "2/4")
+    assert worker.machine_from_environment() == (2, 4)
+    monkeypatch.delenv("OMR_MACHINE")
+    assert worker.machine_from_environment() == (0, 1), "one machine, as before"
+
+
+
+def test_the_main_machine_joins_the_page_a_helping_one_reread(scoremaster):
+    counts = {1: 5, 2: 3, 3: 5}
+    asked = []
+
+    def read_again(pages):
+        asked.extend(pages)
+        return {}
+
+    scoremaster["pages"][(1, 2)] = page(5, 2, "E")
+    worker.run(payload("score"), client=scoremaster["client"], count_pages=lambda path: 3, page_text=lambda path, number: "",
+               read_page=lambda path, number, out_dir: page(counts[number], 2, "C"), read_again=read_again, machines=2)
+    assert asked == [], "page 2 is the other machine's"
+    assert scoremaster["result"]["musicxml"].count("<step>E</step>") > 0, "its reading is in the work"

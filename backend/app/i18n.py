@@ -47,6 +47,8 @@ EN = {
     # PDF
     "Solo se aceptan archivos PDF.": "Only PDF files are accepted.",
     "No existe ese PDF.": "That PDF does not exist.",
+    "La página leída es demasiado grande.": "The page read is too big.",
+    "Esa página no se ha leído todavía.": "That page has not been read yet.",
     "La lectura no es MusicXML válido.": "The reading is not valid MusicXML.",
     "ScoreMaster está procesando otra obra.": "ScoreMaster is processing another work.",
     "La obra terminada no es lo que dice ser.": "The finished work is not what it says it is.",
