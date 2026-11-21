@@ -58,6 +58,14 @@ def test_a_baritone_in_treble_clef_is_told_by_its_key_against_the_instruments_in
     read = work(("Flute", "G", -2), ("Oboe", "G", -2), ("Baritone", "G", 0), ("Baritone", "G", 1))
     assert sounding(add_transpositions(read)) == [C5, C5, C5 - 14, C5 - 21]
 
+def test_a_tuba_in_treble_clef_sounds_in_its_key():
+    """British and European editions write the basses in treble clef (2026-11-21): the E♭ bass sounds an octave and a
+    major sixth below, the B♭ bass two octaves and a major second. The name says which, or else the key against the
+    instruments in C (three fifths more for E♭, two for B♭). In bass clef a tuba sounds as written."""
+    read = work(("Flute", "G", -2), ("Tuba in Eb (T.C.)", "G", 1), ("Tuba in Bb (T.C.)", "G", 0), ("Eb Bass", "G", 1),
+                ("Tuba", "G", 1), ("Tuba", "G", 0), ("Tuba", "F", -2))
+    assert sounding(add_transpositions(read)) == [C5, C5 - 21, C5 - 26, C5 - 21, C5 - 21, C5 - 26, C5]
+
 def test_unknown_parts_and_parts_that_already_say_their_transposition_are_left_alone():
     read = work(("Parte 1", "G"), ("Gaita de fole", "G"))
     assert add_transpositions(read) == read
