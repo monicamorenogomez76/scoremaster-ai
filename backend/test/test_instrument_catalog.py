@@ -363,3 +363,18 @@ def test_a_part_of_several_new_percussion_instruments_is_one_percussion_part():
 def test_the_new_instruments_sound_where_they_should(canonical_id, semitones):
     from backend.domain.instrument_transposition import instrument_shift
     assert instrument_shift(canonical_id) == semitones
+
+
+# The names beside the staves of a score (2026-11-21, «Arabian Dances»): abbreviated and in plural under a brace, and
+# the flat of Finale's music font read by pdftotext as «≤».
+@pytest.mark.parametrize("name, canonical_id, part_numbers", [
+    ("Fls. 1 2", "flute", (1, 2)), ("Flutes 1 2", "flute", (1, 2)), ("Obs. 1 2", "oboe", (1, 2)),
+    ("Oboes 1 2", "oboe", (1, 2)), ("Bsns. 1 2", "bassoon", (1, 2)), ("Bassoons 1 2", "bassoon", (1, 2)),
+    ("Cls. 2 3", "clarinet.bb", (2, 3)), ("B≤ Clarinets 1", "clarinet.bb", (1,)), ("B≤ Bass Clarinet", "clarinet.bass", ()),
+    ("A. Saxes. 1 2", "saxophone.alto", (1, 2)), ("Tpts. 2 3", "trumpet.bb", (2, 3)), ("B≤ Trumpets 1", "trumpet.bb", (1,)),
+    ("Hns. 3 4", "horn.f", (3, 4)), ("F Horns 1 2", "horn.f", (1, 2)), ("Tbns. 3", "trombone.tenor", (3,)),
+    ("Bar./Euph.", "euphonium", ()), ("Timp./Shkr.", "percussion", ()), ("Shkr.", "shaker", ()),
+])
+def test_the_names_beside_the_staves_of_a_score(name, canonical_id, part_numbers):
+    match = match_instrument_name(name)
+    assert (match.identity.canonical_id if match.identity else None, match.part_numbers) == (canonical_id, part_numbers)

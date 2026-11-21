@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v8",
+ "version": "instrument-catalog-v9",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -43,7 +43,10 @@
     "flute traversiere",
     "frauta",
     "querflote",
-    "flauta travesera"
+    "flauta travesera",
+    "fls",
+    "flutes",
+    "flts"
    ],
    "sound": "flute",
    "rehearsal_group": "flutes"
@@ -78,7 +81,9 @@
     "hautbois",
     "oboè",
     "oboi",
-    "oboen"
+    "oboen",
+    "obs",
+    "oboes"
    ],
    "sound": "oboe",
    "rehearsal_group": "double_reeds"
@@ -121,7 +126,9 @@
     "fagott",
     "basson",
     "fg",
-    "fag"
+    "fag",
+    "bsns",
+    "bassoons"
    ],
    "sound": "bassoon",
    "rehearsal_group": "low_voices"
@@ -200,7 +207,10 @@
     "klarinette",
     "clarinette",
     "clarinets",
-    "clarinetes"
+    "clarinetes",
+    "cls",
+    "bb clarinets",
+    "clars"
    ],
    "sound": "clarinet",
    "rehearsal_group": "clarinets"
@@ -354,7 +364,12 @@
     "saxophone alto",
     "sax contralto",
     "sax alto",
-    "sax a"
+    "sax a",
+    "a saxes",
+    "alto saxophones",
+    "eb alto saxophones",
+    "alto saxes",
+    "a saxs"
    ],
    "sound": "alto_sax",
    "rehearsal_group": "saxophones"
@@ -459,7 +474,11 @@
     "trompes",
     "trompas",
     "corni",
-    "cors"
+    "cors",
+    "hns",
+    "horns",
+    "f horns",
+    "hrns"
    ],
    "sound": "french_horn",
    "rehearsal_group": "high_brass"
@@ -532,7 +551,10 @@
     "tpta",
     "trompetas",
     "trompetes",
-    "trombe"
+    "trombe",
+    "tpts",
+    "trumpets",
+    "bb trumpets"
    ],
    "sound": "trumpet",
    "rehearsal_group": "high_brass"
@@ -648,7 +670,9 @@
     "tenorposaune",
     "trombons",
     "trombones",
-    "posaunen"
+    "posaunen",
+    "tbns",
+    "trbs"
    ],
    "sound": "trombone",
    "rehearsal_group": "low_voices"
@@ -702,7 +726,10 @@
     "baritone tc",
     "baritone bc",
     "euphonium t.c.",
-    "euphonium b.c."
+    "euphonium b.c.",
+    "bar euph",
+    "bar euphonium",
+    "baritone euph"
    ],
    "sound": "tuba",
    "rehearsal_group": "low_voices"
@@ -1500,7 +1527,8 @@
     "shaker",
     "egg shaker",
     "shekere",
-    "sonajero"
+    "sonajero",
+    "shkr"
    ],
    "sound": null,
    "rehearsal_group": "percussion"

@@ -1255,3 +1255,24 @@ def test_a_scanned_page_keeps_its_scan(tmp_path):
     found = worker.page_image("obra.pdf", 5, str(tmp_path), extract=lambda *_: _Page(tmp_path / "scan.png", (2480, 3509)),
                               render=render)
     assert found == tmp_path / "scan.png"
+
+
+# The name beside each staff, read with its place (2026-11-21, «Arabian Dances»): one name under a brace covers several
+# staves, and the numbers beside a staff say which parts play it.
+
+def test_a_part_belongs_to_the_staff_it_shares(full_catalog):
+    assert worker.same_part("Flute 1", "Fls. 1 2") and worker.same_part("Flute 2", "Fls. 1 2")
+    assert not worker.same_part("Flute 1", "Flute 2") and not worker.same_part("Flute 3", "Fls. 1 2")
+
+
+def test_the_staves_of_a_score_take_the_names_beside_them_with_their_place(full_catalog):
+    from omr.margin import PageText, Word
+
+    def word(text, left, middle):
+        return Word(text, left, left + 8, middle)
+
+    words = [word("&", 69, 60), word("&", 69, 90), word("&", 69, 120),
+             word("Fls.", 44, 60), word("1", 58, 56), word("2", 58, 64),
+             word("Cls.", 43, 105), word("1", 57, 90), word("2", 56, 116), word("3", 56, 124)]
+    joined, named = worker._score([(page(3, 2, "C"), PageText("Fls.\nCls.", words))], "Obra")
+    assert named == ["Fls. 1 2", "Cls. 1", "Cls. 2 3"]
