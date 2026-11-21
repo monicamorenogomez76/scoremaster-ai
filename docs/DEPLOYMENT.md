@@ -205,6 +205,17 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   llave, y los números, al pentagrama que tienen al lado. Si todos se reconocen en el catálogo, el guion se nombra así
   («Cls. 2 3» es el clarinete con las partes 2 y 3), y cada particella se empareja con el pentagrama que comparte
   («Flute 1» con «Fls. 1 2»).
+- **Guion de banda en un solo sistema** («1812», 30 pentagramas en A3): las barras de compás se cortan entre familias, y
+  copisteria tomaba maderas, metales y percusión (13 + 11 + 6 pentagramas) por tres sistemas seguidos, como compases
+  nuevos de 13 partes. Si el margen tiene un nombre distinto junto a casi cada pentagrama (faltan como mucho 3), el
+  lector le dice a copisteria que son un solo sistema y apunta en cada pentagrama leído el nombre más cercano por su
+  altura. Las páginas se unen por esos nombres: copisteria pierde a veces los pentagramas de percusión de una línea, y por
+  clave y armadura tres clarinetes o cuatro trompetas son iguales. La referencia es la página más ancha con nombres; una
+  con más pentagramas que ella está mal leída y se relee con copista-28m, que gana si nombra sus pentagramas.
+- **Iniciales sueltas:** la fuente de «1812» imprime la mayúscula de cada nombre aparte («F l. 1», «H n. 1», «B sn.»).
+  Una mayúscula de texto pequeño pegada (menos del 15 % de su altura) a un resto en minúscula o a un punto se une a él
+  («Fl. 1»), en el texto de la página y en sus palabras con posición. El catálogo conoce también «Chim.» (campanas
+  tubulares).
 - **Nombres repetidos:** si los nombres del margen del guion se repiten (los nombres largos ocupan dos líneas y las
   percusiones listan sus instrumentos), no son uno por pentagrama y no se usan. Los pentagramas se nombran entonces con
   las particellas.
