@@ -280,3 +280,23 @@ def test_the_names_of_the_band_parts_of_arabian_dances(name, canonical_id):
 def test_the_contra_alto_clarinet_sounds_an_octave_and_a_major_sixth_below():
     from backend.domain.instrument_transposition import instrument_shift
     assert instrument_shift("clarinet.contra_alto") == -21
+
+
+# The basses of brass bands and European editions (2026-11-21): «T.C.» says the clef, not the instrument.
+@pytest.mark.parametrize("name, canonical_id", [
+    ("Tuba in Eb (T.C.)", "tuba"),
+    ("Tuba in B♭ (T.C.)", "tuba"),
+    ("Eb Bass", "tuba"),
+    ("BBb Bass", "tuba"),
+    ("Es-Bass", "tuba"),
+    ("Euphonium T.C.", "euphonium"),
+    ("Bass", None),
+])
+def test_the_basses_of_brass_bands_and_parts_marked_with_their_clef(name, canonical_id):
+    found = match_instrument_name(name).identity
+    assert (found.canonical_id if found else None) == canonical_id
+
+
+def test_the_key_a_name_writes():
+    from backend.domain.instrument_catalog import written_key
+    assert [written_key(name) for name in ("Tuba in E♭ (T.C.)", "Bb Bass", "Tuba")] == ["eb", "bb", None]

@@ -116,3 +116,22 @@ def test_a_database_created_before_gets_the_contra_alto_clarinet_and_the_names_o
             assert connection.execute(sa.text("SELECT count(*) FROM instruments WHERE id = 'clarinet.contra_alto'")).scalar() == 1
             assert connection.execute(sa.text("SELECT instrument_id FROM instrument_names WHERE name_key = :key"),
                                       {"key": key}).scalars().all() == ["euphonium"]
+
+
+def test_a_database_created_before_gets_the_names_of_the_brass_band_basses(postgres_engine):
+    """«Eb Bass» and «Bb Bass» (2026-11-21) are the tubas of brass bands."""
+    import sqlalchemy as sa
+    from alembic import command
+    from alembic.config import Config
+    from backend.domain.instrument_catalog import normalize_instrument_name
+    key = normalize_instrument_name("Eb Bass")
+    with postgres_engine.begin() as connection:
+        connection.execute(sa.text("DELETE FROM instrument_names WHERE name_key = :key"), {"key": key})
+        connection.execute(sa.text("UPDATE alembic_version SET version_num = '0021_contra_alto_and_euphonium'"))
+    with postgres_engine.begin() as connection:
+        config = Config("alembic.ini")
+        config.attributes["connection"] = connection
+        for _ in range(2):   # nothing twice
+            command.upgrade(config, "0022_brass_band_basses")
+            assert connection.execute(sa.text("SELECT instrument_id FROM instrument_names WHERE name_key = :key"),
+                                      {"key": key}).scalars().all() == ["tuba"]

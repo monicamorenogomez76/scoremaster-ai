@@ -37,7 +37,7 @@ def test_the_migration_loads_every_instrument_and_name_of_the_seed(postgres_engi
 
 def test_the_catalog_read_from_the_database_recognises_the_same_names(postgres_engine):
     load_instrument_catalog(PostgresInstrumentRepository(postgres_engine))
-    assert catalog_version() == "instrument-catalog-v6"
+    assert catalog_version() == "instrument-catalog-v7"
     for name, canonical_id in NAMES:
         assert match_instrument_name(name).identity.canonical_id == canonical_id, name
 
