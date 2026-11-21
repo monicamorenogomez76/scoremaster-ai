@@ -5,7 +5,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, delete, func, or_, select, text, update
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID, insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
@@ -43,6 +43,16 @@ class StoredPdfImportFile(Base):
     position: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+
+
+class StoredPdfImportPage(Base):
+    """A page read by a helping machine of the reader, until the main one joins the work (2026-11-21)."""
+    __tablename__ = 'pdf_import_pages'
+    import_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('pdf_imports.id', ondelete='CASCADE'),
+                                            primary_key=True)
+    file_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    page_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    musicxml: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
 
 
 def _import(row: StoredPdfImport) -> PdfImport:
@@ -89,12 +99,27 @@ class PostgresPdfImportRepository:
             session.execute(update(StoredPdfImport).where(StoredPdfImport.id == import_id)
                             .values(**values, updated_at=func.now()))
 
+    def save_page(self, import_id: UUID, file_number: int, page_number: int, musicxml: bytes) -> None:
+        with Session(self.engine) as session, session.begin():
+            session.execute(insert(StoredPdfImportPage).values(
+                import_id=import_id, file_number=file_number, page_number=page_number, musicxml=musicxml)
+                .on_conflict_do_update(index_elements=['import_id', 'file_number', 'page_number'],
+                                       set_={'musicxml': musicxml}))
+
+    def page(self, import_id: UUID, file_number: int, page_number: int) -> Optional[bytes]:
+        with Session(self.engine) as session:
+            content = session.scalar(select(StoredPdfImportPage.musicxml).where(
+                StoredPdfImportPage.import_id == import_id, StoredPdfImportPage.file_number == file_number,
+                StoredPdfImportPage.page_number == page_number))
+            return bytes(content) if content is not None else None
+
     def progress(self, import_id: UUID, pages_done: int, pages_total: int, status: str = "reading") -> None:
         self._update(import_id, status=status, pages_done=pages_done, pages_total=pages_total)
 
     def received(self, import_id: UUID, musicxml: bytes) -> None:
         with Session(self.engine) as session, session.begin():
             session.execute(delete(StoredPdfImportFile).where(StoredPdfImportFile.import_id == import_id))
+            session.execute(delete(StoredPdfImportPage).where(StoredPdfImportPage.import_id == import_id))
             session.execute(update(StoredPdfImport).where(StoredPdfImport.id == import_id).values(
                 status='analysing', musicxml=musicxml, token_sha256=None, updated_at=func.now()))
 
@@ -109,6 +134,7 @@ class PostgresPdfImportRepository:
     def failed(self, import_id: UUID, error: str) -> None:
         with Session(self.engine) as session, session.begin():
             session.execute(delete(StoredPdfImportFile).where(StoredPdfImportFile.import_id == import_id))
+            session.execute(delete(StoredPdfImportPage).where(StoredPdfImportPage.import_id == import_id))
             session.execute(update(StoredPdfImport).where(StoredPdfImport.id == import_id).values(
                 status='failed', error=error[:300], token_sha256=None, musicxml=None, updated_at=func.now()))
 

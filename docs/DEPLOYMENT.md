@@ -140,6 +140,11 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
    (`backend/domain`) y lo que prepara las obras (`backend/parsers`); así se actualiza solo. Pide a ScoreMaster el catálogo de la base y los nombres que la cuenta ya
    confirmó, descarga los PDF con el token, lee las páginas con copista-2m y devuelve el avance y el MusicXML de la
    obra, o por qué falló. Las páginas de partitura que salen con menos pentagramas que las demás, o con dos compases más que la mayoría, se releen con copista-28m (hasta 40 por archivo o partitura, y sus pesos, 115 MB, solo se descargan entonces).
+   Cada lectura usa **cuatro máquinas** a la vez: la primera lee la obra entera y la envía; las otras tres releen antes con
+   copista-28m su parte de las páginas que parecen de partitura y las dejan en ScoreMaster con el mismo token (nunca en
+   GitHub, cuyos registros y *artifacts* son públicos). La primera toma de allí las que necesita; si en 5 minutos no
+   llega ninguna más, relee ella las que falten. Con «1812» (40 páginas de partitura en A3, de 24 a 31 pentagramas que
+   copista-2m deja en 13), releerlas una tras otra costaba media hora.
 3. Antes de devolver la obra, el lector pregunta a ScoreMaster cómo quedará el MusicXML definitivo (`/final`), lo lee con
    music21 y envía el modelo y el audio ya preparados junto con el resultado. Así Render no pasa minutos leyéndola con su
    décima de CPU. Render solo lo guarda si corresponde a esos mismos bytes y a sus versiones, se puede abrir y no había nada guardado; en
@@ -167,6 +172,9 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 - Una lectura a la vez; la siguiente espera.
 - Cada lectura tarda 1–2 minutos en arrancar la máquina, más unos segundos por página. Las páginas se leen de cuatro en cuatro, un proceso de copista por procesador (`OMR_PAGE_WORKERS` lo cambia): «Arabian Dances», 112 páginas, pasó de 444 s a 275 s con cuatro procesadores. Si un proceso se queda sin memoria, las páginas que faltan se leen de una en una.
 - Si Render se está reiniciando al terminar la lectura (un despliegue, o dormido en el plan gratuito), el lector espera y reintenta hasta unos 9 minutos, sin perder lo leído. El avance que no se puede enviar se omite.
+- Tras la última página, el lector avisa cada 5 minutos de que está releyendo y uniendo la obra, y la app lo dice;
+  ScoreMaster da por perdida una lectura que pasa 30 minutos sin avisar.
+- El modelo grande lee en un proceso aparte con todos los procesadores de la máquina; el registro dice cuánto tardó.
 - El registro de cada lectura (pestaña **Actions** del repositorio del lector) no muestra el token ni las partituras.
 
 **Correcciones al recibir la lectura**

@@ -939,17 +939,122 @@ def read_page_big(pdf_path: str, number: int, out_dir: str) -> bytes:
     return read_page(pdf_path, number, out_dir, "28m")
 
 
-def read_with_big_detector(pages: list[tuple[str, int]]) -> dict:
-    """{(path, number): MusicXML or the exception}, in a new process: copisteria keeps the first detector it loads."""
+def read_with_big_detector(pages: list[tuple[str, int]], on_read=None) -> dict:
+    """{(path, number): MusicXML or the exception}, in a new process: copisteria keeps the first detector it loads.
+    on_read(page, result) is called as each page is read, in order."""
     import multiprocessing
     from concurrent.futures import ProcessPoolExecutor
     started = time.monotonic()
     with tempfile.TemporaryDirectory() as out_dir, ProcessPoolExecutor(
             max_workers=1, mp_context=multiprocessing.get_context("spawn"), initializer=_all_processors) as pool:
         futures = {page: pool.submit(_read_one, read_page_big, page[0], page[1], out_dir) for page in pages}
-        found = {page: future.result() for page, future in futures.items()}
+        found = {}
+        for page, future in futures.items():
+            found[page] = future.result()
+            if on_read:
+                on_read(page, found[page])
     print(f"Releídas {len(pages)} páginas en {time.monotonic() - started:.0f} s con {os.cpu_count()} procesadores.", flush=True)
     return found
+
+
+# --- several machines read one work (2026-11-21, «1812»: its 40 pages of score reread with the big model, one after
+# another, took half an hour). The workflow starts several machines with the same job: the first one (0) reads the
+# whole work as before; the others reread with the big model, beforehand, their share of the pages that look like the
+# score and leave them in ScoreMaster, with the job's token (GitHub's artifacts and logs are public). The main machine
+# takes from there the pages of the others' share that it has to read again.
+MAX_MACHINES = 8
+# The main machine waits this long, in seconds, with no page coming from the others before reading the rest itself.
+HELPER_PATIENCE = 300
+HELPER_POLL_EVERY = 15
+
+
+def machine_from_environment() -> tuple[int, int]:
+    """(this machine, how many) from OMR_MACHINE, «1/4»; (0, 1) without it: one machine reads it all."""
+    found = re.fullmatch(r"(\d+)/(\d+)", os.environ.get("OMR_MACHINE", ""))
+    if not found:
+        return 0, 1
+    machine, machines = int(found[1]), int(found[2])
+    return (machine, machines) if 0 <= machine < machines <= MAX_MACHINES else (0, 1)
+
+
+def shared_pages(places: list[tuple[int, int]], texts: dict, kind: str, machine: int, machines: int) -> list[tuple[int, int]]:
+    """The pages (file, number) machine `machine` of `machines` rereads beforehand: its turn among those that look like
+    the score, or among all of them in a scan without text. A part's page is never read again (one or two staves)."""
+    if kind == "parts":
+        return []
+    if any(texts.get(place) for place in places):
+        places = [place for place in places if looks_like_score(texts.get(place) or "")]
+    return places[machine::machines]
+
+
+def shared_reading(read_again, fetch, helping: set, patience: float = HELPER_PATIENCE, every: float = HELPER_POLL_EVERY):
+    """read_again for the main machine: its own pages read here, those of the others' share taken from ScoreMaster
+    (fetch(page) gives the MusicXML or None) while they keep coming; what they never send is read here."""
+    def reading(pages: list[tuple[str, int]]) -> dict:
+        own = [page for page in pages if page not in helping]
+        found = dict(read_again(own)) if own else {}
+        waiting = [page for page in pages if page in helping]
+        news = time.monotonic()
+        while waiting:
+            for page in list(waiting):
+                content = fetch(page)
+                if content:
+                    found[page] = content
+                    waiting.remove(page)
+                    news = time.monotonic()
+            if not waiting or time.monotonic() - news > patience:
+                break
+            time.sleep(every)
+        if waiting:
+            print(f"Las otras máquinas no enviaron {len(waiting)} páginas: se releen aquí.", flush=True)
+            found.update(read_again(waiting))
+        else:
+            print(f"Tomadas de las otras máquinas {sum(page in helping for page in pages)} páginas releídas.", flush=True)
+        return found
+    return reading
+
+
+def _page_texts(saved: list[tuple[str, str]], pages: list[int], kind: str, page_text) -> dict:
+    """The text of each page, by (path, number); none when the job is only parts."""
+    return {(path, number): page_text(path, number) if kind in ("auto", "score") else ""
+            for (_, path), count in zip(saved, pages) for number in range(1, count + 1)}
+
+
+def help_read(data: dict, client: httpx.Client, machine: int, machines: int, read_again=None, count_pages=count_pages,
+              page_text=page_text) -> int:
+    """A helping machine: rereads its share of the score's pages with the big model and leaves them in ScoreMaster.
+    It never reports nor fails the reading: the main machine reads itself whatever does not arrive."""
+    print("::add-mask::" + data["token"], flush=True)
+    client.headers["Authorization"] = "Bearer " + data["token"]
+    callback = data["callback"].rstrip("/")
+    folder = tempfile.mkdtemp(prefix="omr-")
+    try:
+        saved = _download(client, folder, data["files"])
+        pages = [count_pages(path) for _, path in saved]
+        numbered = {path: number for number, (_, path) in enumerate(saved, 1)}
+        texts = {(numbered[path], number): text for (path, number), text in
+                 _page_texts(saved, pages, data["kind"], page_text).items()}
+        mine = shared_pages(list(texts), texts, data["kind"], machine, machines)
+        print(f"Esta máquina relee {len(mine)} páginas.", flush=True)
+        if not mine:
+            return 0
+        paths = {number: path for path, number in numbered.items()}
+        sent = set()
+
+        def send(page: tuple[str, int], result) -> None:
+            if isinstance(result, bytes) and page not in sent:
+                client.put(f"{callback}/pages/{numbered[page[0]]}/{page[1]}", content=result).raise_for_status()
+                sent.add(page)
+        read_again = read_again or (lambda chosen: read_with_big_detector(chosen, on_read=send))
+        for page, result in read_again([(paths[file_number], number) for file_number, number in mine]).items():
+            send(page, result)
+        print(f"Enviadas {len(sent)} páginas releídas.", flush=True)
+    except (httpx.HTTPError, Refused):
+        # The main machine finished (the token is gone) or ScoreMaster does not answer: it reads what is missing.
+        print("La máquina principal ya terminó o ScoreMaster no responde.", flush=True)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+    return 0
 
 
 def read_short_pages_again(found: list, paths: dict, read_again) -> list:
@@ -1002,7 +1107,7 @@ def keep_telling(tell, every: float = JOINING_NEWS_EVERY):
 
 
 def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count_pages, page_text=page_text,
-        read_again=None) -> int:
+        read_again=None, machines: int = 1) -> int:
     """Reads the job and reports to ScoreMaster. 0 when the work was sent back, 1 when the failure was."""
     print("::add-mask::" + data["token"], flush=True)
     client.headers["Authorization"] = "Bearer " + data["token"]
@@ -1019,8 +1124,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         if total > MAX_PAGES:
             raise Refused(f"Se leen hasta {MAX_PAGES} páginas por obra.")
         # «Detectar solo»: with parts named in the PDF's text, the score's pages are never read.
-        texts = {(path, number): page_text(path, number) if data["kind"] in ("auto", "score") else ""
-                 for (_, path), count in zip(saved, pages) for number in range(1, count + 1)}
+        texts = _page_texts(saved, pages, data["kind"], page_text)
         named_parts = any(instrument_name(text) and not looks_like_score(text) for text in texts.values())
         score_like = {key: looks_like_score(text) for key, text in texts.items()}
         # A score's page keeps its words with their place: the name beside each staff (2026-11-21).
@@ -1044,6 +1148,18 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         paths = {number: path for path, number in numbered.items()}
         if read_again is None:
             read_again = read_with_big_detector if read_page is DEFAULT_READ_PAGE else lambda pages: {}
+        if machines > 1:
+            by_place = {(numbered[path], number): text for (path, number), text in texts.items()}
+            helping = {(paths[file_number], number) for other in range(1, machines)
+                       for file_number, number in shared_pages(list(by_place), by_place, data["kind"], other, machines)}
+
+            def fetch(page: tuple[str, int]):
+                try:
+                    found = client.get(f"{callback}/pages/{numbered[page[0]]}/{page[1]}")
+                except httpx.HTTPError:
+                    return None
+                return found.content if found.status_code == 200 else None
+            read_again = shared_reading(read_again, fetch, helping)
         # The real copista reads several pages at once; a reading given by the tests, one after another.
         workers = page_workers() if read_page is DEFAULT_READ_PAGE else 1
 
@@ -1151,9 +1267,12 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
 
 def main() -> int:
     data = payload_from_environment()
+    machine, machines = machine_from_environment()
     with httpx.Client(timeout=httpx.Timeout(120.0), follow_redirects=False) as client:
+        if machine:
+            return help_read(data, client, machine, machines)
         try:
-            return run(data, client)
+            return run(data, client, machines=machines)
         except httpx.HTTPError:
             print("No se pudo hablar con ScoreMaster.", flush=True)
             return 1

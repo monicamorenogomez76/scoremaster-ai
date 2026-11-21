@@ -41,6 +41,8 @@ MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_FILES = 40
 MAX_MUSICXML_CHARACTERS = 20 * 1024 * 1024
 MAX_PREPARED_CHARACTERS = 20 * 1024 * 1024
+# A page read by a helping machine: one page of a score of 34 staves is under 1 MB of MusicXML (2026-11-21).
+MAX_PAGE_BYTES = 4 * 1024 * 1024
 NOT_FOUND = "No se encontró la lectura del PDF."
 # A reading that stopped telling its progress, or an analysis that never ended, is given up.
 STALLED = {"queued": timedelta(minutes=30), "preparing": timedelta(minutes=30), "reading": timedelta(minutes=30),
@@ -167,6 +169,30 @@ def reader_file(import_id: str, position: int, authorization: Optional[str] = He
     if found is None:
         raise HTTPException(status_code=404, detail="No existe ese PDF.")
     return Response(content=found[1], media_type="application/pdf")
+
+
+# Several machines read one work (2026-11-21, «1812»): each helping one leaves here the pages it read, and the main one
+# takes them. Through ScoreMaster and its token, never GitHub's artifacts: they are public.
+@router.put("/omr/imports/{import_id}/pages/{file_number}/{page_number}", status_code=204)
+async def reader_page_put(import_id: str, file_number: int, page_number: int, request: Request,
+                          authorization: Optional[str] = Header(default=None),
+                          imports: PdfImportRepository = Depends(get_pdf_import_repository)):
+    found = _reader(import_id, authorization, imports)
+    content = await request.body()
+    if len(content) > MAX_PAGE_BYTES:
+        raise HTTPException(status_code=413, detail="La página leída es demasiado grande.")
+    imports.save_page(found.id, file_number, page_number, content)
+    return Response(status_code=204)
+
+
+@router.get("/omr/imports/{import_id}/pages/{file_number}/{page_number}")
+def reader_page_get(import_id: str, file_number: int, page_number: int,
+                    authorization: Optional[str] = Header(default=None),
+                    imports: PdfImportRepository = Depends(get_pdf_import_repository)):
+    content = imports.page(_reader(import_id, authorization, imports).id, file_number, page_number)
+    if content is None:
+        raise HTTPException(status_code=404, detail="Esa página no se ha leído todavía.")
+    return Response(content=content, media_type="application/xml")
 
 
 @router.post("/omr/imports/{import_id}/progress", status_code=204)
