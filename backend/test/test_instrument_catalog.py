@@ -300,3 +300,20 @@ def test_the_basses_of_brass_bands_and_parts_marked_with_their_clef(name, canoni
 def test_the_key_a_name_writes():
     from backend.domain.instrument_catalog import written_key
     assert [written_key(name) for name in ("Tuba in E♭ (T.C.)", "Bb Bass", "Tuba")] == ["eb", "bb", None]
+
+
+# Spanish parts write the number between the instrument and its key (2026-11-21): «Trompa 1ª en Fa», «Clarinete 1 Sib».
+@pytest.mark.parametrize("name, canonical_id, part_numbers", [
+    ("Trompa 1ª en Fa", "horn.f", (1,)),
+    ("Clarinete 1 Sib", "clarinet.bb", (1,)),
+    ("Horn 1 in F", "horn.f", (1,)),
+    ("Trumpet 2 in Bb", "trumpet.bb", (2,)),
+    ("Saxo Alto 1 Mib", "saxophone.alto", (1,)),
+    ("Bombardino 1 Sib", "euphonium", (1,)),
+    ("Fliscorno 1º", "flugelhorn.bb", (1,)),
+    ("Trompas 3 y 4 en Fa", "horn.f", (3, 4)),
+    ("Trompa en Fa 1", "horn.f", (1,)),
+])
+def test_the_number_of_a_part_before_its_key(name, canonical_id, part_numbers):
+    match = match_instrument_name(name)
+    assert (match.identity.canonical_id if match.identity else None, match.part_numbers) == (canonical_id, part_numbers)
