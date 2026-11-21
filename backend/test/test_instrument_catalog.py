@@ -317,3 +317,49 @@ def test_the_key_a_name_writes():
 def test_the_number_of_a_part_before_its_key(name, canonical_id, part_numbers):
     match = match_instrument_name(name)
     assert (match.identity.canonical_id if match.identity else None, match.part_numbers) == (canonical_id, part_numbers)
+
+
+# The frequent band names the catalog did not know (2026-11-21, review of band instrumentation against the catalog).
+@pytest.mark.parametrize("name, canonical_id", [
+    # Brass: horn in E♭, the British tenor horn, the E♭ soprano cornet and the places of the brass band cornets.
+    ("Horn in E♭", "horn.eb"), ("Trompa en Mib", "horn.eb"), ("1st Eb Horn", "horn.eb"),
+    ("E♭ Tenor Horn", "alto_horn"), ("Solo Horn", "alto_horn"), ("Althorn", "alto_horn"), ("Alto Horn", "alto_horn"),
+    ("Tenorhorn", "baritone_horn"),
+    ("Soprano Cornet", "cornet.eb"), ("E♭ Soprano Cornet", "cornet.eb"),
+    ("Solo Cornet", "cornet.bb"), ("Repiano Cornet", "cornet.bb"),
+    # Woodwinds.
+    ("B♭ Contra Bass Clarinet", "clarinet.contrabass"), ("Piccolo Clarinet (E♭)", "clarinet.eb"),
+    ("Bass Saxophone", "saxophone.bass"), ("Saxofón bajo", "saxophone.bass"),
+    # Abbreviations of the percussion, strings and keyboards the catalog has.
+    ("Glsp.", "glockenspiel"), ("Xyl.", "xylophone"), ("Pk.", "timpani"), ("Kettledrums", "timpani"),
+    ("S.D.", "snare_drum"), ("Field Drum", "snare_drum"), ("B.D.", "bass_drum"), ("Susp. Cym.", "suspended_cymbal"),
+    ("Cym.", "crash_cymbals"), ("Tri.", "triangle"), ("Hp.", "harp"), ("D.B.", "double_bass"), ("Str. Bass", "double_bass"),
+    ("Bass Gtr.", "electric_bass"),
+    # Parts of mallets: they sound as a xylophone.
+    ("Mallet Percussion", "xylophone"), ("Mallets", "xylophone"), ("Keyboard Percussion", "xylophone"),
+    ("Auxiliary Percussion", "percussion"),
+    # The usual percussion of a band.
+    ("Wood Block", "wood_block"), ("Caja china", "wood_block"), ("Temple Blocks", "temple_blocks"),
+    ("Tam-tam", "tam_tam"), ("Gong", "tam_tam"), ("Toms", "toms"), ("Tenor Drum", "tenor_drum"),
+    ("Hi-Hat", "hi_hat"), ("Charles", "hi_hat"), ("Finger Cymbals", "finger_cymbals"), ("Castanets", "castanets"),
+    ("Castañuelas", "castanets"), ("Claves", "claves"), ("Maracas", "maracas"), ("Guiro", "guiro"), ("Cowbell", "cowbell"),
+    ("Cencerro", "cowbell"), ("Cabasa", "cabasa"), ("Shaker", "shaker"), ("Bongos", "bongos"), ("Congas", "congas"),
+    ("Vibraslap", "vibraslap"), ("Whistle", "whistle"), ("Sleigh Bells", "sleigh_bells"), ("Mark Tree", "wind_chimes"),
+    ("Wind Chimes", "wind_chimes"), ("Whip", "whip"), ("Slapstick", "whip"), ("Ratchet", "ratchet"), ("Carraca", "ratchet"),
+    ("Crotales", "crotales"), ("Celesta", "celesta"),
+])
+def test_the_frequent_names_of_band_parts(name, canonical_id):
+    found = match_instrument_name(name).identity
+    assert (found.canonical_id if found else None) == canonical_id
+
+
+def test_a_part_of_several_new_percussion_instruments_is_one_percussion_part():
+    assert match_instrument_name("Percussion 2 (Wood Block, Tam-tam, Castanets)").identity.canonical_id == "percussion"
+
+
+@pytest.mark.parametrize("canonical_id, semitones", [
+    ("horn.eb", -9), ("alto_horn", -9), ("cornet.eb", 3), ("saxophone.bass", -26), ("crotales", 24), ("celesta", 12),
+])
+def test_the_new_instruments_sound_where_they_should(canonical_id, semitones):
+    from backend.domain.instrument_transposition import instrument_shift
+    assert instrument_shift(canonical_id) == semitones

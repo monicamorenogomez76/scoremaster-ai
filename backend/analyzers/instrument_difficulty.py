@@ -87,10 +87,14 @@ PROFILE_BY_CANONICAL_ID = {
     "saxophone.alto": "alto saxophone",
     "saxophone.tenor": "tenor saxophone",
     "saxophone.baritone": "baritone saxophone",
+    "saxophone.bass": "baritone saxophone",
     "trumpet.bb": "trumpet",
     "cornet.bb": "trumpet",
+    "cornet.eb": "trumpet",
     "flugelhorn.bb": "trumpet",
     "horn.f": "horn",
+    "horn.eb": "horn",
+    "alto_horn": "horn",
     "trombone.tenor": "trombone",
     "euphonium": "euphonium",
     "tuba": "tuba",
@@ -98,6 +102,7 @@ PROFILE_BY_CANONICAL_ID = {
     "timpani": "timpani",
     "xylophone": "xylophone",
     "glockenspiel": "glockenspiel",
+    "crotales": "glockenspiel",
     "chimes": "chimes",
 }
 

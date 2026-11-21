@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v7",
+ "version": "instrument-catalog-v8",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -169,7 +169,8 @@
     "petite clarinette",
     "req",
     "clarinete requinto",
-    "clarinet requint"
+    "clarinet requint",
+    "piccolo clarinet"
    ],
    "sound": "clarinet",
    "rehearsal_group": "clarinets"
@@ -300,7 +301,10 @@
     "contrabass clarinet",
     "bb contrabass clarinet",
     "clarinete contrabajo",
-    "clarinetto contrabbasso"
+    "clarinetto contrabbasso",
+    "contra bass clarinet",
+    "bb contra bass clarinet",
+    "contrabass clarinet in bb"
    ],
    "sound": "clarinet",
    "rehearsal_group": "low_voices"
@@ -410,6 +414,27 @@
    "rehearsal_group": "low_voices"
   },
   {
+   "id": "saxophone.bass",
+   "section": "woodwinds",
+   "family": "saxophone",
+   "variant": "bass",
+   "transposition": "Bb",
+   "label_es": "Saxofón bajo",
+   "label_en": "Bass Saxophone",
+   "aliases": [
+    "bass saxophone",
+    "bass sax",
+    "bb bass saxophone",
+    "saxofon bajo",
+    "saxo bajo",
+    "sassofono basso",
+    "basssaxophon",
+    "saxophone basse"
+   ],
+   "sound": "baritone_sax",
+   "rehearsal_group": "low_voices"
+  },
+  {
    "id": "horn.f",
    "section": "brass",
    "family": "horn",
@@ -435,6 +460,50 @@
     "trompas",
     "corni",
     "cors"
+   ],
+   "sound": "french_horn",
+   "rehearsal_group": "high_brass"
+  },
+  {
+   "id": "horn.eb",
+   "section": "brass",
+   "family": "horn",
+   "variant": "eb",
+   "transposition": "Eb",
+   "label_es": "Trompa en Mi bemol",
+   "label_en": "Horn in E♭",
+   "aliases": [
+    "horn in eb",
+    "eb horn",
+    "trompa en mib",
+    "trompa en mi bemol",
+    "corno in mib",
+    "cor en mib",
+    "horn in es",
+    "es horn"
+   ],
+   "sound": "french_horn",
+   "rehearsal_group": "high_brass"
+  },
+  {
+   "id": "alto_horn",
+   "section": "brass",
+   "family": "alto_horn",
+   "variant": "alto",
+   "transposition": "Eb",
+   "label_es": "Trompa alto en Mi bemol",
+   "label_en": "E♭ Tenor Horn",
+   "aliases": [
+    "tenor horn",
+    "eb tenor horn",
+    "solo horn",
+    "alto horn",
+    "eb alto horn",
+    "althorn",
+    "saxhorn alto",
+    "flicorno contralto",
+    "genis",
+    "trompa alto"
    ],
    "sound": "french_horn",
    "rehearsal_group": "high_brass"
@@ -503,7 +572,31 @@
     "kornett",
     "cornet a pistons",
     "cornetin",
-    "cornets"
+    "cornets",
+    "solo cornet",
+    "repiano cornet",
+    "ripieno cornet",
+    "2nd cornet",
+    "3rd cornet"
+   ],
+   "sound": "trumpet",
+   "rehearsal_group": "high_brass"
+  },
+  {
+   "id": "cornet.eb",
+   "section": "brass",
+   "family": "cornet",
+   "variant": "eb",
+   "transposition": "Eb",
+   "label_es": "Corneta soprano en Mi bemol",
+   "label_en": "E♭ Soprano Cornet",
+   "aliases": [
+    "soprano cornet",
+    "eb soprano cornet",
+    "eb cornet",
+    "cornet in eb",
+    "cornetin en mib",
+    "sop cornet"
    ],
    "sound": "trumpet",
    "rehearsal_group": "high_brass"
@@ -691,7 +784,12 @@
     "cb",
     "contrabaix",
     "kontrabass",
-    "contrebasse"
+    "contrebasse",
+    "d b",
+    "db",
+    "str bass",
+    "st bass",
+    "string b"
    ],
    "sound": "contrabass",
    "rehearsal_group": "strings_rhythm"
@@ -709,7 +807,11 @@
     "bass guitar",
     "bajo electrico",
     "5 str electric bass",
-    "el bass"
+    "el bass",
+    "e bass",
+    "bass gtr",
+    "el bass gtr",
+    "electric bass guitar"
    ],
    "sound": "electric_bass_finger",
    "rehearsal_group": "strings_rhythm"
@@ -794,7 +896,11 @@
    "label_en": "Harp",
    "aliases": [
     "harp",
-    "arpa"
+    "arpa",
+    "hp",
+    "hrp",
+    "harpe",
+    "harfe"
    ],
    "sound": "orchestral_harp",
    "rehearsal_group": "strings_rhythm"
@@ -813,7 +919,12 @@
     "timpano",
     "timp",
     "timbals",
-    "pauken"
+    "pauken",
+    "pk",
+    "kettledrums",
+    "kettle drums",
+    "kettledrum",
+    "timpanos"
    ],
    "sound": "timpani",
    "rehearsal_group": "percussion"
@@ -840,7 +951,15 @@
     "rullante",
     "tambor",
     "redoblante",
-    "caja clara"
+    "caja clara",
+    "sd",
+    "sn dr",
+    "snare dr",
+    "field drum",
+    "military drum",
+    "tamburo militare",
+    "tambour militaire",
+    "tambor militar"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -862,7 +981,11 @@
     "grosse caisse",
     "grosse trommel",
     "grobe trommel",
-    "gran casa"
+    "gran casa",
+    "bd",
+    "b dr",
+    "gr c",
+    "gr cassa"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -885,7 +1008,11 @@
     "plats",
     "becken",
     "cymbales",
-    "platillos"
+    "platillos",
+    "cym",
+    "cyms",
+    "crash cym",
+    "a2 cym"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -902,7 +1029,11 @@
     "suspended cymbal",
     "sus cym",
     "plato suspendido",
-    "piatto sospeso"
+    "piatto sospeso",
+    "susp cym",
+    "susp cymbal",
+    "sus cymbal",
+    "plato susp"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -959,7 +1090,9 @@
     "triangulo",
     "triangolo",
     "trgl",
-    "triangel"
+    "triangel",
+    "tri",
+    "trg"
    ],
    "sound": null,
    "rehearsal_group": "percussion"
@@ -981,7 +1114,27 @@
     "glock",
     "jeu de timbres",
     "campanelli",
-    "carillon"
+    "carillon",
+    "glsp",
+    "gl"
+   ],
+   "sound": "glockenspiel",
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "crotales",
+   "section": "percussion",
+   "family": "keyboard_percussion",
+   "variant": "crotales",
+   "transposition": null,
+   "label_es": "Crótalos",
+   "label_en": "Crotales",
+   "aliases": [
+    "crotales",
+    "crotalos",
+    "antique cymbals",
+    "cymbales antiques",
+    "crotali"
    ],
    "sound": "glockenspiel",
    "rehearsal_group": "percussion"
@@ -999,7 +1152,14 @@
     "xilofono",
     "xylo",
     "xilofon",
-    "xylophon"
+    "xylophon",
+    "xyl",
+    "mallet percussion",
+    "mallets",
+    "mallet perc",
+    "keyboard percussion",
+    "keyboard perc",
+    "mallet"
    ],
    "sound": "xylophone",
    "rehearsal_group": "percussion"
@@ -1014,7 +1174,9 @@
    "label_en": "Marimba",
    "aliases": [
     "marimba",
-    "mrb"
+    "mrb",
+    "mar",
+    "mba"
    ],
    "sound": "marimba",
    "rehearsal_group": "percussion"
@@ -1057,6 +1219,22 @@
    "rehearsal_group": "percussion"
   },
   {
+   "id": "celesta",
+   "section": "keyboard",
+   "family": "celesta",
+   "variant": "celesta",
+   "transposition": null,
+   "label_es": "Celesta",
+   "label_en": "Celesta",
+   "aliases": [
+    "celesta",
+    "celeste",
+    "cel"
+   ],
+   "sound": "celesta",
+   "rehearsal_group": "strings_rhythm"
+  },
+  {
    "id": "percussion",
    "section": "percussion",
    "family": "percussion",
@@ -1072,7 +1250,400 @@
     "percusiones",
     "percussio",
     "percussioni",
-    "schlagwerk"
+    "schlagwerk",
+    "auxiliary percussion",
+    "aux percussion",
+    "aux perc",
+    "accessories",
+    "accesorios"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "wood_block",
+   "section": "percussion",
+   "family": "block",
+   "variant": "wood_block",
+   "transposition": null,
+   "label_es": "Caja china",
+   "label_en": "Wood Block",
+   "aliases": [
+    "wood block",
+    "woodblock",
+    "wood blocks",
+    "caja china",
+    "wb",
+    "blocco di legno",
+    "holzblock",
+    "bloc chinois"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "temple_blocks",
+   "section": "percussion",
+   "family": "block",
+   "variant": "temple_blocks",
+   "transposition": null,
+   "label_es": "Temple blocks",
+   "label_en": "Temple Blocks",
+   "aliases": [
+    "temple blocks",
+    "temple block",
+    "bloques chinos",
+    "temple bloc",
+    "tempelblocke"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "tam_tam",
+   "section": "percussion",
+   "family": "gong",
+   "variant": "tam_tam",
+   "transposition": null,
+   "label_es": "Tam-tam",
+   "label_en": "Tam-tam",
+   "aliases": [
+    "tam tam",
+    "tamtam",
+    "gong",
+    "tam t"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "toms",
+   "section": "percussion",
+   "family": "drum",
+   "variant": "toms",
+   "transposition": null,
+   "label_es": "Toms",
+   "label_en": "Toms",
+   "aliases": [
+    "toms",
+    "tom toms",
+    "tom tom",
+    "concert toms",
+    "tom",
+    "roto toms",
+    "rototoms"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "tenor_drum",
+   "section": "percussion",
+   "family": "drum",
+   "variant": "tenor_drum",
+   "transposition": null,
+   "label_es": "Tambor tenor",
+   "label_en": "Tenor Drum",
+   "aliases": [
+    "tenor drum",
+    "tambor tenor",
+    "tamburo rullante",
+    "ruhrtrommel",
+    "caisse roulante"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "hi_hat",
+   "section": "percussion",
+   "family": "cymbal",
+   "variant": "hi_hat",
+   "transposition": null,
+   "label_es": "Charles",
+   "label_en": "Hi-Hat",
+   "aliases": [
+    "hi hat",
+    "hihat",
+    "high hat",
+    "charles",
+    "charleston",
+    "h h"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "finger_cymbals",
+   "section": "percussion",
+   "family": "cymbal",
+   "variant": "finger_cymbals",
+   "transposition": null,
+   "label_es": "Platillos de dedo",
+   "label_en": "Finger Cymbals",
+   "aliases": [
+    "finger cymbals",
+    "finger cymbal",
+    "platillos de dedo",
+    "zills"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "castanets",
+   "section": "percussion",
+   "family": "castanets",
+   "variant": "castanets",
+   "transposition": null,
+   "label_es": "Castañuelas",
+   "label_en": "Castanets",
+   "aliases": [
+    "castanets",
+    "castanuelas",
+    "castagnette",
+    "kastagnetten",
+    "castagnettes",
+    "castanyoles"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "claves",
+   "section": "percussion",
+   "family": "block",
+   "variant": "claves",
+   "transposition": null,
+   "label_es": "Claves",
+   "label_en": "Claves",
+   "aliases": [
+    "claves",
+    "clave"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "maracas",
+   "section": "percussion",
+   "family": "shaker",
+   "variant": "maracas",
+   "transposition": null,
+   "label_es": "Maracas",
+   "label_en": "Maracas",
+   "aliases": [
+    "maracas",
+    "maraca"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "guiro",
+   "section": "percussion",
+   "family": "scraper",
+   "variant": "guiro",
+   "transposition": null,
+   "label_es": "Güiro",
+   "label_en": "Guiro",
+   "aliases": [
+    "guiro",
+    "gourd"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "cowbell",
+   "section": "percussion",
+   "family": "bell",
+   "variant": "cowbell",
+   "transposition": null,
+   "label_es": "Cencerro",
+   "label_en": "Cowbell",
+   "aliases": [
+    "cowbell",
+    "cow bell",
+    "cencerro",
+    "campanaccio",
+    "kuhglocke",
+    "cloche de vache"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "cabasa",
+   "section": "percussion",
+   "family": "shaker",
+   "variant": "cabasa",
+   "transposition": null,
+   "label_es": "Cabasa",
+   "label_en": "Cabasa",
+   "aliases": [
+    "cabasa",
+    "afuche"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "shaker",
+   "section": "percussion",
+   "family": "shaker",
+   "variant": "shaker",
+   "transposition": null,
+   "label_es": "Shaker",
+   "label_en": "Shaker",
+   "aliases": [
+    "shaker",
+    "egg shaker",
+    "shekere",
+    "sonajero"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "bongos",
+   "section": "percussion",
+   "family": "drum",
+   "variant": "bongos",
+   "transposition": null,
+   "label_es": "Bongós",
+   "label_en": "Bongos",
+   "aliases": [
+    "bongos",
+    "bongo",
+    "bongoes"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "congas",
+   "section": "percussion",
+   "family": "drum",
+   "variant": "congas",
+   "transposition": null,
+   "label_es": "Congas",
+   "label_en": "Congas",
+   "aliases": [
+    "congas",
+    "conga",
+    "tumbadora"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "vibraslap",
+   "section": "percussion",
+   "family": "rattle",
+   "variant": "vibraslap",
+   "transposition": null,
+   "label_es": "Vibraslap",
+   "label_en": "Vibraslap",
+   "aliases": [
+    "vibraslap",
+    "quijada"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "whistle",
+   "section": "percussion",
+   "family": "whistle",
+   "variant": "whistle",
+   "transposition": null,
+   "label_es": "Silbato",
+   "label_en": "Whistle",
+   "aliases": [
+    "whistle",
+    "police whistle",
+    "silbato",
+    "pito",
+    "fischietto",
+    "pfeife",
+    "sifflet"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "sleigh_bells",
+   "section": "percussion",
+   "family": "bell",
+   "variant": "sleigh_bells",
+   "transposition": null,
+   "label_es": "Cascabeles",
+   "label_en": "Sleigh Bells",
+   "aliases": [
+    "sleigh bells",
+    "jingle bells",
+    "cascabeles",
+    "sonagli",
+    "schellen",
+    "grelots"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "wind_chimes",
+   "section": "percussion",
+   "family": "chimes",
+   "variant": "wind_chimes",
+   "transposition": null,
+   "label_es": "Mark tree",
+   "label_en": "Mark Tree",
+   "aliases": [
+    "mark tree",
+    "wind chimes",
+    "bell tree",
+    "chimes tree",
+    "arbol de campanas"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "whip",
+   "section": "percussion",
+   "family": "whip",
+   "variant": "whip",
+   "transposition": null,
+   "label_es": "Látigo",
+   "label_en": "Whip",
+   "aliases": [
+    "whip",
+    "slapstick",
+    "slap stick",
+    "latigo",
+    "frusta",
+    "peitsche",
+    "fouet"
+   ],
+   "sound": null,
+   "rehearsal_group": "percussion"
+  },
+  {
+   "id": "ratchet",
+   "section": "percussion",
+   "family": "ratchet",
+   "variant": "ratchet",
+   "transposition": null,
+   "label_es": "Carraca",
+   "label_en": "Ratchet",
+   "aliases": [
+    "ratchet",
+    "carraca",
+    "matraca",
+    "raganella",
+    "ratsche",
+    "crecelle"
    ],
    "sound": null,
    "rehearsal_group": "percussion"

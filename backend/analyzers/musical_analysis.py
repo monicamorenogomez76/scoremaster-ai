@@ -28,7 +28,7 @@ TUTTI_SHARE = 0.75       # share of the parts of the work playing in a section f
 MELODY_SHARE = 0.6       # share of the tune's attacks a part plays, in any octave, to carry it
 # Above the band, these double the tune or ornament it (trills, a descant): the tune is looked for below them, and they
 # are named among those who double it when they play it.
-ABOVE_THE_TUNE = {"piccolo", "glockenspiel", "xylophone", "chimes", "crotales"}
+ABOVE_THE_TUNE = {"piccolo", "glockenspiel", "xylophone", "chimes", "crotales", "celesta"}
 # The timpani have pitch but play no tune: they are left out of it altogether.
 NEVER_THE_TUNE = {"timpani"}
 SECTION_WORDS = re.compile(r"\b(trio|trío|coda|fine|introd|intro|maestoso|marcha|marcia|tempo\s+i|d\.\s*[cs]\.)", re.IGNORECASE)

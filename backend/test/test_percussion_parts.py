@@ -81,18 +81,21 @@ def test_a_percussion_part_written_with_pitches_sounds_as_drums(tmp_path):
 def test_a_database_created_before_gets_the_generic_percussion(postgres_engine):
     """Render's and Neon's catalog was created on 2026-10-28: the migration adds the instrument where it is missing."""
     import sqlalchemy as sa
+    from backend.domain.instrument_catalog import normalize_instrument_name, seed_instruments
+    [item] = [entry for entry in seed_instruments() if entry["id"] == "percussion"]
+    names = len({normalize_instrument_name(alias) for alias in item["aliases"]})
     from alembic import command
     from alembic.config import Config
     with postgres_engine.begin() as connection:
         assert connection.execute(sa.text("SELECT count(*) FROM instruments WHERE id = 'percussion'")).scalar() == 1
-        assert connection.execute(sa.text("SELECT count(*) FROM instrument_names WHERE instrument_id = 'percussion'")).scalar() == 8
+        assert connection.execute(sa.text("SELECT count(*) FROM instrument_names WHERE instrument_id = 'percussion'")).scalar() == names
         connection.execute(sa.text("DELETE FROM instruments WHERE id = 'percussion'"))
         connection.execute(sa.text("UPDATE alembic_version SET version_num = '0018_email_verification'"))
     with postgres_engine.begin() as connection:
         config = Config("alembic.ini")
         config.attributes["connection"] = connection
         command.upgrade(config, "0019_generic_percussion")
-        assert connection.execute(sa.text("SELECT count(*) FROM instrument_names WHERE instrument_id = 'percussion'")).scalar() == 8
+        assert connection.execute(sa.text("SELECT count(*) FROM instrument_names WHERE instrument_id = 'percussion'")).scalar() == names
         command.upgrade(config, "0019_generic_percussion")   # nothing twice
         assert connection.execute(sa.text("SELECT count(*) FROM instruments WHERE id = 'percussion'")).scalar() == 1
 
@@ -135,3 +138,24 @@ def test_a_database_created_before_gets_the_names_of_the_brass_band_basses(postg
             command.upgrade(config, "0022_brass_band_basses")
             assert connection.execute(sa.text("SELECT instrument_id FROM instrument_names WHERE name_key = :key"),
                                       {"key": key}).scalars().all() == ["tuba"]
+
+
+def test_a_database_created_before_gets_the_frequent_band_instruments_and_names(postgres_engine):
+    """2026-11-21: the tenor horn, the wood block, and abbreviations such as «Glsp.»."""
+    import sqlalchemy as sa
+    from alembic import command
+    from alembic.config import Config
+    from backend.domain.instrument_catalog import normalize_instrument_name
+    keys = {name: normalize_instrument_name(name) for name in ("Glsp.", "Tenor Horn", "Wood Block")}
+    with postgres_engine.begin() as connection:
+        connection.execute(sa.text("DELETE FROM instruments WHERE id IN ('alto_horn', 'wood_block')"))
+        connection.execute(sa.text("DELETE FROM instrument_names WHERE name_key = :key"), {"key": keys["Glsp."]})
+        connection.execute(sa.text("UPDATE alembic_version SET version_num = '0022_brass_band_basses'"))
+    with postgres_engine.begin() as connection:
+        config = Config("alembic.ini")
+        config.attributes["connection"] = connection
+        for _ in range(2):   # nothing twice
+            command.upgrade(config, "0023_frequent_band_names")
+            found = {name: connection.execute(sa.text("SELECT instrument_id FROM instrument_names WHERE name_key = :key"),
+                                              {"key": key}).scalars().all() for name, key in keys.items()}
+            assert found == {"Glsp.": ["glockenspiel"], "Tenor Horn": ["alto_horn"], "Wood Block": ["wood_block"]}

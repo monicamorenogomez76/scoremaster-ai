@@ -42,7 +42,14 @@ def _drum_note(hit, part, name):
 # General MIDI key of each unpitched percussion instrument of the catalog (2026-11-01): copista writes them as pitched
 # notes in treble clef, and without a drum the browser played them on its fallback piano.
 DRUM_KEYS = {'snare_drum': 38, 'bass_drum': 35, 'crash_cymbals': 49, 'suspended_cymbal': 51, 'tambourine': 54,
-             'triangle': 81}
+             'triangle': 81,
+             # The usual percussion of a band (2026-11-21); General MIDI has no gong, castanets, sleigh bells, mark tree,
+             # whip or ratchet, which take the nearest sound: Chinese cymbal, claves, tambourine, open triangle, hand clap
+             # and short guiro.
+             'wood_block': 76, 'temple_blocks': 77, 'tam_tam': 52, 'toms': 45, 'tenor_drum': 47, 'hi_hat': 42,
+             'finger_cymbals': 80, 'castanets': 75, 'claves': 75, 'maracas': 70, 'guiro': 73, 'cowbell': 56,
+             'cabasa': 69, 'shaker': 70, 'bongos': 60, 'congas': 63, 'vibraslap': 58, 'whistle': 71, 'sleigh_bells': 54,
+             'wind_chimes': 81, 'whip': 39, 'ratchet': 73}
 # A drum set written with pitches, by the usual positions of drum notation: bass drum F4, snare C5, hi-hat G5, crash A5.
 DRUM_SET_KEYS = {65: 36, 64: 36, 72: 38, 71: 38, 79: 42, 81: 49, 76: 45, 74: 47, 77: 43}
 
