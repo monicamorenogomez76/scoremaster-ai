@@ -8,9 +8,11 @@ Parts are always printed in the key of their instrument; a score may be too, or 
 tell it otherwise (in a transposed score a B♭ clarinet has two sharps more than the flute; in C both have the same)."""
 from __future__ import annotations
 
+import re
+
 from xml.etree import ElementTree as ET
 
-from backend.domain.instrument_catalog import as_written, identity_by_id, instrument_name_key, match_instrument_name
+from backend.domain.instrument_catalog import as_written, identity_by_id, instrument_name_key, match_instrument_name, written_key
 from backend.domain.instrument_transposition import written_to_sounding
 
 # MusicXML's order inside <attributes>: <transpose> comes after these.
@@ -30,6 +32,17 @@ def _fifths(part) -> int | None:
         return None
 
 
+# Against the instruments in C, a part in E♭ has three fifths more in its key signature, one in B♭ two (2026-11-21).
+_KEY_BY_FIFTHS = {3: "eb", 2: "bb"}
+
+
+def _tuba_key(name: str, key_fifths: int | None) -> str | None:
+    """The key of a tuba part in treble clef: the one its name writes («BBb Bass» is in B♭), or else its key signature."""
+    if re.search(r"\bbbb\b", name, re.IGNORECASE):
+        return "bb"
+    return written_key(name) or (_KEY_BY_FIFTHS.get(key_fifths % 12) if key_fifths is not None else None)
+
+
 def _concert_fifths(root, names: dict, learned: dict[str, str]) -> int | None:
     """The key signature most of the known instruments that sound as written share, in fifths; None without any."""
     found = []
@@ -37,8 +50,11 @@ def _concert_fifths(root, names: dict, learned: dict[str, str]) -> int | None:
         instrument = _instrument(names.get(part.get("id"), ""), learned)
         identity = identity_by_id(instrument) if instrument else None
         fifths = _fifths(part)
-        if identity is not None and identity.section != "percussion" and fifths is not None \
-                and written_to_sounding(instrument, part.findtext(".//clef/sign")) is None:
+        clef_sign = part.findtext(".//clef/sign")
+        # A tuba in treble clef is in E♭ or B♭, whatever key its name leaves out.
+        in_treble = instrument in ("tuba", "sousaphone") and clef_sign == "G"
+        if identity is not None and identity.section != "percussion" and fifths is not None and not in_treble \
+                and written_to_sounding(instrument, clef_sign) is None:
             found.append(fifths)
     return max(set(found), key=found.count) if found else None
 
@@ -88,7 +104,9 @@ def add_transpositions(musicxml: bytes, learned: dict[str, str] | None = None, c
             continue
         identity = identity_by_id(instrument)
         pitched = identity is not None and identity.section not in ("percussion",)
-        found.append((part, written_to_sounding(instrument, part.findtext(".//clef/sign")), pitched))
+        clef_sign = part.findtext(".//clef/sign")
+        key = _tuba_key(names.get(part.get("id"), ""), None if concert is None or fifths is None else fifths - concert)
+        found.append((part, written_to_sounding(instrument, clef_sign, key), pitched))
     if source == "score" and _at_sounding_pitch(found):
         return musicxml
     changed = False

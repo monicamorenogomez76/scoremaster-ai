@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v6",
+ "version": "instrument-catalog-v7",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -647,7 +647,14 @@
     "tuba basse",
     "tubas",
     "tuba en fa",
-    "tuba fa"
+    "tuba fa",
+    "eb bass",
+    "bb bass",
+    "bbb bass",
+    "e flat bass",
+    "b flat bass",
+    "es bass",
+    "b bass"
    ],
    "sound": "tuba",
    "rehearsal_group": "low_voices"

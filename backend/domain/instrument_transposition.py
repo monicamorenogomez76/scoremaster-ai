@@ -35,8 +35,16 @@ _WRITTEN_TO_SOUNDING = {
 _IN_B_FLAT_IN_TREBLE_CLEF = {"euphonium", "baritone_horn", "trombone.tenor"}
 
 
-def written_to_sounding(canonical_id: str, clef_sign: str | None = None) -> tuple[int, int, int] | None:
-    """The interval from written to sounding pitch, None when the instrument sounds as written."""
+# In treble clef the basses of British and European editions (2026-11-21): in E♭ an octave and a major sixth below, in B♭
+# two octaves and a major second (brass band guides: neopragma.github.io/dnmusic, brasscrest.com). In bass clef, as written.
+_TUBA_IN_TREBLE_CLEF = {"eb": (-9, -5, -1), "bb": (-2, -1, -2)}
+
+
+def written_to_sounding(canonical_id: str, clef_sign: str | None = None, key: str | None = None) -> tuple[int, int, int] | None:
+    """The interval from written to sounding pitch, None when the instrument sounds as written. key: the one a tuba part
+    in treble clef is written in («eb» or «bb»); without it, it is left as written."""
+    if canonical_id in ("tuba", "sousaphone"):
+        return _TUBA_IN_TREBLE_CLEF.get(key) if clef_sign == "G" else None
     if canonical_id in _IN_B_FLAT_IN_TREBLE_CLEF:
         return (-2, -1, -1) if clef_sign == "G" else None
     return _WRITTEN_TO_SOUNDING.get(canonical_id)

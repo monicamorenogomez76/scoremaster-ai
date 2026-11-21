@@ -251,11 +251,18 @@ _LISTED_AFTER = re.compile(r"\s*(?:[(:]|\s[-–—]\s)")
 _LIST_SEPARATOR = re.compile(r"\s*(?:[,;/+&]|\b(?:y|e|i|and|et|und)\b)\s*", re.IGNORECASE)
 
 
+# «T.C.» and «B.C.» say the clef of the part, not the instrument («Tuba in E♭ (T.C.)», 2026-11-21).
+_CLEF_MARK = re.compile(r"\b(?:t c|b c|tc|bc)\b")
+
+
 def _exact_match(name: str) -> CatalogMatch:
     base, part_numbers = _split_part_numbers(_prepare(name))
     alias = normalize_instrument_name(base)
     index = _load()[1]
     identity = index.get(alias)
+    if identity is None and _CLEF_MARK.search(alias):
+        alias = " ".join(_CLEF_MARK.sub(" ", alias).split())
+        identity = index.get(alias)
     words = alias.split()
     if identity is None and words and _is_key(words[-1]):
         unkeyed = index.get(" ".join(words[:-1]))
@@ -323,3 +330,9 @@ def as_written(identity, name: str, clef_sign: str | None = None, shift: int | N
     if clef_sign == "F" or shift == BRASS_BARITONE_SHIFT or (key_fifths is not None and key_fifths % 12 == BRASS_BARITONE_FIFTHS):
         return identity_by_id("euphonium")
     return identity
+
+
+def written_key(name: str) -> str | None:
+    """The key a part name writes («Tuba in E♭» → «eb», «Bb Bass» → «bb»), None when it writes none."""
+    words = normalize_instrument_name(_split_part_numbers(_prepare(name))[0]).split()
+    return words[-1][1:] if words and _is_key(words[-1]) else None
