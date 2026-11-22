@@ -183,7 +183,10 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   particella se empareja con su pentagrama (por nombre si el guion lo trae, y por ritmo en conjunto: un pentagrama solo
   comparte particellas del mismo instrumento o de su mismo ritmo) y se compara compás a compás por ritmo. Donde guion y
   particella coinciden, se queda el guion; donde no, se toma el compás de la particella, que se lee mejor, y queda como
-  dudoso. El registro dice la coincidencia y cuántos compases dudosos hay. Sin guion, la obra sale de las particellas.
+  dudoso. El registro dice la coincidencia y cuántos compases dudosos hay, y el lector envía esos compases con la obra:
+  la pestaña Partitura los muestra por parte («Dudas del lector de PDF»), cada pasaje se abre para compararlo con el PDF
+  y la parte se marca como revisada (se guarda en `works.reading_doubts`, migración 0027). Sin guion, la obra sale de
+  las particellas y no hay dudas.
 - **Páginas partidas:** copista parte a veces una página del guion en bloques: ve menos pentagramas y repite los
   compases. Si una página tiene menos pentagramas y casi el doble de compases que las demás, se toma como mal leída
   aunque el margen no lo diga, y se queda con sus compases reales (sin los vacíos y dividida entre los bloques), que se

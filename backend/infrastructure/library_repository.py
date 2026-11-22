@@ -30,6 +30,8 @@ class StoredWork(Base):
     size: Mapped[int] = mapped_column(Integer, nullable=False)
     preparation_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default='review')
     source_format: Mapped[str] = mapped_column(String(10), nullable=False, server_default='musicxml')
+    # The doubts of the PDF reader and the parts already reviewed (2026-11-22); deferred like the file.
+    reading_doubts: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, deferred=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -150,6 +152,16 @@ class PostgresLibraryRepository:
             row.preparation_status = status
             session.flush()
             return _work(row)
+
+    def reading_doubts(self, user_id: UUID, work_id: UUID) -> Optional[dict]:
+        with Session(self.engine) as session:
+            return session.execute(select(StoredWork.reading_doubts)
+                                   .where(StoredWork.id == work_id, StoredWork.user_id == user_id)).scalar_one_or_none()
+
+    def save_reading_doubts(self, user_id: UUID, work_id: UUID, doubts: Optional[dict]) -> bool:
+        with Session(self.engine) as session, session.begin():
+            return session.execute(update(StoredWork).where(StoredWork.id == work_id, StoredWork.user_id == user_id)
+                                   .values(reading_doubts=doubts)).rowcount > 0
 
     def preparation_priorities(self, user_id: UUID) -> list[dict]:
         with Session(self.engine) as session:

@@ -981,6 +981,21 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .pdf-title { display: grid; gap: 4px; max-width: 32rem; }
 .pdf-provisional { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid var(--warning); background: var(--warning-soft); }
 
+/* The doubts of the PDF reader, above the score (2026-11-22). */
+.reading-doubts { margin: 0 0 16px; padding: 8px 16px; border-left: 3px solid var(--warning); background: var(--warning-soft); }
+.reading-doubts summary { display: flex; align-items: center; min-height: 44px; font-weight: 600; cursor: pointer; }
+.reading-doubts summary:hover { text-decoration: underline; }
+.reading-doubts summary:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.reading-doubts > .result-supporting { margin: 0 0 8px; }
+.reading-doubts-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.reading-doubt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.reading-doubt-part { min-width: 8rem; font-weight: 600; }
+.reading-doubt-reviewed .reading-doubt-part { font-weight: 400; }
+.reading-doubt-passages { display: flex; flex-wrap: wrap; gap: 8px; }
+.reading-doubt-passages .passage-open { min-width: 44px; min-height: 44px; }
+.reading-doubt-check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
+.reading-doubt-check input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--primary); }
+
 /* Printable sheet of a rehearsal: hidden on screen; when printing it is the only thing on the page. */
 .rehearsal-sheet { display: none; }
 @media print {
