@@ -179,6 +179,45 @@ def names_at(words: list[Word], centres: list[float], column: float) -> list[str
     return [" ".join(text for _, text in sorted(found[staff])) if staff in found else None for staff in range(len(centres))]
 
 
+# The tempo marks of a page (2026-11-22, «1812»: fourteen, and the reader took only the first for the whole work): a
+# metronome mark, «(q = 132)», «(h. = 72)», with the words before it on its line («E Allegro giusto»), where it starts.
+_METRONOME = re.compile(r"\(?([qhe\u2669\u266a])(\.?)\s*=\s*(\d{2,3})\)?")
+_BEAT_QUARTERS = {"q": 1.0, "\u2669": 1.0, "h": 2.0, "e": 0.5, "\u266a": 0.5}
+# Words of one tempo mark are closer than this, in points: the page number or another mark is further.
+TEMPO_PHRASE_GAP = 12.0
+
+
+def _word_lines(words: list[Word]) -> list[list[Word]]:
+    """The words in lines, each left to right; a rehearsal letter in its box sits a little higher than the words."""
+    lines: list[list[Word]] = []
+    for word in sorted(words, key=lambda word: word.middle):
+        if lines and abs(lines[-1][-1].middle - word.middle) <= max(SAME_LINE, 0.5 * max(word.height, lines[-1][-1].height)):
+            lines[-1].append(word)
+        else:
+            lines.append([word])
+    return [sorted(line, key=lambda word: word.left) for line in lines]
+
+
+def tempo_marks(words: list[Word]) -> list[tuple[float, int, float]]:
+    """(where it starts, beats per minute, beat in quarters) of each metronome mark of the page, top to bottom."""
+    found = []
+    for line in _word_lines(words):
+        index = 0
+        while index < len(line):
+            for span in (1, 2, 3):
+                mark = _METRONOME.fullmatch(" ".join(word.text for word in line[index:index + span]))
+                if mark and 20 <= int(mark.group(3)) <= 300:
+                    start = index
+                    while start and line[start].left - line[start - 1].right < TEMPO_PHRASE_GAP:
+                        start -= 1
+                    found.append((line[start].left, int(mark.group(3)),
+                                  _BEAT_QUARTERS[mark.group(1)] * (1.5 if mark.group(2) else 1)))
+                    index += span - 1
+                    break
+            index += 1
+    return found
+
+
 class PageText(str):
     """A page's text that also keeps its words with their place, for the names beside the staves; plain text elsewhere."""
     words: list[Word]

@@ -1457,3 +1457,19 @@ def test_a_second_reading_with_its_staves_named_is_kept_over_one_without():
     better = worker.read_short_pages_again(found, {1: "obra.pdf"}, read_again)
     assert worker.measure_count(better[3][1]) == 5 and worker.names_in(better[3][1]) == names
 
+
+def test_each_tempo_of_a_page_goes_to_the_measure_it_is_over():
+    """Measures starting at 74, 260 and 582 pt; «Allegro giusto» starts at 607, over the third one."""
+    xml = worker.with_tempos(page(2, 3), [74.0, 260.0, 582.0], [(607.3, 132, 1.0), (80.0, 60, 1.0)])
+    from backend.test.test_omr_merge import parts_of
+    _, _, measures = parts_of(xml)
+    assert [bar.findtext("direction/sound/[@tempo]") is not None and bar.find("direction/sound").get("tempo")
+            for bar in measures[0]] == ["60", False, "132"]
+    assert worker.with_tempos(page(2, 3), [74.0, 260.0], [(607.3, 132, 1.0)]) == page(2, 3), \
+        "measures that are not those of the page: no tempo is placed"
+
+
+def test_the_first_tempo_of_the_text_is_added_only_when_no_page_placed_one(scoremaster):
+    scanned_score(scoremaster, [MARGIN, "Oboe\nAllegro (q = 120)\n" + MUSIC, MARGIN])
+    assert scoremaster["result"]["musicxml"].count("<metronome") == 1
+

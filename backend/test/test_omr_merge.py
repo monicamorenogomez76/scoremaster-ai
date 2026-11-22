@@ -510,3 +510,14 @@ def test_the_pages_of_the_pdf_are_kept_when_scoremaster_finishes_the_work():
     joined = join_pages([page(2, 3), page(2, 2)], "Obra")
     assert final_musicxml(joined, None, False, "score").count(b'new-page="yes"') == 2, "one per part"
 
+
+def test_a_tempo_is_written_in_the_measure_where_it_starts_and_kept_when_the_pages_are_joined():
+    from omr.merge import add_tempo, join_pages
+    marked = add_tempo(page(2, 3), 132, 1.0, measure=2)
+    _, _, measures = parts_of(marked)
+    assert [bar.find("direction/sound") is not None for bar in measures[0]] == [False, False, True]
+    assert all(bar.find("direction") is None for bar in measures[1]), "only in the first part"
+    _, _, joined = parts_of(join_pages([page(2, 2), marked], "Obra"))
+    tempos = [index for index, bar in enumerate(joined[0]) if bar.find(".//metronome") is not None]
+    assert tempos == [4], "the third measure of the second page"
+

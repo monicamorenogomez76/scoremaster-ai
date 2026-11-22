@@ -27,7 +27,7 @@ from xml.sax.saxutils import escape
 
 import httpx
 
-from omr.margin import PageText, names_at, names_by_staff, one_system, page_words, split_capitals, words_of
+from omr.margin import PageText, names_at, names_by_staff, one_system, tempo_marks, page_words, split_capitals, words_of
 from omr.merge import add_instrumentation, add_tempo, check_with_parts, combine_parts, fill_lost_rests, join_pages, measure_count, silent_page, staff_of
 
 try:
@@ -86,20 +86,26 @@ class _Copista:
                 found[:] = staves
                 return True
             return False
-        front._systems = whole_systems(front, alone, original=cls.systems)
+        # Where each measure of the first staff starts, for the tempo marks over them (2026-11-22).
+        starts: list[float] = []
+
+        def measures_of(syms, staves) -> None:
+            if staves:
+                starts[:] = sorted(syms[index].box[0] / PIXELS_PER_POINT for index in staves[0].bars)
+        front._systems = whole_systems(front, alone, original=cls.systems, seen=measures_of)
         png = page_image(pdf_path, number, out_dir, extract=lambda *place: from_pdf(place[0], place[1], Path(place[2])))
         xml = transcribe(png, cls.model).encode("utf-8")
         if found and staves(xml) == len(found):
             xml = with_names(xml, names_at(words, [(staff.y0 + staff.y1) / 2 / PIXELS_PER_POINT for staff in found],
                                            min(staff.x0 for staff in found) / PIXELS_PER_POINT))
-        return xml
+        return with_tempos(xml, starts, tempo_marks(words)) if words else xml
 
 
 # copisteria draws a digital PDF's page at 300 ppi; pdftotext places its words in points.
 PIXELS_PER_POINT = 300 / 72
 
 
-def whole_systems(front, alone, original=None):
+def whole_systems(front, alone, original=None, seen=None):
     """copisteria's grouping of staves into systems, with every staff joined to the one above it on a page where
     alone(staves) says they are one system: the bar lines of a band score break between the families (woodwinds,
     brass, percussion), and copisteria took each family for a system of its own."""
@@ -107,15 +113,35 @@ def whole_systems(front, alone, original=None):
 
     def systems(syms, staves, *args, **kwargs):
         if not alone(staves):
-            return original(syms, staves, *args, **kwargs)
-        saved = front._ink_links, front._braced
-        front._ink_links = lambda *_: (front.INK_LINK + 1, 1.0)
-        front._braced = lambda *_: True
-        try:
-            return original(syms, staves, *args, **kwargs)
-        finally:
-            front._ink_links, front._braced = saved
+            found = original(syms, staves, *args, **kwargs)
+        else:
+            saved = front._ink_links, front._braced
+            front._ink_links = lambda *_: (front.INK_LINK + 1, 1.0)
+            front._braced = lambda *_: True
+            try:
+                found = original(syms, staves, *args, **kwargs)
+            finally:
+                front._ink_links, front._braced = saved
+        if seen:
+            seen(syms, staves)
+        return found
     return systems
+
+
+# A tempo mark starts a little after its barline (a rehearsal letter's box, the first note): this far before a measure,
+# in points, it is still that measure's.
+TEMPO_SLACK = 8.0
+
+
+def with_tempos(xml: bytes, starts: list[float], marks: list[tuple[float, int, float]]) -> bytes:
+    """The page with each tempo mark in the measure it is over (2026-11-22, «1812»), by where the measures start
+    (points); nothing when those are not the page's measures."""
+    if not marks or len(starts) != measure_count(xml):
+        return xml
+    for left, beats_per_minute, beat_quarters in marks:
+        measure = max((index for index, start in enumerate(starts) if start <= left + TEMPO_SLACK), default=0)
+        xml = add_tempo(xml, beats_per_minute, beat_quarters, measure)
+    return xml
 
 
 _GENERIC_PART = re.compile(r"Part \d+")
@@ -1353,7 +1379,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
             print(f"Percusión leída de la plantilla del PDF: {len(percussion)} particellas.", flush=True)
         # copista reads no tempo: the first one written in the pages' text, at the start of the work (2026-11-01).
         tempo = next((found for found in (tempo_from_text(texts[(path, number)]) for _, path, number in plan) if found), None)
-        if tempo:
+        if tempo and b"<metronome" not in musicxml:
             musicxml = add_tempo(musicxml, *tempo)
             print(f"Tempo leído del texto del PDF: {tempo[0]} por minuto.", flush=True)
         background.close()
