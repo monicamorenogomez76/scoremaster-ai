@@ -70,13 +70,29 @@ test('ensemble starts parts on same clock and schedules ahead in small windows',
   t.stop(); assert.equal(h.callbacks.size, 0);
 });
 
+// «1812» (2026-11-22): the player stopped for a moment at each turn of the score's page. Drawing 30 staves keeps the
+// page busy for longer than the notes queued ahead (0.3 s), and smplr held its notes in a timer of the page too. The notes
+// now go to the audio clock seconds ahead, which plays them while the page is busy; a pause still stops them.
+test('notes go to the audio clock seconds ahead, so drawing the score does not stall them', async () => {
+  const h = harness(), t = await h.api.preparePlayback({}, null);
+  await t.play();
+  assert.equal(h.starts.length, 2);
+  h.tick(1.5);
+  assert.equal(h.starts.length, 3, 'the note at 4 s is already with the audio clock at 1.5 s');
+  const handed = [];
+  h.optionsUsed[0].scheduler.schedule({ time: 99 }, event => handed.push(event));
+  assert.deepEqual(handed, [{ time: 99 }], 'smplr hands every note to the audio clock at once');
+  t.pause();
+  assert.ok(h.instruments.every(instrument => instrument.stopCount >= 1), 'a pause stops the notes handed ahead');
+});
+
 test('pause and seek restore held notes; speed adjusts remaining duration', async () => {
   const h = harness(), t = await h.api.preparePlayback({}, null);
   await t.play(); h.tick(1.05); t.pause();
   assert.equal(h.callbacks.size, 0);
   t.seek(3); t.setSpeed(.5); await t.play();
-  const last = h.starts.at(-1);
-  assert.equal(last.instrument, 'flute'); assert.equal(last.duration, 2);
+  const held = h.starts.findLast(event => event.instrument === 'flute');
+  assert.equal(held.duration, 2, 'the flute held across the seek sounds what is left of it, at half speed');
   h.api.stopPlayback(); assert.equal(h.callbacks.size, 0);
   assert.ok(h.instruments.every((instrument) => instrument.disposeCount === 1));
 });
