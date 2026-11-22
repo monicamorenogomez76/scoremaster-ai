@@ -7,6 +7,16 @@ import re
 from typing import Optional
 
 EN = {
+    # Corrected notes (2026-11-22)
+    "La obra no tiene correcciones.": "The work has no corrections.",
+    "Ya tienes otra obra con este mismo archivo: no se pudo guardar la corrección.":
+        "You already have another work with this same file: the correction could not be saved.",
+    "La corrección no es una nota válida.": "The correction is not a valid note.",
+    "Ese compás no está en la obra.": "That measure is not in the work.",
+    "La nota ya no está como se vio: vuelve a abrir la obra.": "The note is no longer as it was seen: open the work again.",
+    "Hay varias notas iguales en ese sitio; no se sabe cuál corregir.": "There are several equal notes there; it is not known which one to correct.",
+    "Esta obra está en MusicXML comprimido y no se puede corregir aquí.": "This work is in compressed MusicXML and cannot be corrected here.",
+    "Una nota de un acorde no puede ser un silencio: corrige su altura.": "A note of a chord cannot become a rest: correct its pitch.",
     # Accounts
     "Email o contraseña incorrectos.": "Wrong email or password.",
     "Demasiados intentos. Espera unos minutos.": "Too many attempts. Wait a few minutes.",

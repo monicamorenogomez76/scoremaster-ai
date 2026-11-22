@@ -23,6 +23,7 @@ from backend.app.auth_routes import router as auth_router
 from backend.application import ai_usage
 from backend.infrastructure.ai_usage_repository import PostgresAiUsageRepository
 from backend.app.i18n import language, translate
+from backend.app.correction_routes import router as correction_router
 from backend.app.library_routes import router as library_router, valid_band_profile
 from backend.app.question_routes import router as question_router
 from backend.app.band_routes import router as band_router
@@ -130,6 +131,7 @@ class _BuiltStatic(StaticFiles):
 app.mount("/static", _BuiltStatic(directory=str(BASE_DIR / "static")), name="static")
 app.include_router(auth_router)
 app.include_router(library_router)
+app.include_router(correction_router)
 app.include_router(question_router)
 app.include_router(rehearsal_router)
 app.include_router(concert_router)

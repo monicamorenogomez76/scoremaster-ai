@@ -115,6 +115,14 @@ def kept_work(content: bytes, store: Optional[PreparedStore]) -> Optional[Score]
     return _known(sha256(content).hexdigest(), store)
 
 
+def keep_model(content: bytes, score: Score, store: Optional[PreparedStore]) -> None:
+    """A model made elsewhere for these bytes (a corrected note, 2026-11-22), kept as if they had been read here."""
+    key = sha256(content).hexdigest()
+    if store is not None:
+        _save(key, score, store)
+    _remember(key, score)
+
+
 def parse_source(content: bytes, overrides: Optional[dict[str, str]] = None,
                  store: Optional[PreparedStore] = None) -> Score:
     return confirm_instruments(parsed_work(content, store), overrides or {})

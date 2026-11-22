@@ -73,6 +73,15 @@ def analyze_and_store(content: bytes, file_name: str, user_id: UUID, profile: di
 
 
 
+def analyse_again(content: bytes, score, configuration: dict, repository, user_id: UUID, work_id: UUID) -> dict:
+    """The work analysed again with the band, minutes and confirmed instruments of its latest analysis."""
+    overrides = configuration.get("instrument_overrides") or {}
+    profile = configuration.get("band_profile") or {}
+    minutes = int(configuration.get("total_minutes") or 90)
+    result = _result(confirm_instruments(score, overrides), profile, minutes)
+    return save_analysis(result, content, profile, minutes, repository, overrides, user_id=user_id, work_id=work_id)
+
+
 def refresh_outdated_analyses(repository, library, score_store=None, only_prepared: bool = False) -> int:
     """Analyses every work whose latest analysis came from an earlier ScoreLint again (difficulty-v2,
     2026-10-14), with the band, minutes and confirmed instruments it was made with. The old analysis stays
