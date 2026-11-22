@@ -96,3 +96,54 @@ def test_a_change_of_time_signature_is_followed():
     read = work(note(8), three, note(12) + note(4))
     assert offsets(fit_measures(read)) == [0, 2, 5]
     assert layout(fit_measures(read))[2][2] == 3
+
+
+# The measures numbered as the PDF prints them (2026-11-22, «1812»): its first measure is an upbeat, and the PDF numbers
+# the first full measure 1. The upbeat is measure 0, as MusicXML writes it (implicit), so measure 83 is the PDF's 83.
+def numbers(musicxml: bytes) -> list[tuple[str, str | None]]:
+    import xml.etree.ElementTree as ET
+    return [(measure.get("number"), measure.get("implicit"))
+            for measure in ET.fromstring(musicxml).find("part").findall("measure")]
+
+
+def test_an_upbeat_is_measure_zero_and_the_next_ones_keep_the_numbers_of_the_pdf():
+    from backend.parsers.pdf_measures import number_like_the_pdf
+    upbeat = work(note(4), note(8), note(8))
+    assert numbers(number_like_the_pdf(upbeat)) == [("0", "yes"), ("1", None), ("2", None)]
+    full = work(note(8), note(8))
+    assert number_like_the_pdf(full) == full, "a work without an upbeat keeps its numbers"
+
+
+def test_an_upbeat_counts_only_where_a_part_plays_it():
+    """A part resting in the upbeat is written as a whole-measure rest, full length; one part playing it short is the
+    upbeat. A first measure missing a note in every part is no upbeat when one part plays it whole."""
+    from backend.parsers.pdf_measures import number_like_the_pdf
+    two = lambda first, second: (work(first, note(8)).decode()
+                                 .replace("</score-partwise>", "")
+                                 .replace("</part-list>", '<score-part id="P2"><part-name>Oboe</part-name></score-part></part-list>')
+                                 + work(second, note(8)).decode()[work(second, note(8)).decode().index('<part id="P1">'):]
+                                 .replace('<part id="P1">', '<part id="P2">')).encode()
+    resting = two(note(4), '<note><rest measure="yes"/><duration>8</duration></note>')
+    assert numbers(number_like_the_pdf(resting))[0] == ("0", "yes")
+    playing = two(note(4), note(8))
+    assert numbers(number_like_the_pdf(playing))[0] == ("1", None)
+
+
+def test_the_finished_work_of_a_reading_numbers_its_upbeat_zero():
+    from backend.parsers.prepare import final_musicxml
+    finished = final_musicxml(work(note(4), note(8)), None, False, "score")
+    assert numbers(finished) == [("0", "yes"), ("1", None)]
+    assert [length for _, _, length, _ in layout(finished)] == [2.0, 2.0], "the upbeat still sounds after its rests"
+
+
+def test_measure_zero_is_kept_by_the_analysis_and_the_player(tmp_path):
+    """music21 gives an upbeat the number 0, which `number or index` turned into another measure."""
+    from backend.parsers.musicxml_parser import parse_musicxml
+    from backend.parsers.playback import build_playback
+    from backend.parsers.prepare import final_musicxml
+    finished = final_musicxml(work(note(4), note(8), note(8)), None, False, "score")
+    path = tmp_path / "obra.musicxml"
+    path.write_bytes(finished)
+    assert [measure.number for measure in parse_musicxml(path).parts[0].measures] == [0, 1, 2]
+    assert [measure["number"] for measure in build_playback(finished, "", 0, 2)["measures"]] == [0, 1, 2]
+

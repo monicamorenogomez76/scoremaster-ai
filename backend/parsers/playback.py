@@ -92,7 +92,7 @@ def _scores_kept() -> int:
 # Beyond this the work is too large to keep (the whole-score playback already stops at 150 000 events).
 MAX_PREPARED_NOTES = 1_000_000
 # Stored timelines of another version are prepared again.
-TIMELINE_VERSION = 'playback-timeline-v7'   # v7 (2026-11-20): every part keeps the band's measures; v6 (2026-11-20): trills, mordents and turns sound as their notes; v5 (2026-11-17): a part that changes instrument sounds as each one; v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
+TIMELINE_VERSION = 'playback-timeline-v8'   # v8 (2026-11-22): an upbeat numbered 0 keeps its number; v7 (2026-11-20): every part keeps the band's measures; v6 (2026-11-20): trills, mordents and turns sound as their notes; v5 (2026-11-17): a part that changes instrument sounds as each one; v4 (2026-11-05): grace notes sound; v3 (2026-11-02): the generic percussion plays drums by line
 # A grace note takes no time in the score: it sounds this long, just before its note, which stays on the beat (2026-11-05:
 # with no length it fell on the note and could hardly be heard).
 GRACE_QUARTERS = 0.125
@@ -425,7 +425,8 @@ def _read_timeline(content: bytes) -> _Timeline:
         # saves the deep copies that took two thirds of the time (nobody else uses this parsed score).
         identity = _identity(part, name, declared)
         program = part.getInstrument().midiProgram
-        written_measures = [(int(m.number or i), float(m.offset))
+        # A first measure numbered 0 is an upbeat (2026-11-22); 0 elsewhere is music21's measure without a number.
+        written_measures = [(int(m.number if m.number or i == 1 else i), float(m.offset))
                             for i, m in enumerate(part.getElementsByClass(stream.Measure), 1)]
         measures = band.measures([number for number, _ in written_measures])
         highest_time = band.end

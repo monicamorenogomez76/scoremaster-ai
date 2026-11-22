@@ -226,7 +226,8 @@ def parse_musicxml(source: Union[str, Path]) -> Score:
         key_fifths, time_signature = None, None   # in force: a measure repeats them only when they change
 
         for measure_index, parsed_measure in enumerate(source_measures, start=1):
-            measure_number = int(parsed_measure.number or measure_index)
+            # music21 numbers 0 a measure without a number; the first one numbered 0 is an upbeat (2026-11-22).
+            measure_number = int(parsed_measure.number if parsed_measure.number or measure_index == 1 else measure_index)
             if parsed_measure.keySignature is not None:
                 key_fifths = int(parsed_measure.keySignature.sharps)
             if parsed_measure.timeSignature is not None:

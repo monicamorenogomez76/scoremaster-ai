@@ -268,7 +268,7 @@ def test_a_grace_note_at_the_very_start_never_sounds_before_the_work():
 
 def test_the_audio_prepared_before_is_prepared_again():
     from backend.parsers.playback import TIMELINE_VERSION
-    assert TIMELINE_VERSION == "playback-timeline-v7"
+    assert TIMELINE_VERSION == "playback-timeline-v8"
 
 
 # Ornaments (2026-11-20): a trill, a mordent or a turn sounds as the notes it stands for, in the key of the work;
