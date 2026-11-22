@@ -10,7 +10,8 @@ export function fitScale(widestPage, containerWidth, zoom, minimum = .75) {
 }
 
 // A page of the PDF is drawn whole in one line, this wide a measure to begin with, wider while the engraver breaks it.
-const PDF_MEASURE_PIXELS = 250;
+// 400: wide enough for most pages to fit at the first drawing; each drawing of 30 staves stops the page a while.
+const PDF_MEASURE_PIXELS = 400;
 const PDF_LINE_ATTEMPTS = 4;
 
 // The page of the PDF a measure is on: the index of the last start not after it (pages: the first measure of each).
