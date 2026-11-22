@@ -10,7 +10,7 @@ from tempfile import NamedTemporaryFile
 import zlib
 
 from backend.parsers.musicxml_parser import parse_musicxml
-from backend.parsers.pdf_measures import fit_measures
+from backend.parsers.pdf_measures import fit_measures, number_like_the_pdf
 from backend.parsers.pdf_transpositions import add_transpositions, fix_key_signatures
 from backend.parsers.playback import TIMELINE_VERSION, encode_timeline, timeline_has_parts
 from backend.parsers.score_codec import SCORE_VERSION, decode_score, encode_score
@@ -42,7 +42,8 @@ def final_musicxml(read: bytes, learned: dict | None, concert_pitch: bool, sourc
     """The bytes kept for a work read from a PDF: what the reader read with what it cannot know. Raises ParseError."""
     # copista writes the notes in the key of each instrument but no <transpose> (2026-10-29).
     # Each measure keeps the length of its time signature: one read too long made its part sound late.
-    content = add_transpositions(fit_measures(read), learned, concert_pitch, source)
+    # Numbered as the PDF prints them: an upbeat is measure 0 (2026-11-22), before it is completed with silence.
+    content = add_transpositions(fit_measures(number_like_the_pdf(read)), learned, concert_pitch, source)
     # A key signature the reader missed in a transposed part is taken from the band.
     return fix_key_signatures(content)
 

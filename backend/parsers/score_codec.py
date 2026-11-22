@@ -9,7 +9,7 @@ from backend.domain.models import (PartMetadata, PartTransposition, Score, Score
                                    TempoMark)
 
 # Stored scores of another version are parsed again.
-SCORE_VERSION = 'score-v5'   # v5 (2026-11-18): the marks of the structure (barlines, repeats, endings, rehearsal marks, words). v4 (2026-11-17): a part that changes instrument is a part per instrument. v3 (2026-11-05): what coincides on a staff. v2 (2026-10-25): key, meter, tuplets, dynamics, articulation, ornaments
+SCORE_VERSION = 'score-v6'   # v6 (2026-11-22): an upbeat numbered 0 keeps its number. v5 (2026-11-18): the marks of the structure (barlines, repeats, endings, rehearsal marks, words). v4 (2026-11-17): a part that changes instrument is a part per instrument. v3 (2026-11-05): what coincides on a staff. v2 (2026-10-25): key, meter, tuplets, dynamics, articulation, ornaments
 
 
 def encode_score(score: Score) -> bytes:

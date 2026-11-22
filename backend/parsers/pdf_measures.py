@@ -94,6 +94,37 @@ def _complete(measure, missing: int, before: bool) -> None:
         measure.append(forward)
 
 
+def _expected(measure, divisions: int = 1, beats: int = 4, beat_type: int = 4) -> int:
+    """The length of a measure by the divisions and time signature it declares, or those given."""
+    for attributes in measure.findall("attributes"):
+        try:
+            divisions = int(attributes.findtext("divisions") or divisions)
+            if attributes.find("time/beats") is not None:
+                beats = int(attributes.findtext("time/beats"))
+                beat_type = int(attributes.findtext("time/beat-type"))
+        except ValueError:
+            continue
+    return divisions * beats * 4 // beat_type
+
+
+def number_like_the_pdf(musicxml: bytes) -> bytes:
+    """The measures numbered as the PDF prints them (2026-11-22, «1812»): when the first measure is an upbeat, shorter
+    than its time signature in every part that plays in it, it is measure 0 (implicit, as MusicXML writes an upbeat) and
+    the first full measure is 1. A part resting in it is written as a whole-measure rest and does not count."""
+    root = ET.fromstring(musicxml)
+    parts = [part.findall("measure") for part in root.findall("part")]
+    short = [_length(measures[0]) < _expected(measures[0]) for measures in parts
+             if measures and any(item.find("rest") is None for item in measures[0].iter("note"))]
+    if not short or not all(short):
+        return musicxml
+    for measures in parts:
+        for index, measure in enumerate(measures):
+            measure.set("number", str(index))
+        if measures:
+            measures[0].set("implicit", "yes")
+    return b'<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="utf-8")
+
+
 def fit_measures(musicxml: bytes) -> bytes:
     root = ET.fromstring(musicxml)
     changed = False
