@@ -163,10 +163,21 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
 }
 
 // First and last written measure numbers of a score.
+// The first measure of each page of the work's PDF (2026-11-22, «1812»): the reader marks with MusicXML's page break the
+// measure that starts each page after the first, as engravers export them. Those of the first part; none when the work
+// does not mark them, and it is shown four measures at a time.
+export function pageStarts(source) {
+  const part = /<part\s[^>]*>([\s\S]*?)<\/part>/.exec(source)?.[1] ?? '';
+  const measures = [...part.matchAll(/<measure\b[^>]*\bnumber="(-?\d+)"[^>]*>([\s\S]*?)<\/measure>/g)];
+  const starts = measures.filter(([, , body]) => /<print\b[^>]*\bnew-page="yes"/.test(body)).map(([, number]) => Number(number));
+  return starts.length ? [Number(measures[0][1]), ...starts] : [];
+}
+
 export function measureBounds(source) {
   const xml = new DOMParser().parseFromString(source, 'application/xml');
   const numbers = Array.from(xml.getElementsByTagName('*')).filter(item => item.localName === 'measure')
     .map(item => Number.parseInt(item.getAttribute('number'), 10)).filter(Number.isFinite);
   if (!numbers.length) throw new Error(t('La partitura no contiene compases.'));
-  return { first: numbers.reduce((a, b) => Math.min(a, b)), last: numbers.reduce((a, b) => Math.max(a, b)) };
+  return { first: numbers.reduce((a, b) => Math.min(a, b)), last: numbers.reduce((a, b) => Math.max(a, b)),
+    pages: pageStarts(source) };
 }

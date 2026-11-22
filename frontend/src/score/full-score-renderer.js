@@ -5,8 +5,19 @@ export const MEASURES_PER_PAGE = 4;
 const CURSOR = [{ type: 3, color: '#6366f1', alpha: .25, follow: false }];
 
 // Width fit with a legible minimum; tall ensembles scroll vertically instead of shrinking.
-export function fitScale(widestPage, containerWidth, zoom) {
-  return Math.max(.75, (containerWidth - 32) / widestPage) * zoom;
+export function fitScale(widestPage, containerWidth, zoom, minimum = .75) {
+  return Math.max(minimum, (containerWidth - 32) / widestPage) * zoom;
+}
+
+// A page of the PDF is drawn whole in one line, this wide a measure to begin with, wider while the engraver breaks it.
+const PDF_MEASURE_PIXELS = 250;
+const PDF_LINE_ATTEMPTS = 4;
+
+// The page of the PDF a measure is on: the index of the last start not after it (pages: the first measure of each).
+export const pdfPageOf = (pages, measure) => Math.max(0, pages.findLastIndex(start => start <= measure));
+
+export function pdfPageLabel(pages, index, first, last) {
+  return t('Página {page} de {pages} · compases {first}–{last}', { page: index + 1, pages: pages.length, first, last });
 }
 
 // Pages hold up to four measures, fewer when they do not fit in one line, so they are told by their measures.
@@ -76,10 +87,13 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
   const publish = changes => { snapshot = { ...snapshot, ...changes }; onChange(snapshot); };
   const frame = nextFrame || (() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
+  // The pages of the work's PDF, when it marks them: each shown whole, as small as its width needs.
+  const pdfPages = () => (score?.pages?.length ? score.pages : null);
+
   function fit() {
     if (!score?.sizes?.length || container.clientWidth <= 32 || container.clientHeight <= 32) return;
     const width = Math.max(...score.sizes.map(item => item.width));
-    const scale = fitScale(width, container.clientWidth, score.zoom);
+    const scale = fitScale(width, container.clientWidth, score.zoom, pdfPages() ? 0 : .75);
     for (const item of score.sizes) {
       item.svg.style.display = 'block';
       item.svg.style.width = item.width * scale + 'px';
@@ -92,20 +106,26 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
 
   async function renderPage() {
     if (!score) return;
-    const state = score, token = ++rendering;
-    let end = Math.min(state.pageStart + MEASURES_PER_PAGE - 1, state.last);
+    const state = score, token = ++rendering, pages = pdfPages();
+    const index = pages ? pdfPageOf(pages, state.pageStart) : 0;
+    let end = pages ? (index + 1 < pages.length ? pages[index + 1] - 1 : state.last)
+      : Math.min(state.pageStart + MEASURES_PER_PAGE - 1, state.last);
+    const label = () => (pages ? pdfPageLabel(pages, index, state.pageStart, end) : pageLabel(state.first, state.last, state.pageStart, end));
     publish({ status: t('Cargando partitura · compases {first}–{last}…', { first: state.pageStart, last: end }), busy: true,
-      canPrevious: state.pageStart > state.first, canNext: end < state.last, page: pageLabel(state.first, state.last, state.pageStart, end) });
+      canPrevious: state.pageStart > state.first, canNext: end < state.last, page: label() });
     await frame();
     if (token !== rendering || state !== score) return;
     let staging;
     try {
       let display;
-      // Drawn once with up to four measures; again with the ones that fit when they need a second line.
-      for (let attempt = 0; attempt < 2; attempt++) {
+      const count = end - state.pageStart + 1;
+      let width = Math.max(900, container.clientWidth - 24, pages ? count * PDF_MEASURE_PIXELS : 0);
+      // Drawn once with up to four measures; again with the ones that fit when they need a second line. A page of the
+      // PDF is never cut: it is drawn wider until it fits in one line, and shrunk to the screen.
+      for (let attempt = 0; attempt < (pages ? PDF_LINE_ATTEMPTS : 2); attempt++) {
         staging?.remove();
         staging = container.ownerDocument.createElement('div');
-        staging.style.width = Math.max(900, container.clientWidth - 24) + 'px';
+        staging.style.width = width + 'px';
         staging.style.position = 'absolute'; staging.style.visibility = 'hidden';
         container.append(staging);
         const pageXml = filter(state.source, null, state.pageStart + '-' + end);
@@ -117,10 +137,11 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
         display.render();
         const fitting = measuresInFirstLine(display);
         if (!fitting || fitting >= end - state.pageStart + 1) break;
-        end = state.pageStart + fitting - 1;
+        if (pages) width = Math.ceil(width * count / fitting * 1.1);
+        else end = state.pageStart + fitting - 1;
       }
       state.pageEnd = end;
-      publish({ canNext: end < state.last, page: pageLabel(state.first, state.last, state.pageStart, end) });
+      publish({ canNext: end < state.last, page: label() });
       staging.style.position = ''; staging.style.visibility = '';
       state.staging = staging; state.display = display;
       state.sizes = Array.from(staging.querySelectorAll('svg'))
@@ -161,7 +182,12 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
   // The next page starts after the last measure shown; the previous one goes back to where it was.
   const turn = delta => {
     if (!score) return;
-    if (delta > 0) {
+    const pages = pdfPages();
+    if (pages) {
+      const index = pdfPageOf(pages, score.pageStart) + delta;
+      if (index < 0 || index >= pages.length) return;
+      score.pageStart = pages[index];
+    } else if (delta > 0) {
       if (score.pageEnd >= score.last) return;
       score.starts.push(score.pageStart);
       score.pageStart = score.pageEnd + 1;
@@ -189,9 +215,13 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
       score.currentMeasure = measure;
       if (playing && outside) {
         // Playing on, the next page starts with the measure that sounds; a jump goes to the page of four it is in.
-        if (measure === pageEnd + 1) score.starts.push(score.pageStart);
-        else score.starts = [];
-        score.pageStart = measure === pageEnd + 1 ? measure : pageStartFor(score.first, measure);
+        const pages = pdfPages();
+        if (pages) score.pageStart = pages[pdfPageOf(pages, measure)];
+        else {
+          if (measure === pageEnd + 1) score.starts.push(score.pageStart);
+          else score.starts = [];
+          score.pageStart = measure === pageEnd + 1 ? measure : pageStartFor(score.first, measure);
+        }
         renderPage();
       }
       else highlightMeasure(score.display, measure, container);

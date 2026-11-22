@@ -150,3 +150,45 @@ test('the map is drawn above the measures of the page, and removed when hidden',
   renderer.setOverlay(null);
   assert.equal(staging.children.length, 1);
 });
+
+
+// The pages of the PDF (2026-11-22, «1812»): a work that marks where each page of its PDF starts is shown page by page,
+// as the PDF, each page whole in one line, smaller when it is wide (the zoom enlarges it); the director compares them.
+test('a work with the pages of its PDF turns them where the PDF does, each page whole in one line', async () => {
+  const pages = [], widths = [];
+  const container = new Element();
+  let view;
+  const renderer = createFullScoreRenderer({
+    container, session: { getVersion: () => 0, loadSource: async () => '<score/>' }, nextFrame: async () => {},
+    filter: (_, instrument, range) => { pages.push(range); return '<page/>'; },
+    bounds: () => ({ first: 1, last: 9, pages: [1, 4, 6] }),
+    createDisplay: target => {
+      const asked = pages[pages.length - 1].split('-').map(Number);
+      const count = asked[1] - asked[0] + 1;
+      const width = Number.parseFloat(target.style.width);
+      widths.push(width);
+      // 300 px a measure: a narrower line breaks.
+      const fit = Math.floor(width / 300);
+      const lines = count > fit ? [fit, count - fit] : [count];
+      return { async load() {}, GraphicSheet: { MusicPages: [{ MusicSystems: lines.map(n => ({ GraphicalMeasures: Array(n) })) }] },
+        render() { const svg = new Element(); svg.attributes = { width: String(count * 300), height: '500' }; target.append(svg); } };
+    },
+    onChange: snapshot => { view = snapshot; },
+  });
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  await renderer.load();
+  assert.deepEqual(pages, ['1-3'], 'the first page of the PDF, never cut');
+  assert.equal(view.page, 'Página 1 de 3 · compases 1–3');
+  renderer.next(); await settle();
+  assert.equal(view.page, 'Página 2 de 3 · compases 4–5');
+  renderer.follow(7, true); await settle();
+  assert.equal(view.page, 'Página 3 de 3 · compases 6–9');
+  assert.ok(pages.slice(-2).every(range => range === '6-9'), 'drawn wider until its four measures fit in one line');
+  assert.ok(widths.at(-1) >= 1200);
+  const svg = container.children[0].children.find(child => child.attributes.width);
+  assert.equal(svg.style.width, '768px', 'its 1200 px shrunk to the width of the screen');
+  assert.equal(view.canNext, false);
+  renderer.previous(); await settle();
+  assert.equal(view.page, 'Página 2 de 3 · compases 4–5');
+});
+
