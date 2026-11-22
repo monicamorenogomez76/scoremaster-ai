@@ -46,6 +46,15 @@ class InMemoryLibrary:
     def preparation_priorities(self, user_id):
         return []
 
+    def reading_doubts(self, user_id, work_id):
+        return getattr(self, "doubts", {}).get(work_id) if self.get_work(user_id, work_id) else None
+
+    def save_reading_doubts(self, user_id, work_id, doubts):
+        if self.get_work(user_id, work_id) is None:
+            return False
+        self.doubts = {**getattr(self, "doubts", {}), work_id: doubts}
+        return True
+
     def band_profile(self, user_id):
         return dict(self.bands.get(user_id, {}))
 

@@ -1181,4 +1181,12 @@ export const en = {
   'ScoreMaster elige las obras a partir de sus análisis; la IA solo interpreta la pregunta y explica el resultado, sin cambiar nada. Las preguntas sugeridas se responden con reglas, sin gastar cupo.': 'ScoreMaster chooses the works from their analyses; the AI only reads the question and explains the result, changing nothing. The suggested questions are answered by rules, without spending quota.',
   'Por ejemplo: «¿Qué obras de grado 2 duran menos de 5 minutos?» o «¿Qué le falta a Persis?». Hasta {count} caracteres.': 'For example: «Which grade 2 works last less than 5 minutes?» or «What does Persis lack?». Up to {count} characters.',
   'Buscando la respuesta en tu repertorio': 'Looking for the answer in your repertoire',
+  'Dudas del lector de PDF': 'Doubts of the PDF reader',
+  'Compases que el lector tomó de una particella porque la partitura general se leía de otra forma. Ábrelos junto al PDF y marca cada parte cuando esté bien.': 'Measures the reader took from a part because the full score read otherwise. Open them beside the PDF and mark each part when it is right.',
+  'Ver {part}, compases {range}': 'View {part}, measures {range}',
+  'Revisada': 'Reviewed',
+  '1 compás dudoso': '1 doubtful measure',
+  '{count} compases dudosos': '{count} doubtful measures',
+  'Todas las partes revisadas': 'All parts reviewed',
+  '{left} de {total} partes por revisar': '{left} of {total} parts to review',
 };

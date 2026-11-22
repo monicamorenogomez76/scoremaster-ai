@@ -34,6 +34,7 @@ from backend.parsers.prepare import final_musicxml, opened_final, usable_score, 
 from backend.parsers.reader import ONE_READING, ask_for_turn, end_turn
 from backend.parsers.score_codec import SCORE_VERSION
 from backend.application.pdf_imports import OmrDispatcher, PdfImport, PdfImportRepository
+from backend.application.reading_doubts import MAX_DOUBTS, printed
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -160,6 +161,8 @@ class Result(BaseModel):
     # The work prepared by the reader (2026-11-04). A plain dict: what does not fit is ignored here, it never loses the
     # reading of a whole PDF to a refused request.
     prepared: Optional[dict] = None
+    # The measures the reader took from a part, by the name of their staff (2026-11-22): the director checks them.
+    doubts: Optional[list] = Field(default=None, max_length=MAX_DOUBTS)
 
 
 @router.get("/omr/imports/{import_id}/files/{position}")
@@ -275,8 +278,16 @@ def _keep_prepared(content: bytes, prepared: Optional[dict], score_store, playba
             logger.warning("No se pudo guardar lo que preparó el lector de PDF.", exc_info=True)
 
 
+def _keep_doubts(found: PdfImport, work_id: UUID, content: bytes, doubts: Optional[list], library) -> None:
+    """The reader's doubts with the work, those of an earlier reading of the same file replaced; never lose the work."""
+    try:
+        library.save_reading_doubts(found.user_id, work_id, printed(content, doubts) if doubts else None)
+    except Exception:
+        logger.warning("No se pudieron guardar las dudas del lector de PDF.", exc_info=True)
+
+
 def _analyse(found: PdfImport, imports, repository, library, score_store, instruments=None, prepared=None,
-             playback_store=None) -> None:
+             playback_store=None, doubts=None) -> None:
     try:
         content = imports.musicxml(found.id)
         _keep_prepared(content, prepared, score_store, playback_store)
@@ -285,6 +296,7 @@ def _analyse(found: PdfImport, imports, repository, library, score_store, instru
         saved = analyze_and_store(content, found.title + ".musicxml", found.user_id, found.band_profile,
                                   found.total_minutes, {}, repository, library, score_store, source_format="pdf",
                                   learned=learned)
+        _keep_doubts(found, UUID(saved["work_id"]), content, doubts, library)
         imports.done(found.id, UUID(saved["work_id"]))
     except Exception:
         logger.warning("No se pudo analizar una obra leída de PDF.", exc_info=True)
@@ -323,7 +335,7 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
     if finished:
         imports.received(found.id, finished)
         background.add_task(_analyse, found, imports, repository, library, score_store, instruments, result.prepared,
-                            playback_store)
+                            playback_store, result.doubts)
     elif result.error or not content:
         imports.failed(found.id, result.error or "El lector no devolvió ninguna obra.")
     elif b"<!ENTITY" in content:
@@ -337,5 +349,5 @@ def reader_result(import_id: str, result: Result, background: BackgroundTasks,
         imports.received(found.id, content)
         # music21 is slow on Render: the reader is answered at once and the work is analysed afterwards.
         background.add_task(_analyse, found, imports, repository, library, score_store, instruments, result.prepared,
-                            playback_store)
+                            playback_store, result.doubts)
     return JSONResponse(status_code=202, content={})

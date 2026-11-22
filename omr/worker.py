@@ -909,7 +909,7 @@ def _first_pages(saved: list[tuple[str, str]], pages: list[int], texts: dict, nu
 
 
 def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]], title: str,
-          read_score=lambda: [], first_pages: frozenset = frozenset()) -> tuple[bytes, str, bool]:
+          read_score=lambda: [], first_pages: frozenset = frozenset()) -> tuple[bytes, str, bool, list[dict]]:
     """read: the pages of each file by their place in the upload, None where copista could not read the page. read_score
     reads the score's pages that were set apart, when a part needs them or no part appears. Returns the work, where it
     came from (parts or score) and whether the score says it is in C."""
@@ -952,14 +952,26 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
         pages_of_parts = sum(len(found) for _, found, _ in groups)
         print(f"La obra se saca de {len(files)} particellas ({pages_of_parts} {'página' if pages_of_parts == 1 else 'páginas'}).",
               flush=True)
-        return combine_parts(files, title), "parts", False
+        return combine_parts(files, title), "parts", False, []
     # A scan's OCR names «Oboe» beside the staves and no part appears (2026-11-05): the pages set apart are the work's.
     pages = score_pages()
     print(f"La obra se saca de la partitura general: {len(pages)} páginas.", flush=True)
-    return _score(pages, title)[0], "score", any(at_concert_pitch(text) for _, text in pages)
+    return _score(pages, title)[0], "score", any(at_concert_pitch(text) for _, text in pages), []
 
 
-def _checked_score(pages: list[tuple[bytes, str]], files: list[tuple[str, bytes]], title: str) -> tuple[bytes, str, bool] | None:
+# The doubts sent with a work, at most (2026-11-21): «Pirates of the Caribbean» had 865.
+MAX_DOUBTS = 5000
+
+
+def _doubts(musicxml: bytes, dubious: list[tuple[int, int]]) -> list[dict]:
+    """The measures taken from a part, or where a shared staff and its parts differ, by the name of their staff: the
+    director checks them against the PDF in ScoreMaster (2026-11-21)."""
+    names = [item.findtext("part-name") or f"Parte {number}"
+             for number, item in enumerate(ElementTree.fromstring(musicxml).iter("score-part"), 1)]
+    return [{"part": names[staff], "measure": measure} for staff, measure in dubious if staff < len(names)][:MAX_DOUBTS]
+
+
+def _checked_score(pages: list[tuple[bytes, str]], files: list[tuple[str, bytes]], title: str) -> tuple[bytes, str, bool, list[dict]] | None:
     """The score checked with its parts, or None when there is no score. With a score the work is always the score's
     (2026-11-18): its parts are asked only for the measures where the two readings differ. The log numbers the staves:
     it never says which work was read."""
@@ -969,12 +981,13 @@ def _checked_score(pages: list[tuple[bytes, str]], files: list[tuple[str, bytes]
     checked = check_with_parts(joined, files, title, same_part)
     if checked.agreement is None:
         print("La partitura general no se pudo comparar con las particellas.", flush=True)
-        return checked.musicxml, "score", any(at_concert_pitch(text) for _, text in pages)
+        return checked.musicxml, "score", any(at_concert_pitch(text) for _, text in pages), []
     print(f"Partitura general y particellas coinciden en el {checked.agreement:.0%} de {checked.compared} compases; "
           f"{len(checked.dubious)} compases dudosos se toman de las particellas"
           + (f"; {checked.unmatched} particellas no se parecen a ningún pentagrama." if checked.unmatched else "."), flush=True)
     print(f"La obra se saca de la partitura general ({len(pages)} páginas), comprobada con {len(files)} particellas.", flush=True)
-    return checked.musicxml, "score", any(at_concert_pitch(text) for _, text in pages)
+    return (checked.musicxml, "score", any(at_concert_pitch(text) for _, text in pages),
+            _doubts(checked.musicxml, checked.dubious))
 
 
 def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, str]], title: str) -> dict[str, bytes]:
@@ -1354,9 +1367,10 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
                    for key, pages_read in by_file.items()}
         read = [(name, sorted(by_file.get((name, path), []) + failed.get((name, path), []), key=lambda page: page[0]))
                 for name, path in saved if (name, path) in by_file or (name, path) in failed]
+        doubts: list[dict] = []
         try:
             if data["kind"] == "auto":
-                musicxml, source, concert_pitch = _auto(read, data["title"], read_score, _first_pages(saved, pages, texts, numbered))
+                musicxml, source, concert_pitch, doubts = _auto(read, data["title"], read_score, _first_pages(saved, pages, texts, numbered))
             elif data["kind"] == "score":
                 pages_read = [(xml, text) for _, pages_xml in read for _, xml, text in pages_xml if xml is not None]
                 musicxml, source = _score(pages_read, data["title"])[0], "score"
@@ -1385,7 +1399,7 @@ def run(data: dict, client: httpx.Client, read_page=read_page, count_pages=count
         background.close()
         # ScoreMaster adds the transposition of each instrument, never to a score in C (2026-10-29).
         send_result(client, callback, {"musicxml": musicxml.decode("utf-8"), "source": source,
-                                       "concert_pitch": concert_pitch})
+                                       "concert_pitch": concert_pitch, "doubts": doubts})
         print(f"Leídas {total} páginas.", flush=True)
         return 0
     except Refused as reason:

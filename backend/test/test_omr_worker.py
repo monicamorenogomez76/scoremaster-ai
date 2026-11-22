@@ -1204,7 +1204,7 @@ def test_a_page_without_text_like_the_first_pages_is_a_first_page(tmp_path):
 def test_a_score_its_parts_agree_with_is_the_work(capsys):
     from backend.test.test_omr_merge import work
     score = [(work(list("hhqq"), list("qqhh")), "")]
-    musicxml, source, _ = worker._checked_score(score, [("Flauta", work(list("hhqq"))), ("Tuba", work(list("qqhh")))], "Obra")
+    musicxml, source, _, _ = worker._checked_score(score, [("Flauta", work(list("hhqq"))), ("Tuba", work(list("qqhh")))], "Obra")
     assert source == "score" and part_names(musicxml.decode()) == ["Flauta", "Tuba"]
     assert "coinciden en el 100% de 8 compases" in capsys.readouterr().out
 
@@ -1213,7 +1213,7 @@ def test_a_score_is_the_work_even_when_its_parts_disagree_with_it():
     """The score first, always (2026-11-18): the parts are asked only for the measures where the readings differ."""
     from backend.test.test_omr_merge import work
     score = [(work(list("hhqq"), list("qqhh")), "")]
-    musicxml, source, _ = worker._checked_score(score, [("Flauta", work(list("eeee"))), ("Tuba", work(list("qqhh")))], "Obra")
+    musicxml, source, _, _ = worker._checked_score(score, [("Flauta", work(list("eeee"))), ("Tuba", work(list("qqhh")))], "Obra")
     assert source == "score"
     assert worker._checked_score([], [("Flauta", work(list("hhqq")))], "Obra") is None
 
@@ -1473,3 +1473,28 @@ def test_the_first_tempo_of_the_text_is_added_only_when_no_page_placed_one(score
     scanned_score(scoremaster, [MARGIN, "Oboe\nAllegro (q = 120)\n" + MUSIC, MARGIN])
     assert scoremaster["result"]["musicxml"].count("<metronome") == 1
 
+# The doubts of the reader reach ScoreMaster (2026-11-21): the measures it took from a part because the score's staff
+# attacked elsewhere were only in the log, so the director could not check them against the PDF.
+
+def _part_with_other_rhythm() -> bytes:
+    """One staff of two measures: a half note, then four crotchets where the score has a half note."""
+    crotchet = '<note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>'
+    return ('<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"><part-list><score-part id="P1">'
+            '<part-name>Part 1</part-name></score-part></part-list><part id="P1"><measure number="1"><attributes>'
+            '<divisions>2</divisions><key><fifths>0</fifths></key><time><beats>2</beats><beat-type>4</beat-type></time>'
+            '<clef><sign>G</sign><line>2</line></clef></attributes><note><pitch><step>C</step><octave>5</octave></pitch>'
+            '<duration>4</duration><type>half</type></note></measure><measure number="2">' + crotchet * 2
+            + '</measure></part></score-partwise>').encode()
+
+
+def test_the_measures_taken_from_a_part_are_sent_as_doubts(scoremaster):
+    catalog_server(scoremaster)
+    texts = ["Flauta\nClarinete\nTuba", "Paco el barba\nFlauta 1"]
+
+    def read_page(pdf_path, number, out_dir):
+        return page(3, 2, "C") if number == 1 else _part_with_other_rhythm()
+
+    assert worker.run(payload("auto", ("obra.pdf",)), client=scoremaster["client"], read_page=read_page,
+                      count_pages=lambda path: 2, page_text=lambda path, number: texts[number - 1]) == 0
+    doubts = scoremaster["result"]["doubts"]
+    assert {"part": part_names(scoremaster["result"]["musicxml"])[0], "measure": 2} in doubts

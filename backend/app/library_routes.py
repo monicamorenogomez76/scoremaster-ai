@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.application.accounts import User
 from backend.application.library import PREPARATION_STATUSES, ExternalGrade, LibraryRepository, Work
+from backend.application.reading_doubts import grouped, reviewed
 from backend.domain.difficulty_scale import external_grade
 from backend.app.dependencies import (authenticated_user, get_analysis_provider, get_concert_repository, get_explanation_cache,
                                       get_explanation_provider, get_library_repository, get_playback_store,
@@ -167,7 +168,23 @@ def get_work(work_id: str, user: User = Depends(authenticated_user),
     work = library.get_work(user.id, _work_id(work_id))
     # A work read from a PDF says so: its page warns that the grade is provisional (2026-10-27).
     return {**with_english_reasons(record.result), "analysis_id": str(record.analysis_id), "work_id": work_id,
-            "source_format": work.source_format if work else "musicxml"}
+            "source_format": work.source_format if work else "musicxml",
+            "reading_doubts": grouped(library.reading_doubts(user.id, _work_id(work_id)))}
+
+
+class DoubtReview(BaseModel):
+    part: str = Field(min_length=1, max_length=200)
+    reviewed: bool
+
+
+@router.put("/works/{work_id}/reading-doubts/review")
+def review_reading_doubts(work_id: str, review: DoubtReview, user: User = Depends(authenticated_user),
+                          library: LibraryRepository = Depends(get_library_repository)):
+    """A part of a work read from a PDF whose doubts the director checked against the PDF (2026-11-22), or not yet."""
+    changed = reviewed(library.reading_doubts(user.id, _work_id(work_id)), review.part, review.reviewed)
+    if changed is None or not library.save_reading_doubts(user.id, _work_id(work_id), changed):
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return {"reading_doubts": grouped(changed)}
 
 
 @router.get("/works/{work_id}/explanation")

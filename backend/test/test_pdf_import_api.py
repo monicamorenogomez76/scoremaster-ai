@@ -659,3 +659,28 @@ def test_without_a_token_nothing_takes_the_turn_of_a_reading(clients, reader):  
         assert ana.post(url, json={"musicxml": "<a/>"}).status_code == 401
     finally:
         pdf_routes.ONE_READING.release()
+
+
+def test_the_doubts_of_the_reader_are_shown_with_the_work_until_their_part_is_reviewed(clients, reader):  # noqa: F811
+    """The measures the reader took from a part (2026-11-22) were only in its log: the director could not check them."""
+    ana, berta = clients
+    created = upload(ana, files=(("Paco el barba (Score-parts).pdf", PDF),), kind="auto")
+    doubts = [{"part": "Clarinet", "measure": 1}, {"part": "Clarinet", "measure": 40}]
+    assert machine(ana, reader.jobs[0], "/result", json={"musicxml": MUSICXML.decode(), "doubts": doubts}).status_code == 202
+    work_id = ana.get("/pdf-imports/" + created.json()["id"]).json()["work_id"]
+    assert ana.get("/works/" + work_id).json()["reading_doubts"] == [
+        {"part": "Clarinet", "measures": 1, "reviewed": False, "passages": ["1"]}], "measure 40 is not in the work"
+
+    url = f"/works/{work_id}/reading-doubts/review"
+    assert ana.put(url, json={"part": "Clarinet", "reviewed": True}).json()["reading_doubts"][0]["reviewed"] is True
+    assert ana.get("/works/" + work_id).json()["reading_doubts"][0]["reviewed"] is True
+    assert ana.put(url, json={"part": "Oboe", "reviewed": True}).status_code == 404
+    assert berta.put(url, json={"part": "Clarinet", "reviewed": True}).status_code == 404
+
+
+def test_a_work_without_doubts_has_none(clients, reader):  # noqa: F811
+    ana, _ = clients
+    created = upload(ana)
+    machine(ana, reader.jobs[0], "/result", json={"musicxml": MUSICXML.decode()})
+    work_id = ana.get("/pdf-imports/" + created.json()["id"]).json()["work_id"]
+    assert ana.get("/works/" + work_id).json()["reading_doubts"] == []
