@@ -155,14 +155,15 @@ test('the map is drawn above the measures of the page, and removed when hidden',
 // The pages of the PDF (2026-11-22, «1812»): a work that marks where each page of its PDF starts is shown page by page,
 // as the PDF, each page whole in one line, smaller when it is wide (the zoom enlarges it); the director compares them.
 test('a work with the pages of its PDF turns them where the PDF does, each page whole in one line', async () => {
-  const pages = [], widths = [];
+  const pages = [], widths = [], options = [];
   const container = new Element();
   let view;
   const renderer = createFullScoreRenderer({
     container, session: { getVersion: () => 0, loadSource: async () => '<score/>' }, nextFrame: async () => {},
     filter: (_, instrument, range) => { pages.push(range); return '<page/>'; },
     bounds: () => ({ first: 1, last: 9, pages: [1, 4, 6] }),
-    createDisplay: target => {
+    createDisplay: (target, given) => {
+      options.push(given);
       const asked = pages[pages.length - 1].split('-').map(Number);
       const count = asked[1] - asked[0] + 1;
       const width = Number.parseFloat(target.style.width);
@@ -179,6 +180,8 @@ test('a work with the pages of its PDF turns them where the PDF does, each page 
   await renderer.load();
   assert.ok(pages.length && pages.every(range => range === '1-3'), 'the first page of the PDF, never cut');
   assert.equal(view.page, 'Página 1 de 3 · compases 1–3');
+  // Its one line is the last of the score, which OpenSheetMusicDisplay leaves at its natural width: half the page was blank.
+  assert.ok(options.every(given => given.stretchLastSystemLine), 'the line is stretched to the whole width');
   renderer.next(); await settle();
   assert.equal(view.page, 'Página 2 de 3 · compases 4–5');
   renderer.follow(7, true); await settle();
