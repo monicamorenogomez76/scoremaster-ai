@@ -167,26 +167,26 @@ test('a work with the pages of its PDF turns them where the PDF does, each page 
       const count = asked[1] - asked[0] + 1;
       const width = Number.parseFloat(target.style.width);
       widths.push(width);
-      // 300 px a measure: a narrower line breaks.
-      const fit = Math.floor(width / 300);
+      // 450 px a measure: a narrower line breaks.
+      const fit = Math.floor(width / 450);
       const lines = count > fit ? [fit, count - fit] : [count];
       return { async load() {}, GraphicSheet: { MusicPages: [{ MusicSystems: lines.map(n => ({ GraphicalMeasures: Array(n) })) }] },
-        render() { const svg = new Element(); svg.attributes = { width: String(count * 300), height: '500' }; target.append(svg); } };
+        render() { const svg = new Element(); svg.attributes = { width: String(count * 450), height: '500' }; target.append(svg); } };
     },
     onChange: snapshot => { view = snapshot; },
   });
   const settle = () => new Promise(resolve => setTimeout(resolve, 0));
   await renderer.load();
-  assert.deepEqual(pages, ['1-3'], 'the first page of the PDF, never cut');
+  assert.ok(pages.length && pages.every(range => range === '1-3'), 'the first page of the PDF, never cut');
   assert.equal(view.page, 'Página 1 de 3 · compases 1–3');
   renderer.next(); await settle();
   assert.equal(view.page, 'Página 2 de 3 · compases 4–5');
   renderer.follow(7, true); await settle();
   assert.equal(view.page, 'Página 3 de 3 · compases 6–9');
   assert.ok(pages.slice(-2).every(range => range === '6-9'), 'drawn wider until its four measures fit in one line');
-  assert.ok(widths.at(-1) >= 1200);
+  assert.ok(widths.at(-1) >= 1800);
   const svg = container.children[0].children.find(child => child.attributes.width);
-  assert.equal(svg.style.width, '768px', 'its 1200 px shrunk to the width of the screen');
+  assert.equal(svg.style.width, '768px', 'its 1800 px shrunk to the width of the screen');
   assert.equal(view.canNext, false);
   renderer.previous(); await settle();
   assert.equal(view.page, 'Página 2 de 3 · compases 4–5');

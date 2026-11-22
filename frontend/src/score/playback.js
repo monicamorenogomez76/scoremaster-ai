@@ -19,8 +19,9 @@ const MASTER_GAIN = 4;
 const VELOCITY = 100;
 // Seconds of music handed to the audio clock ahead of the position (2026-11-22, «1812»): drawing a page of 30 staves keeps
 // the page busy for longer than the 0.3 s used before, and the notes not yet handed waited, so the music stopped at
-// each turn of the score's page. The audio clock plays what it has while the page is busy; a pause or seek stops it.
-const SCHEDULE_AHEAD = 3;
+// each turn of the score's page. 3 s were not enough once each page of the PDF was drawn whole (a page of 17 measures).
+// The audio clock plays what it has while the page is busy; a pause or seek stops it.
+const SCHEDULE_AHEAD = 20;
 // smplr queues a note for later in a timer of the page until 0.2 s before it; this one hands it to the audio clock at
 // once, where stop() still reaches it.
 const AT_ONCE = { schedule(event, play) { play(event); return () => {}; }, stop() {} };

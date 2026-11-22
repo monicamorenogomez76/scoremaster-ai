@@ -60,13 +60,11 @@ function harness() {
     tick(time) { audio.currentTime = time; [...callbacks].forEach((callback) => callback()); } };
 }
 
-test('ensemble starts parts on same clock and schedules ahead in small windows', async () => {
+test('ensemble starts parts on same clock and schedules ahead', async () => {
   const h = harness(), t = await h.api.preparePlayback({}, null);
   await t.play();
-  assert.equal(h.starts.length, 2);
+  assert.equal(h.starts.length, 3, 'the notes of the next seconds, the one at 4 s too');
   assert.equal(h.starts[0].time, h.starts[1].time);
-  h.tick(3.8);
-  assert.equal(h.starts.length, 3);
   t.stop(); assert.equal(h.callbacks.size, 0);
 });
 
@@ -74,11 +72,16 @@ test('ensemble starts parts on same clock and schedules ahead in small windows',
 // page busy for longer than the notes queued ahead (0.3 s), and smplr held its notes in a timer of the page too. The notes
 // now go to the audio clock seconds ahead, which plays them while the page is busy; a pause still stops them.
 test('notes go to the audio clock seconds ahead, so drawing the score does not stall them', async () => {
-  const h = harness(), t = await h.api.preparePlayback({}, null);
+  const h = harness();
+  h.setData({ duration: 40, measures: [{ number: 1, time: 0 }], tracks: [
+    { instrument: 'Flute', program: 73, events: [{ note: 72, time: 0, duration: 1 }, { note: 74, time: 25, duration: 1 }] }] });
+  const t = await h.api.preparePlayback({}, null);
   await t.play();
-  assert.equal(h.starts.length, 2);
-  h.tick(1.5);
-  assert.equal(h.starts.length, 3, 'the note at 4 s is already with the audio clock at 1.5 s');
+  assert.equal(h.starts.length, 1);
+  h.tick(4.9);
+  assert.equal(h.starts.length, 1, 'twenty seconds ahead, not more');
+  h.tick(5.1);
+  assert.equal(h.starts.length, 2, 'the note at 25 s is with the audio clock 20 s before');
   const handed = [];
   h.optionsUsed[0].scheduler.schedule({ time: 99 }, event => handed.push(event));
   assert.deepEqual(handed, [{ time: 99 }], 'smplr hands every note to the audio clock at once');
