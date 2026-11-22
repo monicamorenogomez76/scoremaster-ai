@@ -131,8 +131,9 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
         container.append(staging);
         const pageXml = filter(state.source, null, state.pageStart + '-' + end);
         const xml = pageXml.trimStart().startsWith('<?xml') ? pageXml : '<?xml version="1.0" encoding="UTF-8"?>\n' + pageXml;
+        // A page of the PDF is one line, the last of what is drawn: stretched to the width, or half of it stayed blank.
         display = createDisplay(staging, { autoResize: false, backend: 'svg', drawTitle: false,
-          drawPartNames: true, drawMeasureNumbers: true, cursorsOptions: CURSOR });
+          drawPartNames: true, drawMeasureNumbers: true, cursorsOptions: CURSOR, ...(pages ? { stretchLastSystemLine: true } : {}) });
         await display.load(xml);
         if (token !== rendering || state !== score) return;
         display.render();
