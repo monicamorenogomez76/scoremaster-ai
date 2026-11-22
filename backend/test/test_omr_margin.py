@@ -1,5 +1,5 @@
 """The name beside each staff of a score's page, read with its place on the page (2026-11-21, «Arabian Dances»)."""
-from omr.margin import Word, join_split_capitals, names_at, names_by_staff, one_system, split_capitals
+from omr.margin import Word, join_split_capitals, names_at, names_by_staff, one_system, tempo_marks, split_capitals
 
 
 def word(text, left, middle, width=8.0):
@@ -110,4 +110,18 @@ def test_a_name_over_two_lines_is_one_name():
     words = [Word("Bass Clarinet", 30.0, 70.0, 92.0, 7.0), Word("in Bb", 50.0, 70.0, 101.0, 7.0),
              Word("Bsn.", 50.0, 70.0, 130.0, 7.0)]
     assert names_at(words, [96.5, 130.0], 74.0) == ["Bass Clarinet in Bb", "Bsn."]
+
+
+# The tempos of «1812» (2026-11-22): fourteen marks on its pages, and the reader took only the first one, crotchet = 60,
+# for the whole work. Each mark is read with where its words start on the page.
+def test_each_tempo_mark_is_read_with_where_it_starts():
+    def line(pieces, middle):
+        """Words as pdftotext places them: each ends 2 pt before the next one starts."""
+        lefts = [left for _, left in pieces] + [pieces[-1][1] + 10]
+        return [Word(text, left, lefts[index + 1] - 2, middle, 7.0) for index, (text, left) in enumerate(pieces)]
+    words = line([("E", 607.3), ("Allegro", 617.3), ("giusto", 645.6), ("(q", 668.5), ("=", 675.8), ("132)", 681.5)], 72.0)
+    words += [Word("9", 792.6, 797.0, 48.0, 7.0)]
+    words += line([("Meno", 120.0), ("mosso", 140.0), ("(h.", 166.0), ("=", 175.0), ("72)", 182.0)], 300.0)
+    assert tempo_marks(words) == [(607.3, 132, 1.0), (120.0, 72, 3.0)]
+    assert tempo_marks([Word("rit.", 100.0, 110.0, 70.0, 7.0)]) == [], "a word without a metronome mark is no tempo"
 

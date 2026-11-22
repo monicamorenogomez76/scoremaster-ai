@@ -422,17 +422,22 @@ _BEAT_UNITS = {2.0: ("half", False), 3.0: ("half", True), 1.0: ("quarter", False
                0.5: ("eighth", False), 0.75: ("eighth", True)}
 
 
-def add_tempo(xml: bytes, beats_per_minute: int, beat_quarters: float) -> bytes:
-    """The work with the tempo written on its pages (copista reads none), once at the start of its first part."""
+def add_tempo(xml: bytes, beats_per_minute: int, beat_quarters: float, measure: int = 0) -> bytes:
+    """The work with a tempo written on its pages (copista reads none), in the first part: at its start, or at the start
+    of the measure given (counted from 0, 2026-11-22)."""
     unit, dotted = _BEAT_UNITS[beat_quarters]
     direction = (f'<direction placement="above"><direction-type><metronome><beat-unit>{unit}</beat-unit>'
                  + ("<beat-unit-dot/>" if dotted else "")
                  + f'<per-minute>{beats_per_minute}</per-minute></metronome></direction-type>'
                  f'<sound tempo="{beats_per_minute * beat_quarters:g}"/></direction>').encode()
     part = xml.find(b"<part ")
-    measure = xml.find(b"<measure", part)
-    if part < 0 or measure < 0:
+    end = xml.find(b"</part>", part)
+    at_measure = xml.find(b"<measure", part)
+    for _ in range(measure):
+        at_measure = xml.find(b"<measure", at_measure + 1)
+    if part < 0 or at_measure < 0 or at_measure > end:
         return xml
+    measure = at_measure
     opened = xml.find(b">", measure) + 1
     attributes = xml.find(b"</attributes>", opened)
     next_measure = xml.find(b"</measure>", opened)
