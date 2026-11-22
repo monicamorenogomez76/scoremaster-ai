@@ -141,7 +141,9 @@ export const canReview = (rehearsal, today = todayIso()) => rehearsal.date <= to
 
 export const reviewRehearsal = (id, notes, blocks) => apiJson(path(id) + '/review', send('PUT', { notes, blocks }),
   t('No se pudo guardar la revisión.'));
-export const listReviewPriorities = async () => (await apiJson('/rehearsals/priorities', {}, t('No se pudieron cargar las prioridades.'))).priorities;
+// today: the director's day; what was left pending for a concert already held is no longer a priority (2026-11-22).
+export const listReviewPriorities = async today => (await apiJson('/rehearsals/priorities?today=' + encodeURIComponent(today), {},
+  t('No se pudieron cargar las prioridades.'))).priorities;
 
 const measuresOf = range => (!range ? '—' : t(/[-,]/.test(range) ? 'cc. {range}' : 'c. {range}', { range: range.replace(/-/g, '–') }));
 

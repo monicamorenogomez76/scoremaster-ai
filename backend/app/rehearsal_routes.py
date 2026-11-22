@@ -186,10 +186,15 @@ def rehearsal_explanation(rehearsal_id: str, user: User = Depends(authenticated_
 
 # Declared before /rehearsals/{rehearsal_id}.
 @router.get("/rehearsals/priorities")
-def review_priorities(user: User = Depends(authenticated_user),
-                      rehearsals: RehearsalRepository = Depends(get_rehearsal_repository)):
-    """What the director left pending or to improve in the last reviewed rehearsal, block by block."""
-    reviewed = [item for item in rehearsals.list_rehearsals(user.id) if item.reviewed_at]
+def review_priorities(today: Optional[date] = None, user: User = Depends(authenticated_user),
+                      rehearsals: RehearsalRepository = Depends(get_rehearsal_repository),
+                      concerts: ConcertRepository = Depends(get_concert_repository)):
+    """What the director left pending or to improve in the last reviewed rehearsal, block by block; nothing of a
+    rehearsal for a concert already held (2026-11-22): its passages no longer need work. today is the director's."""
+    today = today or date.today()
+    held = {concert.id for concert in concerts.list_concerts(user.id) if concert.draft.date < today}
+    reviewed = [item for item in rehearsals.list_rehearsals(user.id)
+                if item.reviewed_at and item.draft.concert_id not in held]
     if not reviewed:
         return {"priorities": []}
     last = max(reviewed, key=lambda item: (item.draft.date, item.reviewed_at))

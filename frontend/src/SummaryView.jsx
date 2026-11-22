@@ -39,7 +39,7 @@ export function SummaryView({ active, user, hidden, onNavigate, onOpenWork, onOp
   useEffect(() => {
     if (!visible) return undefined;
     let current = true;
-    Promise.all([listWorks(), listPriorities(), listRehearsals(), listConcerts(), listReviewPriorities()])
+    Promise.all([listWorks(), listPriorities(), listRehearsals(), listConcerts(), listReviewPriorities(todayIso())])
       .then(([found, passages, saved, programmed, reviewed]) => {
         if (current) { setWorks(found); setPriorities(passages); setRehearsals(saved); setConcerts(programmed); setReviewPriorities(reviewed); setError(''); }
       })

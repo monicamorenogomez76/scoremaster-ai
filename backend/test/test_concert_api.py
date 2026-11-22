@@ -191,3 +191,21 @@ def test_priorities_from_the_last_review_are_what_was_left_pending_or_to_improve
                            "block": "Pasajes prioritarios", "sections": ["Clarinetes"], "parts": ["Clarinet"], "measure_range": "1-4",
                            "status": "pending", "note": "Entradas de clarinetes", "origin": "review"}]
     assert berta.get("/rehearsals/priorities").json() == {"priorities": []}
+
+
+def test_what_was_left_pending_for_a_concert_already_held_is_no_priority(clients):
+    """2026-11-22: the passages left pending in the last review of a concert already held no longer need work."""
+    ana, _ = clients
+    work = analyze(ana).json()
+    concert_id = ana.post("/concerts", json=concert([work["work_id"]], date="2026-10-20")).json()["id"]
+    held = ana.post("/rehearsals", json=rehearsal(work["work_id"], date="2026-10-15", concert_id=concert_id)).json()
+    ana.put("/rehearsals/" + held["id"] + "/review", json={"notes": "", "blocks": [{"status": "pending", "note": ""}] * 3})
+
+    assert len(ana.get("/rehearsals/priorities", params={"today": "2026-10-20"}).json()["priorities"]) == 1, \
+        "the day of the concert it still counts"
+    assert ana.get("/rehearsals/priorities", params={"today": "2026-10-21"}).json() == {"priorities": []}
+
+    loose = ana.post("/rehearsals", json=rehearsal(work["work_id"], date="2026-10-12")).json()
+    ana.put("/rehearsals/" + loose["id"] + "/review", json={"notes": "", "blocks": [{"status": "improve", "note": ""}] * 3})
+    found = ana.get("/rehearsals/priorities", params={"today": "2026-10-21"}).json()["priorities"]
+    assert [item["rehearsal_id"] for item in found] == [loose["id"]], "a rehearsal of no concert still counts"
