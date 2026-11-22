@@ -491,3 +491,22 @@ def test_a_silenced_page_keeps_its_measures_in_its_meter():
 def test_a_staff_missing_from_a_page_rests_in_the_meter_of_the_page():
     _, _, measures = parts_of(join_pages([page(2, 2), breve_page(1, 2)], title="Obra"))
     assert [len(bars) for bars in measures] == [4, 4]
+
+
+# The pages of the PDF in the work (2026-11-22, «1812»): the viewer turns its pages where the PDF does, so the director
+# compares page by page. MusicXML's own page break marks the first measure of each page after the first.
+def test_each_page_of_the_score_starts_a_page_of_the_work():
+    from omr.merge import join_pages
+    joined = join_pages([page(2, 3), page(2, 2), page(2, 4)], "Obra")
+    _, _, measures = parts_of(joined)
+    breaks = [index + 1 for index, bar in enumerate(measures[0])
+              if bar.find("print") is not None and bar.find("print").get("new-page") == "yes"]
+    assert breaks == [4, 6]
+
+
+def test_the_pages_of_the_pdf_are_kept_when_scoremaster_finishes_the_work():
+    from omr.merge import join_pages
+    from backend.parsers.prepare import final_musicxml
+    joined = join_pages([page(2, 3), page(2, 2)], "Obra")
+    assert final_musicxml(joined, None, False, "score").count(b'new-page="yes"') == 2, "one per part"
+

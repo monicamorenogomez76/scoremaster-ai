@@ -14,7 +14,7 @@ from dataclasses import dataclass
 import re
 from xml.sax.saxutils import escape
 
-from music21 import chord, clef, converter, duration, instrument, key, metadata, note, stream, meter, spanner
+from music21 import chord, clef, converter, duration, instrument, key, layout, metadata, note, stream, meter, spanner
 from music21.musicxml.m21ToXml import GeneralObjectExporter
 from music21.musicxml.xmlObjects import MusicXMLExportException
 
@@ -220,6 +220,16 @@ def join_pages(pages: list[bytes], title: str, names: list[str] | None = None, l
         names = [(reference_names[number - 1] if reference_names and len(reference_names) == len(joined)
                   and reference_names[number - 1] else f"Parte {number}") for number in range(1, len(joined) + 1)]
     parts = [_part(name, measures) for name, measures in zip(names, joined)]
+    # Where each page of the PDF starts (2026-11-22): the viewer turns its pages there, as the PDF does.
+    starts, at = [], 0
+    for page in staves[:-1]:
+        at += max((len(_measures(staff)) for staff in page), default=0)
+        starts.append(at)
+    for part in parts:
+        bars = list(part.getElementsByClass(stream.Measure))
+        for start in starts:
+            if start < len(bars):
+                bars[start].insert(0, layout.PageLayout(isNew=True))
     first_page = max((_measures(staff) for staff in staves[0]), key=len, default=[]) if staves else []
     for part in parts:
         if first_page:
