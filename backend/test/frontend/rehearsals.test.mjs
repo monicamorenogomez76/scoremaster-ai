@@ -131,10 +131,11 @@ test('the director reviews a rehearsal already held, block by block', async () =
   assert.deepEqual(reviewStatusOptions, [['resolved', 'Resuelto'], ['improve', 'Mejorable'], ['pending', 'Pendiente'], ['not_done', 'No se hizo']]);
   assert.equal(canReview({ date: '2026-10-13' }, '2026-10-13'), true);
   assert.equal(canReview({ date: '2026-10-14' }, '2026-10-13'), false, 'a rehearsal to come is not reviewed yet');
-  const calls = fakeServer({ 'PUT /rehearsals/r1/review': [200, { id: 'r1' }], 'GET /rehearsals/priorities': [200, { priorities: [] }] });
+  const calls = fakeServer({ 'PUT /rehearsals/r1/review': [200, { id: 'r1' }], 'GET /rehearsals/priorities?today=2026-10-21': [200, { priorities: [] }] });
   await reviewRehearsal('r1', 'Bien', [{ status: 'pending', note: 'c. 3' }]);
   assert.deepEqual(JSON.parse(calls[0].body), { notes: 'Bien', blocks: [{ status: 'pending', note: 'c. 3' }] });
-  assert.deepEqual(await listReviewPriorities(), []);
+  // The director's day: what was left pending for a concert already held is no priority (2026-11-22).
+  assert.deepEqual(await listReviewPriorities('2026-10-21'), []);
 });
 
 test('the summary puts the director\'s review first, then the passages of the analysis', () => {
