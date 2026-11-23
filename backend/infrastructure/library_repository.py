@@ -3,14 +3,14 @@ from hashlib import sha256
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, LargeBinary, String, UniqueConstraint, delete, func, select, text, update
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint, delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID, insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from backend.application.analysis_repository import AnalysisRecord
-from backend.application.library import ExternalGrade, Work, WorkUpload
+from backend.application.library import Correction, ExternalGrade, Work, WorkUpload
 from backend.infrastructure.analysis_repository import Base, StoredAnalysis, record_of
 from backend.infrastructure.band_repository import active_band, update_active_profile
 
@@ -34,6 +34,16 @@ class StoredWork(Base):
     reading_doubts: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, deferred=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class StoredCorrection(Base):
+    __tablename__ = 'work_corrections'
+    __table_args__ = (Index('ix_work_corrections_work_id', 'work_id', 'created_at'),)
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    work_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('works.id', ondelete='CASCADE'), nullable=False)
+    user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    correction: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class StoredExternalGrade(Base):
@@ -131,6 +141,43 @@ class PostgresLibraryRepository:
                                                updated_at=func.now())).rowcount > 0
         except IntegrityError:
             return False
+
+    def corrections(self, user_id: UUID, work_id: UUID) -> Optional[list[Correction]]:
+        with Session(self.engine) as session:
+            if session.scalar(select(StoredWork.id).where(StoredWork.id == work_id, StoredWork.user_id == user_id)) is None:
+                return None
+            rows = session.scalars(select(StoredCorrection).where(StoredCorrection.work_id == work_id)
+                                   .order_by(StoredCorrection.created_at, StoredCorrection.id)).all()
+            return [Correction(row.id, row.correction, row.created_at) for row in rows]
+
+    def add_correction(self, user_id: UUID, work_id: UUID, correction: dict, source: bytes) -> bool:
+        """The corrected file and the correction together; False when the work is not the user's or its owner already
+        has a work with that file."""
+        try:
+            with Session(self.engine) as session, session.begin():
+                if not self._replace(session, user_id, work_id, source):
+                    return False
+                session.add(StoredCorrection(id=uuid4(), work_id=work_id, user_id=user_id, correction=correction,
+                                             created_at=func.clock_timestamp()))
+                return True
+        except IntegrityError:
+            return False
+
+    def remove_correction(self, user_id: UUID, work_id: UUID, correction_id: UUID, source: bytes) -> bool:
+        try:
+            with Session(self.engine) as session, session.begin():
+                if not self._replace(session, user_id, work_id, source):
+                    return False
+                return session.execute(delete(StoredCorrection).where(StoredCorrection.id == correction_id,
+                                                                       StoredCorrection.work_id == work_id)).rowcount > 0
+        except IntegrityError:
+            return False
+
+    @staticmethod
+    def _replace(session, user_id: UUID, work_id: UUID, source: bytes) -> bool:
+        return session.execute(update(StoredWork).where(StoredWork.id == work_id, StoredWork.user_id == user_id)
+                               .values(source=source, source_sha256=sha256(source).hexdigest(), size=len(source),
+                                       updated_at=func.now())).rowcount > 0
 
     def latest_analysis(self, user_id: UUID, work_id: UUID) -> Optional[AnalysisRecord]:
         with Session(self.engine) as session:

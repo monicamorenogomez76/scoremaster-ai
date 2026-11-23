@@ -200,6 +200,23 @@ def _ready(key: str, store: Optional[PreparedStore]) -> Optional[_Timeline]:
     return found
 
 
+def prepared_timeline(content: bytes, store: Optional[PreparedStore]) -> Optional[bytes]:
+    """What the store keeps for a work already prepared, never preparing it; None otherwise."""
+    found = _ready(timeline_key(content), store)
+    return _encode(found) if found is not None else None
+
+
+def keep_timeline(content: bytes, data: bytes, store: Optional[PreparedStore]) -> None:
+    """A timeline made elsewhere for these bytes (a corrected note, 2026-11-22), kept as if it had been prepared here."""
+    key = timeline_key(content)
+    if store is not None:
+        try:
+            store.save(key, TIMELINE_VERSION, data)
+        except Exception:
+            logger.warning('No se pudo guardar el audio preparado de una obra.', exc_info=True)
+    _remember(key, _decode(data))
+
+
 def is_prepared(content: bytes, store: Optional[PreparedStore] = None) -> bool:
     return _ready(timeline_key(content), store) is not None
 
