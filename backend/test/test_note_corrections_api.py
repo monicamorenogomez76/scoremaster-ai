@@ -59,3 +59,13 @@ def test_a_note_that_is_not_there_is_refused_and_nothing_changes(clients):  # no
     assert ana.get(f"/works/{work_id}/corrections").json()["corrections"] == []
     assert ana.delete(f"/works/{work_id}/corrections/last").status_code == 404
     assert ana.post(f"/works/{work_id}/corrections", json={**B_TO_B_FLAT, "new": ["H", 0, 4]}).status_code == 422
+
+
+def test_the_parts_and_the_notes_of_a_measure_are_listed_for_the_owner(clients):  # noqa: F811
+    ana, berta = clients
+    work_id = upload(ana)
+    assert ana.get(f"/works/{work_id}/notes").json() == {"parts": [{"id": "P1", "name": "Clarinet in Bb"}]}
+    found = ana.get(f"/works/{work_id}/notes", params={"part_id": "P1", "measure": "2"}).json()
+    assert found["measure"] == 2 and [item["pitch"] for item in found["notes"]] == [["B", 0, 4], ["C", 0, 5], ["E", 0, 5]]
+    assert ana.get(f"/works/{work_id}/notes", params={"part_id": "P1", "measure": "40"}).status_code == 404
+    assert berta.get(f"/works/{work_id}/notes").status_code == 404

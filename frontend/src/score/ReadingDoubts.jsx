@@ -4,7 +4,7 @@ import { t } from '../i18n.js';
 
 // The measures the PDF reader doubted (2026-11-22), by part: each passage opens beside the PDF to check it by eye, and a
 // part is marked reviewed when it is right. Nothing for a work without doubts.
-export function ReadingDoubts({ workId, doubts: initial, onOpenPassage }) {
+export function ReadingDoubts({ workId, doubts: initial, onOpenPassage, onCorrect }) {
   const heading = useId();
   const [doubts, setDoubts] = useState(initial || []);
   const [saving, setSaving] = useState('');
@@ -37,6 +37,9 @@ export function ReadingDoubts({ workId, doubts: initial, onOpenPassage }) {
               aria-label={t('Ver {part}, compases {range}', { part: doubt.part, range })}
               onClick={() => onOpenPassage(doubt.part, range)}>{range}</button>)}
           </span>
+          {onCorrect && <button type="button" className="secondary-action reading-doubt-correct"
+            aria-label={t('Corregir {part}, compás {measure}', { part: doubt.part, measure: doubt.passages[0].split('-')[0] })}
+            onClick={() => onCorrect(doubt.part, doubt.passages[0])}>{t('Corregir')}</button>}
           <label className="reading-doubt-check" htmlFor={box}>
             <input id={box} type="checkbox" checked={doubt.reviewed} disabled={saving === doubt.part}
               onChange={event => mark(doubt.part, event.target.checked)} />

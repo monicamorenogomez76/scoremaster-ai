@@ -296,3 +296,37 @@ def described(content: bytes, correction: NoteCorrection) -> dict:
     measures = list(part.iter("measure")) if part is not None else []
     number = measures[correction.measure - 1].get("number") if correction.measure <= len(measures) else None
     return {"part": names.get(correction.part_id, correction.part_id), "number": number or str(correction.measure)}
+
+
+def note_parts(content: bytes) -> list[dict]:
+    """The parts a note can be corrected in, by their id and name, in the order of the work."""
+    root = ET.fromstring(content)
+    return [{"id": item.get("id"), "name": (item.findtext("part-name") or item.get("id") or "").strip()}
+            for item in root.iter("score-part")]
+
+
+def measure_notes(content: bytes, part_id: str, number: str) -> Optional[dict]:
+    """The notes and rests of the first measure numbered so in the part, as a correction names them; None when there
+    is no such measure. Grace notes and unpitched hits are left out: they cannot be corrected."""
+    root = ET.fromstring(content)
+    part = next((item for item in root.iter("part") if item.get("id") == part_id), None)
+    if part is None:
+        return None
+    divisions = 1
+    for position, measure in enumerate(part.iter("measure"), 1):
+        if measure.get("number") != number:
+            for attributes in measure.iter("attributes"):
+                if attributes.findtext("divisions"):
+                    divisions = int(float(attributes.findtext("divisions")))
+            continue
+        notes = []
+        for element, at, _ in _notes_in_place(measure, divisions):
+            if element.find("grace") is not None or element.find("unpitched") is not None:
+                continue
+            pitch = _pitch_of(element)
+            notes.append({"offset": float(at), "pitch": list(pitch) if pitch else None, "type": element.findtext("type"),
+                          "chord": element.find("chord") is not None,
+                          "staff": int(element.findtext("staff")) if element.findtext("staff") else None,
+                          "voice": element.findtext("voice")})
+        return {"measure": position, "number": number, "notes": notes}
+    return None

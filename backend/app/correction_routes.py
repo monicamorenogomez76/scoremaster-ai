@@ -19,7 +19,8 @@ from backend.app.work_analysis import analyse_again
 from backend.application.accounts import User
 from backend.application.library import Correction, LibraryRepository
 from backend.parsers.note_corrections import (
-    CannotCorrect, NoteCorrection, correct_musicxml, correct_score, correct_timeline, described, from_dict, undone)
+    CannotCorrect, NoteCorrection, correct_musicxml, correct_score, correct_timeline, described, from_dict, measure_notes, note_parts,
+    undone)
 from backend.parsers.playback import keep_timeline, prepared_timeline
 
 router = APIRouter()
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 NO_CORRECTIONS = "La obra no tiene correcciones."
 SAME_FILE = "Ya tienes otra obra con este mismo archivo: no se pudo guardar la corrección."
 INVALID = "La corrección no es una nota válida."
+NO_MEASURE = "Ese compás no está en esa parte."
 
 
 class CorrectionIn(BaseModel):
@@ -80,6 +82,25 @@ def _apply(user: User, work_id: UUID, correction: NoteCorrection, save: Callable
         analyse_again(corrected, patched, record.configuration or {}, repository, user.id, work_id)
     else:
         background.add_task(_analyse_later, corrected, record.configuration or {}, repository, score_store, user.id, work_id)
+
+
+@router.get("/works/{work_id}/notes")
+def work_notes(work_id: str, part_id: Optional[str] = None, measure: Optional[str] = None,
+               user: User = Depends(authenticated_user), library: LibraryRepository = Depends(get_library_repository)):
+    """The parts of the work, and with a part and the number of a measure its notes, to choose the one to correct."""
+    stored = library.work_file(user.id, _work_id(work_id))
+    if stored is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    try:
+        parts = note_parts(stored[0])
+        if part_id is None or measure is None:
+            return {"parts": parts}
+        found = measure_notes(stored[0], part_id[:100], measure[:20])
+    except ET.ParseError:
+        raise HTTPException(status_code=422, detail=INVALID) from None
+    if found is None:
+        raise HTTPException(status_code=404, detail=NO_MEASURE)
+    return {"parts": parts, **found}
 
 
 @router.get("/works/{work_id}/corrections")
