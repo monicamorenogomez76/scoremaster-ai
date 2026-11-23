@@ -102,3 +102,64 @@ def test_the_notes_of_a_measure_are_listed_as_a_correction_names_them():
         (1.0, ["G", 0, 5], "quarter", False)]
     assert [item["chord"] for item in measure_notes(work(), "P1", "2")["notes"]] == [False, False, True]
     assert measure_notes(work(), "P1", "9") is None and measure_notes(work(), "P9", "1") is None
+
+
+# --- Durations (2026-11-23): a note shortened leaves a rest; lengthened, it takes what follows in its voice; never past
+# the bar line. Each patched model and timeline is what reading the corrected file gives, and undoing gives the reading.
+
+def plain() -> bytes:
+    """A flute in 2/4, divisions 4: measure 1 four eighths C D E F; measure 2 a half note G; measure 3 a quarter chord
+    C-E and a quarter rest."""
+    eighth = lambda step: note(pitch(step, 5), 2, "eighth")
+    attributes = ("<attributes><divisions>4</divisions><key><fifths>0</fifths></key><time><beats>2</beats>"
+                  "<beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>")
+    return ('<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"><part-list><score-part id="P1">'
+            '<part-name>Flute</part-name></score-part></part-list><part id="P1">'
+            f'<measure number="1">{attributes}{"".join(eighth(step) for step in "CDEF")}</measure>'
+            f'<measure number="2">{note(pitch("G", 5), 8, "half")}</measure>'
+            f'<measure number="3">{note(pitch("C", 5), 4, "quarter")}{note("<chord/>" + pitch("E", 5), 4, "quarter")}'
+            f'{note("<rest/>", 4, "quarter")}</measure></part></score-partwise>').encode()
+
+
+def lasting(position, offset, old, kind, dots=0):
+    return NoteCorrection(part_id="P1", measure=position, offset=offset, old=old, new=old, new_type=kind, new_dots=dots)
+
+
+DURATIONS = [
+    lasting(1, 0.0, ("C", 0, 5), "quarter"),                 # takes D
+    lasting(1, 0.0, ("C", 0, 5), "quarter", 1),              # takes D and E
+    lasting(1, 0.5, ("D", 0, 5), "quarter", 1),              # takes E and F
+    lasting(1, 0.0, ("C", 0, 5), "16th"),                    # leaves a 16th rest
+    lasting(2, 0.0, ("G", 0, 5), "eighth"),                  # leaves rests: an eighth and a quarter
+    lasting(2, 0.0, ("G", 0, 5), "quarter", 1),              # leaves an eighth rest
+    lasting(3, 0.0, ("C", 0, 5), "half"),                    # the chord takes the rest
+    lasting(3, 1.0, None, "eighth"),                         # a rest shortened
+    lasting(1, 1.0, ("E", 0, 5), "quarter", 1),              # takes F and half of nothing: past the bar line
+]
+
+
+@pytest.mark.parametrize("correction", DURATIONS[:-1])
+def test_a_duration_changed_gives_the_model_and_the_audio_of_the_corrected_file(correction):
+    from backend.parsers.note_corrections import snapshot, restored
+    original = plain()
+    corrected = correct_musicxml(original, correction)
+    model = parsed(original)
+    assert correct_score(model, correction) == parsed(corrected)
+    timeline = encode_timeline(original)
+    patched = correct_timeline(timeline, model, correction)
+    assert rounded(_decode(patched)) == rounded(_decode(encode_timeline(corrected)))
+    # Undone from what the measure was before.
+    kept = snapshot(original, model, timeline, correction)
+    back, back_model, back_timeline = restored(corrected, parsed(corrected), patched, kept)
+    assert parsed(back) == model and back_model == model
+    assert rounded(_decode(back_timeline)) == rounded(_decode(timeline))
+
+
+def test_a_duration_never_goes_past_the_bar_line_nor_into_a_tuplet():
+    with pytest.raises(CannotCorrect, match="no cabe"):
+        correct_musicxml(plain(), DURATIONS[-1])
+    with pytest.raises(CannotCorrect, match="tresillo"):
+        correct_musicxml(work(), NoteCorrection(part_id="P1", measure=1, offset=0.0, old=("C", 0, 5), new=("C", 0, 5),
+                                                new_type="quarter"))
+    shortened = correct_musicxml(plain(), DURATIONS[3]).decode()
+    assert shortened.count("<type>16th</type>") == 2 and "<rest" in shortened

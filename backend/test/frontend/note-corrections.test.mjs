@@ -47,3 +47,21 @@ test('the notes of a measure are asked for, and a correction is sent and undone'
     { url: '/works/w1/corrections/last', method: 'DELETE', body: undefined },
   ]);
 });
+
+test('a duration changed is listed with its figures', async () => {
+  const { figureLabel } = await import('../../../frontend/src/noteCorrections.js');
+  assert.equal(figureLabel('quarter', 1), 'negra con puntillo');
+  assert.equal(correctionLabel({ part: 'Fl. 1', measure: '1', old: ['C', 0, 5], new: ['C', 0, 5], old_type: 'eighth', old_dots: 0,
+    new_type: 'quarter', new_dots: 0 }), 'Fl. 1 · compás 1 · do5: corchea → negra');
+});
+
+test('a duration is saved with its figure and dots', async () => {
+  const { saveEdits } = await import('../../../frontend/src/noteCorrections.js');
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push(JSON.parse(options.body));
+    return new Response(JSON.stringify({ corrections: [] }), { status: 200 });
+  };
+  await saveEdits('w1', [{ partId: 'P1', number: '1', offset: 0, old: null, new: null, newType: 'half', newDots: 1 }]);
+  assert.deepEqual(calls[0].corrections[0], { part_id: 'P1', number: '1', offset: 0, old: null, new: null, new_type: 'half', new_dots: 1 });
+});

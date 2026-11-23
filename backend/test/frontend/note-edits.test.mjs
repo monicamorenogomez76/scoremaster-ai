@@ -48,3 +48,23 @@ test('the changes of one note become one change from what was read to what it is
   assert.equal(edits.length, 2);
   assert.deepEqual(mergeEdits(edits, { ...at, old: ['D', 0, 5], new: null }), edits.slice(1), 'back to what was read');
 });
+
+test('the numbers give a note its figure as in a notation program, and the dot adds or takes away its dot', () => {
+  assert.deepEqual(key('5'), { duration: 'quarter' });
+  assert.deepEqual(key('3'), { duration: '16th' });
+  assert.deepEqual(key('4'), { duration: 'eighth' });
+  assert.deepEqual(key('6'), { duration: 'half' });
+  assert.deepEqual(key('7'), { duration: 'whole' });
+  assert.deepEqual(keyChange(null, { key: '6' }), { duration: 'half' }, 'a rest too');
+  assert.deepEqual(key('.'), { dot: true });
+  assert.equal(key('8'), null);
+});
+
+test('a figure is read from its length in quarters', async () => {
+  const { figureOf } = await import('../../../frontend/src/score/note-edits.js');
+  assert.deepEqual(figureOf(1), { type: 'quarter', dots: 0 });
+  assert.deepEqual(figureOf(1.5), { type: 'quarter', dots: 1 });
+  assert.deepEqual(figureOf(0.75), { type: 'eighth', dots: 1 });
+  assert.deepEqual(figureOf(3.5), { type: 'half', dots: 2 });
+  assert.equal(figureOf(1 / 3), null);
+});

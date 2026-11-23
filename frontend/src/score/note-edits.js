@@ -5,6 +5,17 @@ const SEMITONES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const SHARPS = [['C', 0], ['C', 1], ['D', 0], ['D', 1], ['E', 0], ['F', 0], ['F', 1], ['G', 0], ['G', 1], ['A', 0], ['A', 1], ['B', 0]];
 const FLATS = [['C', 0], ['D', -1], ['D', 0], ['E', -1], ['E', 0], ['F', 0], ['G', -1], ['G', 0], ['A', -1], ['A', 0], ['B', -1], ['B', 0]];
 
+const FIGURE_KEYS = { 3: '16th', 4: 'eighth', 5: 'quarter', 6: 'half', 7: 'whole' };
+const FIGURES = { whole: 4, half: 2, quarter: 1, eighth: 0.5, '16th': 0.25, '32nd': 0.125 };
+
+// The figure of a length in quarters, with its dots; null for a length no figure has (a note of a tuplet).
+export function figureOf(quarters) {
+  for (const [type, length] of Object.entries(FIGURES)) {
+    for (const dots of [0, 1, 2]) if (Math.abs(length * (2 - 1 / 2 ** dots) - quarters) < 1e-6) return { type, dots };
+  }
+  return null;
+}
+
 export const midiOf = ([step, alter, octave]) => 12 * (octave + 1) + SEMITONES[step] + alter;
 
 function spelled(midi, names) {
@@ -31,6 +42,9 @@ export function keyChange(pitch, event, reference = ['C', 0, 5]) {
   if (key === 'ArrowRight') return { move: 'next' };
   if ((key === 'ArrowUp' || key === 'ArrowDown') && altKey) return { move: key === 'ArrowUp' ? 'up' : 'down' };
   if (key === 'Delete' || key === 'Backspace') return pitch ? { rest: true } : null;
+  // The figures by number, as notation programs give them (2026-11-23): 3 a sixteenth … 7 a whole note; the dot.
+  if (FIGURE_KEYS[key] && !command) return { duration: FIGURE_KEYS[key] };
+  if (key === '.' && !command) return { dot: true };
   const letter = key.length === 1 ? key.toUpperCase() : '';
   if (STEPS.includes(letter) && !command) return { pitch: nearest(letter, pitch || reference) };
   if (!pitch) return null;

@@ -19,7 +19,8 @@ from backend.app.work_analysis import analyse_again
 from backend.application.accounts import User
 from backend.application.library import Correction, LibraryRepository
 from backend.parsers.note_corrections import (
-    CannotCorrect, NoteCorrection, correct_musicxml, correct_score, correct_timeline, described, from_dict, measure_notes, measure_position, note_parts,
+    CannotCorrect, NoteCorrection, correct_musicxml, correct_score, correct_timeline, described, figure_of, from_dict, measure_notes, measure_position, note_parts,
+    restored, snapshot,
     undone)
 from backend.parsers.playback import keep_timeline, prepared_timeline
 
@@ -42,11 +43,16 @@ class CorrectionIn(BaseModel):
     new: Optional[tuple[str, int, int]] = None
     staff: Optional[int] = Field(default=None, ge=1, le=10)
     voice: Optional[str] = Field(default=None, max_length=10)
+    # A new duration (2026-11-23): the figure and its dots; the pitch stays.
+    new_type: Optional[str] = Field(default=None, pattern="^(whole|half|quarter|eighth|16th|32nd)$")
+    new_dots: int = Field(default=0, ge=0, le=2)
 
 
 def _listed(found: list[Correction]) -> dict:
     return {"corrections": [{"id": str(item.id), "part": item.data.get("part"), "measure": item.data.get("number"),
                              "old": item.data.get("old"), "new": item.data.get("new"),
+                             **({key: item.data.get(key) for key in ("old_type", "old_dots", "new_type", "new_dots")}
+                                if item.data.get("new_type") else {}),
                              "created_at": item.created_at.isoformat()} for item in found]}
 
 
@@ -73,6 +79,10 @@ def _apply(user: User, work_id: UUID, corrections: list[NoteCorrection], save: C
     for correction in corrections:
         try:
             shown.append({**correction.as_dict(), **described(content, correction)})
+            if correction.new_type is not None:
+                # A duration moves the notes after it: the measure as it was is kept to undo it.
+                shown[-1].update({**figure_of(content, correction),
+                                  "snapshot": snapshot(content, model, timeline, correction)})
             corrected = correct_musicxml(content, correction)
         except CannotCorrect as reason:
             raise HTTPException(status_code=422, detail=str(reason)) from None
@@ -91,6 +101,32 @@ def _apply(user: User, work_id: UUID, corrections: list[NoteCorrection], save: C
         analyse_again(content, model, record.configuration or {}, repository, user.id, work_id)
     else:
         background.add_task(_analyse_later, content, record.configuration or {}, repository, score_store, user.id, work_id)
+
+
+def _undo_duration(user: User, work_id: UUID, last: Correction, library, repository, score_store, playback_store,
+                   background: BackgroundTasks) -> None:
+    """The measure as it was before the duration changed, in the file, the model and the audio."""
+    stored = library.work_file(user.id, work_id)
+    record = library.latest_analysis(user.id, work_id) if stored else None
+    if stored is None or record is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    content = stored[0]
+    model = kept_work(content, score_store)
+    timeline = prepared_timeline(content, playback_store) if model is not None else None
+    try:
+        back, model, timeline = restored(content, model, timeline, last.data["snapshot"])
+    except (ET.ParseError, KeyError, StopIteration, IndexError, TypeError):
+        raise HTTPException(status_code=422, detail=INVALID) from None
+    if model is not None:
+        keep_model(back, model, score_store)
+    if timeline is not None:
+        keep_timeline(back, timeline, playback_store)
+    if not library.remove_correction(user.id, work_id, last.id, back):
+        raise HTTPException(status_code=409, detail=SAME_FILE)
+    if model is not None:
+        analyse_again(back, model, record.configuration or {}, repository, user.id, work_id)
+    else:
+        background.add_task(_analyse_later, back, record.configuration or {}, repository, score_store, user.id, work_id)
 
 
 @router.get("/works/{work_id}/notes")
@@ -155,7 +191,8 @@ def _add(work_id: str, items: list[CorrectionIn], background, user, library, rep
                 raise HTTPException(status_code=422, detail=INVALID) from None
             if measure is None:
                 raise HTTPException(status_code=422, detail=NO_MEASURE)
-        corrections.append(NoteCorrection(item.part_id, measure, item.offset, item.old, item.new, item.staff, item.voice))
+        corrections.append(NoteCorrection(item.part_id, measure, item.offset, item.old, item.new, item.staff, item.voice,
+                                          item.new_type, item.new_dots))
     _apply(user, work, corrections, lambda content, shown: library.add_corrections(user.id, work, shown, content), library,
            repository, score_store, playback_store, background)
     return _listed(library.corrections(user.id, work) or [])
@@ -172,7 +209,10 @@ def undo_correction(work_id: str, background: BackgroundTasks, user: User = Depe
     if not found:
         raise HTTPException(status_code=404, detail=NO_CORRECTIONS)
     last = found[-1]
-    _apply(user, work, [undone(from_dict(last.data))],
-           lambda corrected, _: library.remove_correction(user.id, work, last.id, corrected),
-           library, repository, score_store, playback_store, background)
+    if "snapshot" in last.data:
+        _undo_duration(user, work, last, library, repository, score_store, playback_store, background)
+    else:
+        _apply(user, work, [undone(from_dict(last.data))],
+               lambda corrected, _: library.remove_correction(user.id, work, last.id, corrected),
+               library, repository, score_store, playback_store, background)
     return _listed(library.corrections(user.id, work) or [])

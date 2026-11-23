@@ -38,8 +38,15 @@ export function noteLabel(note, index) {
     + (details ? ' (' + details + ')' : '');
 }
 
-export const correctionLabel = item =>
-  t('{part} · compás {measure} · {old} → {new}', { part: item.part, measure: item.measure, old: pitchLabel(item.old), new: pitchLabel(item.new) });
+export const figureLabel = (type, dots = 0) => {
+  const name = typesEs[type] ? t(typesEs[type]) : type;
+  return dots === 2 ? t('{figure} con doble puntillo', { figure: name }) : dots ? t('{figure} con puntillo', { figure: name }) : name;
+};
+
+export const correctionLabel = item => (item.new_type
+  ? t('{part} · compás {measure} · {pitch}: {old} → {new}', { part: item.part, measure: item.measure, pitch: pitchLabel(item.old),
+    old: figureLabel(item.old_type, item.old_dots), new: figureLabel(item.new_type, item.new_dots) })
+  : t('{part} · compás {measure} · {old} → {new}', { part: item.part, measure: item.measure, old: pitchLabel(item.old), new: pitchLabel(item.new) }));
 
 // The form opened from a reader's doubt: its part by name and the first measure of its passage.
 export function doubtTarget(parts, partName, passage) {
@@ -63,5 +70,5 @@ export const undoLastCorrection = async id => (await apiJson(path(id) + '/correc
 export const saveEdits = async (id, edits) => (await apiJson(path(id) + '/corrections/batch', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ corrections: edits.map(edit => ({ part_id: edit.partId, number: edit.number, offset: edit.offset,
-    old: edit.old, new: edit.new })) }),
+    old: edit.old, new: edit.new, ...(edit.newType ? { new_type: edit.newType, new_dots: edit.newDots || 0 } : {}) })) }),
 }, t('No se pudieron guardar los cambios.'))).corrections;

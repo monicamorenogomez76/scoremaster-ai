@@ -95,3 +95,28 @@ def test_the_changes_made_on_the_score_are_saved_together_and_analysed_once(clie
     assert ana.get(f"/works/{work_id}/file").content == corrected, "nothing is saved when one change cannot be made"
     assert berta.post(f"/works/{work_id}/corrections/batch", json={"corrections": changes}).status_code == 404
     assert ana.post(f"/works/{work_id}/corrections/batch", json={"corrections": []}).status_code == 422
+
+
+def test_a_duration_changed_on_the_score_is_saved_and_undone_as_the_measure_was(clients, monkeypatch):  # noqa: F811
+    from backend.test.test_note_corrections import plain
+    ana, _ = clients
+    answer = ana.post("/analyze", files={"file": ("flauta.musicxml", plain(), "application/xml")})
+    work_id = answer.json()["work_id"]
+    playback.prepare_playback(plain())
+
+    def never(*_):
+        raise AssertionError("music21 read the work again")
+    monkeypatch.setattr("backend.app.stored_scores.parse_musicxml", never)
+    monkeypatch.setattr("backend.parsers.playback._read_timeline", never)
+    longer = {"part_id": "P1", "number": "1", "offset": 0.0, "old": ["C", 0, 5], "new": ["C", 0, 5], "new_type": "quarter"}
+    saved = ana.post(f"/works/{work_id}/corrections/batch", json={"corrections": [longer]})
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["corrections"][0] | {"id": None, "created_at": None} == {
+        "id": None, "created_at": None, "part": "Flute", "measure": "1", "old": ["C", 0, 5], "new": ["C", 0, 5],
+        "old_type": "eighth", "old_dots": 0, "new_type": "quarter", "new_dots": 0}
+    assert ana.get(f"/works/{work_id}/file").content.count(b"<type>eighth</type>") == 2
+    assert ana.post(f"/works/{work_id}/corrections/batch", json={"corrections": [
+        {**longer, "offset": 1.0, "old": ["E", 0, 5], "new": ["E", 0, 5], "new_dots": 1}]}).status_code == 422
+    assert ana.delete(f"/works/{work_id}/corrections/last").status_code == 200
+    back = ana.get(f"/works/{work_id}/file").content
+    assert back.count(b"<type>eighth</type>") == 4 and b"<step>D</step>" in back, "the measure as it was"

@@ -1,5 +1,5 @@
 import { highlightMeasure } from './playback-guide.js';
-import { applyEdits, keyChange, mergeEdits } from './note-edits.js';
+import { applyEdits, figureOf, keyChange, mergeEdits } from './note-edits.js';
 import { pitchLabel } from '../noteCorrections.js';
 import { t } from '../i18n.js';
 
@@ -102,7 +102,8 @@ function notesOf(display) {
       if (pitch === undefined) continue;
       found.push({ graphical, note, staff, measureIndex, number, pitch, partId: note.ParentStaff?.ParentInstrument?.IdString,
         partName: note.ParentStaff?.ParentInstrument?.Name, offset: (entry.relInMeasureTimestamp?.RealValue || 0) * 4,
-        chord: (note.ParentVoiceEntry?.Notes?.length || 1) > 1, element: graphical.getSVGGElement?.() || null });
+        chord: (note.ParentVoiceEntry?.Notes?.length || 1) > 1, element: graphical.getSVGGElement?.() || null,
+        length: (note.Length?.RealValue || 0) * 4, tuplet: Boolean(note.NoteTuplet) });
     }
   }));
   return found;
@@ -114,10 +115,12 @@ const idle = { visible: false, status: '', busy: false, page: '', canPrevious: f
 
 // Renders the whole ensemble with OpenSheetMusicDisplay, in pages of up to four measures in a single line.
 // React owns the controls; this object owns only the notation inside `container`.
-export function createFullScoreRenderer({ container, session, filter, bounds, createDisplay, onChange, nextFrame, onSave }) {
+export function createFullScoreRenderer({ container, session, filter, bounds, createDisplay, onChange, nextFrame, onSave, onDuration }) {
   let score = null, rendering = 0, snapshot = idle, overlay = null;
   // Editing on the score: the pending changes, and the note selected by its place and pitch (2026-11-23).
   let editing = false, edits = [], selection = null, selectAfter = null;
+  // After saving, the work opens again on the same page with the same note selected.
+  let resume = null;
   const publish = changes => { snapshot = { ...snapshot, ...changes }; onChange(snapshot); };
   const frame = nextFrame || (() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
@@ -276,6 +279,18 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
     } else renderPage();
   }
 
+  // A figure is saved at once with the changes waiting (2026-11-23): it moves the notes after it.
+  function changeDuration(result) {
+    const note = selected();
+    if (!note) return;
+    const current = figureOf(note.length);
+    if (note.tuplet || !current) { publish({ status: t('Una nota de un tresillo no cambia de duración aquí.') }); return; }
+    const type = result.duration || current.type;
+    const dots = result.dot ? (current.dots ? 0 : 1) : 0;
+    if (type === current.type && dots === current.dots) return;
+    onDuration?.({ partId: note.partId, number: note.number, offset: note.offset, old: note.pitch, new: note.pitch, newType: type, newDots: dots });
+  }
+
   container.addEventListener?.('click', event => {
     if (!editing || !score?.notes) return;
     const hit = score.notes.find(note => note.element?.contains(event.target));
@@ -293,6 +308,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
     if (!result) return;
     event.preventDefault();
     if (result.move) move(result.move);
+    else if (result.duration || result.dot) changeDuration(result);
     else change(result.rest ? null : result.pitch);
   });
 
@@ -300,7 +316,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
     edits = []; selection = null;
     score = null; rendering++;
     container.replaceChildren();
-    publish(idle);
+    publish({ ...idle, editing, edits: 0 });
   }
 
   async function load() {
@@ -312,6 +328,11 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
       if (version !== session.getVersion()) return;
       score = { source, ...bounds(source), zoom: 1, starts: [] };
       score.pageStart = score.first;
+      if (resume) {
+        if (resume.pageStart >= score.first && resume.pageStart <= score.last) score.pageStart = resume.pageStart;
+        selection = resume.selection;
+        resume = null;
+      }
       publish({ loaded: true });
       await renderPage();
     } catch (error) {
@@ -382,7 +403,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
     },
     getEdits: () => edits,
     discardEdits() { edits = []; selection = null; publish({ edits: 0 }); return renderPage(); },
-    saved() { edits = []; publish({ edits: 0 }); },
+    saved() { resume = score ? { pageStart: score.pageStart, selection } : null; edits = []; publish({ edits: 0 }); },
     // lanes: cells → what to draw (pageLanes), or null to hide the map; label names it.
     setOverlay(lanes, label = '') {
       overlay = lanes ? { lanes, label } : null;
