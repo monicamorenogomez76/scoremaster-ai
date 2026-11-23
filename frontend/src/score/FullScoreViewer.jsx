@@ -27,7 +27,8 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
 
   useLayoutEffect(() => {
     renderer.current = createFullScoreRenderer({ container: container.current, session, filter: filterMusicXmlPassage,
-      bounds: measureBounds, createDisplay: openSheetMusicDisplay, onChange: setView, nextFrame, onSave: () => saveRef.current?.() });
+      bounds: measureBounds, createDisplay: openSheetMusicDisplay, onChange: setView, nextFrame, onSave: () => saveRef.current?.(),
+      onDuration: edit => saveRef.current?.([edit]) });
     const observer = new ResizeObserver(() => renderer.current.fit());
     observer.observe(container.current);
     return () => observer.disconnect();
@@ -59,8 +60,9 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
   const stop = () => { transport.reset(); renderer.current.hideMarker(); };
 
   // The changes made on the score are saved together; the work then opens again with them (2026-11-23).
-  const save = async () => {
-    const edits = renderer.current.getEdits();
+  // A figure comes as extra: it is saved at once with the changes waiting.
+  const save = async (extra = []) => {
+    const edits = [...renderer.current.getEdits(), ...extra];
     if (!edits.length || saving || !workId) return;
     setSaving(true); setSaveMessage({ text: '', error: false });
     try {
@@ -115,10 +117,10 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
         disabled={!view.loaded} onClick={toggleEditing}>{view.editing ? t('Terminar de editar') : t('Editar notas')}</button>}
     </div>
     {view.editing && <div className="score-editing-bar">
-      <p id="score-edit-help" className="score-edit-help">{t('Haz clic en una nota o muévete con ← →; Alt+↑ ↓ cambia de pentagrama. ↑ ↓ sube o baja un grado, con Mayús medio tono y con Cmd o Ctrl una octava. A–G da el nombre de la nota; + − = ponen sostenido, bemol o becuadro; Supr la deja en silencio. Cmd o Ctrl+S guarda.')}</p>
+      <p id="score-edit-help" className="score-edit-help">{t('Haz clic en una nota o muévete con ← →; Alt+↑ ↓ cambia de pentagrama. ↑ ↓ sube o baja un grado, con Mayús medio tono y con Cmd o Ctrl una octava. A–G da el nombre de la nota; + − = ponen sostenido, bemol o becuadro; Supr la deja en silencio. 3 a 7 cambian la figura (semicorchea, corchea, negra, blanca, redonda) y el punto pone o quita el puntillo: se guarda al momento. Cmd o Ctrl+S guarda.')}</p>
       <div className="score-edit-actions">
         <span className="score-edit-count">{view.edits === 1 ? t('1 cambio sin guardar') : t('{count} cambios sin guardar', { count: view.edits })}</span>
-        <button className="primary-action" type="button" disabled={!view.edits || saving} onClick={save}>{saving ? t('Guardando…') : t('Guardar cambios')}</button>
+        <button className="primary-action" type="button" disabled={!view.edits || saving} onClick={() => save()}>{saving ? t('Guardando…') : t('Guardar cambios')}</button>
         <button className="secondary-action" type="button" disabled={!view.edits || saving} onClick={() => renderer.current.discardEdits()}>{t('Descartar')}</button>
       </div>
     </div>}

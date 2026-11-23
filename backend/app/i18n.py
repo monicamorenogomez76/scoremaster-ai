@@ -9,6 +9,11 @@ from typing import Optional
 EN = {
     # Corrected notes (2026-11-22)
     "La obra no tiene correcciones.": "The work has no corrections.",
+    "El silencio que queda no se puede escribir con estas figuras.": "The rest left cannot be written with these note values.",
+    "Una nota de un tresillo no cambia de duración aquí.": "A note of a tuplet does not change its duration here.",
+    "Una nota ligada no cambia de duración aquí.": "A tied note does not change its duration here.",
+    "La nota no cabe en el compás: acórtala o cambia antes las que la siguen.": "The note does not fit in the measure: shorten it or change the following ones first.",
+    "Esa figura no se puede escribir en este compás.": "That note value cannot be written in this measure.",
     "Ese compás no está en esa parte.": "That measure is not in that part.",
     "Ya tienes otra obra con este mismo archivo: no se pudo guardar la corrección.":
         "You already have another work with this same file: the correction could not be saved.",
