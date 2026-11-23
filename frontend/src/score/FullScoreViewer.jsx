@@ -7,14 +7,18 @@ import { preparePlayback } from './playback.js';
 import { Icon, TransportBar } from './TransportBar.jsx';
 import { useTransport } from './useTransport.js';
 import { currentLanguage, t } from '../i18n.js';
+import { saveEdits } from '../noteCorrections.js';
 
 const readyMessage = () => t('Todas las voces · pulsa Reproducir para cargar los sonidos.');
 
 // Whole score with all voices, page navigation, zoom and ensemble playback; with workId, the map of the work can be drawn
 // above the measures (2026-11-20).
-export function FullScoreViewer({ ref, session, workId }) {
+export function FullScoreViewer({ ref, session, workId, onSaved }) {
   const section = useRef(null), container = useRef(null), renderer = useRef(null);
-  const [view, setView] = useState({ visible: false, status: '', busy: false, page: '', canPrevious: false, canNext: false, zoomLabel: 'Auto', loaded: false });
+  const [view, setView] = useState({ visible: false, status: '', busy: false, page: '', canPrevious: false, canNext: false, zoomLabel: 'Auto', loaded: false, editing: false, edits: 0 });
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState({ text: '', error: false });
+  const saveRef = useRef(null);
   const transport = useTransport({
     prepare: onStatus => preparePlayback(session.getFile(), null, onStatus),
     onPosition: (measure, playing) => renderer.current?.follow(measure, playing),
@@ -23,7 +27,7 @@ export function FullScoreViewer({ ref, session, workId }) {
 
   useLayoutEffect(() => {
     renderer.current = createFullScoreRenderer({ container: container.current, session, filter: filterMusicXmlPassage,
-      bounds: measureBounds, createDisplay: openSheetMusicDisplay, onChange: setView, nextFrame });
+      bounds: measureBounds, createDisplay: openSheetMusicDisplay, onChange: setView, nextFrame, onSave: () => saveRef.current?.() });
     const observer = new ResizeObserver(() => renderer.current.fit());
     observer.observe(container.current);
     return () => observer.disconnect();
@@ -53,6 +57,30 @@ export function FullScoreViewer({ ref, session, workId }) {
   }, [showAnalysis, workId, language]);
 
   const stop = () => { transport.reset(); renderer.current.hideMarker(); };
+
+  // The changes made on the score are saved together; the work then opens again with them (2026-11-23).
+  const save = async () => {
+    const edits = renderer.current.getEdits();
+    if (!edits.length || saving || !workId) return;
+    setSaving(true); setSaveMessage({ text: '', error: false });
+    try {
+      await saveEdits(workId, edits);
+      renderer.current.saved();
+      setSaveMessage({ text: edits.length === 1 ? t('1 cambio guardado. La obra se ha vuelto a analizar.')
+        : t('{count} cambios guardados. La obra se ha vuelto a analizar.', { count: edits.length }), error: false });
+      await onSaved?.();
+    } catch (failure) { setSaveMessage({ text: failure.message, error: true }); }
+    finally { setSaving(false); }
+  };
+  saveRef.current = save;
+  // Unsaved changes are not lost by closing the page without a warning.
+  useEffect(() => {
+    if (!view.edits) return;
+    const warn = event => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [view.edits]);
+  const toggleEditing = () => { setSaveMessage({ text: '', error: false }); renderer.current.setEditing(!view.editing); };
   useImperativeHandle(ref, () => ({
     load() { transport.reset(readyMessage()); return renderer.current.load(); },
     clear() { transport.reset(); renderer.current.clear(); },
@@ -83,9 +111,21 @@ export function FullScoreViewer({ ref, session, workId }) {
       {tool('score-zoom-in', t('Ampliar zoom'), () => renderer.current.zoomIn(), '+')}
       {workId && <button id="score-analysis-toggle" className="secondary-action score-analysis-toggle" type="button" aria-pressed={showAnalysis}
         onClick={() => setShowAnalysis(shown => !shown)}>{showAnalysis ? t('Ocultar el mapa') : t('Ver el mapa de la obra')}</button>}
+      {workId && <button id="score-edit-toggle" className="secondary-action score-edit-toggle" type="button" aria-pressed={view.editing}
+        disabled={!view.loaded} onClick={toggleEditing}>{view.editing ? t('Terminar de editar') : t('Editar notas')}</button>}
     </div>
+    {view.editing && <div className="score-editing-bar">
+      <p id="score-edit-help" className="score-edit-help">{t('Haz clic en una nota o muévete con ← →; Alt+↑ ↓ cambia de pentagrama. ↑ ↓ sube o baja un grado, con Mayús medio tono y con Cmd o Ctrl una octava. A–G da el nombre de la nota; + − = ponen sostenido, bemol o becuadro; Supr la deja en silencio. Cmd o Ctrl+S guarda.')}</p>
+      <div className="score-edit-actions">
+        <span className="score-edit-count">{view.edits === 1 ? t('1 cambio sin guardar') : t('{count} cambios sin guardar', { count: view.edits })}</span>
+        <button className="primary-action" type="button" disabled={!view.edits || saving} onClick={save}>{saving ? t('Guardando…') : t('Guardar cambios')}</button>
+        <button className="secondary-action" type="button" disabled={!view.edits || saving} onClick={() => renderer.current.discardEdits()}>{t('Descartar')}</button>
+      </div>
+    </div>}
+    {saveMessage.text && <p className={saveMessage.error ? 'score-compare-error' : 'loading-status'} role={saveMessage.error ? 'alert' : 'status'}>{saveMessage.text}</p>}
     {analysisStatus && <p id="score-analysis-status" className="loading-status" role="status" aria-live="polite">{analysisStatus}</p>}
     {/* It may scroll sideways (beside a PDF, or zoomed in): the keyboard has to reach it. */}
-    <div id="full-score-rendering" ref={container} tabIndex={0} role="region" aria-label={t('Partitura completa')} />
+    <div id="full-score-rendering" ref={container} tabIndex={0} role="region" aria-label={t('Partitura completa')}
+      aria-describedby={view.editing ? 'score-edit-help' : undefined} className={view.editing ? 'score-editing' : undefined} />
   </section>;
 }

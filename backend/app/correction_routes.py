@@ -19,7 +19,7 @@ from backend.app.work_analysis import analyse_again
 from backend.application.accounts import User
 from backend.application.library import Correction, LibraryRepository
 from backend.parsers.note_corrections import (
-    CannotCorrect, NoteCorrection, correct_musicxml, correct_score, correct_timeline, described, from_dict, measure_notes, note_parts,
+    CannotCorrect, NoteCorrection, correct_musicxml, correct_score, correct_timeline, described, from_dict, measure_notes, measure_position, note_parts,
     undone)
 from backend.parsers.playback import keep_timeline, prepared_timeline
 
@@ -29,11 +29,14 @@ NO_CORRECTIONS = "La obra no tiene correcciones."
 SAME_FILE = "Ya tienes otra obra con este mismo archivo: no se pudo guardar la corrección."
 INVALID = "La corrección no es una nota válida."
 NO_MEASURE = "Ese compás no está en esa parte."
+MAX_CHANGES = 500
 
 
 class CorrectionIn(BaseModel):
     part_id: str = Field(min_length=1, max_length=100)
-    measure: int = Field(ge=1, le=100_000)
+    # The position of the measure from 1, or the number the score prints (2026-11-23, edited on the score).
+    measure: Optional[int] = Field(default=None, ge=1, le=100_000)
+    number: Optional[str] = Field(default=None, min_length=1, max_length=20)
     offset: float = Field(ge=0, le=1000)
     old: Optional[tuple[str, int, int]] = None
     new: Optional[tuple[str, int, int]] = None
@@ -55,33 +58,39 @@ def _analyse_later(content: bytes, configuration: dict, repository, score_store,
         logger.warning("No se pudo volver a analizar una obra corregida.", exc_info=True)
 
 
-def _apply(user: User, work_id: UUID, correction: NoteCorrection, save: Callable[[bytes], bool], library, repository,
-           score_store, playback_store, background: BackgroundTasks) -> None:
+def _apply(user: User, work_id: UUID, corrections: list[NoteCorrection], save: Callable[[bytes, list[dict]], bool],
+           library, repository, score_store, playback_store, background: BackgroundTasks) -> None:
+    """The corrections one after another on the file, the model and the audio, saved together and analysed once; none
+    is saved when one cannot be made."""
     stored = library.work_file(user.id, work_id)
     record = library.latest_analysis(user.id, work_id) if stored else None
     if stored is None or record is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     content = stored[0]
-    try:
-        corrected = correct_musicxml(content, correction)
-    except CannotCorrect as reason:
-        raise HTTPException(status_code=422, detail=str(reason)) from None
-    except ET.ParseError:
-        raise HTTPException(status_code=422, detail=INVALID) from None
     model = kept_work(content, score_store)
-    patched = correct_score(model, correction) if model is not None else None
-    timeline = prepared_timeline(content, playback_store) if patched is not None else None
-    patched_timeline = correct_timeline(timeline, model, correction) if timeline is not None else None
-    if patched is not None:
-        keep_model(corrected, patched, score_store)
-    if patched_timeline is not None:
-        keep_timeline(corrected, patched_timeline, playback_store)
-    if not save(corrected):
+    timeline = prepared_timeline(content, playback_store) if model is not None else None
+    shown = []
+    for correction in corrections:
+        try:
+            shown.append({**correction.as_dict(), **described(content, correction)})
+            corrected = correct_musicxml(content, correction)
+        except CannotCorrect as reason:
+            raise HTTPException(status_code=422, detail=str(reason)) from None
+        except ET.ParseError:
+            raise HTTPException(status_code=422, detail=INVALID) from None
+        patched = correct_score(model, correction) if model is not None else None
+        timeline = correct_timeline(timeline, model, correction) if timeline is not None and patched is not None else None
+        content, model = corrected, patched
+    if model is not None:
+        keep_model(content, model, score_store)
+    if timeline is not None:
+        keep_timeline(content, timeline, playback_store)
+    if not save(content, shown):
         raise HTTPException(status_code=409, detail=SAME_FILE)
-    if patched is not None:
-        analyse_again(corrected, patched, record.configuration or {}, repository, user.id, work_id)
+    if model is not None:
+        analyse_again(content, model, record.configuration or {}, repository, user.id, work_id)
     else:
-        background.add_task(_analyse_later, corrected, record.configuration or {}, repository, score_store, user.id, work_id)
+        background.add_task(_analyse_later, content, record.configuration or {}, repository, score_store, user.id, work_id)
 
 
 @router.get("/works/{work_id}/notes")
@@ -116,17 +125,38 @@ def list_corrections(work_id: str, user: User = Depends(authenticated_user),
 def add_correction(work_id: str, body: CorrectionIn, background: BackgroundTasks, user: User = Depends(authenticated_user),
                    library: LibraryRepository = Depends(get_library_repository), repository=Depends(get_analysis_repository),
                    score_store=Depends(get_score_store), playback_store=Depends(get_playback_store)):
+    return _add(work_id, [body], background, user, library, repository, score_store, playback_store)
+
+
+class Corrections(BaseModel):
+    corrections: list[CorrectionIn] = Field(min_length=1, max_length=MAX_CHANGES)
+
+
+@router.post("/works/{work_id}/corrections/batch")
+def add_corrections(work_id: str, body: Corrections, background: BackgroundTasks, user: User = Depends(authenticated_user),
+                    library: LibraryRepository = Depends(get_library_repository), repository=Depends(get_analysis_repository),
+                    score_store=Depends(get_score_store), playback_store=Depends(get_playback_store)):
+    """The notes changed on the score (2026-11-23), saved together with one analysis."""
+    return _add(work_id, body.corrections, background, user, library, repository, score_store, playback_store)
+
+
+def _add(work_id: str, items: list[CorrectionIn], background, user, library, repository, score_store, playback_store) -> dict:
     work = _work_id(work_id)
-    correction = NoteCorrection(body.part_id, body.measure, body.offset, body.old, body.new, body.staff, body.voice)
     stored = library.work_file(user.id, work)
     if stored is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
-    try:
-        shown = described(stored[0], correction)
-    except ET.ParseError:
-        raise HTTPException(status_code=422, detail=INVALID) from None
-    data = {**correction.as_dict(), **shown}
-    _apply(user, work, correction, lambda corrected: library.add_correction(user.id, work, data, corrected), library,
+    corrections = []
+    for item in items:
+        measure = item.measure
+        if measure is None:
+            try:
+                measure = measure_position(stored[0], item.part_id, item.number or "")
+            except ET.ParseError:
+                raise HTTPException(status_code=422, detail=INVALID) from None
+            if measure is None:
+                raise HTTPException(status_code=422, detail=NO_MEASURE)
+        corrections.append(NoteCorrection(item.part_id, measure, item.offset, item.old, item.new, item.staff, item.voice))
+    _apply(user, work, corrections, lambda content, shown: library.add_corrections(user.id, work, shown, content), library,
            repository, score_store, playback_store, background)
     return _listed(library.corrections(user.id, work) or [])
 
@@ -142,6 +172,7 @@ def undo_correction(work_id: str, background: BackgroundTasks, user: User = Depe
     if not found:
         raise HTTPException(status_code=404, detail=NO_CORRECTIONS)
     last = found[-1]
-    _apply(user, work, undone(from_dict(last.data)), lambda corrected: library.remove_correction(user.id, work, last.id, corrected),
+    _apply(user, work, [undone(from_dict(last.data))],
+           lambda corrected, _: library.remove_correction(user.id, work, last.id, corrected),
            library, repository, score_store, playback_store, background)
     return _listed(library.corrections(user.id, work) or [])

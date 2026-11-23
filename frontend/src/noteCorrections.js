@@ -58,3 +58,10 @@ export const saveCorrection = async (id, partId, measure, note, pitch) => (await
 }, t('No se pudo guardar la corrección.'))).corrections;
 export const undoLastCorrection = async id => (await apiJson(path(id) + '/corrections/last', { method: 'DELETE' },
   t('No se pudo deshacer la corrección.'))).corrections;
+
+// The notes changed on the score (2026-11-23), saved together with one analysis; measures by their printed number.
+export const saveEdits = async (id, edits) => (await apiJson(path(id) + '/corrections/batch', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ corrections: edits.map(edit => ({ part_id: edit.partId, number: edit.number, offset: edit.offset,
+    old: edit.old, new: edit.new })) }),
+}, t('No se pudieron guardar los cambios.'))).corrections;

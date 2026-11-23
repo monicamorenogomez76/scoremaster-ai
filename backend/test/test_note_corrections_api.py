@@ -69,3 +69,29 @@ def test_the_parts_and_the_notes_of_a_measure_are_listed_for_the_owner(clients):
     assert found["measure"] == 2 and [item["pitch"] for item in found["notes"]] == [["B", 0, 4], ["C", 0, 5], ["E", 0, 5]]
     assert ana.get(f"/works/{work_id}/notes", params={"part_id": "P1", "measure": "40"}).status_code == 404
     assert berta.get(f"/works/{work_id}/notes").status_code == 404
+
+
+def test_the_changes_made_on_the_score_are_saved_together_and_analysed_once(clients, monkeypatch):  # noqa: F811
+    """Edited on the score as in a notation program (2026-11-23): the director changes several notes, sees them at once,
+    and saves them together; the measures are named by the number the score prints."""
+    ana, berta = clients
+    work_id = upload(ana)
+    playback.prepare_playback(work())
+    analyses = []
+    import backend.app.correction_routes as routes
+    monkeypatch.setattr(routes, "analyse_again", lambda *args: analyses.append(args))
+    changes = [{"part_id": "P1", "number": "1", "offset": 1 / 3, "old": None, "new": ["D", 0, 5]},
+               {"part_id": "P1", "number": "2", "offset": 0.0, "old": ["B", 0, 4], "new": ["B", -1, 4]}]
+    answer = ana.post(f"/works/{work_id}/corrections/batch", json={"corrections": changes})
+    assert answer.status_code == 200, answer.text
+    assert [item["measure"] for item in answer.json()["corrections"]] == ["1", "2"]
+    corrected = ana.get(f"/works/{work_id}/file").content
+    assert b"<step>D</step>" in corrected and b"<alter>-1</alter>" in corrected
+    assert len(analyses) == 1, "one analysis for all the changes"
+    assert playback._ready(sha256(corrected).hexdigest(), None) is not None
+
+    wrong = [changes[0], {"part_id": "P1", "number": "2", "offset": 0.0, "old": ["A", 0, 4], "new": ["B", 0, 4]}]
+    assert ana.post(f"/works/{work_id}/corrections/batch", json={"corrections": wrong}).status_code == 422
+    assert ana.get(f"/works/{work_id}/file").content == corrected, "nothing is saved when one change cannot be made"
+    assert berta.post(f"/works/{work_id}/corrections/batch", json={"corrections": changes}).status_code == 404
+    assert ana.post(f"/works/{work_id}/corrections/batch", json={"corrections": []}).status_code == 422

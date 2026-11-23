@@ -1018,6 +1018,19 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .note-corrections-list { margin: 0 0 8px; padding-left: 24px; line-height: 1.5; }
 .reading-doubt-correct { min-height: 44px; }
 
+/* Editing on the score (2026-11-23): the notes are chosen with a click, the selected one and the changed ones coloured. */
+.score-edit-toggle { min-height: 44px; }
+.score-editing-bar { display: grid; gap: 8px; margin: 8px 0; padding: 8px 16px; border-left: 3px solid var(--primary); background: var(--primary-soft); }
+.score-edit-help { margin: 0; line-height: 1.5; }
+.score-edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.score-edit-actions button { min-height: 44px; }
+.score-edit-count { font-weight: 600; }
+.score-editing:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.score-note { cursor: pointer; }
+.score-note:hover path, .score-note:hover rect { fill: var(--primary); stroke: var(--primary); }
+.score-note-edited path, .score-note-edited rect { fill: var(--success); stroke: var(--success); }
+.score-note-selected path, .score-note-selected rect { fill: var(--primary); stroke: var(--primary); }
+
 /* Printable sheet of a rehearsal: hidden on screen; when printing it is the only thing on the page. */
 .rehearsal-sheet { display: none; }
 @media print {

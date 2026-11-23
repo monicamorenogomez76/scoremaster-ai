@@ -330,3 +330,12 @@ def measure_notes(content: bytes, part_id: str, number: str) -> Optional[dict]:
                           "voice": element.findtext("voice")})
         return {"measure": position, "number": number, "notes": notes}
     return None
+
+
+def measure_position(content: bytes, part_id: str, number: str) -> Optional[int]:
+    """The position (from 1) of the first measure numbered so in the part, as the score prints it."""
+    root = ET.fromstring(content)
+    part = next((item for item in root.iter("part") if item.get("id") == part_id), None)
+    if part is None:
+        return None
+    return next((position for position, measure in enumerate(part.iter("measure"), 1) if measure.get("number") == number), None)
