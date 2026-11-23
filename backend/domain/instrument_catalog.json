@@ -1,5 +1,5 @@
 {
- "version": "instrument-catalog-v10",
+ "version": "instrument-catalog-v11",
  "context": "concert band: unqualified clarinet and trumpet are in B♭, horn in F, and 'baritone' is the baritone saxophone; electric bass and guitars form the rhythm section, the drum set stays in percussion",
  "instruments": [
   {
@@ -20,6 +20,25 @@
     "kleine flote",
     "petite flute",
     "piccolo flote"
+   ],
+   "sound": "piccolo",
+   "rehearsal_group": "flutes"
+  },
+  {
+   "id": "piccolo.db",
+   "section": "woodwinds",
+   "family": "flute",
+   "variant": "db_piccolo",
+   "transposition": "Db",
+   "label_es": "Flautín en Re bemol",
+   "label_en": "D♭ Piccolo",
+   "aliases": [
+    "db piccolo",
+    "piccolo in db",
+    "d flat piccolo",
+    "des piccolo",
+    "flautin en reb",
+    "flautin en re bemol"
    ],
    "sound": "piccolo",
    "rehearsal_group": "flutes"
@@ -210,7 +229,9 @@
     "clarinetes",
     "cls",
     "bb clarinets",
-    "clars"
+    "clars",
+    "solo clarinet",
+    "solo bb clarinet"
    ],
    "sound": "clarinet",
    "rehearsal_group": "clarinets"
@@ -522,7 +543,10 @@
     "saxhorn alto",
     "flicorno contralto",
     "genis",
-    "trompa alto"
+    "trompa alto",
+    "altos",
+    "alto horns",
+    "eb altos"
    ],
    "sound": "french_horn",
    "rehearsal_group": "high_brass"
@@ -599,7 +623,8 @@
     "repiano cornet",
     "ripieno cornet",
     "2nd cornet",
-    "3rd cornet"
+    "3rd cornet",
+    "bb cornets"
    ],
    "sound": "trumpet",
    "rehearsal_group": "high_brass"
@@ -746,7 +771,9 @@
     "baritone horn",
     "flicorno baritono",
     "tenorhorn",
-    "baryton"
+    "baryton",
+    "tenors",
+    "bb tenors"
    ],
    "sound": "tuba",
    "rehearsal_group": "low_voices"
@@ -774,7 +801,10 @@
     "e flat bass",
     "b flat bass",
     "es bass",
-    "b bass"
+    "b bass",
+    "basses",
+    "bb basses",
+    "eb basses"
    ],
    "sound": "tuba",
    "rehearsal_group": "low_voices"
@@ -951,7 +981,8 @@
     "kettledrums",
     "kettle drums",
     "kettledrum",
-    "timpanos"
+    "timpanos",
+    "timpany"
    ],
    "sound": "timpani",
    "rehearsal_group": "percussion"

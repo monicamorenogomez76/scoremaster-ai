@@ -6,6 +6,8 @@ from __future__ import annotations
 # (chromatic, diatonic, octave-change); instruments written at sounding pitch are not listed.
 _WRITTEN_TO_SOUNDING = {
     "piccolo": (0, 0, 1),
+    # The D♭ piccolo of old American band editions (2026-11-23): a minor ninth above written.
+    "piccolo.db": (1, 1, 1),
     "flute.alto": (-5, -3, 0),
     "english_horn": (-7, -4, 0),
     "contrabassoon": (0, 0, -1),
