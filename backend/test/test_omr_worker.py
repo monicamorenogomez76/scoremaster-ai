@@ -1498,3 +1498,93 @@ def test_the_measures_taken_from_a_part_are_sent_as_doubts(scoremaster):
                       count_pages=lambda path: 2, page_text=lambda path, number: texts[number - 1]) == 0
     doubts = scoremaster["result"]["doubts"]
     assert {"part": part_names(scoremaster["result"]["musicxml"])[0], "measure": 2} in doubts
+
+
+# --- A scan without text (2026-11-23, «The Ride of the Valkyries»: 76 pages of parts engraved a century ago). The top of
+# each page is read with OCR; its parts start where the credits are printed, and each is named as most of its pages read.
+
+TSV_HEADER = "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext"
+
+
+def tsv_word(line, left, width, text, height=50):
+    return f"5\t1\t1\t1\t{line}\t1\t{left}\t{line * 100}\t{width}\t{height}\t90\t{text}"
+
+
+def test_the_ocr_of_a_scanned_header_keeps_apart_what_is_printed_apart():
+    tsv = "\n".join([TSV_HEADER, tsv_word(1, 742, 200, "The"), tsv_word(1, 970, 250, "Ride"),
+                     tsv_word(2, 170, 120, "Flute."), tsv_word(2, 960, 100, "from"), tsv_word(2, 1080, 300, "R.Wagner's")])
+    assert worker.laid_out(tsv) == "The Ride\nFlute.   from R.Wagner's"
+
+
+@pytest.mark.parametrize("read, name", [
+    ("457 Bb Clarinet.", "1st B♭ Clarinet"), ("45T Bb Clarinet.", "1st B♭ Clarinet"), ("187 Bd Clarinet.", "1st B♭ Clarinet"),
+    ("287 Br Clarinet,", "2nd B♭ Clarinet"), ("2NP Bd Clarinet.", "2nd B♭ Clarinet"), ("38D B> Clarinet.", "3rd B♭ Clarinet"),
+    ("32D Bb Clarinet.", "3rd B♭ Clarinet"), ("D> Piccolo. |", "D♭ Piccolo"), ("Kp Clarinet", "E♭ Clarinet"),
+    ("Ep Clarinet.", "E♭ Clarinet"), ("_ Bassoons.", "Bassoons"), ("45ST & 2ND Trombones.", "1st & 2nd Trombones"),
+    ("Solo Bb Clarinet,", "Solo B♭ Clarinet"), ("Bp Tenor Saxophone.", "B♭ Tenor Saxophone"), ("Flute.", "Flute"),
+])
+def test_a_name_read_with_ocr_has_its_ordinal_and_its_flat(read, name):
+    assert worker.ocr_part_name(read) == name
+
+
+def test_the_parts_of_a_scan_start_at_their_credits_and_take_the_name_most_pages_give():
+    texts = ["The Ride of the Valkyries\n457 Bb Clarinet.   arr. by L.P. Laurendeau", "45T Bb Clarinet.", "187 Bd Clarinet.",
+             "The Ride of the Valkyries\n287 Br Clarinet,   arr. by L.P. Laurendeau", "2ND Bb Clarinet.", "2NP Bd Clarinet.",
+             "The Ride of the Valkyries\nnoise   arr. by L.P. Laurendeau", "Alto Saxophone."]
+    pages = [(f"<page{index}/>".encode(), worker.ScanText(text), False) for index, text in enumerate(texts)]
+    groups = worker._parts_of(pages)
+    assert [(name, len(found)) for name, found, _ in groups] == [
+        ("1st B♭ Clarinet", 3), ("2nd B♭ Clarinet", 3), ("Alto Saxophone", 2)]
+
+
+def test_copisteria_reads_each_line_of_a_scanned_part_as_a_system_of_its_own():
+    """«The Ride of the Valkyries» page 30: the eight lines of one part read as one system of eight staves, ten measures
+    made up; each line alone, 41 measures of one staff."""
+    import types
+    front = types.SimpleNamespace(INK_LINK=0.85, _ink_links=lambda *args: (1.0, 1.0), _braced=lambda *args: True,
+                                  _opening_line=lambda *args: 1.0, _pale_line=lambda *args: 1.0)
+
+    def systems(syms, staves, gray=None):
+        return [(front._ink_links(), front._braced(), front._opening_line(), front._pale_line()) for _ in staves[1:]]
+    front._systems = systems
+    wrapped = worker.whole_systems(front, lambda staves: False, apart=lambda staves: True)
+    assert wrapped([], [1, 2, 3]) == [((0.0, 0.0), False, 0.0, 0.0)] * 2
+    assert front._braced() is True, "copisteria's own afterwards"
+
+
+def test_a_scanned_page_naming_one_part_is_read_line_by_line(monkeypatch):
+    monkeypatch.setattr(worker, "page_text", lambda *_: worker.ScanText("The Ride of the Valkyries\nFlute.   arr. by L.P."))
+    assert worker.one_part_scan("obra.pdf", 4)
+    monkeypatch.setattr(worker, "page_text", lambda *_: worker.ScanText("Oboe\nClarinet\nTrumpet\nTuba"))
+    assert not worker.one_part_scan("obra.pdf", 4), "a scanned score names many"
+    monkeypatch.setattr(worker, "page_text", lambda *_: "Flute 1")
+    assert not worker.one_part_scan("obra.pdf", 4), "a digital page reads its systems as copisteria does"
+
+
+@pytest.mark.parametrize("read, name", [
+    ("4S7& 2 Trombones.", "1st & 2nd Trombones"), ("DdRD € ATH Altos.", "3rd & 4th Altos"),
+    ("AST €& QZND Tenors 6. |", "1st & 2nd Tenors"), ("Baritone $.", "Baritone"), ("Baritone 9:", "Baritone"),
+    ("2ND & 3B Bb Cornets.", "2nd & 3rd B♭ Cornets"), ("Timpany in Bb & F", "Timpany in B♭ & F"),
+])
+def test_the_ampersand_and_the_clef_of_an_old_part_are_read_as_printed(read, name):
+    assert worker.ocr_part_name(read) == name
+
+
+def test_a_scan_of_parts_has_no_score_even_where_copista_saw_several_staves(full_catalog):
+    """«The Ride of the Valkyries»: six pages read as systems of three to eight staves made a score of the work."""
+    texts = ["The Ride of the Valkyries\nFlute.   arr. by L.P. Laurendeau", "Flute.",
+             "The Ride of the Valkyries\nOboes.   arr. by L.P. Laurendeau", "Oboes."]
+    read = [("obra.pdf", [((0, number), page(8 if number == 1 else 1, 2, "C"), worker.ScanText(text))
+                          for number, text in enumerate(texts)])]
+    musicxml, source, _, _ = worker._auto(read, "Obra")
+    assert source == "parts" and part_names(musicxml.decode()) == ["Flute", "Oboes"]
+
+
+def test_a_scan_of_parts_may_have_a_page_with_a_line_of_text():
+    """Pages 69 and 70 of «The Ride of the Valkyries» carry «The Ride of the Valkyries» and «3rd Trombone» as text."""
+    texts = [worker.ScanText("The Ride of the Valkyries\nFlute.   arr. by L.P."), worker.ScanText("Flute."),
+             worker.ScanText("The Ride of the Valkyries\nOboes.   arr. by L.P."), worker.ScanText("Oboes."),
+             worker.ScanText("Oboes."), worker.ScanText("Oboes."), worker.ScanText("Oboes."), worker.ScanText("Oboes."),
+             worker.ScanText("Oboes."), '"The Ride of the Valkyries"', "3rd Trombone"]
+    assert worker.scan_part_starts(texts) == [0, 2, 9]
+    assert worker.scan_part_starts(["Flute 1", "Flute 1", "Oboe"]) is None, "a digital PDF keeps its own grouping"
