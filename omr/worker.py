@@ -14,6 +14,7 @@ import html
 import json
 import os
 import re
+from collections import Counter
 import shutil
 import subprocess
 import sys
@@ -92,7 +93,9 @@ class _Copista:
         def measures_of(syms, staves) -> None:
             if staves:
                 starts[:] = sorted(syms[index].box[0] / PIXELS_PER_POINT for index in staves[0].bars)
-        front._systems = whole_systems(front, alone, original=cls.systems, seen=measures_of)
+        # A scanned part names one instrument at its top: each of its lines is a system (2026-11-23).
+        single = one_part_scan(pdf_path, number)
+        front._systems = whole_systems(front, alone, original=cls.systems, seen=measures_of, apart=lambda staves: single)
         png = page_image(pdf_path, number, out_dir, extract=lambda *place: from_pdf(place[0], place[1], Path(place[2])))
         xml = transcribe(png, cls.model).encode("utf-8")
         if found and staves(xml) == len(found):
@@ -105,14 +108,26 @@ class _Copista:
 PIXELS_PER_POINT = 300 / 72
 
 
-def whole_systems(front, alone, original=None, seen=None):
+def whole_systems(front, alone, original=None, seen=None, apart=lambda staves: False):
     """copisteria's grouping of staves into systems, with every staff joined to the one above it on a page where
     alone(staves) says they are one system: the bar lines of a band score break between the families (woodwinds,
-    brass, percussion), and copisteria took each family for a system of its own."""
+    brass, percussion), and copisteria took each family for a system of its own. Where apart(staves) says the page is
+    one part, each staff is a system of its own (2026-11-23, «The Ride of the Valkyries»: the eight lines of an engraved
+    part read as one system of eight staves)."""
     original = original or front._systems
 
     def systems(syms, staves, *args, **kwargs):
-        if not alone(staves):
+        if apart(staves):
+            saved = front._ink_links, front._braced, front._opening_line, front._pale_line
+            front._ink_links = lambda *_: (0.0, 0.0)
+            front._braced = lambda *_: False
+            front._opening_line = lambda *_: 0.0
+            front._pale_line = lambda *_: 0.0
+            try:
+                found = original(syms, staves, *args, **kwargs)
+            finally:
+                front._ink_links, front._braced, front._opening_line, front._pale_line = saved
+        elif not alone(staves):
             found = original(syms, staves, *args, **kwargs)
         else:
             saved = front._ink_links, front._braced
@@ -412,8 +427,113 @@ def page_text(pdf_path: str, number: int) -> str:
                               check=True, capture_output=True, text=True, timeout=30).stdout
     except (subprocess.SubprocessError, OSError):
         return ""
+    if not text.strip():
+        return scan_header(pdf_path, number)
     pairs = split_capitals(page_words(pdf_path, number, joined=False)) if text.strip() else set()
     return mend_split_capitals(text, pairs) if pairs else text
+
+
+# A scan without text (2026-11-23, «The Ride of the Valkyries», 76 pages of parts engraved a century ago): the name of
+# each part is printed at the top of its pages, so the top of the page is read with OCR (tesseract) when the PDF has no
+# text. Words far apart are written three spaces apart, as pdftotext -layout does: «Flute.» and «from R. Wagner's Music
+# Drama:» on one line are two pieces.
+SCAN_HEADER_SHARE = 0.15
+SCAN_HEADER_DPI = 300
+
+
+def laid_out(tsv: str) -> str:
+    """tesseract's words with their place, as lines of text; words further apart than twice their height are pieces."""
+    lines: dict[tuple, list[tuple[int, int, int, str]]] = {}
+    for row in tsv.splitlines()[1:]:
+        cells = row.split("\t")
+        if len(cells) < 12 or cells[0] != "5" or not cells[11].strip():
+            continue
+        try:
+            left, width, height = int(cells[6]), int(cells[8]), int(cells[9])
+        except ValueError:
+            continue
+        lines.setdefault((cells[2], cells[3], cells[4]), []).append((left, width, height, cells[11].strip()))
+    found = []
+    for words in lines.values():
+        words.sort()
+        height = sorted(word[2] for word in words)[len(words) // 2]
+        text, end = "", None
+        for left, width, _, word in words:
+            text += ("" if end is None else "   " if left - end > 2 * height else " ") + word
+            end = left + width
+        found.append(text)
+    return "\n".join(found)
+
+
+class ScanText(str):
+    """The text of a scanned page read with OCR: its parts are told by their credits, its names have OCR slips."""
+
+
+def scan_header(pdf_path: str, number: int) -> str:
+    """The top of a scanned page read with OCR, laid out; empty without tesseract or when it fails."""
+    try:
+        info = subprocess.run(["pdfinfo", "-f", str(number), "-l", str(number), pdf_path], check=True,
+                              capture_output=True, text=True, timeout=30).stdout
+        size = re.search(r"size:\s*([\d.]+) x ([\d.]+) pts", info)
+        if not size:
+            return ScanText("")
+        width, height = (float(value) * SCAN_HEADER_DPI / 72 for value in size.groups())
+        image = subprocess.run(["pdftoppm", "-r", str(SCAN_HEADER_DPI), "-f", str(number), "-l", str(number), "-gray",
+                                "-singlefile", "-x", "0", "-y", "0", "-W", str(int(width)),
+                                "-H", str(int(height * SCAN_HEADER_SHARE)), "-png", pdf_path],
+                               check=True, capture_output=True, timeout=60).stdout
+        tsv = subprocess.run(["tesseract", "-", "-", "--psm", "6", "tsv"], input=image, check=True, capture_output=True,
+                             timeout=60).stdout.decode("utf-8", "replace")
+    except (subprocess.SubprocessError, OSError, ValueError):
+        return ScanText("")
+    return ScanText(laid_out(tsv))
+
+
+# OCR slips in the names of old engraved parts (2026-11-23): the ordinal («1ST» read «457», «45T», «187»; «2ND» read
+# «287», «2NP»; «3RD» read «38D», «32D») and the flat after the key («Bb» read «B>», «B)», «Bd», «Bp», «Br»; «E♭» read «Ep»,
+# «Kb»).
+_OCR_KEY = re.compile(r"^([A-GK])[b>)}\]|♭dpry]$", re.IGNORECASE)
+
+
+def _ocr_ordinal(token: str) -> str | None:
+    found = token.upper().strip(".,)°’'`_|")
+    if not found or len(found) > 5 or not re.search(r"\d", found + ("1" if found.endswith(("ST", "ND", "RD", "TH")) else "")):
+        return None
+    if "TH" in found:
+        return "4th"
+    if re.search(r"N[DPB]|^2", found):
+        return "2nd"
+    if re.search(r"R[DP]|^3|^SR|8D|2D", found):
+        return "3rd"
+    if re.search(r"(S|5)(T|7)$|^1|87$|57$|^4", found):
+        return "1st"
+    return None
+
+
+def ocr_part_name(read: str) -> str:
+    """A part's name as an old engraved part prints it, from its OCR: the ordinal and the flat put right."""
+    # «€» is how OCR reads the «&» between two ordinals; one stuck to a word is a word apart.
+    words = [word for word in re.split(r"\s+", re.sub(r"[€&]+", " & ", re.sub(r"[|_“”\"]", " ", read))) if word]
+    fixed = []
+    for at, word in enumerate(words):
+        key = _OCR_KEY.match(word.rstrip(".,"))
+        ordinal = _ocr_ordinal(word) if at == 0 or (fixed and fixed[-1] == "&") else None
+        if ordinal:
+            fixed.append(ordinal)
+        elif key and at + 1 < len(words):
+            fixed.append(("E" if key.group(1).upper() == "K" else key.group(1).upper()) + "♭")
+        else:
+            fixed.append(word)
+    # The clef printed after the name («Baritone 𝄢») read as «9:», «6.» or «$».
+    while len(fixed) > 1 and re.fullmatch(r"[$§][.:]?|[69][:.]", fixed[-1]):
+        fixed.pop()
+    return " ".join(fixed).strip(" .,:;")
+
+
+def one_part_scan(pdf_path: str, number: int) -> bool:
+    """A scanned page whose top names one part (2026-11-23): its lines are read one by one."""
+    text = page_text(pdf_path, number)
+    return isinstance(text, ScanText) and not looks_like_score(text)
 
 
 def _pieces(text: str) -> list[str]:
@@ -730,10 +850,109 @@ def _one_part(left: str, right: str) -> bool:
     return left == right or _misread_alike(left, right)
 
 
+# The title of the work is printed on the first page of each part (2026-11-23): its words are those found on several
+# pages but not on most, that name no instrument («Valkyries», «Wagner», «Drama», «Laurendeau»). Two of them start a part:
+# OCR misses «arr. by» on some first pages.
+TITLE_WORD = re.compile(r"[^\W\d_]{5,}")
+TITLE_WORDS_SHARE = 0.6
+TITLE_WORDS_ON_PAGE = 2
+SCAN_SHARE = 0.8
+
+
+def _page_words(text: str) -> set[str]:
+    return {word.casefold() for word in TITLE_WORD.findall(text) if not INSTRUMENT_WORDS.search(word)}
+
+
+def _title_words(texts: list[str]) -> set[str]:
+    counted = Counter(word for text in texts for word in _page_words(text))
+    return {word for word, count in counted.items() if 3 <= count <= TITLE_WORDS_SHARE * len(texts)}
+
+
+# The names of old band parts the catalog may not know (2026-11-23): the alto and tenor horns, the basses, the timpani.
+_OLD_BAND_WORDS = re.compile(r"\b(altos?|tenors?|basses|drums|timpan\w*)\b", re.IGNORECASE)
+
+
+def _printed_name(text: str, title: set[str]) -> str | None:
+    """The name a part prints at its top when the catalog does not know it («Basses.», «3rd & 4th Altos.»): the first
+    short piece of the header naming an instrument, with no word of the title."""
+    for piece in _pieces(_header(text)):
+        letters = re.findall(r"[^\W\d_]{3,}", piece)
+        if (len(piece) <= 30 and not any(word.casefold() in title for word in letters) and not CREDITS.search(piece)
+                and (INSTRUMENT_WORDS.search(piece) or _OLD_BAND_WORDS.search(piece))):
+            return piece
+    return None
+
+
+def scan_part_starts(texts: list[str]) -> list[int] | None:
+    """Where each part of a scan read with OCR starts: its pages with the credits or the title. None when the pages are
+    not such a scan, or a page names several instruments as a score does."""
+    # A page or two may carry a line of text someone added («3rd Trombone»): most pages are scans.
+    scanned = sum(isinstance(text, ScanText) for text in texts)
+    if len(texts) < 2 or scanned < SCAN_SHARE * len(texts) or any(map(looks_like_score, texts)):
+        return None
+    words = [_page_words(text) for text in texts]
+    counted = Counter(word for found in words for word in found)
+    title = _title_words(texts)
+    # The word of the title found most often («valkyries») starts a part alone: OCR may read nothing else there.
+    main = max(title, key=lambda word: counted[word], default=None)
+    starts = [index for index, text in enumerate(texts)
+              if CREDITS.search(text) or len(words[index] & title) >= TITLE_WORDS_ON_PAGE or (main and main in words[index])]
+    if len(starts) < 2:
+        return None
+    return starts if starts[0] == 0 else [0, *starts]
+
+
+def one_line(xml: bytes) -> bytes:
+    """A part's page that copista read as a system of several staves (each written as a part): its lines one after
+    another, as the part prints them."""
+    from xml.etree import ElementTree as ET
+    root = ET.fromstring(xml)
+    parts = root.findall("part")
+    if len(parts) < 2:
+        return xml
+    first = parts[0]
+    for other in parts[1:]:
+        for measure in other.findall("measure"):
+            first.append(measure)
+        root.remove(other)
+    part_list = root.find("part-list")
+    if part_list is not None:
+        for item in part_list.findall("score-part")[1:]:
+            part_list.remove(item)
+    for number, measure in enumerate(first.findall("measure"), 1):
+        measure.set("number", str(number))
+    return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+
+
+def _scan_parts(pages: list[tuple]) -> list[tuple[str, list[bytes], bool]] | None:
+    """The parts of a scan read with OCR, each from a page with its credits to the next (2026-11-23): its pages name it
+    with OCR slips, so it takes the name most of them give. None when the pages are not such a scan."""
+    starts = scan_part_starts([page[1] for page in pages]) if pages else None
+    if starts is None:
+        return None
+    title_words = _title_words([page[1] for page in pages])
+    groups = []
+    for start, end in zip(starts, starts[1:] + [len(pages)]):
+        # The name most of its pages give, then one the catalog knows: «D♭ Piccolo» twice is not «Piccolo» once. A
+        # name of two letters is a slip («Sd» for «2nd Alto» is the snare drum's abbreviation).
+        names = Counter(name for name in (ocr_part_name(read) for read in (part_header(page[1])[0]
+                                                                            or _printed_name(page[1], title_words)
+                                                                            for page in pages[start:end]) if read)
+                        if len(re.findall(r"[^\W\d_]", name)) >= 3)
+        ranked = sorted(names, key=lambda name: (names[name], bool(catalog.names(name)), len(name)), reverse=True)
+        name = ranked[0] if ranked else f"Parte {len(groups) + 1}"
+        found = [page[0] for page in pages[start:end] if page[0] is not None]
+        groups.append((name, found, any(page[0] is None for page in pages[start:end])))
+    return groups
+
+
 def _parts_of(pages: list[tuple]) -> list[tuple[str, list[bytes], bool]]:
     """Consecutive part pages grouped by the instrument their text names: (name, pages read, had pages copista could
     not read). A page copista could not read has no music (None) but still says its instrument. A page (xml, text, True)
     is a part's first page by its look: without a name it starts a part, which the next page naming one names."""
+    scanned = _scan_parts(pages)
+    if scanned is not None:
+        return scanned
     groups: list[tuple[str, list[bytes], bool]] = []
     unnamed = False   # the last part was started by a first page without a name
     for page, (name, continues) in zip(pages, _page_names(pages)):
@@ -758,7 +977,7 @@ def _parts_of(pages: list[tuple]) -> list[tuple[str, list[bytes], bool]]:
 # A part's first page prints the work's title block (2026-11-17): a page without text whose top is like that of the first
 # pages the text tells (they give the credits) starts a part. Measured on «Pirates of the Caribbean»: 0.60 and 0.73 for the
 # first pages without text, never above 0.18 for the others.
-CREDITS = re.compile(r"music\s+b[yv]|arrang|compos", re.IGNORECASE)
+CREDITS = re.compile(r"music\s+b[yv]|arrang|compos|\barr\.?\s*b[yv]\b", re.IGNORECASE)
 TITLE_LIKE = 0.4
 
 
@@ -914,9 +1133,13 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
     reads the score's pages that were set apart, when a part needs them or no part appears. Returns the work, where it
     came from (parts or score) and whether the score says it is in C."""
     score, parts = [], []
+    # A scan of parts read with OCR has no score (2026-11-23): a page where copista saw several staves is a part's.
+    scanned_parts = scan_part_starts([text for _, pages in read for _, _, text in pages]) is not None
     for _, pages in read:
         for place, xml, text in pages:
-            if xml is None:
+            if scanned_parts:
+                parts.append((one_line(xml) if xml is not None else None, text, place in first_pages))
+            elif xml is None:
                 if not looks_like_score(text):
                     parts.append((None, text, place in first_pages))
             elif staves(xml) >= SCORE_STAVES:
