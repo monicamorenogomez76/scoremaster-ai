@@ -1,4 +1,6 @@
 import { highlightMeasure } from './playback-guide.js';
+import { applyEdits, keyChange, mergeEdits } from './note-edits.js';
+import { pitchLabel } from '../noteCorrections.js';
 import { t } from '../i18n.js';
 
 export const MEASURES_PER_PAGE = 4;
@@ -77,14 +79,45 @@ function drawOverlay(staging, display, overlay) {
   return strip;
 }
 
+
+// --- Notes edited on the score (2026-11-23) ------------------------------------------------------------------------
+
+const STEP_AT = { 0: 'C', 2: 'D', 4: 'E', 5: 'F', 7: 'G', 9: 'A', 11: 'B' };
+const ALTER_OF = { 0: 1, 1: -1, 2: 0, 3: 0, 4: 2, 5: -2 };          // OpenSheetMusicDisplay's AccidentalEnum
+const ACCIDENTAL_OF = { '-2': 5, '-1': 1, 0: 2, 1: 0, 2: 4 };
+const samePitch = (one, other) => JSON.stringify(one ?? null) === JSON.stringify(other ?? null);
+const samePlace = (one, other) => one.partId === other.partId && one.number === other.number && Math.abs(one.offset - other.offset) < 1e-4;
+
+// The notes drawn on the page, each with what a correction names it by: part, printed measure, place in quarters, pitch.
+function notesOf(display) {
+  const found = [];
+  (display?.GraphicSheet?.MeasureList || []).forEach((staves, measureIndex) => staves.forEach((measure, staff) => {
+    if (!measure) return;
+    const number = String(measure.parentSourceMeasure?.MeasureNumberXML ?? measure.MeasureNumber);
+    for (const entry of measure.staffEntries || []) for (const voice of entry.graphicalVoiceEntries || []) for (const graphical of voice.notes || []) {
+      const note = graphical.sourceNote;
+      if (!note || note.ParentVoiceEntry?.IsGrace) continue;
+      const pitch = note.isRest() ? null : note.Pitch && STEP_AT[note.Pitch.FundamentalNote]
+        ? [STEP_AT[note.Pitch.FundamentalNote], ALTER_OF[note.Pitch.Accidental] ?? 0, note.Pitch.Octave + 3] : undefined;
+      if (pitch === undefined) continue;
+      found.push({ graphical, note, staff, measureIndex, number, pitch, partId: note.ParentStaff?.ParentInstrument?.IdString,
+        partName: note.ParentStaff?.ParentInstrument?.Name, offset: (entry.relInMeasureTimestamp?.RealValue || 0) * 4,
+        chord: (note.ParentVoiceEntry?.Notes?.length || 1) > 1, element: graphical.getSVGGElement?.() || null });
+    }
+  }));
+  return found;
+}
+
 export const pageStartFor = (first, measure) => first + Math.floor((measure - first) / MEASURES_PER_PAGE) * MEASURES_PER_PAGE;
 
 const idle = { visible: false, status: '', busy: false, page: '', canPrevious: false, canNext: false, zoomLabel: 'Auto', loaded: false };
 
 // Renders the whole ensemble with OpenSheetMusicDisplay, in pages of up to four measures in a single line.
 // React owns the controls; this object owns only the notation inside `container`.
-export function createFullScoreRenderer({ container, session, filter, bounds, createDisplay, onChange, nextFrame }) {
+export function createFullScoreRenderer({ container, session, filter, bounds, createDisplay, onChange, nextFrame, onSave }) {
   let score = null, rendering = 0, snapshot = idle, overlay = null;
+  // Editing on the score: the pending changes, and the note selected by its place and pitch (2026-11-23).
+  let editing = false, edits = [], selection = null, selectAfter = null;
   const publish = changes => { snapshot = { ...snapshot, ...changes }; onChange(snapshot); };
   const frame = nextFrame || (() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
@@ -129,7 +162,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
         staging.style.width = width + 'px';
         staging.style.position = 'absolute'; staging.style.visibility = 'hidden';
         container.append(staging);
-        const pageXml = filter(state.source, null, state.pageStart + '-' + end);
+        const pageXml = applyEdits(filter(state.source, null, state.pageStart + '-' + end), edits);
         const xml = pageXml.trimStart().startsWith('<?xml') ? pageXml : '<?xml version="1.0" encoding="UTF-8"?>\n' + pageXml;
         // A page of the PDF is one line, the last of what is drawn: stretched to the width, or half of it stayed blank.
         display = createDisplay(staging, { autoResize: false, backend: 'svg', drawTitle: false,
@@ -146,20 +179,125 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
       publish({ canNext: end < state.last, page: label() });
       staging.style.position = ''; staging.style.visibility = '';
       state.staging = staging; state.display = display;
-      state.sizes = Array.from(staging.querySelectorAll('svg'))
-        .map(svg => ({ svg, width: Number.parseFloat(svg.getAttribute('width')), height: Number.parseFloat(svg.getAttribute('height')) }))
-        .filter(item => item.width && item.height);
-      state.strip = drawOverlay(staging, display, overlay);
       container.replaceChildren(staging); container.scrollTop = 0;
       publish({ status: t('Todas las voces · notación original · compases {first}–{last}', { first: state.pageStart, last: end }), busy: false });
-      fit();
-      if (state.currentMeasure !== undefined) highlightMeasure(display, state.currentMeasure, container);
+      drawn(state);
+      if (editing && (selectAfter || !selection)) selectOnPage(selectAfter);
+      else if (editing) tell();
+      selectAfter = null;
     } catch (error) {
       if (token === rendering) publish({ status: t('No se pudo mostrar esta página: {error}', { error: error.message }), busy: false });
     } finally { if (staging?.style.visibility === 'hidden') staging.remove(); }
   }
 
+  // What follows each drawing of the page, also after a note changed in place.
+  function drawn(state) {
+    const { staging, display } = state;
+    state.sizes = Array.from(staging.querySelectorAll('svg'))
+      .map(svg => ({ svg, width: Number.parseFloat(svg.getAttribute('width')), height: Number.parseFloat(svg.getAttribute('height')) }))
+      .filter(item => item.width && item.height);
+    state.strip?.remove();
+    state.strip = drawOverlay(staging, display, overlay);
+    state.notes = notesOf(display);
+    mark();
+    fit();
+    if (state.currentMeasure !== undefined) highlightMeasure(display, state.currentMeasure, container);
+  }
+
+  const selected = () => (selection && score?.notes?.find(note => note.staff === selection.staff && samePlace(note, selection)
+    && samePitch(note.pitch, selection.pitch))) || null;
+
+  function mark() {
+    const current = selected();
+    for (const note of score?.notes || []) {
+      if (!note.element) continue;
+      note.element.classList.toggle('score-note', editing);
+      note.element.classList.toggle('score-note-selected', editing && note === current);
+      note.element.classList.toggle('score-note-edited', edits.some(edit => samePlace(edit, note) && samePitch(edit.new, note.pitch)));
+    }
+  }
+
+  function tell() {
+    const note = selected();
+    publish({ edits: edits.length, status: note ? t('{part} · compás {measure} · {pitch}', { part: note.partName || note.partId,
+      measure: note.number, pitch: pitchLabel(note.pitch) }) : snapshot.status });
+  }
+
+  function select(note) {
+    selection = note ? { partId: note.partId, number: note.number, offset: note.offset, staff: note.staff, pitch: note.pitch } : null;
+    mark(); tell();
+    note?.element?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }
+
+  // After a page is drawn: the first or last note of a staff (moving past the page), else the first note of the page.
+  function selectOnPage(wanted) {
+    const notes = score?.notes || [];
+    const staff = wanted ? notes.filter(note => note.staff === wanted.staff) : notes;
+    select(wanted?.last ? staff[staff.length - 1] : staff[0] || notes[0] || null);
+  }
+
+  function inOrder(staff) {
+    return (score?.notes || []).filter(note => note.staff === staff)
+      .sort((one, other) => one.measureIndex - other.measureIndex || one.offset - other.offset);
+  }
+
+  function move(direction) {
+    const current = selected();
+    if (!current) return;
+    if (direction === 'up' || direction === 'down') {
+      const staff = current.staff + (direction === 'up' ? -1 : 1);
+      const options = inOrder(staff).filter(note => note.measureIndex === current.measureIndex);
+      const nearest = options.sort((one, other) => Math.abs(one.offset - current.offset) - Math.abs(other.offset - current.offset))[0];
+      if (nearest) select(nearest);
+      return;
+    }
+    const line = inOrder(current.staff);
+    const at = line.indexOf(current) + (direction === 'next' ? 1 : -1);
+    if (line[at]) return select(line[at]);
+    if (direction === 'next' && snapshot.canNext) { selectAfter = { staff: current.staff }; turn(1); }
+    if (direction === 'previous' && snapshot.canPrevious) { selectAfter = { staff: current.staff, last: true }; turn(-1); }
+  }
+
+  function change(pitch) {
+    const note = selected();
+    if (!note) return;
+    if (!pitch && note.chord) { publish({ status: t('Una nota de un acorde no puede ser un silencio: corrige su altura.') }); return; }
+    edits = mergeEdits(edits, { partId: note.partId, number: note.number, offset: note.offset, old: note.pitch, new: pitch });
+    selection = { ...selection, pitch };
+    const Pitch = globalThis.opensheetmusicdisplay?.Pitch;
+    if (note.pitch && pitch && Pitch) {
+      // A pitch for a pitch is drawn again in place, at once; a rest needs the page drawn from its MusicXML.
+      const semitone = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[pitch[0]];
+      note.note.pitch = new Pitch(semitone, pitch[2] - 3, ACCIDENTAL_OF[pitch[1]]);
+      score.display.updateGraphic();
+      score.display.render();
+      drawn(score);
+      tell();
+    } else renderPage();
+  }
+
+  container.addEventListener?.('click', event => {
+    if (!editing || !score?.notes) return;
+    const hit = score.notes.find(note => note.element?.contains(event.target));
+    if (hit) { select(hit); container.focus(); }
+  });
+  container.addEventListener?.('keydown', event => {
+    if (!editing) return;
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); onSave?.(); return; }
+    if (event.key === 'Escape') { selection = null; mark(); tell(); return; }
+    const note = selected();
+    if (!note) return;
+    const before = inOrder(note.staff).filter(item => item.pitch && (item.measureIndex < note.measureIndex
+      || (item.measureIndex === note.measureIndex && item.offset < note.offset))).pop();
+    const result = keyChange(note.pitch, event, before?.pitch || ['C', 0, 5]);
+    if (!result) return;
+    event.preventDefault();
+    if (result.move) move(result.move);
+    else change(result.rest ? null : result.pitch);
+  });
+
   function clear() {
+    edits = []; selection = null;
     score = null; rendering++;
     container.replaceChildren();
     publish(idle);
@@ -233,6 +371,18 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
       score.display?.cursor?.hide(); score.currentMeasure = undefined;
     },
     setStatus: status => publish({ status, busy: false }),
+    // Editing on the score: on, the notes can be selected and changed; the changes wait to be saved together.
+    setEditing(on) {
+      editing = on;
+      if (!on) selection = null;
+      else if (!selection) selectOnPage(null);
+      mark();
+      if (on) container.focus();
+      publish({ editing: on, edits: edits.length });
+    },
+    getEdits: () => edits,
+    discardEdits() { edits = []; selection = null; publish({ edits: 0 }); return renderPage(); },
+    saved() { edits = []; publish({ edits: 0 }); },
     // lanes: cells → what to draw (pageLanes), or null to hide the map; label names it.
     setOverlay(lanes, label = '') {
       overlay = lanes ? { lanes, label } : null;

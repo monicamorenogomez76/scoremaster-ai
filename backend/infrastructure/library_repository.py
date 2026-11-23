@@ -150,15 +150,17 @@ class PostgresLibraryRepository:
                                    .order_by(StoredCorrection.created_at, StoredCorrection.id)).all()
             return [Correction(row.id, row.correction, row.created_at) for row in rows]
 
-    def add_correction(self, user_id: UUID, work_id: UUID, correction: dict, source: bytes) -> bool:
-        """The corrected file and the correction together; False when the work is not the user's or its owner already
-        has a work with that file."""
+    def add_corrections(self, user_id: UUID, work_id: UUID, corrections: list[dict], source: bytes) -> bool:
+        """The corrected file and its corrections together, in order; False when the work is not the user's or its owner
+        already has a work with that file."""
         try:
             with Session(self.engine) as session, session.begin():
                 if not self._replace(session, user_id, work_id, source):
                     return False
-                session.add(StoredCorrection(id=uuid4(), work_id=work_id, user_id=user_id, correction=correction,
-                                             created_at=func.clock_timestamp()))
+                for correction in corrections:
+                    session.add(StoredCorrection(id=uuid4(), work_id=work_id, user_id=user_id, correction=correction,
+                                                 created_at=func.clock_timestamp()))
+                    session.flush()
                 return True
         except IntegrityError:
             return False
