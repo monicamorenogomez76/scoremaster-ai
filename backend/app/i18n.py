@@ -9,6 +9,7 @@ from typing import Optional
 EN = {
     # Corrected notes (2026-11-22)
     "La obra no tiene correcciones.": "The work has no corrections.",
+    "Ese compás no está en esa parte.": "That measure is not in that part.",
     "Ya tienes otra obra con este mismo archivo: no se pudo guardar la corrección.":
         "You already have another work with this same file: the correction could not be saved.",
     "La corrección no es una nota válida.": "The correction is not a valid note.",

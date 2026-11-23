@@ -996,6 +996,28 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .reading-doubt-check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
 .reading-doubt-check input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--primary); }
 
+/* The correction of notes, above the score (2026-11-22). */
+.note-corrections { margin: 0 0 16px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.note-corrections summary { display: flex; align-items: center; min-height: 44px; font-weight: 600; cursor: pointer; }
+.note-corrections summary:hover { color: var(--primary); }
+.note-corrections summary:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.note-corrections-find { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 16px; margin: 8px 0; }
+.note-corrections-find label, .note-corrections-pitch label { display: grid; gap: 4px; font-weight: 600; }
+.note-corrections-find input { width: 7rem; }
+.note-corrections-find .secondary-action { min-height: 44px; }
+.note-corrections-edit fieldset { display: grid; gap: 8px; margin: 8px 0; padding: 8px 16px; border: 1px solid var(--line); border-radius: 8px; }
+.note-corrections-edit legend { padding: 0 4px; font-weight: 600; }
+.note-corrections-edit legend:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.note-corrections-choice, .note-corrections-kind label { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
+.note-corrections-choice input, .note-corrections-kind input { flex: none; width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--primary); }
+.note-corrections-kind { display: flex; flex-wrap: wrap; gap: 0 24px; }
+.note-corrections-pitch { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.note-corrections-preview { margin: 0; font-size: 1.1rem; }
+.note-corrections-edit .primary-action { justify-self: start; }
+.note-corrections-title { margin: 16px 0 8px; font-size: 1rem; }
+.note-corrections-list { margin: 0 0 8px; padding-left: 24px; line-height: 1.5; }
+.reading-doubt-correct { min-height: 44px; }
+
 /* Printable sheet of a rehearsal: hidden on screen; when printing it is the only thing on the page. */
 .rehearsal-sheet { display: none; }
 @media print {

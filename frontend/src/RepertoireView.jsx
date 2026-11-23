@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DifficultyPanel, PublishedGrades, WorkExplanation } from './DifficultyView.jsx';
 import { MusicalAnalysis } from './MusicalAnalysis.jsx';
 import { OverviewPanel } from './OverviewView.jsx';
 import { PdfUpload } from './PdfUpload.jsx';
 import { PdfCompare } from './score/PdfCompare.jsx';
+import { NoteCorrections } from './score/NoteCorrections.jsx';
 import { ReadingDoubts } from './score/ReadingDoubts.jsx';
 import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
@@ -22,6 +23,8 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
   const data = analysis?.data;
   const detail = mode === 'detail' && Boolean(data);
   const busy = upload.state.busy;
+  // A reader's doubt opens the correction of notes on its part and measure (2026-11-22).
+  const [correcting, setCorrecting] = useState(null);
   const action = <button id="add-work" className="primary-action" type="button" onClick={() => onModeChange('add')}>{t('Añadir obra')}</button>;
   return <View name="repertoire" active={active} eyebrow={t('Biblioteca')} title={t('Repertorio')}
     description={t('Tus obras, su estado de preparación y su análisis.')} action={action}>
@@ -55,7 +58,10 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
           aria-selected={tab === name} aria-controls={'work-panel-' + name} onClick={() => onTabChange(name)}>{label}</button>)}
       </div>
       <div id="work-panel-score" role="tabpanel" aria-labelledby="work-tab-score" hidden={tab !== 'score'}>
-        {data?.work_id && <ReadingDoubts workId={data.work_id} doubts={data.reading_doubts} onOpenPassage={onOpenPassage} />}
+        {data?.work_id && <ReadingDoubts workId={data.work_id} doubts={data.reading_doubts} onOpenPassage={onOpenPassage}
+          onCorrect={(part, passage) => setCorrecting({ workId: data.work_id, part, passage })} />}
+        {data?.work_id && <NoteCorrections key={data.work_id} workId={data.work_id} target={correcting?.workId === data.work_id ? correcting : null}
+          onCorrected={() => onOpenWork(data.work_id)} />}
         <PdfCompare workId={data?.work_id}>{scoreViewer}</PdfCompare></div>
       <div id="work-panel-difficulty" role="tabpanel" aria-labelledby="work-tab-difficulty" hidden={tab !== 'difficulty'}>
         {/* First in the tab, where it is seen without scrolling (2026-10-07: «¿dónde lo veo?»). */}

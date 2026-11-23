@@ -90,3 +90,15 @@ def test_a_note_that_is_not_there_is_never_guessed():
         correct_musicxml(work(), NoteCorrection(part_id="P1", measure=7, offset=0.0, old=("C", 0, 5), new=("D", 0, 5)))
     with pytest.raises(CannotCorrect, match="acorde"):
         correct_musicxml(work(), NoteCorrection(part_id="P1", measure=2, offset=1.0, old=("E", 0, 5), new=None))
+
+
+def test_the_notes_of_a_measure_are_listed_as_a_correction_names_them():
+    from backend.parsers.note_corrections import measure_notes, note_parts
+    assert note_parts(work()) == [{"id": "P1", "name": "Clarinet in Bb"}]
+    found = measure_notes(work(), "P1", "1")
+    assert found["measure"] == 1 and found["number"] == "1"
+    assert [(round(item["offset"], 3), item["pitch"], item["type"], item["chord"]) for item in found["notes"]] == [
+        (0.0, ["C", 0, 5], "eighth", False), (0.333, None, "eighth", False), (0.667, ["E", 0, 5], "eighth", False),
+        (1.0, ["G", 0, 5], "quarter", False)]
+    assert [item["chord"] for item in measure_notes(work(), "P1", "2")["notes"]] == [False, False, True]
+    assert measure_notes(work(), "P1", "9") is None and measure_notes(work(), "P9", "1") is None
