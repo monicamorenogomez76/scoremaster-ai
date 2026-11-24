@@ -19,6 +19,7 @@ from backend.domain.timing import is_attack, sounding_pitches
 # Usual substitutes in band arrangements, the most common first.
 USUAL = {
     "piccolo": ("flute", "clarinet.eb"),
+    "piccolo.db": ("piccolo", "flute", "clarinet.eb"),
     "flute": ("piccolo", "oboe", "clarinet.bb", "saxophone.soprano"),
     "flute.alto": ("flute", "clarinet.bb"),
     "oboe": ("flute", "clarinet.bb", "saxophone.soprano", "trumpet.bb"),

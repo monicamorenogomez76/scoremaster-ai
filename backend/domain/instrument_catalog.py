@@ -31,7 +31,8 @@ _NUMBER = r"\b(?:\d+|vi|iv|v|iii|ii|i)\b"
 # "Horn 1 & 2", "Flute 1/2", "Trompas 1 y 2", "Trompa 3-4" share one staff between several players.
 _TRAILING_PARTS = re.compile(r"\s+(" + _NUMBER + r"(?:(?:\s*(?:&|/|,|\band\b|\by\b|\bi\b|\bund\b|\bet\b)\s*|\s+)"
                              + _NUMBER + r")*)$")
-_LEADING_ORDINAL = re.compile(r"^(\d+)(?:st|nd|rd|th|o|a)\s+")
+# One ordinal or several before the name («1st & 2nd Trombones», «3rd & 4th Altos»: old American band editions).
+_LEADING_ORDINAL = re.compile(r"^(\d+)(?:st|nd|rd|th|o|a)((?:\s*(?:&|and|y|/|,)\s*\d+(?:st|nd|rd|th|o|a))*)\s+")
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,8 @@ def _prepare(name: str) -> str:
     text = re.sub(r"\b([a-g])[\s-]*flat\b", r"\1b", text)
     text = re.sub(r"[^a-z0-9#&/]+", " ", text)
     text = _keys(" ".join(text.split()))
+    # The notes the timpani are tuned to are no key of the instrument («Timpany in B♭ & F», 2026-11-23).
+    text = re.sub(r"^(timpan\w*|timbal\w*|pauken|kettle ?drums?) k[a-g]b?\b.*$", r"\1", text)
     return " ".join(text.split())
 
 
@@ -136,6 +139,7 @@ def _split_part_numbers(prepared: str) -> tuple[str, tuple[int, ...]]:
     leading = _LEADING_ORDINAL.match(prepared)
     if leading:
         numbers.append(int(leading.group(1)))
+        numbers.extend(int(found) for found in re.findall(r"\d+", leading.group(2)))
         prepared = prepared[leading.end():]
     prepared = _ORDINAL_MARK.sub(r"\1", prepared)
     key_after = _KEY_AFTER_PARTS.search(prepared)

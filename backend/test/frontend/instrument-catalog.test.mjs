@@ -41,7 +41,7 @@ test('a new instrument takes its key and its names one per line', () => {
 
 test('the administration reads and changes the catalog through the API', async () => {
   const calls = fakeServer({
-    'GET /admin/instruments': [200, { instruments: catalog, version: 'instrument-catalog-v10', sounds: ['oboe'] }],
+    'GET /admin/instruments': [200, { instruments: catalog, version: 'instrument-catalog-v11', sounds: ['oboe'] }],
     'POST /admin/instruments/flugelhorn.bb/names': [201, { id: 4, name: 'Fiscornio' }],
     'DELETE /admin/instruments/names/4': [204, null],
     'POST /admin/instruments': [201, { canonical_id: 'dulzaina' }],

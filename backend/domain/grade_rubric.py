@@ -60,7 +60,7 @@ RANGES: dict[str, dict[int, tuple[tuple[str, str], tuple[str, str]]]] = {
 CONCERT_PITCH_ROWS = frozenset({"bassoon", "trombone_baritone", "trombone_bass", "tuba"})
 # The chart has no row for piccolo, E-flat clarinet, cornet or flugelhorn: they read as the closest instrument.
 RANGE_ROW_BY_INSTRUMENT = {
-    "piccolo": "flute", "flute": "flute", "flute.alto": "flute",
+    "piccolo": "flute", "piccolo.db": "flute", "flute": "flute", "flute.alto": "flute",
     "oboe": "oboe", "english_horn": "oboe",
     "bassoon": "bassoon",
     "clarinet.eb": "clarinet", "clarinet.bb": "clarinet", "clarinet.a": "clarinet",
