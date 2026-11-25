@@ -156,8 +156,8 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 **Crear el repositorio del lector** (una vez)
 
 1. En GitHub, **New repository** → `scoremaster-omr`, **Public**, sin README.
-2. Desde ScoreMaster, con `gh` autenticado: `scripts/deploy_omr_worker.sh <usuario>/scoremaster-omr`. Copia solo el
-   *workflow*, sin secretos. Solo hay que repetirlo si cambia `omr/workflow/read-pdf.yml`.
+2. Desde ScoreMaster, con `gh` autenticado: `scripts/deploy_omr_worker.sh <usuario>/scoremaster-omr`. Copia el
+   *workflow* y el README, sin secretos. Solo hay que repetirlo si cambia `omr/workflow/read-pdf.yml` u `omr/README.md`.
 3. **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**:
    - **Repository access:** *Only select repositories* → `scoremaster-omr`;
    - **Permissions → Contents: Read and write** (lo exige `repository_dispatch`);
@@ -188,6 +188,11 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   la pestaña Partitura los muestra por parte («Dudas del lector de PDF»), cada pasaje se abre para compararlo con el PDF
   y la parte se marca como revisada (se guarda en `works.reading_doubts`, migración 0027). Sin guion, la obra sale de
   las particellas y no hay dudas.
+- **Claves confundidas:** en algunas páginas copista da clave de fa a trompetas y trompas, o clave de sol a trombones y tuba. Se
+  revisa cada tramo con la clave en duda y se queda la clave con la que el resto de la banda dobla sus notas, sin contar
+  las partes también dudosas (`backend/parsers/pdf_clefs.py`).
+- **Alteraciones sin signo:** copista pone a veces una alteración que la página no escribe. Se quita si al menos tres partes
+  atacan a la vez la nota escrita y ninguna toca la leída (`backend/parsers/pdf_alterations.py`).
 - **Páginas partidas:** copista parte a veces una página del guion en bloques: ve menos pentagramas y repite los
   compases. Si una página tiene menos pentagramas y casi el doble de compases que las demás, se toma como mal leída
   aunque el margen no lo diga, y se queda con sus compases reales (sin los vacíos y dividida entre los bloques), que se

@@ -1,9 +1,9 @@
 #!/bin/sh
-# Publishes the PDF reader's workflow to its private GitHub repository (scoremaster-omr), where GitHub Actions runs it
+# Publishes the PDF reader's workflow to its public GitHub repository (scoremaster-omr), where GitHub Actions runs it
 # (2026-10-27). The reader's code is not copied: the workflow checks it out from ScoreMaster's main branch at every
-# reading (2026-10-28), so this is only needed when omr/workflow/read-pdf.yml changes.
+# reading (2026-10-28), so this is only needed when omr/workflow/read-pdf.yml or omr/README.md changes.
 # Usage: scripts/deploy_omr_worker.sh <user>/<repository>   e.g. scripts/deploy_omr_worker.sh monica/scoremaster-omr
-# Before: create the repository (private, empty) on GitHub; `gh auth login` already works on this machine. No secret
+# Before: create the repository (public, empty) on GitHub; `gh auth login` already works on this machine. No secret
 # is written here or in the repository: ScoreMaster sends a one-time token with each reading.
 set -eu
 cd "$(dirname "$0")/.."
@@ -17,7 +17,7 @@ mkdir -p "$work/worker/.github/workflows"
 cp omr/workflow/read-pdf.yml "$work/worker/.github/workflows/read-pdf.yml"
 cp omr/NOTICE "$work/worker/NOTICE"
 cp LICENSE "$work/worker/LICENSE"
-printf '# ScoreMaster OMR\n\nLector de PDF de ScoreMaster (copista-2m). El código está en `omr/` del repositorio de ScoreMaster y se\ndescarga de su rama main en cada lectura. Lo lanza ScoreMaster; no se usa a mano.\n' > "$work/worker/README.md"
+cp omr/README.md "$work/worker/README.md"
 cd "$work/worker"
 # GitHub runs repository_dispatch workflows only on the default branch: main.
 git checkout --quiet -B main
