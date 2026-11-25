@@ -33,7 +33,7 @@ from backend.app.instrument_routes import (confirmable_ids, learn_confirmations,
                                            router as instrument_router)
 from backend.app.rehearsal_routes import router as rehearsal_router
 from backend.app.pdf_routes import OneReadingAtATime, router as pdf_router
-from backend.app.stored_scores import kept_work, prepare_in_own_process, prepare_missing_works
+from backend.app.stored_scores import kept_work, prepare_in_own_process, prepare_missing_works, timeline_in_own_process
 from backend.app.work_analysis import analyze_and_store, refresh_outdated_analyses, repair_pdf_works
 from backend.app.youtube import search_videos
 from backend.app.dependencies import (
@@ -46,8 +46,8 @@ from backend.application.library import LibraryRepository
 from backend.domain.models import Score
 from backend.infrastructure.instrument_repository import PostgresInstrumentRepository
 from backend.parsers.musicxml_source import extract_musicxml
-from backend.parsers.playback import (NotMusicXML, StillPreparing, build_playback, is_prepared, prepare_playback, preparation_enabled,
-                                      preparation_status)
+from backend.parsers.playback import (NotMusicXML, StillPreparing, WorkTooLarge, build_playback, is_prepared, prepare_playback, preparation_enabled,
+                                      preparation_status, read_large_works_with)
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -64,12 +64,14 @@ async def lifespan(app):
     # Works uploaded before are read once in the background, so the first proposal or passage after
     # a deploy does not wait minutes for music21 (Render's free plan, 2026-10-07).
     score_store, playback_store = get_score_store(), get_playback_store()
+    read_large_works_with(timeline_in_own_process if preparation_enabled() else None)
     if preparation_enabled() and score_store is not None and playback_store is not None:
         Thread(target=_prepare_missing, args=(score_store, playback_store), daemon=True, name='prepare-works').start()
     try:
         yield
     finally:
         ai_usage.use_recorder(None)
+        read_large_works_with(None)
         close_analysis_engine()
 
 
@@ -268,6 +270,8 @@ def playback(
         raise
     except NotMusicXML as exc:
         raise HTTPException(status_code=400, detail="La partitura no es MusicXML válido.") from exc
+    except WorkTooLarge as exc:
+        raise HTTPException(status_code=400, detail="La obra es demasiado grande para preparar su audio en este servidor.") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail="No se pudo preparar el audio del pasaje.") from exc
 

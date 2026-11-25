@@ -18,7 +18,7 @@ from uuid import UUID
 from backend.application.library import LibraryRepository
 from backend.domain.models import Score
 from backend.parsers.musicxml_parser import parse_musicxml
-from backend.parsers.playback import TIMELINE_VERSION, PreparedStore, prepare_playback
+from backend.parsers.playback import TIMELINE_VERSION, PreparedStore, WorkTooLarge, prepare_playback
 from backend.parsers.reader import StartupStopped, read, startup_turn
 from backend.parsers.score_codec import SCORE_VERSION, decode_score, encode_score
 
@@ -140,13 +140,26 @@ def stored_score(library: LibraryRepository, user_id: UUID, work_id: UUID,
     return work.title, parse_source(found[0], overrides, store)
 
 
+def _in_own_process(kind: str, source: bytes) -> bytes:
+    return subprocess.run([sys.executable, "-m", "backend.app.prepare_child", kind], input=source, capture_output=True,
+                          timeout=PREPARING_SECONDS, check=True).stdout
+
+
+def timeline_in_own_process(source: bytes) -> bytes:
+    """The audio of a work asked for while the server works (2026-11-25): out of memory, its process dies and not the server."""
+    try:
+        return _in_own_process("playback", source)
+    except (subprocess.SubprocessError, OSError) as failed:
+        logger.warning("No se pudo preparar el audio de una obra grande en su propio proceso (salida %s).", getattr(failed, "returncode", None))
+        raise WorkTooLarge from None
+
+
 def prepare_in_own_process(kind: str, source: bytes, store) -> None:
     """The model ("score") or the audio of a work of the startup, read by a process that gives all its memory back. Whatever
     fails is left for the next start."""
     try:
-        done = subprocess.run([sys.executable, "-m", "backend.app.prepare_child", kind], input=source, capture_output=True,
-                              timeout=PREPARING_SECONDS, check=True)
-        store.save(sha256(source).hexdigest(), SCORE_VERSION if kind == "score" else TIMELINE_VERSION, done.stdout)
+        done = _in_own_process(kind, source)
+        store.save(sha256(source).hexdigest(), SCORE_VERSION if kind == "score" else TIMELINE_VERSION, done)
     except subprocess.CalledProcessError as failed:
         # Only the name of the error: its message may carry the address of the database. Killed for memory, it leaves none.
         lines = (failed.stderr or b"").decode(errors="replace").strip().splitlines()

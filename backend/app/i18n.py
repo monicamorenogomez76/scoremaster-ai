@@ -51,6 +51,7 @@ EN = {
     "La partitura supera 8 MB.": "The score is larger than 8 MB.",
     "La partitura descomprimida supera 20 MB.": "The uncompressed score is larger than 20 MB.",
     "El rango de compases no es válido.": "The measure range is not valid.",
+    "La obra es demasiado grande para preparar su audio en este servidor.": "The work is too large to prepare its audio on this server.",
     "No se pudo preparar el audio del pasaje.": "Could not prepare the audio of the passage.",
     "Estado de preparación desconocido.": "Unknown preparation status.",
     "Indica la editorial o el catálogo.": "Give the publisher or the catalogue.",
