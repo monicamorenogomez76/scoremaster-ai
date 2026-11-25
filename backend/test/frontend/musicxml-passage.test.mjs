@@ -30,3 +30,16 @@ test('the pages of the sheets of the parts are not pages of the work', async () 
   const { pageStarts } = await import('../../../frontend/src/score/musicxml-passage.js');
   assert.deepEqual(pageStarts(work(part('P1', 12, [5, 9]), part('P2', 12, [7]), part('P3', 12, [6, 11]))), [], 'each sheet turns elsewhere');
 });
+
+// 2026-11-25, «The Ride of the Valkyries»: thirty-one parts read without a score had from 78 to 158 measures, so they
+// sounded out of step, and nothing said so.
+test('the parts with other measures than the rest are told', async () => {
+  const { unevenParts } = await import('../../../frontend/src/score/musicxml-passage.js');
+  const named = (...parts) => `<score-partwise><part-list>${parts.map(([id, name]) => `<score-part id="${id}"><part-name>${name}</part-name></score-part>`).join('')}</part-list>${
+    parts.map(([id, , last]) => part(id, last, [])).join('')}</score-partwise>`;
+  assert.equal(unevenParts(named(['P1', 'Flute', 12], ['P2', 'Oboe', 12])), null);
+  assert.equal(unevenParts(named(['P1', 'Flute', 12])), null);
+  assert.equal(unevenParts(''), null);
+  assert.deepEqual(unevenParts(named(['P1', 'Flute', 12], ['P2', 'Cor &amp; Alto', 9], ['P3', 'Tuba', 12], ['P4', 'Drums', 14])),
+    { least: 9, most: 14, parts: [{ name: 'Flute', measures: 12 }, { name: 'Cor & Alto', measures: 9 }, { name: 'Tuba', measures: 12 }, { name: 'Drums', measures: 14 }] });
+});

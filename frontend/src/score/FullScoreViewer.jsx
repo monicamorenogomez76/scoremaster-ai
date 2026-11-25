@@ -132,6 +132,12 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
       playDisabled={!view.loaded} stopDisabled={!view.loaded} onStop={stop} onFullscreen={fullscreen} isFullscreen={isFullscreen} />
     <p id="ensemble-status" className="loading-status" role="status" aria-live="polite" aria-busy={transport.loading}>{transport.status}</p>
     <p id="full-score-status" className="loading-status" role="status" aria-live="polite" aria-busy={view.busy}>{view.status}</p>
+    {view.uneven && <div id="score-uneven" className="score-uneven" role="note">
+      <p><strong>{t('Las partes no tienen los mismos compases: de {least} a {most}.', { least: view.uneven.least, most: view.uneven.most })}</strong> {t('Suenan desincronizadas y los resultados pueden no ser fiables. Pasa cuando un PDF trae particellas sin guion y el lector pierde o añade compases.')}</p>
+      <details><summary>{t('Compases de cada parte')}</summary>
+        <ul>{view.uneven.parts.map((part, at) => <li key={at}>{t('{part}: {count} compases', { part: part.name, count: part.measures })}</li>)}</ul>
+      </details>
+    </div>}
     <div className="score-toolbar" aria-label={t('Navegación de la partitura completa')}>
       {tool('score-prev', t('Página anterior'), () => renderer.current.previous(), <Icon path="m15 4-8 8 8 8 2-2-6-6 6-6z" />, !view.canPrevious)}
       <span id="score-page" className="score-page-label">{view.page}</span>

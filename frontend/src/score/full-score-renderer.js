@@ -135,7 +135,7 @@ function notesOf(display) {
 
 export const pageStartFor = (first, measure) => first + Math.floor((measure - first) / MEASURES_PER_PAGE) * MEASURES_PER_PAGE;
 
-const idle = { visible: false, status: '', busy: false, page: '', canPrevious: false, canNext: false, zoomLabel: 'Auto', loaded: false };
+const idle = { visible: false, status: '', busy: false, page: '', canPrevious: false, canNext: false, zoomLabel: 'Auto', loaded: false, uneven: null };
 
 // Renders the whole ensemble with OpenSheetMusicDisplay, in pages of up to four measures in a single line.
 // React owns the controls; this object owns only the notation inside `container`.
@@ -362,7 +362,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
         selection = resume.selection;
         resume = null;
       }
-      publish({ loaded: true });
+      publish({ loaded: true, uneven: score.uneven || null });
       await renderPage();
     } catch (error) {
       if (version === session.getVersion()) publish({ status: error.message, busy: false });
