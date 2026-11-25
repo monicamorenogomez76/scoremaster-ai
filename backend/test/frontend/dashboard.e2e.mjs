@@ -168,6 +168,8 @@ try {
   assert.equal(await videos.locator('iframe').count(), 0);
   await manualLink.fill('https://youtu.be/dQw4w9WgXcQ');
   await videos.getByRole('button', { name: 'Reproducir enlace' }).click();
+  assert.equal(await videos.locator('iframe').count(), 0, 'YouTube is not loaded without permission');
+  await videos.getByRole('button', { name: 'Permitir vídeos de YouTube' }).click();
   assert.equal(await videos.locator('iframe').getAttribute('src'), 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
   await page.unroute('**/youtube/search?*');
   console.log('PASS: video search falls back to a YouTube link and plays only valid links');

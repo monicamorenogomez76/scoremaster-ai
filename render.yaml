@@ -41,6 +41,10 @@ services:
         sync: false
       - key: GOOGLE_REDIRECT_URI
         sync: false
+      - key: PRIVACY_CONTROLLER
+        sync: false          # who answers for the personal data; the privacy policy shows it
+      - key: PRIVACY_EMAIL
+        sync: false          # the contact to exercise the rights; the privacy policy shows it
       - key: BREVO_API_KEY
         sync: false          # optional: password recovery by email stays off while it, MAIL_FROM or APP_BASE_URL is empty
       - key: MAIL_FROM

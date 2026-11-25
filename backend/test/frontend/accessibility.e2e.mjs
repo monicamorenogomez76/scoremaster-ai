@@ -33,7 +33,19 @@ try {
     const page = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 900 }, colorScheme: scheme, reducedMotion: 'reduce', bypassCSP: true });
     await page.goto(url);
     await page.locator('#login-screen').waitFor({ state: 'visible' });
+    await page.locator('#cookie-notice').waitFor();
     await audit(page, `access screen (${scheme})`);
+    // The privacy policy opens from the notice, over the screen, and closing it leaves no trace in the address.
+    await page.locator('#cookie-notice .privacy-link').click();
+    await page.locator('#privacy-policy h3').first().waitFor();
+    await audit(page, `privacy policy (${scheme})`);
+    await page.locator('#privacy-close').click();
+    await page.waitForFunction(() => !window.location.hash);
+    await page.locator('#cookie-accept').click();
+    await page.locator('#cookie-notice').waitFor({ state: 'detached' });
+    await page.reload();
+    await page.locator('#login-screen').waitFor({ state: 'visible' });
+    if (await page.locator('#cookie-notice').count()) throw new Error('the notice comes back once read');
     // Password recovery: asking for the link, and the form a link opens (this one is not valid).
     await page.locator('#login-forgot').click();
     await page.locator('#login-email').fill('nadie@banda.test');
@@ -74,6 +86,7 @@ try {
   // Configuración › Instrumentos is shown only to the administration (ADMIN_EMAILS has this account in CI).
   const admin = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', bypassCSP: true });
   await admin.goto(url);
+  await admin.locator('#cookie-accept').click();
   const adminEmail = process.env.E2E_A11Y_ADMIN_EMAIL || 'admin-a11y@banda.test';
   for (const mode of ['register', 'sign in']) {   // the account may exist from an earlier run
     await admin.locator('#login-mode').click();

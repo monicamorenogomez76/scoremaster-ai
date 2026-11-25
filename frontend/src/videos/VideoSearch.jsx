@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../api.js';
 import { MAX_QUERY, embedUrl, initialVideoQuery, isVideoId, parseYouTubeVideoId, safeSearchUrl, searchStatus } from './youtube.js';
+import { allowYouTube, youTubeAllowed } from '../privacy.js';
 import { t } from '../i18n.js';
 
 // Searches through the server (the YouTube key never reaches the browser) and embeds the
@@ -10,6 +11,9 @@ export function VideoSearch({ title, composer, fileName }) {
   const [search, setSearch] = useState(() => ({ status: t('Buscando coincidencias…'), videos: [], searchUrl: '', searched: '' }));
   const [selected, setSelected] = useState(null);
   const [link, setLink] = useState('');
+  // Nothing is asked of YouTube by this browser, its thumbnails included, until the director allows it (2026-11-25).
+  const [allowed, setAllowed] = useState(youTubeAllowed);
+  const allow = () => { allowYouTube(true); setAllowed(true); };
   const manual = useRef(null), request = useRef(0);
 
   const run = useCallback(async value => {
@@ -51,7 +55,11 @@ export function VideoSearch({ title, composer, fileName }) {
     </form>
     <p className="result-supporting" role="status">{search.status}</p>
     {selected && <h3 className="video-selected-title">{selected.title}</h3>}
-    {selected && <div className="video-player">
+    {selected && !allowed && <div className="video-permission">
+      <p>{t('Para ver el vídeo hay que cargar YouTube, que recibe tu dirección IP y puede guardar datos en tu navegador. Puedes retirar el permiso en Configuración.')}</p>
+      <button type="button" className="primary-action" onClick={allow}>{t('Permitir vídeos de YouTube')}</button>
+    </div>}
+    {selected && allowed && <div className="video-player">
       <iframe key={selected.id} src={embedUrl(selected.id)} title={t('Vídeo de YouTube seleccionado')} loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
@@ -60,7 +68,7 @@ export function VideoSearch({ title, composer, fileName }) {
       const active = selected?.id === video.video_id;
       return <button key={video.video_id} type="button" className={'video-result' + (active ? ' is-selected' : '')} aria-pressed={active}
         onClick={() => setSelected({ id: video.video_id, title: video.title })}>
-        <img src={video.thumbnail} alt="" loading="lazy" />
+        {allowed && <img src={video.thumbnail} alt="" loading="lazy" />}
         <span className="video-result-copy"><strong>{video.title}</strong><span>{video.channel}</span></span>
       </button>;
     })}</div>

@@ -1147,3 +1147,18 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .work-map-phrase--open-start { border-left: 0; border-top-left-radius: 0; }
 .work-map-phrase--open-end { border-right: 0; border-top-right-radius: 0; }
 .score-map-lane .work-map-key { line-height: 24px; }
+/* The cookie notice and the privacy policy (2026-11-25). */
+.cookie-notice { position: fixed; z-index: 20; right: 16px; bottom: 16px; left: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; max-width: 960px; margin: 0 auto; padding: 16px 24px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow-1); }
+/* Nothing stays under the notice: the page ends above it, and what takes the focus is scrolled clear of it. */
+html:has(.cookie-notice) { scroll-padding-bottom: 240px; }
+body:has(.cookie-notice) { padding-bottom: 240px; }
+.cookie-notice p { flex: 1 1 320px; margin: 0; font-size: .9rem; line-height: 1.5; }
+.privacy-link { display: inline-block; padding: 12px 0; color: var(--primary); }
+.privacy-link:hover { text-decoration-thickness: 2px; }
+.privacy-link:active { color: var(--primary-strong); }
+.privacy-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 24px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--panel); color: var(--ink); line-height: 1.6; box-sizing: border-box; }
+.privacy-dialog::backdrop { background: var(--backdrop); }
+.privacy-dialog h2 { margin: 0 0 16px; }
+.privacy-dialog h3 { margin: 24px 0 8px; font-size: 1.05rem; }
+.privacy-dialog ul { margin: 0 0 8px; padding-left: 24px; }
+.video-permission { margin: 8px 0 16px; padding: 16px; border: 1px solid var(--line-strong); border-radius: 12px; line-height: 1.5; }

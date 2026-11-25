@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { authConfig, register, requestPasswordReset, resetPassword, resetTokenFrom, signIn } from './api.js';
+import { PrivacyLink } from './Privacy.jsx';
 import { t } from './i18n.js';
 
 const titles = () => ({
@@ -72,6 +73,7 @@ export function LoginScreen({ hidden, onSignedIn, notice }) {
           <input id="login-password" type="password" required minLength={newPassword ? 10 : undefined} maxLength={256}
             autoComplete={newPassword ? 'new-password' : 'current-password'} value={form.password} onChange={update('password')} /></label>}
         {newPassword && <p className="result-supporting">{t('Al menos 10 caracteres.')}</p>}
+        {creating && <p className="result-supporting">{t('Usamos tu nombre y tu email para darte acceso y guardar tu trabajo. Puedes pedir que se borren cuando quieras.')}</p>}
         {state.error && <p id="login-error" className="login-error" role="alert">{state.error}</p>}
         <div role="status">{state.notice && <p id="login-notice" className="login-note">{state.notice}</p>}</div>
         <button id="login-submit" className="login-demo-button" type="submit" disabled={state.busy}>
@@ -83,6 +85,7 @@ export function LoginScreen({ hidden, onSignedIn, notice }) {
           onClick={() => switchTo(mode === 'login' ? 'register' : 'login')}>
           {mode === 'login' ? t('Crear una cuenta') : creating ? t('Ya tengo cuenta') : t('Volver a entrar')}</button>
         {mode === 'login' && config.demo_email && <div className="login-note">{t('Usuario de prueba:')} <strong>{config.demo_email}</strong>. {t('La contraseña está en el README.')}</div>}
+        <PrivacyLink />
       </form>
     </div>
   </section>;
