@@ -13,7 +13,7 @@ try {
   await page.goto(process.env.SCOREMASTER_URL || 'http://127.0.0.1:8006');
   await page.addScriptTag({ content: banks + '\nwindow.recordedPreset = recordedPreset;' });
   const level = await page.evaluate(async () => {
-    const { Sampler } = await import('https://unpkg.com/smplr@1.1.0/dist/index.mjs');
+    const { Sampler } = await import('/static/frontend/vendor/smplr-1.1.0.mjs');
     const context = new OfflineAudioContext(1, 44100 * 2, 44100);
     const sampler = Sampler(context, { preset: window.recordedPreset('clarinet', [62]), destination: context.destination });
     await sampler.ready;

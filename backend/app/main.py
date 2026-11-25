@@ -144,12 +144,13 @@ app.include_router(instrument_router)
 app.include_router(ai_usage_router)
 app.add_middleware(OneReadingAtATime)
 
-# The score viewer, the samples and the video search load from these CDNs; nothing else runs scripts.
+# The app serves its own scripts, styles and fonts (2026-11-25); only the samples of the playback and the videos, asked for
+# by the user, come from other sites.
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
-    "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data: blob: https://i.ytimg.com",
     "media-src 'self' data: blob: https:",
     "connect-src 'self' https:",

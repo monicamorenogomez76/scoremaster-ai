@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch();
 const page = await browser.newPage({ locale: 'es-ES', viewport: { width: 1440, height: 1000 } });
-await page.route('https://unpkg.com/smplr@1.1.0/dist/index.mjs', route => route.fulfill({ contentType: 'text/javascript', body: 'export function Soundfont() { return { ready: Promise.resolve(), start() {}, stop() {}, dispose() {} }; }' }));
+await page.route('**/vendor/smplr-1.1.0.mjs', route => route.fulfill({ contentType: 'text/javascript', body: 'export function Soundfont() { return { ready: Promise.resolve(), start() {}, stop() {}, dispose() {} }; }' }));
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const score = name => `<?xml version="1.0"?><score-partwise version="4.0"><work><work-title>Synthetic workflow test</work-title></work><part-list><score-part id="P1"><part-name>${name}</part-name><score-instrument id="I1"><instrument-name>${name === 'Voice' ? 'Voice Oohs' : name}</instrument-name></score-instrument><midi-instrument id="I1"><midi-channel>1</midi-channel><midi-program>${name === 'Voice' ? 54 : 74}</midi-program></midi-instrument></score-part></part-list><part id="P1"><measure number="1"><attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note></measure></part></score-partwise>`;
