@@ -10,6 +10,7 @@ from tempfile import NamedTemporaryFile
 import zlib
 
 from backend.parsers.musicxml_parser import parse_musicxml
+from backend.parsers.pdf_alterations import fix_unwritten_alterations
 from backend.parsers.pdf_measures import fit_measures, number_like_the_pdf
 from backend.parsers.pdf_transpositions import add_transpositions, fix_key_signatures
 from backend.parsers.playback import TIMELINE_VERSION, encode_timeline, timeline_has_parts
@@ -45,7 +46,8 @@ def final_musicxml(read: bytes, learned: dict | None, concert_pitch: bool, sourc
     # Numbered as the PDF prints them: an upbeat is measure 0 (2026-11-22), before it is completed with silence.
     content = add_transpositions(fit_measures(number_like_the_pdf(read)), learned, concert_pitch, source)
     # A key signature the reader missed in a transposed part is taken from the band.
-    return fix_key_signatures(content)
+    # An alteration the page does not print is kept only while the band does not disprove it (2026-11-25).
+    return fix_unwritten_alterations(fix_key_signatures(content))
 
 
 def finish_reading(read: bytes, learned: dict | None, concert_pitch: bool, source: str) -> dict:
