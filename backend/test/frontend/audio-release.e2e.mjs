@@ -6,10 +6,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch();
 try {
  const page = await browser.newPage({ locale: 'es-ES' });
- if (process.env.SMPLR_MODULE_FILE) await page.route('https://unpkg.com/smplr@1.1.0/dist/index.mjs', r => r.fulfill({ contentType: 'text/javascript', body: readFileSync(process.env.SMPLR_MODULE_FILE, 'utf8') }));
+ if (process.env.SMPLR_MODULE_FILE) await page.route('**/vendor/smplr-1.1.0.mjs', r => r.fulfill({ contentType: 'text/javascript', body: readFileSync(process.env.SMPLR_MODULE_FILE, 'utf8') }));
  await page.goto(process.env.SCOREMASTER_URL || 'http://127.0.0.1:8006');
  const result = await page.evaluate(async () => {
-  const { Instrument } = await import('https://unpkg.com/smplr@1.1.0/dist/index.mjs');
+  const { Instrument } = await import('/static/frontend/vendor/smplr-1.1.0.mjs');
   async function render(fixed) {
    const ctx = new OfflineAudioContext(1, 24000, 48000);
    const buffer = ctx.createBuffer(1, 48000, 48000);

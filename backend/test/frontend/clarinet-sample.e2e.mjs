@@ -9,7 +9,7 @@ const browser = await chromium.launch();
 try {
   const page = await browser.newPage({ locale: 'es-ES' });
   const urls = {
-    module: 'https://unpkg.com/smplr@1.1.0/dist/index.mjs',
+    module: new URL('/static/frontend/vendor/smplr-1.1.0.mjs', process.env.SCOREMASTER_URL || 'http://127.0.0.1:8006').href,
     sample: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/clarinet-mp3.js',
     loops: 'https://goldst.dev/midi-js-soundfonts/FluidR3_GM/clarinet-loop.json'
   };

@@ -125,7 +125,10 @@ def test_responses_carry_security_headers(client):
     headers = client.get("/health").headers
     assert headers["x-content-type-options"] == "nosniff"
     assert "frame-ancestors 'none'" in headers["content-security-policy"]
-    assert "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com" in headers["content-security-policy"]
+    # The app serves its scripts and fonts itself (2026-11-25): opening it sends nobody's address to another site.
+    policy = dict(part.strip().split(" ", 1) for part in headers["content-security-policy"].split(";"))
+    assert policy["script-src"] == "'self'" and policy["font-src"] == "'self'"
+    assert policy["style-src"] == "'self' 'unsafe-inline'"
     assert headers["referrer-policy"] == "strict-origin-when-cross-origin"
 
 

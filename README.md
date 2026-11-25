@@ -270,7 +270,7 @@ asistente de IA usado durante el desarrollo.
 - **Audio**: [smplr](https://github.com/danigb/smplr) (MIT) con grabaciones de
   [tonejs-instruments](https://github.com/nbrosowsky/tonejs-instruments) (VSCO 2 Community Edition y
   Karoryfer Samples, CC0; University of Iowa, sin restricciones) y la fuente General MIDI MusyngKite de
-  [midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) (CC BY-SA 3.0). Se descargan de sus
-  CDN durante la reproducción; no se incluyen en el repositorio.
+  [midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) (CC BY-SA 3.0). Los sonidos se descargan de sus
+  CDN durante la reproducción; no se incluyen en el repositorio. OpenSheetMusicDisplay y smplr los sirve la propia app.
 - **Tipografía**: Bricolage Grotesque y Outfit (SIL Open Font License), incluidas en el build con `@fontsource-variable`.
 - **Obras de la demo**: composiciones originales de este repositorio, CC0 ([demo/LICENSES.md](demo/LICENSES.md)).

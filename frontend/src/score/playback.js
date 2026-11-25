@@ -9,7 +9,7 @@ let pendingRequest;
 const wholeScoreCache = new WeakMap();
 let generation = 0;
 let library;
-const SMPLR_URL = 'https://unpkg.com/smplr@1.1.0/dist/index.mjs';
+const SMPLR_URL = '/static/frontend/vendor/smplr-1.1.0.mjs';
 // MusyngKite (CC BY-SA 3.0) sounds less synthetic than FluidR3_GM for winds; samples load from its CDN.
 const SOUNDFONT_KIT = 'MusyngKite';
 const RELEASE = .08;
