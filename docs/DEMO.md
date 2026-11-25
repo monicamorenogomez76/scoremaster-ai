@@ -1,6 +1,6 @@
 # Recorrido por la demo
 
-Recorrido de unos ocho minutos por ScoreMasterAI y qué mirar en cada paso.
+Recorrido de unos nueve minutos por ScoreMasterAI y qué mirar en cada paso.
 
 ## Acceso
 
@@ -25,14 +25,15 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
 | 4 | **Dificultad → Grado publicado** | Ver la tarjeta | El grado de una editorial se escribe a mano con su fuente y se compara con ScoreLint. La aplicación no lo busca ni se lo pide a la IA |
 | 5 | **Análisis** | Abrir la pestaña y pulsar una sección del mapa; después «Redactar el comentario» | Mapa de la obra en un solo eje de compases: forma, tonalidades, frases, temas, cadencias, dinámica y partes que tocan. Cada sección abre su ficha (material, frases, armonía, textura, orquestación, ritmo y dinámica). El comentario lo escribe la IA, o la demo identificada, a partir de esos datos |
 | 6 | **Partitura → «Ver el mapa de la obra»** | Activar el mapa y pasar de página | Las mismas franjas del mapa, recortadas a los compases de cada página, encima de la partitura |
-| 7 | **Preguntar** | Pulsar «¿Qué pasajes son los más difíciles?» y después escribir una pregunta propia | Las sugeridas responden con reglas, sin gastar cupo; la pregunta libre la responde la IA a partir de los datos que eligió leer, y dice cuáles. Los pasajes citados abren la partitura |
-| 8 | **Mi banda** | Ver la plantilla de la banda activa | Adecuación de la obra abierta: instrumentos que faltan o partes sin intérprete y, para las partes sin músico, qué instrumentos libres de la banda alcanzan su tesitura |
-| 9 | **Repertorio → «Preguntar al repertorio»** | Pulsar «¿Cuáles son las obras más fáciles?» y después preguntar, por ejemplo, «¿Qué obras de grado 3 puede tocar mi banda?» | ScoreMaster elige las obras filtrando sus análisis; la IA solo interpreta la pregunta y explica el resultado. Las obras citadas abren su ficha |
-| 10 | **Conciertos → Planificación** | Abrir el concierto de demostración | Serie de ensayos por fases hasta el ensayo general, con bloques por línea común, sección y tutti |
-| 11 | **Ensayos → «¿Por qué este plan?»** | Pedir la explicación de un ensayo | Razones citando bloques concretos, comprobados contra la agenda guardada |
-| 12 | **Valoraciones** | Pulsar «Empezar» en la campaña de demostración | La vista del músico: su perfil, cada pasaje con partitura y audio, y su valoración, sin la predicción de ScoreLint ni lo que han valorado otros. La vista de la directora (predicción, invitaciones, valoración con IA y exportación) es solo de las cuentas de `ADMIN_EMAILS`; la muestra la captura del README |
-| 13 | **Repertorio → Añadir obra** | Subir [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](../demo/para-subir/pasodoble-de-las-fiestas.mxl) | El recorrido completo con una obra nueva. En el plan gratuito, leerla puede tardar uno o dos minutos la primera vez |
-| 14 | **Configuración → Tema** | Elegir «Oscuro» | Paleta propia en los dos temas; la partitura conserva el papel blanco |
+| 7 | **Partitura → «Editar notas»** | Pulsar una nota, subirla con ↑ y cambiar su figura con 3–7; después «Descartar» | Las notas se corrigen sobre la misma partitura, como en un programa de notación; al guardar, la obra se vuelve a analizar sin leerla otra vez, y la última corrección se deshace. Al lado, «Compases por pentagrama», «Ir al compás», arrastrar con el ratón y pantalla completa |
+| 8 | **Preguntar** | Pulsar «¿Qué pasajes son los más difíciles?» y después escribir una pregunta propia | Las sugeridas responden con reglas, sin gastar cupo; la pregunta libre la responde la IA a partir de los datos que eligió leer, y dice cuáles. Los pasajes citados abren la partitura |
+| 9 | **Mi banda** | Ver la plantilla de la banda activa | Adecuación de la obra abierta: instrumentos que faltan o partes sin intérprete y, para las partes sin músico, qué instrumentos libres de la banda alcanzan su tesitura |
+| 10 | **Repertorio → «Preguntar al repertorio»** | Pulsar «¿Cuáles son las obras más fáciles?» y después preguntar, por ejemplo, «¿Qué obras de grado 3 puede tocar mi banda?» | ScoreMaster elige las obras filtrando sus análisis; la IA solo interpreta la pregunta y explica el resultado. Las obras citadas abren su ficha |
+| 11 | **Conciertos → Planificación** | Abrir el concierto de demostración | Serie de ensayos por fases hasta el ensayo general, con bloques por línea común, sección y tutti |
+| 12 | **Ensayos → «¿Por qué este plan?»** | Pedir la explicación de un ensayo | Razones citando bloques concretos, comprobados contra la agenda guardada |
+| 13 | **Valoraciones** | Pulsar «Empezar» en la campaña de demostración | La vista del músico: su perfil, cada pasaje con partitura y audio, y su valoración, sin la predicción de ScoreLint ni lo que han valorado otros. La vista de la directora (predicción, invitaciones, valoración con IA y exportación) es solo de las cuentas de `ADMIN_EMAILS`; la muestra la captura del README |
+| 14 | **Repertorio → Añadir obra** | Subir [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](../demo/para-subir/pasodoble-de-las-fiestas.mxl) | El recorrido completo con una obra nueva. En el plan gratuito, leerla puede tardar uno o dos minutos la primera vez |
+| 15 | **Configuración → Tema** | Elegir «Oscuro» | Paleta propia en los dos temas; la partitura conserva el papel blanco |
 
 ## Ideas clave
 
