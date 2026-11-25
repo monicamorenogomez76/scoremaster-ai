@@ -254,7 +254,7 @@ def test_gemini_chooses_the_functions_to_read_with_function_calling():
                                        tools_factory=lambda specs: bound.append(specs) or chat)
     assert chosen.choose_tools("¿Me falta alguien?", tool_specs("es"), "es") == [{"name": "band", "args": {}}, {"name": "schedule", "args": {}}]
     [specs] = bound
-    assert [spec["function"]["name"] for spec in specs] == ["difficulty", "band", "analysis", "schedule"]
+    assert [spec["function"]["name"] for spec in specs] == ["difficulty", "instrument", "band", "analysis", "schedule"]
     assert all(spec["type"] == "function" and spec["function"]["description"] for spec in specs)
     [[(system_role, system), (human_role, human)]] = chat.seen
     assert (system_role, system, human_role, human) == ("system", TOOL_CHOICE_PROMPT.system, "human", "¿Me falta alguien?")
@@ -278,7 +278,7 @@ def test_gemini_answers_the_question_with_the_work_answer_schema():
     evidence = {"version": "work-question-evidence-v1", "question": "¿Me falta alguien?", "results": {"band": {}}}
     assert provider(chat, schemas).answer_work_question(evidence) == answer
     assert schemas == ["WorkAnswer"] and chat.calls[0][0] == ("system", WORK_QUESTION_PROMPT.system)
-    assert WORK_QUESTION_PROMPT.version == "work-question-v1"
+    assert WORK_QUESTION_PROMPT.version == "work-question-v2"
     assert "question" in WORK_QUESTION_PROMPT.system and "results" in WORK_QUESTION_PROMPT.system
     assert gemini_provider.PURPOSES["WorkAnswer"] == "work_question"
 

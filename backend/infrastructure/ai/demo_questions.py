@@ -9,6 +9,9 @@ TEXTS = {
         "passage": "{label} en los compases {measures} ({why})",
         "passage_one": "{label} en el compás {measures} ({why})",
         "no_passages": "ScoreLint no ha señalado pasajes críticos en esta obra.",
+        "part": "{label}: grado {grade}", "demands": "; lo que más pesa, {}",
+        "part_passages": " Conviene preparar {}.", "part_no_passages": " Sin pasajes críticos señalados.",
+        "no_part": "Esta obra no tiene ese instrumento.",
         "no_band": "Todavía no has indicado tu plantilla, así que no puedo comparar la banda con la obra.",
         "band_ok": "Tu banda cubre todas las partes de la obra.",
         "band_short": "Tu banda cubre el {percent} % de la obra. Faltan: {missing}.",
@@ -38,6 +41,9 @@ TEXTS = {
         "passage": "{label} in measures {measures} ({why})",
         "passage_one": "{label} in measure {measures} ({why})",
         "no_passages": "ScoreLint has not marked any critical passage in this work.",
+        "part": "{label}: grade {grade}", "demands": "; what weighs most, {}",
+        "part_passages": " Worth preparing: {}.", "part_no_passages": " No critical passages marked.",
+        "no_part": "This work does not have that instrument.",
         "no_band": "You have not entered your band's lineup yet, so the band cannot be compared with the work.",
         "band_ok": "Your band covers every part of the work.",
         "band_short": "Your band covers {percent} % of the work. Missing: {missing}.",
@@ -81,14 +87,27 @@ def _difficulty(found: dict, topic, say) -> tuple[list, list]:
     if topic in (None, "passages"):
         passages = (found.get("passages") or [])[:3]
         if passages:
-            texts.append(say["passages"].format(_joined([say["passage" if "-" in str(item["measures"]) else "passage_one"].format(
-                label=item["label"], measures=item["measures"],
-                why=", ".join(finding["label"].lower() for finding in item["findings"]) or "—") for item in passages],
-                say["and"])))
+            texts.append(say["passages"].format(_joined([_passage(item, say) for item in passages], say["and"])))
             cites += [item["id"] for item in passages]
         else:
             texts.append(say["no_passages"])
     return texts, cites
+
+
+def _passage(item: dict, say) -> str:
+    return say["passage" if "-" in str(item["measures"]) else "passage_one"].format(
+        label=item["label"], measures=item["measures"], why=", ".join(finding["label"].lower() for finding in item["findings"]) or "—")
+
+
+def _instrument(found: dict, say) -> tuple[str, list]:
+    if not found.get("parts"):
+        return say["no_part"], []
+    text = ". ".join(say["part"].format(label=part["label"], grade=part["grade"])
+                     + (say["demands"].format(part["demands"][0]["aspect"]) if part["demands"] else "") for part in found["parts"]) + "."
+    passages = found.get("passages") or []
+    text += say["part_passages"].format(_joined([_passage(item, say) for item in passages[:4]], say["and"])) if passages \
+        else say["part_no_passages"]
+    return text, [item["id"] for item in passages[:4]]
 
 
 def _band(found: dict, say) -> str:
@@ -137,7 +156,7 @@ def work_answer(evidence: dict) -> dict:
         cites += cited
     if "band" in results:
         texts.append(_band(results["band"], say))
-    for name, write in (("analysis", _analysis), ("schedule", _schedule)):
+    for name, write in (("instrument", _instrument), ("analysis", _analysis), ("schedule", _schedule)):
         if name in results:
             text, cited = write(results[name], say)
             texts.append(text)

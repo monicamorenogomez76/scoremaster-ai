@@ -9,7 +9,7 @@ import pytest
 
 from backend.application.ai import ProviderFailure, ProviderInfo
 from backend.application.work_questions import (EVIDENCE_VERSION, MAX_QUESTION, PROMPT_VERSION, SUGGESTIONS, TOOLS,
-                                                WorkTools, ask_work, band_tool, schedule_tool, tool_specs)
+                                                WorkTools, ask_work, band_tool, instrument_tool, schedule_tool, tool_specs)
 from backend.application.concerts import Concert, ConcertDraft
 from backend.application.rehearsals import Rehearsal, RehearsalBlock, RehearsalDraft
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
@@ -36,7 +36,24 @@ def tools(calls=None):
     seen = calls if calls is not None else []
     give = lambda name, value: (lambda: seen.append(name) or value)
     return WorkTools("Persis", give("difficulty", DIFFICULTY), give("band", BAND), give("analysis", ANALYSIS),
-                     give("schedule", SCHEDULE))
+                     give("schedule", SCHEDULE), lambda asked: instrument_tool(RESULT, asked, "es"))
+
+
+# ScoreLint's analysis, as it is stored: the clarinet is not among the hardest passages.
+RESULT = {"difficulty": {"by_instrument": {
+    "Trumpet 1": {"instrument_label_es": "Trompeta 1", "grade": 4, "difficulty_score": 5.2, "findings": ["SL002"],
+                  "dimensions": {"range": 6.1, "register": 7.0, "density": 2.0, "endurance": 1.0, "intervals": 3.0}},
+    "Clarinet in Bb 1": {"instrument_label_es": "Clarinete en Si bemol 1", "grade": 3, "difficulty_score": 4.1, "findings": ["SL003"],
+                         "dimensions": {"range": 3.0, "register": 1.0, "density": 6.4, "endurance": 2.0, "intervals": 1.0}},
+    "Clarinet in Bb 2": {"instrument_label_es": "Clarinete en Si bemol 2", "grade": 2, "difficulty_score": 2.5, "findings": [],
+                         "dimensions": {"range": 2.0, "register": 0.0, "density": 3.0, "endurance": 1.0, "intervals": 1.0}},
+    "Bass Clarinet": {"instrument_label_es": "Clarinete bajo", "grade": 2, "difficulty_score": 2.0, "findings": [], "dimensions": {}},
+    "Alto Sax 1": {"instrument_label_es": "Saxofón alto 1", "grade": 3, "difficulty_score": 3.0, "findings": [], "dimensions": {}},
+    "Tenor Sax": {"instrument_label_es": "Saxofón tenor", "grade": 3, "difficulty_score": 3.0, "findings": [], "dimensions": {}},
+    "Horn in F": {"instrument_label_es": "Trompa en Fa", "grade": 3, "difficulty_score": 3.0, "findings": [], "dimensions": {}},
+    "Trombone": {"instrument_label_es": "Trombón", "grade": 3, "difficulty_score": 3.0, "findings": [], "dimensions": {}}},
+    "critical_passages": [{"instrument": "Trumpet 1", "instrument_label_es": "Trompeta 1", "measure_range": "41-48", "findings": ["SL002"]}] * 9
+    + [{"instrument": "Clarinet in Bb 1", "instrument_label_es": "Clarinete en Si bemol 1", "measure_range": "60-64", "findings": ["SL003"]}]}}
 
 
 class Fake:
@@ -62,10 +79,12 @@ def ask(question=None, suggestion=None, provider=None, calls=None, language="es"
 
 
 def test_the_ai_gets_only_read_only_functions_described_for_it():
-    assert TOOLS == ("difficulty", "band", "analysis", "schedule")
+    assert TOOLS == ("difficulty", "instrument", "band", "analysis", "schedule")
     specs = tool_specs("es")
     assert [spec["name"] for spec in specs] == list(TOOLS)
-    assert all(spec["description"] and "parameters" not in spec for spec in specs)
+    assert all(spec["description"] for spec in specs)
+    assert [spec["name"] for spec in specs if "parameters" in spec] == ["instrument"], "the work is fixed; only the instrument is asked"
+    assert specs[1]["parameters"]["required"] == ["instrument"]
     assert tool_specs("en")[0]["description"] != specs[0]["description"]
     assert PROMPT_VERSION.startswith("work-question-") and EVIDENCE_VERSION.startswith("work-question-evidence-")
 
@@ -216,3 +235,60 @@ def test_a_passage_of_one_measure_is_named_in_the_singular():
     assert "en el compás 1 (" in shown["answer"]["answer"] and shown["cites"][0]["text"] == "Trompeta 1 (c. 1)"
     english = ask_work(None, "passages", found, DemoExplanationProvider(), DemoExplanationProvider(), language="en")
     assert "in measure 1 (" in english["answer"]["answer"] and english["cites"][0]["text"] == "Trompeta 1 (m. 1)"
+
+
+# 2026-11-25: «¿Qué tiene que preparar el clarinete?» had no answer: the AI was given only the eight hardest passages.
+@pytest.mark.parametrize("asked, parts", [
+    ("clarinete", ["Clarinete bajo", "Clarinete en Si bemol 1", "Clarinete en Si bemol 2"]), ("Clarinetes", ["Clarinete bajo", "Clarinete en Si bemol 1", "Clarinete en Si bemol 2"]),
+    ("el clarinete 1", ["Clarinete en Si bemol 1"]), ("clarinete bajo", ["Clarinete bajo"]), ("clarinet", ["Clarinete bajo", "Clarinete en Si bemol 1", "Clarinete en Si bemol 2"]),
+    ("trompa", ["Trompa en Fa"]), ("trompeta", ["Trompeta 1"]), ("trombones", ["Trombón"]), ("saxos altos", ["Saxofón alto 1"]),
+    ("saxofones", ["Saxofón alto 1", "Saxofón tenor"]), ("violín", []), ("", []),
+])
+def test_the_instrument_function_finds_the_parts_by_how_they_are_called(asked, parts):
+    assert [part["label"] for part in instrument_tool(RESULT, asked, "es")["parts"]] == parts
+
+
+def test_the_instrument_function_gives_its_demands_and_its_passages():
+    found = instrument_tool(RESULT, "clarinete 1", "es")
+    [part] = found["parts"]
+    assert (part["name"], part["grade"], part["technical_index"]) == ("Clarinet in Bb 1", 3, 4.1)
+    assert part["demands"][0] == {"aspect": "densidad rítmica", "value": 6.4}
+    assert part["findings"] == [{"code": "SL003", "label": "Alta densidad rítmica"}]
+    assert [(item["id"], item["measures"]) for item in found["passages"]] == [("P10", "60-64")], "the id of the whole list"
+    assert instrument_tool(RESULT, "violín", "es")["available"][:2] == ["Clarinete bajo", "Clarinete en Si bemol 1"]
+    assert instrument_tool({}, "clarinete", "es") == {"asked": "clarinete", "parts": [], "passages": [], "available": []}
+
+
+def test_the_ai_reads_the_instrument_it_is_asked_about():
+    reply = {"answer": "El clarinete 1 tiene que preparar los compases 60-64, de alta densidad rítmica.", "answered": True, "cites": ["P10"]}
+    provider = Fake([{"name": "instrument", "args": {"instrument": "clarinete 1"}}], reply)
+    shown = ask("¿Qué tiene que preparar el clarinete?", provider=provider)
+    assert shown["mode"] == "llm" and shown["tools"] == ["instrument"]
+    assert shown["cites"] == [{"id": "P10", "kind": "passage", "text": "Clarinete en Si bemol 1 (cc. 60-64)",
+                               "instrument": "Clarinet in Bb 1", "measures": "60-64"}]
+
+
+def test_several_instruments_are_read_together_and_odd_arguments_are_ignored():
+    provider = Fake([{"name": "instrument", "args": {"instrument": "trompa"}}, {"name": "instrument", "args": {"instrument": "trombón"}},
+                     {"name": "instrument", "args": {"instrument": 7}}, {"name": "instrument", "args": {}}],
+                    {"answer": "Nada especial.", "answered": True, "cites": []})
+    ask("¿Y las trompas y trombones?", provider=provider)
+    assert [part["label"] for part in provider.answered[0]["results"]["instrument"]["parts"]] == ["Trompa en Fa", "Trombón"]
+
+
+@pytest.mark.parametrize("question", ["¿Qué tiene que preparar el clarinete 1?", "¿Es difícil para el clarinete 1?", "What should clarinet 1 prepare?"])
+def test_without_the_ai_the_rules_answer_about_an_instrument(question):
+    shown = ask(question)
+    assert shown["mode"] == "demo" and shown["tools"] == ["instrument"] and shown["answer"]["answered"]
+    assert "Clarinete en Si bemol 1" in shown["answer"]["answer"] and shown["answer"]["cites"] == ["P10"]
+    assert "60-64" in shown["answer"]["answer"]
+
+
+def test_an_instrument_without_passages_says_what_weighs_most_in_it():
+    shown = ask("¿Qué prepara el clarinete 2?")
+    assert "densidad rítmica" in shown["answer"]["answer"] and shown["answer"]["cites"] == []
+
+
+def test_what_the_band_lacks_is_still_asked_of_the_band():
+    calls = []
+    assert ask("¿Me falta algún clarinete?", calls=calls)["tools"] == ["band"]

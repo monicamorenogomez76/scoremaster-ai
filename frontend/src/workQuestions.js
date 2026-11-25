@@ -30,7 +30,7 @@ export const suggestions = () => [
   ['schedule', t('¿Cuándo la ensayamos?')],
 ];
 
-const toolNames = () => ({ difficulty: t('dificultad'), band: t('banda'), analysis: t('análisis musical'),
+const toolNames = () => ({ difficulty: t('dificultad'), instrument: t('partes del instrumento'), band: t('banda'), analysis: t('análisis musical'),
   schedule: t('ensayos y conciertos'), find_works: t('tus obras'), work_details: t('detalle de obras'),
   repertoire_schedule: t('conciertos y ensayos'), repertoire_band: t('plantilla de la banda') });
 

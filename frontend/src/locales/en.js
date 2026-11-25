@@ -1238,6 +1238,7 @@ export const en = {
   'Suenan desincronizadas y los resultados pueden no ser fiables. Pasa cuando un PDF trae particellas sin guion y el lector pierde o añade compases.': 'They sound out of step and the results may not be reliable. It happens when a PDF brings parts without a score and the reader loses or adds measures.',
   'Compases de cada parte': 'Measures of each part',
   '{part}: {count} compases': '{part}: {count} measures',
+  'partes del instrumento': 'parts of the instrument',
   'Google no encuentra el modelo de IA configurado (GEMINI_MODEL)': 'Google does not find the configured AI model (GEMINI_MODEL)',
   'Google no acepta la clave de IA configurada (GEMINI_API_KEY)': 'Google does not accept the configured AI key (GEMINI_API_KEY)',
   'El servicio de IA está saturado; prueba dentro de unos minutos': 'The AI service is overloaded; try again in a few minutes',
