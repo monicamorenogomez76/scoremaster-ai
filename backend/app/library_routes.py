@@ -25,7 +25,7 @@ from backend.application.instrument_proposals import InvalidProposals, NotAvaila
 from backend.analyzers.rubric_grade import part_label
 from backend.application.musical_analysis_text import analysis_evidence, explain_analysis, labelled
 from backend.application.difficulty_explanation import difficulty_evidence
-from backend.application.work_questions import MAX_QUESTION, SUGGESTIONS, WorkTools, ask_work, band_tool, schedule_tool
+from backend.application.work_questions import MAX_QUESTION, SUGGESTIONS, WorkTools, ask_work, band_tool, instrument_tool, schedule_tool
 from backend.application.substitutes_explanation import explain_substitutes
 from backend.analyzers.musical_analysis import analyse
 from backend.analyzers.substitutes import substitute_candidates
@@ -296,7 +296,8 @@ def ask_the_work(work_id: str, asked: QuestionIn, user: User = Depends(authentic
     tools = WorkTools(
         title, lambda: difficulty_evidence(record.result, lang),
         lambda: band_tool(record.result.get("band_fit") or {}, lang), analysis,
-        lambda: schedule_tool(work, rehearsals.list_rehearsals(user.id), concerts.list_concerts(user.id), date.today()))
+        lambda: schedule_tool(work, rehearsals.list_rehearsals(user.id), concerts.list_concerts(user.id), date.today()),
+        lambda asked: instrument_tool(record.result, asked, lang))
     return ask_work(asked.question, asked.suggestion, tools, provider, DemoExplanationProvider(), cache, lang)
 
 

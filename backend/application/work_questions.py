@@ -19,12 +19,14 @@ from backend.application.explanations import InvalidExplanation, failure_reason,
 from backend.domain.instrument_catalog import english_label
 from backend.domain.text import evidence_text
 
-PROMPT_VERSION = "work-question-v1"
-EVIDENCE_VERSION = "work-question-evidence-v1"
+PROMPT_VERSION = "work-question-v2"   # v2 (2026-11-25): the instrument function
+EVIDENCE_VERSION = "work-question-evidence-v2"
 MAX_QUESTION = 300
 MAX_CITES = 12
 MAX_REHEARSALS, MAX_CONCERTS = 6, 4
-TOOLS = ("difficulty", "band", "analysis", "schedule")
+MAX_PARTS, MAX_PART_PASSAGES, MAX_AVAILABLE, MAX_DEMANDS = 8, 8, 40, 3
+MAX_ASKED = 4
+TOOLS = ("difficulty", "instrument", "band", "analysis", "schedule")
 # The suggested questions and the function each one reads; the rules answer them, so they never spend AI quota.
 SUGGESTIONS = {"grade": ("difficulty",), "passages": ("difficulty",), "band": ("band",), "form": ("analysis",),
                "schedule": ("schedule",)}
@@ -34,6 +36,9 @@ DESCRIPTIONS = {
     "es": {
         "difficulty": "Dificultad de la obra calculada por ScoreLint: grado de 1 a 6 y los criterios que lo fijan, los "
                       "instrumentos más exigentes y los pasajes críticos (instrumento, compases y motivo).",
+        "instrument": "Lo que tiene que preparar un instrumento o una sección concretos: grado y exigencias de cada una de sus partes "
+                      "y todos sus pasajes críticos con sus compases. Úsala siempre que la pregunta nombre un instrumento.",
+        "asked": "El instrumento como lo nombra la pregunta: clarinete, trompeta 2, saxos altos…",
         "band": "Si la banda de la directora puede tocar la obra: porcentaje de partes cubiertas, instrumentos que faltan "
                 "y partes sin instrumento confirmado.",
         "analysis": "Análisis musical calculado: forma y secciones con sus compases y tonalidades, modulaciones, "
@@ -43,6 +48,9 @@ DESCRIPTIONS = {
     "en": {
         "difficulty": "Difficulty of the work calculated by ScoreLint: grade from 1 to 6 and the criteria that set it, the "
                       "most demanding instruments and the critical passages (instrument, measures and reason).",
+        "instrument": "What a given instrument or section has to prepare: grade and demands of each of its parts and all its critical "
+                      "passages with their measures. Use it whenever the question names an instrument.",
+        "asked": "The instrument as the question names it: clarinet, trumpet 2, alto saxes…",
         "band": "Whether the director's band can play the work: share of parts covered, missing instruments and parts "
                 "without a confirmed instrument.",
         "analysis": "Calculated musical analysis: form and sections with their measures and keys, modulations, cadences, "
@@ -77,6 +85,8 @@ class WorkTools:
     band: Callable[[], dict]
     analysis: Callable[[], dict]
     schedule: Callable[[], dict]
+    # What each named instrument has to prepare (2026-11-25): the only function with an argument.
+    instrument: Callable[[str], dict] = lambda asked: {"asked": asked, "parts": [], "passages": [], "available": []}
 
 
 class WorkAnswer(BaseModel):
@@ -87,9 +97,11 @@ class WorkAnswer(BaseModel):
 
 
 def tool_specs(language: str = "es") -> list[dict]:
-    """The functions as the AI sees them: a name and what it returns. They take no arguments: the work is fixed."""
+    """The functions as the AI sees them: a name and what it returns. The work is fixed; only the instrument is asked."""
     descriptions = DESCRIPTIONS["en" if language == "en" else "es"]
-    return [{"name": name, "description": descriptions[name]} for name in TOOLS]
+    asked = {"parameters": {"type": "object", "properties": {"instrument": {"type": "string", "description": descriptions["asked"]}},
+                            "required": ["instrument"]}}
+    return [{"name": name, "description": descriptions[name], **(asked if name == "instrument" else {})} for name in TOOLS]
 
 
 def _plain(text: str) -> list[str]:
@@ -104,6 +116,78 @@ def recognise(question: str) -> Optional[str]:
         if any(word.startswith(stem) for word in words for stem in stems):
             return topic
     return None
+
+
+# Words that tell one part of an instrument from another, or its key; they do not name it.
+_QUALIFIERS = {"bemol", "flat", "natural", "sostenido", "sharp", "alto", "tenor", "soprano", "bajo", "bass", "baritono", "baritone",
+               "contralto", "contrabajo", "solo", "primer", "segundo", "tercer"}
+_SHORT_NAMES = {"sax": "saxofon", "saxo": "saxofon"}
+ASPECTS = {"es": {"range": "tesitura", "register": "registro", "intervals": "saltos", "density": "densidad rítmica",
+                  "endurance": "resistencia", "tempo": "tempo"},
+           "en": {"range": "range", "register": "register", "intervals": "leaps", "density": "rhythmic density",
+                  "endurance": "endurance", "tempo": "tempo"}}
+
+
+def _same_word(one: str, other: str) -> bool:
+    """«clarinetes» and «clarinete», «saxos» and «saxofón»; never «trompa» and «trompeta»."""
+    one, other = (_SHORT_NAMES.get(word.rstrip("s"), word.rstrip("s")) for word in (one, other))
+    short, long = sorted((one, other), key=len)
+    return short == long or (len(short) >= 4 and len(long) - len(short) <= 2 and long.startswith(short))
+
+
+def _named_parts(by_instrument: dict, asked: str) -> list[str]:
+    """The parts of the work that the text names, by label: their numbers and qualifiers choose among them when they are said."""
+    said = _plain(asked)
+    words = {name: set(_plain(" ".join((entry.get("instrument_label_es") or name, english_label(entry.get("instrument_label_es") or name, name), name))))
+             for name, entry in by_instrument.items()}
+
+    def named(name: str) -> bool:
+        own = {word for word in words[name] if len(word) >= 3 and not word.isdigit()}
+        return any(_same_word(word, mine) for word in said if len(word) >= 3 for mine in (own - _QUALIFIERS) or own)
+    found = [name for name in by_instrument if named(name)]
+    for word in said:
+        if word.isdigit() or word.rstrip("s") in _QUALIFIERS:
+            chosen = [name for name in found if any(word == mine or word.rstrip("s") == mine for mine in words[name])]
+            found = chosen or found
+    return sorted(found, key=lambda name: (by_instrument[name].get("instrument_label_es") or name, name))
+
+
+def instrument_tool(result: dict, asked: str, language: str = "es") -> dict:
+    """What the named instrument has to prepare, from the whole of ScoreLint's analysis: the difficulty function gives only the
+    hardest of the work. Its passages keep the id they have there."""
+    from backend.application.difficulty_explanation import FINDING_LABELS, FINDING_LABELS_EN
+    difficulty = result.get("difficulty") or {}
+    by_instrument = difficulty.get("by_instrument") or {}
+    english = language == "en"
+    findings = FINDING_LABELS_EN if english else FINDING_LABELS
+    aspects = ASPECTS["en" if english else "es"]
+
+    def label(name: str, spanish) -> str:
+        return evidence_text(english_label(spanish or name, name) if english else spanish or name)
+    told = lambda codes: [{"code": code, "label": findings.get(code, code)} for code in codes or []]
+    chosen = _named_parts(by_instrument, asked)[:MAX_PARTS]
+    parts = []
+    for name in chosen:
+        entry = by_instrument[name]
+        dimensions = sorted(((aspects[key], round(float(value), 1)) for key, value in (entry.get("dimensions") or {}).items()
+                             if key in aspects and value), key=lambda item: (-item[1], item[0]))
+        parts.append({"name": evidence_text(name), "label": label(name, entry.get("instrument_label_es")), "grade": entry.get("grade"),
+                      "technical_index": entry.get("difficulty_score"),
+                      "demands": [{"aspect": aspect, "value": value} for aspect, value in dimensions[:MAX_DEMANDS]],
+                      "findings": told(entry.get("findings"))})
+    passages = [{"id": "P{}".format(index), "instrument": evidence_text(passage.get("instrument")),
+                 "label": label(passage.get("instrument"), passage.get("instrument_label_es")),
+                 "measures": passage.get("measure_range"), "findings": told(passage.get("findings"))}
+                for index, passage in enumerate(difficulty.get("critical_passages") or [], start=1) if passage.get("instrument") in chosen]
+    return {"asked": evidence_text(asked), "parts": parts, "passages": passages[:MAX_PART_PASSAGES],
+            "available": [] if parts else sorted({label(name, entry.get("instrument_label_es")) for name, entry in by_instrument.items()})[:MAX_AVAILABLE]}
+
+
+def _together(found: list[dict]) -> dict:
+    """Several instruments asked in one question, each part and passage once."""
+    once = lambda key, name: list({item[name]: item for result in found for item in result[key]}.values())
+    return {"asked": ", ".join(result["asked"] for result in found), "parts": once("parts", "name"),
+            "passages": once("passages", "id"), "available": sorted({label for result in found for label in result["available"]})}
 
 
 def band_tool(band_fit: dict, language: str = "es") -> dict:
@@ -144,7 +228,7 @@ def cited(results: dict, language: str = "es") -> dict:
     """Every id the results hold, with what the interface shows for it."""
     measures, measure = ("mm.", "m.") if language == "en" else ("cc.", "c.")
     found = {}
-    for passage in (results.get("difficulty") or {}).get("passages", []):
+    for passage in (results.get("difficulty") or {}).get("passages", []) + (results.get("instrument") or {}).get("passages", []):
         found[passage["id"]] = {"id": passage["id"], "kind": "passage",
                                 "text": "{} ({} {})".format(passage["label"], measures if "-" in str(passage["measures"])
                                                             else measure, passage["measures"]),
@@ -241,12 +325,26 @@ def ask_work(question: Optional[str], suggestion: Optional[str], tools: WorkTool
     question = _question(question, suggestion)
 
     def run(calls):
-        names = list(dict.fromkeys(call["name"] for call in calls if call["name"] in TOOLS))
-        return {name: getattr(tools, name)() for name in names}, names
+        names = [name for name in dict.fromkeys(call["name"] for call in calls) if name in TOOLS]
+        asked = list(dict.fromkeys(call["args"]["instrument"].strip() for call in calls if call["name"] == "instrument"
+                                   and isinstance(call["args"].get("instrument"), str) and call["args"]["instrument"].strip()))[:MAX_ASKED]
+        if not asked:
+            names = [name for name in names if name != "instrument"]
+        return {name: _together([tools.instrument(text[:MAX_QUESTION]) for text in asked]) if name == "instrument"
+                else getattr(tools, name)() for name in names}, names
+
+    def topic_of(text):
+        """A question that names an instrument of the work is about it, unless it asks what the band lacks or about the rest."""
+        topic = recognise(text)
+        return "instrument" if topic in (None, "passages", "grade") and tools.instrument(text)["parts"] else topic
+
+    def rules(topic):
+        if topic == "instrument":
+            return [{"name": "instrument", "args": {"instrument": question}}]
+        return [{"name": name, "args": {}} for name in SUGGESTIONS.get(topic, ())]
 
     return answer_with_tools(
         question, suggestion, scope="work", specs=tool_specs(language),
-        rules=lambda topic: [{"name": name, "args": {}} for name in SUGGESTIONS.get(topic, ())],
-        recognise_topic=recognise, run=run, evidence={"version": EVIDENCE_VERSION, "title": evidence_text(tools.title)},
+        rules=rules, recognise_topic=topic_of, run=run, evidence={"version": EVIDENCE_VERSION, "title": evidence_text(tools.title)},
         answer=lambda who, data: who.answer_work_question(data), validate=validate_answer, cited_index=cited,
         provider=provider, demo=demo, cache=cache, language=language, prompt_version=PROMPT_VERSION, purpose="work_question")
