@@ -11,7 +11,7 @@ import math
 import os
 import re
 from threading import RLock
-from typing import Optional, Protocol
+from typing import Callable, Optional, Protocol
 
 from pathlib import Path
 
@@ -154,6 +154,22 @@ class NotMusicXML(ValueError):
     """The uploaded file is not a MusicXML score."""
 
 
+class WorkTooLarge(Exception):
+    """The work does not fit in the memory of this server."""
+
+
+# A work whose MusicXML is at least this long is read outside the server when there is a reader for it (2026-11-25): music21
+# takes some forty times the text, and a band of 11 MB without its audio restarted Render (512 MB) with a 502.
+LARGE_SOURCE = 2 * 1024 * 1024
+_read_large: Optional[Callable[[bytes], bytes]] = None
+
+
+def read_large_works_with(reader_of_works: Optional[Callable[[bytes], bytes]]) -> None:
+    """content → its encoded timeline, in a process of its own; None: every work is read here."""
+    global _read_large
+    _read_large = reader_of_works
+
+
 class StillPreparing(Exception):
     """The work is being prepared in the background; its key lets the browser follow it."""
     def __init__(self, key: str):
@@ -229,10 +245,11 @@ def _prepare(content: bytes, key: str, store: Optional[PreparedStore]) -> _Timel
     source = extract_musicxml(content)
     if source is None:
         raise NotMusicXML('La partitura no es MusicXML válido.')
-    found = _read_timeline(source)
+    outside = _read_large(content) if _read_large is not None and len(source) >= LARGE_SOURCE else None
+    found = _decode(outside) if outside is not None else _read_timeline(source)
     if store is not None:
         try:
-            store.save(key, TIMELINE_VERSION, _encode(found))
+            store.save(key, TIMELINE_VERSION, outside if outside is not None else _encode(found))
         except Exception:
             logger.warning('No se pudo guardar el audio preparado de una obra.', exc_info=True)
     _remember(key, found)
