@@ -10,6 +10,7 @@ import { UploadWorkspace } from './UploadWorkspace.jsx';
 import { VideoSearch } from './videos/VideoSearch.jsx';
 import { View } from './View.jsx';
 import { RepertoireQuestions, WorkQuestions } from './WorkQuestions.jsx';
+import { WorkTitle } from './WorkTitle.jsx';
 import { WorksList } from './WorksView.jsx';
 import { t } from './i18n.js';
 import { gradeWarning } from './library.js';
@@ -19,7 +20,7 @@ const tabs = () => [['score', t('Partitura')], ['difficulty', t('Dificultad')], 
 
 // Repertoire: the list of works (and the form to add one), or the detail of the open work.
 // The detail stays mounted while hidden: the score viewer keeps its renderer between tabs and modes.
-export function RepertoireView({ active, user, hidden, analysis, mode, onModeChange, tab, onTabChange, upload, onOpenWork, onOpenPassage, scoreViewer, minutes }) {
+export function RepertoireView({ active, user, hidden, analysis, mode, onModeChange, tab, onTabChange, upload, onOpenWork, onOpenPassage, onWorkRenamed, scoreViewer, minutes }) {
   const data = analysis?.data;
   const detail = mode === 'detail' && Boolean(data);
   const busy = upload.state.busy;
@@ -46,8 +47,8 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
     <section id="work-detail" className="work-detail" hidden={!detail} aria-labelledby="work-detail-title">
       <div className="work-detail-heading">
         <div>
-          <h2 id="work-detail-title">{data?.title || t('Partitura sin título')}</h2>
-          <p className="result-supporting">{data?.composer || t('Compositor no indicado en el MusicXML')}</p>
+          {/* Keyed by work: the form of another work is never shown. */}
+          <WorkTitle key={data?.work_id} data={data} onRenamed={onWorkRenamed} />
           {data?.source_format === 'pdf' && <p className="pdf-provisional" role="note">{t('Leída de PDF · grado provisional: revisa en la partitura las notas más agudas y graves, y confirma los instrumentos en Mi banda.')}</p>}
           {gradeWarning(data) && <p className="pdf-provisional" role="note">{gradeWarning(data)}</p>}
         </div>

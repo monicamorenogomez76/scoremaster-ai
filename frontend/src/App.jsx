@@ -163,7 +163,7 @@ export function App({ session }) {
       rehearsalEditing={rehearsalEditing} onEditRehearsal={rehearsal => { setRehearsalEditing(rehearsal); navigate('rehearsal'); }}
       onCloseRehearsal={() => setRehearsalEditing(null)}
       rehearsalReviewing={rehearsalReviewing} onReviewRehearsal={rehearsal => { setRehearsalEditing(null); setRehearsalReviewing(rehearsal); navigate('rehearsal'); }}
-      onCloseReview={() => setRehearsalReviewing(null)} onUserChanged={setUser} onAccountDeleted={() => { setUser(null); upload.reset(); setNotice(t('Tu cuenta y tus datos se han borrado.')); }} onBandDraftChange={setBandDraft}
+      onCloseReview={() => setRehearsalReviewing(null)} onUserChanged={setUser} onWorkRenamed={named => setAnalysis(previous => previous && { ...previous, data: { ...previous.data, ...named }, revision: previous.revision + 1 })} onAccountDeleted={() => { setUser(null); upload.reset(); setNotice(t('Tu cuenta y tus datos se han borrado.')); }} onBandDraftChange={setBandDraft}
       minutes={minutes} onMinutesChange={setMinutes} onRecalculate={recalculate} onUpdateBand={updateBand} onConfirmInstruments={confirmInstruments} onBandActivated={bandActivated} onOpenWork={upload.openWork} onOpenPassage={workspace.openPassage} onOpenBlock={openBlock} onOpenEvaluationPassage={openEvaluationPassage}
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} workId={analysis?.data?.work_id}
         onSaved={() => analysis?.data?.work_id && upload.openWork(analysis.data.work_id, { navigate: false })} />} />

@@ -293,3 +293,56 @@ def test_an_ai_explanation_is_kept_in_postgresql_and_reused(clients, postgres_en
     again = ana.get("/works/" + work_id + "/explanation").json()
     assert Llm.calls == 1 and (first["cached"], again["cached"]) == (False, True)
     assert again["explanation"] == first["explanation"] and again["mode"] == "llm"
+
+
+# The title and composer of a work (2026-11-25): a PDF or a MusicXML may bring another name, and the recordings are searched by it.
+def test_the_director_names_the_work_and_every_view_says_it(clients):
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    changed = ana.patch("/works/" + work_id, json={"title": "  Obertura   1812 ", "composer": " P. I. Chaikovski "})
+    assert changed.status_code == 200
+    assert (changed.json()["title"], changed.json()["composer"]) == ("Obertura 1812", "P. I. Chaikovski")
+    assert changed.json()["preparation_status"] == "review", "only what is sent changes"
+    assert ana.get("/works").json()["works"][0]["title"] == "Obertura 1812"
+    opened = ana.get("/works/" + work_id).json()
+    assert (opened["title"], opened["composer"]) == ("Obertura 1812", "P. I. Chaikovski")
+    assert "Obertura 1812" in ana.get("/works/" + work_id + "/explanation").json()["explanation"]["summary"]
+    asked = ana.post("/works/" + work_id + "/questions", json={"suggestion": "grade"}).json()
+    assert "Obertura 1812" in asked["answer"]["answer"]
+
+
+def test_analysing_the_file_again_keeps_the_name(clients):
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    ana.patch("/works/" + work_id, json={"title": "Obertura 1812", "composer": ""})
+    again = analyze(ana).json()
+    assert again["work_id"] == work_id and (again["title"], again["composer"]) == ("Obertura 1812", None)
+    assert ana.get("/works").json()["works"][0]["title"] == "Obertura 1812"
+
+
+def test_a_work_never_named_takes_what_its_file_says(clients):
+    ana, _ = clients
+    first = analyze(ana).json()
+    assert analyze(ana).json()["title"] == first["title"]
+    assert ana.get("/works/" + first["work_id"]).json()["title"] == first["title"]
+
+
+@pytest.mark.parametrize("body", [{"title": "   "}, {"title": "x" * 301}, {"composer": "x" * 301}, {}, {"title": None}])
+def test_a_name_is_needed_and_bounded(clients, body):
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    assert ana.patch("/works/" + work_id, json=body).status_code == 422
+
+
+def test_only_its_owner_names_a_work(clients):
+    ana, berta = clients
+    work_id = analyze(ana).json()["work_id"]
+    assert berta.patch("/works/" + work_id, json={"title": "Otra"}).status_code == 404
+    assert ana.get("/works").json()["works"][0]["title"] != "Otra"
+
+
+def test_the_status_still_changes_alone(clients):
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    ana.patch("/works/" + work_id, json={"title": "Obertura 1812"})
+    assert ana.patch("/works/" + work_id, json={"preparation_status": "preparing"}).json()["title"] == "Obertura 1812"

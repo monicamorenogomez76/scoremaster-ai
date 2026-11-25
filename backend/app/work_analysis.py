@@ -12,7 +12,7 @@ from backend.analyzers.difficulty import DIFFICULTY_VERSION, compute_difficulty_
 from backend.analyzers.rehearsal_plan import build_rehearsal_plan
 from backend.analyzers.tempo import compute_tempo_metrics, estimate_duration
 from backend.app.stored_scores import confirm_instruments, kept_work, parsed_work
-from backend.application.library import WorkUpload
+from backend.application.library import WorkUpload, named_result
 from backend.application.save_analysis import save_analysis
 from backend.domain.instrument_catalog import catalog_version, instrument_name_key
 from backend.domain.instrument_resolver import RESOLVED, RESOLVER_VERSION, resolve_part
@@ -66,6 +66,7 @@ def analyze_and_store(content: bytes, file_name: str, user_id: UUID, profile: di
     title = (score.title or "").strip() or Path(file_name).stem
     work = library.store_work(user_id, WorkUpload(title, score.composer, Path(file_name).name, content,
                                                   hashlib.sha256(content).hexdigest(), source_format))
+    result = named_result(result, work)
     saved = save_analysis(result, content, profile, total_minutes, repository,
                           {part.name: overrides[part.name] for part in score.parts if part.name in overrides},
                           user_id=user_id, work_id=work.id)

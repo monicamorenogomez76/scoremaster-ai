@@ -36,6 +36,13 @@ class InMemoryLibrary:
         del self.works[work_id], self.files[work_id]
         return True
 
+    def rename_work(self, user_id, work_id, title, composer):
+        if self.get_work(user_id, work_id) is None:
+            return None
+        owner, work, source = self.works[work_id]
+        self.works[work_id] = (owner, replace(work, title=title, composer=composer, title_edited=True), source)
+        return self.works[work_id][1]
+
     def update_preparation(self, user_id, work_id, status):
         if self.get_work(user_id, work_id) is None:
             return None

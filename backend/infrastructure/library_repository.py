@@ -1,16 +1,18 @@
+from dataclasses import replace
 from datetime import date, datetime
 from hashlib import sha256
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint, delete, func, select, text, update
+from sqlalchemy import (Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint, case, delete, false,
+                        func, select, text, update)
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID, insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from backend.application.analysis_repository import AnalysisRecord
-from backend.application.library import Correction, ExternalGrade, Work, WorkUpload
+from backend.application.library import Correction, ExternalGrade, Work, WorkUpload, named_result
 from backend.infrastructure.analysis_repository import Base, StoredAnalysis, record_of
 from backend.infrastructure.band_repository import active_band, update_active_profile
 
@@ -30,6 +32,7 @@ class StoredWork(Base):
     size: Mapped[int] = mapped_column(Integer, nullable=False)
     preparation_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default='review')
     source_format: Mapped[str] = mapped_column(String(10), nullable=False, server_default='musicxml')
+    title_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     # The doubts of the PDF reader and the parts already reviewed (2026-11-22); deferred like the file.
     reading_doubts: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, deferred=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -67,7 +70,7 @@ def _external(row: StoredExternalGrade) -> ExternalGrade:
 
 def _work(row: StoredWork, summary: Optional[dict] = None) -> Work:
     return Work(row.id, row.title, row.composer, row.file_name, row.size, row.created_at, row.updated_at, summary or {},
-                row.preparation_status, row.source_format)
+                row.preparation_status, row.source_format, row.title_edited)
 
 
 # Summary of the latest analysis of each work, read from the stored JSON without loading it whole.
@@ -107,8 +110,10 @@ class PostgresLibraryRepository:
                       size=len(upload.source), source_format=upload.source_format)
         statement = insert(StoredWork).values(**values).on_conflict_do_update(
             constraint='uq_works_user_source',
-            set_={'title': values['title'], 'composer': values['composer'], 'file_name': values['file_name'],
-                  'updated_at': func.now()}).returning(StoredWork.id)
+            # The name the director gave it stays (2026-11-25).
+            set_={'title': case((StoredWork.title_edited, StoredWork.title), else_=values['title']),
+                  'composer': case((StoredWork.title_edited, StoredWork.composer), else_=values['composer']),
+                  'file_name': values['file_name'], 'updated_at': func.now()}).returning(StoredWork.id)
         with Session(self.engine) as session, session.begin():
             work_id = session.execute(statement).scalar_one()
         return self.get_work(user_id, work_id)
@@ -186,12 +191,24 @@ class PostgresLibraryRepository:
             row = session.scalars(select(StoredAnalysis)
                                   .where(StoredAnalysis.work_id == work_id, StoredAnalysis.user_id == user_id)
                                   .order_by(StoredAnalysis.created_at.desc()).limit(1)).first()
-            return record_of(row) if row else None
+            if row is None:
+                return None
+            record, work = record_of(row), session.get(StoredWork, work_id)
+            return replace(record, result=named_result(record.result, _work(work))) if work is not None and work.title_edited else record
 
     def delete_work(self, user_id: UUID, work_id: UUID) -> bool:
         with Session(self.engine) as session, session.begin():
             deleted = session.execute(delete(StoredWork).where(StoredWork.id == work_id, StoredWork.user_id == user_id))
             return deleted.rowcount > 0
+
+    def rename_work(self, user_id: UUID, work_id: UUID, title: str, composer: Optional[str]) -> Optional[Work]:
+        with Session(self.engine) as session, session.begin():
+            row = session.scalars(select(StoredWork).where(StoredWork.id == work_id, StoredWork.user_id == user_id)).first()
+            if row is None:
+                return None
+            row.title, row.composer, row.title_edited = title[:300], composer, True
+            session.flush()
+            return _work(row)
 
     def update_preparation(self, user_id: UUID, work_id: UUID, status: str) -> Optional[Work]:
         with Session(self.engine) as session, session.begin():

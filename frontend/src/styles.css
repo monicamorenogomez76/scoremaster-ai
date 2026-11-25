@@ -1166,3 +1166,5 @@ body:has(.cookie-notice) { padding-bottom: 240px; }
 .score-uneven { margin: 8px 0 16px; padding: 8px 16px; border-left: 3px solid var(--primary); background: var(--primary-soft); line-height: 1.5; }
 .score-uneven summary { min-height: 44px; display: list-item; align-content: center; cursor: pointer; }
 .score-uneven ul { columns: 220px; margin: 0; padding-left: 24px; }
+.work-rename { display: grid; gap: 8px; max-width: 560px; margin-top: 16px; }
+.work-rename input { padding: 8px 12px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); }

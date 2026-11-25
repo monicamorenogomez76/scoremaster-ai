@@ -34,6 +34,8 @@ class Work:
     summary: dict = field(default_factory=dict)
     preparation_status: str = "review"
     source_format: str = "musicxml"
+    # The director named it (2026-11-25): its title and composer prevail over those of its file.
+    title_edited: bool = False
 
 
 @dataclass(frozen=True)
@@ -56,6 +58,11 @@ class Correction:
     created_at: datetime
 
 
+def named_result(result: dict, work: Work) -> dict:
+    """An analysis with the title and composer of a work the director named; the same otherwise."""
+    return {**result, "title": work.title, "composer": work.composer} if work.title_edited else result
+
+
 class LibraryRepository(Protocol):
     def store_work(self, user_id: UUID, upload: WorkUpload) -> Work: ...
     def list_works(self, user_id: UUID) -> list[Work]: ...
@@ -66,6 +73,7 @@ class LibraryRepository(Protocol):
     def latest_analysis(self, user_id: UUID, work_id: UUID) -> Optional[AnalysisRecord]: ...
     def delete_work(self, user_id: UUID, work_id: UUID) -> bool: ...
     def update_preparation(self, user_id: UUID, work_id: UUID, status: str) -> Optional[Work]: ...
+    def rename_work(self, user_id: UUID, work_id: UUID, title: str, composer: Optional[str]) -> Optional[Work]: ...
     def preparation_priorities(self, user_id: UUID) -> list[dict]: ...
     # The corrected notes, oldest first; None when the work is not the user's. Each change of the file goes with its
     # correction, or neither does.

@@ -159,6 +159,19 @@ try {
   await page.locator('[data-view-target=repertoire]').click();
   await page.locator('#work-tab-recordings').click();
   const videos = page.locator('#videos-content');
+  // The director names the work, and its recordings are searched by that name (2026-11-25).
+  const before = await page.locator('#work-detail-title').textContent();
+  const rename = async title => {
+    await page.locator('#work-rename').click();
+    await page.locator('#work-rename-title').fill(title);
+    await page.locator('#work-rename-save').click();
+    await page.locator('#work-detail-title').getByText(title, { exact: true }).waitFor();
+  };
+  await rename('Obertura 1812');
+  await page.waitForFunction(() => document.querySelector('#videos-content input[type=search]').value.includes('Obertura 1812'));
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'work-rename', 'the focus goes back to its button');
+  await rename(before);
+  console.log('PASS: a work is named by the director and its recordings are searched by that name');
   await videos.getByRole('button', { name: 'Buscar' }).click();
   await videos.getByRole("link", { name: /^Abrir búsqueda de “/ }).waitFor();
   const manualLink = videos.getByLabel('Enlace de vídeo de YouTube');
