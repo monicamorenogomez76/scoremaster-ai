@@ -86,7 +86,7 @@ plan gratuito de Render no tiene IP fija). Si la búsqueda falla, los logs de Re
 |---|---|---|
 | Render duerme el servicio tras 15 min sin uso | El primer acceso tardaba alrededor de un minuto | El *workflow* `despertar.yml` pide `/health` cada 10 minutos desde este repositorio, que es público y no gasta minutos de Actions; las 750 horas al mes del plan cubren un servicio siempre encendido. GitHub puede retrasar unos minutos una ejecución programada y la desactiva tras 60 días sin actividad en el repositorio: si vuelve a dormirse, se reactiva en Actions › Despertar Render |
 | 512 MB de memoria | Leer una obra grande con music21 usa ~330-450 MB en su pico | El lector termina la obra en GitHub y la envía comprimida (12 MB son 347 KB). Las obras pendientes al arrancar se leen en un proceso aparte, por turnos con las lecturas de PDF: si no le toca, el lector recibe 503 antes de enviar nada y reintenta unos 19 minutos. Al recibir una lectura, las pendientes siguen en el próximo arranque. Con obras muy grandes, subir de plan |
-| CPU muy limitada | Leer una obra grande con music21 tarda unos 3 minutos | Cada obra se lee una sola vez: su modelo musical y su audio se guardan en la tabla `prepared_works` y sobreviven a reinicios y despliegues. Al arrancar se preparan en segundo plano las que falten. Si se pide un pasaje antes, el navegador muestra el avance y espera hasta 15 minutos. Con la obra preparada, un pasaje suena en ~2 s, una propuesta de ensayo tarda ~13 s y la planificación de un concierto ~22 s |
+| CPU muy limitada | Leer una obra grande con music21 tarda unos 3 minutos | Cada obra se lee una sola vez: su modelo musical y su audio se guardan en la tabla `prepared_works` y sobreviven a reinicios y despliegues. Al arrancar se preparan en segundo plano las que falten. Cambiar `SCORE_VERSION` o `TIMELINE_VERSION` obliga a prepararlas todas otra vez: con `score-v6` Render se quedó sin memoria con «1812» (que solo cabe preparada por el lector) y se reiniciaba cada minuto, así que una versión nueva es solo para un cambio que necesitan todas las obras. Una nota corregida por el director cambia el modelo y el audio guardados sin music21 (tabla `work_corrections`, migración 0028, que guarda cada corrección para listarla y deshacer la última). Si se pide un pasaje antes, el navegador muestra el avance y espera hasta 15 minutos. Con la obra preparada, un pasaje suena en ~2 s, una propuesta de ensayo tarda ~13 s y la planificación de un concierto ~22 s |
 | Neon suspende la base tras 5 min sin uso | La primera consulta espera a que despierte (el servidor espera hasta 10 s al conectar) | Nada: se reanuda sola. El plan da 1 GB y 100 horas de cómputo al mes |
 
 Para cambiar de plan basta con editar `plan:` en `render.yaml` o hacerlo desde el panel de Render.
@@ -260,9 +260,11 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   la particella anterior cuando el nombre la abrevia con su mismo número («Fl. 1» de «Flute 1», «Hn. 1» de «F Horn 1»);
   una primera página siempre empieza particella. Una página que nombra varios instrumentos entre dos páginas de
   particella, como la percusión, es de esa particella y no de la partitura general.
-- **Instrumentos:** las particellas y los pentagramas de la partitura general se nombran con el catálogo (78
+- **Instrumentos:** las particellas y los pentagramas de la partitura general se nombran con el catálogo (79
   instrumentos, con los de las bandas de concierto, las españolas y las brass bands, la percusión habitual y las
-  abreviaturas de las particellas). El número de parte puede ir antes de la tonalidad («Trompa 1ª en Fa», «Clarinete 1
+  abreviaturas de las particellas). Desde el catálogo v11 (migración 0029) conoce también los nombres de las ediciones
+  americanas de hace un siglo («The Ride of the Valkyries», arr. Laurendeau): el flautín en Re♭, «Solo B♭ Clarinet»,
+  «Cornets», «Altos» (trompas altas en Mi♭), «Tenors» (bombardinos en Si♭), «Basses» y «Timpany». El número de parte puede ir antes de la tonalidad («Trompa 1ª en Fa», «Clarinete 1
   Sib»), y «T.C.» o «B.C.» solo indican la clave. Si una particella no se puede leer, toma su pentagrama de la partitura
   general.
 - **Transposición:** copista lee las notas tal como están impresas, pero no escribe `<transpose>`. ScoreMaster añade
@@ -279,6 +281,14 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 - **Compases:** cada compás toma la duración de su compás (`backend/parsers/pdf_measures.py`). Si se pasa, se quita
   primero el silencio de compás entero leído junto a otras notas y después lo que sobrepasa la barra; si se queda
   corto, se completa con silencio (antes de las notas en el primer compás, que es una anacrusa).
+- **Numeración:** los compases se numeran como en el PDF. Si el primero es más corto que su compás en todas las partes
+  que tocan en él, es una anacrusa: compás 0 (`implicit` en MusicXML) y el primero completo es el 1
+  (`number_like_the_pdf`). Así «compás 20» es el mismo en la app y en el papel.
 - **Armaduras:** la tonalidad de cada compás es la que comparten la mayoría de las partes no transpositoras (al menos
   dos). Una parte transpuesta que no lleve esa tonalidad más el intervalo de su instrumento la toma
   (`fix_key_signatures`); sus alteraciones impresas se respetan hasta la barra.
+- **Alteraciones que la página no escribe:** copista da a una nota la alteración que oye su modelo aunque no vea el
+  signo (en «1812», compás 20, el sol del segundo saxo alto salía sol♯). La banda decide
+  (`backend/parsers/pdf_alterations.py`): la nota toma la altura que le dan su armadura, las alteraciones de su compás y
+  sus ligaduras cuando al menos tres partes atacan esa altura con ella y ninguna toca la leída. En trece páginas de
+  «1812», 226 de 8.903 notas tenían una alteración así, y la banda demostró que 111 sobraban.
