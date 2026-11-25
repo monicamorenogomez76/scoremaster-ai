@@ -37,7 +37,7 @@ export function policy(privacy) {
       t('Render (aloja la aplicación) y Neon (guarda la base de datos).'),
       t('Brevo: envía los correos de confirmación y de recuperación de la contraseña.'),
       t('GitHub: lee los PDF que subes; se borran de la aplicación al terminar la lectura.'),
-      t('Google Gemini: solo si está activado y pides una explicación, una opinión o preguntas algo. Recibe el análisis de la obra y tu pregunta, no tu nombre ni tu email.'),
+      t('Google Gemini: solo si está activado y pides una explicación, una opinión o preguntas algo. Recibe el análisis de la obra y tu pregunta, no tu nombre ni tu email. En su nivel gratuito, Google puede usar lo enviado para mejorar sus productos.'),
       t('jsDelivr y gleitz.github.io: al pulsar Reproducir envían los sonidos de los instrumentos y reciben tu dirección IP.'),
       t('YouTube: solo si permites cargar sus vídeos. Al buscarlos, el servidor envía a YouTube el texto de la búsqueda.'),
     ], t('Algunos de estos proveedores son de Estados Unidos y pueden tratar los datos fuera del Espacio Económico Europeo.')]],

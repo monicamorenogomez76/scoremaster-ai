@@ -1,6 +1,7 @@
 // Asking the work (M6, 2026-11-20): the AI chooses which read-only data of ScoreMaster to read and answers from them;
 // the suggested questions, and every question without the AI, are answered by rules, never presented as AI.
 import { apiJson } from './api.js';
+import { aiFailure } from './aiFailures.js';
 import { currentLanguage, t } from './i18n.js';
 
 export const MAX_QUESTION = 300;
@@ -33,13 +34,6 @@ const toolNames = () => ({ difficulty: t('dificultad'), band: t('banda'), analys
   schedule: t('ensayos y conciertos'), find_works: t('tus obras'), work_details: t('detalle de obras'),
   repertoire_schedule: t('conciertos y ensayos'), repertoire_band: t('plantilla de la banda') });
 
-const fallbacks = () => ({
-  timeout: t('La IA no respondió a tiempo'),
-  rate_limit: t('La IA ha alcanzado su límite de uso'),
-  invalid: t('La IA dio una respuesta que no coincidía con los datos'),
-  error: t('La IA no está disponible'),
-});
-
 // The repertoire's schedule and band read other data than the work's, under the same names.
 const listed = (tools, scope) => {
   const names = toolNames();
@@ -56,10 +50,7 @@ export function answerSource(result, scope = 'work') {
       { provider, data: read }) + (result.cached ? ' ' + t('Respuesta guardada: no gasta cupo.') : '');
   }
   const rules = read ? t('se responde con reglas, sin IA, a partir de: {data}.', { data: read }) : t('se responde con reglas, sin IA.');
-  if (result.fallback_reason) {
-    const reasons = fallbacks();
-    return (reasons[result.fallback_reason] || reasons.error) + ': ' + rules;
-  }
+  if (result.fallback_reason) return aiFailure(result.fallback_reason) + ': ' + rules;
   return read ? t('Respondida con reglas a partir de estos datos de ScoreMaster, sin IA: {data}.', { data: read })
     : t('Respondida con reglas, sin IA.');
 }

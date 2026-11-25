@@ -12,8 +12,13 @@ class ProviderInfo:
     model: Optional[str] = None
 
 
+# Why a provider did not answer: too slow, its quota used up, a model it does not have, a key it refuses, too busy, or
+# anything else.
+FAILURES = ("timeout", "rate_limit", "model", "key", "overloaded", "error")
+
+
 class ProviderFailure(Exception):
-    """A provider that did not answer: timeout, rate_limit or error (the reason is the message)."""
+    """A provider that did not answer: the reason, one of FAILURES, is the message."""
 
 
 class ExplanationProvider(Protocol):

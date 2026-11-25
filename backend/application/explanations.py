@@ -6,7 +6,7 @@ import logging
 import re
 
 from backend.application import ai_usage
-from backend.application.ai import ProviderFailure
+from backend.application.ai import FAILURES, ProviderFailure
 from backend.domain.text import MAX_TEXT, evidence_text  # noqa: F401 (used by the explanations)
 
 logger = logging.getLogger(__name__)
@@ -86,6 +86,10 @@ def check_figures(explanation, evidence: dict):
     return explanation
 
 
+def failure_reason(error: Exception) -> str:
+    return str(error) if isinstance(error, ProviderFailure) and str(error) in FAILURES else "error"
+
+
 def cache_key(evidence: dict, provider, prompt_version: str) -> str:
     """Step 23: the exact evidence (with its version), provider, model and prompt version."""
     payload = json.dumps({"evidence": evidence, "provider": provider.info.name, "model": provider.info.model,
@@ -129,7 +133,7 @@ def run_explanation(evidence: dict, ask, validate, provider, demo, prompt_versio
                 except Exception:
                     logger.warning("No se pudo guardar la explicación en la caché.", exc_info=True)
         except ProviderFailure as failure:
-            fallback_reason = str(failure) if str(failure) in ("timeout", "rate_limit") else "error"
+            fallback_reason = failure_reason(failure)
         except InvalidExplanation as invalid:
             fallback_reason = "invalid"
             if llm:

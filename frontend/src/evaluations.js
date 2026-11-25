@@ -119,7 +119,9 @@ export const getLlmReview = id => apiJson(path(id) + '/llm-review', {}, t('No se
 export const startLlmReview = id => apiJson(path(id) + '/llm-review', { method: 'POST' }, t('No se pudo iniciar la valoración con IA.'));
 
 const reviewErrors = () => ({ timeout: t('la IA no respondió a tiempo'), rate_limit: t('la IA alcanzó su límite de uso'),
-  invalid: t('la respuesta no seguía la rúbrica'), error: t('la IA no estaba disponible') });
+  invalid: t('la respuesta no seguía la rúbrica'), model: t('Google no encuentra el modelo de IA configurado (GEMINI_MODEL)'),
+  key: t('Google no acepta la clave de IA configurada (GEMINI_API_KEY)'), overloaded: t('El servicio de IA está saturado; prueba dentro de unos minutos'),
+  error: t('la IA no estaba disponible') });
 
 export function llmReviewText(status) {
   if (!status.available) return t('Necesita configurar GEMINI_API_KEY en el servidor: sin IA real no hay método B (un sustituto con reglas sería otra heurística).');

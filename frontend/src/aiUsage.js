@@ -33,5 +33,6 @@ const purposes = () => ({ difficulty: t('Explicación de la dificultad'), rehear
 export const purposeLabel = purpose => purposes()[purpose] || purpose;
 
 const outcomes = () => ({ timeout: t('Sin respuesta a tiempo'), rate_limit: t('Límite de uso alcanzado'),
+  model: t('Modelo no encontrado'), key: t('Clave no aceptada'), overloaded: t('Servicio saturado'),
   error: t('Error del proveedor'), invalid: t('Respuesta descartada por la validación') });
 export const outcomeLabel = outcome => outcomes()[outcome] || outcome;

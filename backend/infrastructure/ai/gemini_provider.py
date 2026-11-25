@@ -2,10 +2,11 @@
 
 LangChain stays behind the AI port: the domain only sees ExplanationProvider. Answers use structured
 output with the same Pydantic schemas the server validates, temperature 0, a time limit and a single
-retry; any failure becomes ProviderFailure (timeout, rate_limit, error) and the demo answers. The key
+retry; any failure becomes ProviderFailure (its reason) and the demo answers. The key
 never reaches logs or the browser. LangChain is imported on first use: ~70 MB a keyless server skips."""
 import logging
 import os
+import re
 import time
 from threading import Lock
 from typing import Optional
@@ -91,13 +92,22 @@ def _structured(answer):
     return answer, None, None
 
 
+# What Google's errors say, the first that matches. Whole words (2026-11-25): «generateContent» holds «rate», and a model
+# that Google no longer had was told as a quota used up.
+_REASONS = (
+    ("timeout", re.compile(r"timeout|timed out|deadline|\b504\b")),
+    ("rate_limit", re.compile(r"\b429\b|resource_?exhausted|quota|\brate[ _-]?limit")),
+    ("key", re.compile(r"api[ _]key|\b401\b|\b403\b|permission_?denied|unauthenticated")),
+    ("model", re.compile(r"\b404\b|not[ _]?found")),
+    ("overloaded", re.compile(r"\b503\b|unavailable|overloaded")),
+)
+
+
 def _reason(error: Exception) -> str:
-    text = (type(error).__name__ + " " + str(error)).lower()
-    if isinstance(error, TimeoutError) or "timeout" in text or "timed out" in text or "deadline" in text:
+    if isinstance(error, TimeoutError):
         return "timeout"
-    if "429" in text or "resource_exhausted" in text or "resourceexhausted" in text or "quota" in text or "rate" in text:
-        return "rate_limit"
-    return "error"
+    text = (type(error).__name__ + " " + str(error)).lower()
+    return next((reason for reason, said in _REASONS if said.search(text)), "error")
 
 
 class GeminiExplanationProvider:
@@ -117,7 +127,7 @@ class GeminiExplanationProvider:
         reason = _reason(error)
         # Only the kind of failure: the exception text could carry request details.
         logger.warning("Gemini no respondió (%s, %s) con el prompt %s.", reason, type(error).__name__, prompt.version)
-        if type(error).__name__ == "NotFound" or "not found" in str(error).lower():
+        if reason == "model":
             logger.warning("Google no encuentra el modelo %s: elige otro disponible con GEMINI_MODEL.", self.info.model)
         return ProviderFailure(reason)
 
