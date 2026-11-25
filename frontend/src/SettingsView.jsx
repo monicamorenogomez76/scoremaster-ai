@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { applyTextSize, applyTheme, loadTextSize, loadTheme, saveTextSize, saveTheme, textSizes, themes, updateProfile } from './settings.js';
 import { applyLanguage, currentLanguage, languages, saveLanguage, t } from './i18n.js';
+import { AccountData } from './AccountData.jsx';
 import { InstrumentAdmin } from './InstrumentAdmin.jsx';
 import { AiUsageAdmin } from './AiUsageAdmin.jsx';
 import { PrivacyLink } from './Privacy.jsx';
@@ -8,7 +9,7 @@ import { allowYouTube, youTubeAllowed } from './privacy.js';
 import { View } from './View.jsx';
 
 // Configuración (as in its mock-up): the account's visible name and the language, text size and theme of this device.
-export function SettingsView({ active, user, onUserChanged }) {
+export function SettingsView({ active, user, onUserChanged, onAccountDeleted }) {
   const [name, setName] = useState(user?.display_name || '');
   const [size, setSize] = useState(loadTextSize);
   const [theme, setTheme] = useState(loadTheme);
@@ -67,6 +68,7 @@ export function SettingsView({ active, user, onUserChanged }) {
           onChange={event => { allowYouTube(event.target.checked); setYouTube(event.target.checked); }} />{t('Permitir que se carguen vídeos de YouTube')}</label>
         <p className="result-supporting">{t('YouTube recibe tu dirección IP y puede guardar datos en tu navegador.')}</p>
         <PrivacyLink />
+        <AccountData user={user} onDeleted={onAccountDeleted} />
       </section>
       {user?.is_admin && <InstrumentAdmin />}
       {user?.is_admin && <AiUsageAdmin />}

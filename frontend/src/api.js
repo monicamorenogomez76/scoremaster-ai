@@ -96,6 +96,12 @@ export async function signOut() {
   finally { csrfToken = ''; }
 }
 
+export async function deleteAccount(confirmation) {
+  const response = await apiFetch('/auth/me', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(confirmation) });
+  if (!response.ok) throw new Error(await detail(response, t('No se pudo borrar la cuenta.')));
+  csrfToken = '';
+}
+
 export async function authConfig() {
   try { const response = await fetch('/auth/config'); return response.ok ? await response.json() : {}; }
   catch { return {}; }

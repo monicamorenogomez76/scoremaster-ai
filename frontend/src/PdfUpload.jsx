@@ -68,6 +68,7 @@ export function PdfUpload({ visible, minutes, onOpenWork }) {
   return <form id="pdf-upload" className="pdf-upload" onSubmit={submit} aria-busy={busy} aria-labelledby={ids + 'title'}>
     <h3 id={ids + 'title'}>{t('Desde un PDF')}</h3>
     <p className="result-supporting">{t('Se lee con reconocimiento óptico de partituras. Funciona mejor con PDF exportados de un editor de partituras. Revisa la obra leída: su grado es provisional y no entra en las valoraciones de los músicos.')}</p>
+    <p className="result-supporting">{t('El PDF se envía a GitHub para leerlo y se borra de la aplicación al terminar la lectura.')}</p>
     <fieldset className="pdf-kind" disabled={busy}>
       <legend>{t('Qué vas a subir')}</legend>
       <label><input type="radio" name="pdf-kind" value="auto" checked={kind === 'auto'} onChange={() => setKind('auto')} />

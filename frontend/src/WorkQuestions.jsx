@@ -50,7 +50,7 @@ function QuestionPanel({ id, scope, ask, suggestions: offered, intro, example, b
     send({ question: text });
   };
   return <>
-    <p className="result-supporting">{intro}</p>
+    <p className="result-supporting">{intro} {t('Si la IA está activada, tu pregunta y los datos del análisis se envían a Google Gemini; no escribas datos personales.')}</p>
     <div className="work-question-suggestions" role="group" aria-label={t('Preguntas sugeridas')}>
       {offered.map(([name, label]) => <button key={name} type="button" className="secondary-action" disabled={busy}
         onClick={() => send({ suggestion: name })}>{label}</button>)}

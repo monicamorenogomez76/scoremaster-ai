@@ -86,6 +86,23 @@ try {
   assert.equal(await rootSize(), '18px', 'the text size is kept on this device');
   assert.deepEqual(errors, []);
   console.log('PASS: the visible name and the text size are set in Configuración');
+
+  // The account downloads its data and is deleted with it, its password asked again (2026-11-25).
+  if (await page.locator('#cookie-accept').isVisible()) await page.locator('#cookie-accept').click();
+  await page.locator('[data-view-target=settings]').click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#account-download').click()]);
+  assert.equal(download.suggestedFilename(), 'scoremaster-mis-datos.zip');
+  await page.locator('#account-delete').click();
+  await page.locator('#account-confirmation').fill('no es la contraseña');
+  await page.locator('#account-delete-confirm').click();
+  await page.locator('#account-error').getByText('La contraseña no es correcta.').waitFor();
+  await page.locator('#account-confirmation').fill('una contraseña larga');
+  await page.locator('#account-delete-confirm').click();
+  await page.locator('#login-screen').waitFor({ state: 'visible' });
+  await page.locator('#login-verified').getByText('Tu cuenta y tus datos se han borrado.').waitFor();
+  await page.reload();
+  await page.locator('#login-screen').waitFor({ state: 'visible' });
+  console.log('PASS: an account downloads its data and is deleted with it');
 } finally {
   await browser.close();
 }
