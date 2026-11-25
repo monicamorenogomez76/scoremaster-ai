@@ -203,17 +203,18 @@ def _set_key(measure, fifths: int) -> None:
     key.find("fifths").text = str(fifths)
 
 
-def fix_key_signatures(musicxml: bytes) -> bytes:
+def fix_key_signatures(musicxml: bytes, turned: frozenset[str] = frozenset()) -> bytes:
     """A transposed part whose key is not the band's plus its interval missed its key signature (2026-10-29): it takes
     that key and its notes without a printed accidental are spelled in it. The band's key at each measure is the one
-    most of its non-transposing parts agree on (at least two); without them nothing is changed."""
+    most of its non-transposing parts agree on (at least two); without them nothing is changed. turned: the parts whose clef was corrected, whose key was read in the
+    wrong place: they take the band's too."""
     root = ET.fromstring(musicxml)
     names = {item.get("id"): item.findtext("part-name") or "" for item in root.iter("score-part")}
     reference, transposed = [], []
     for part in root.findall("part"):
         shift = _shift(part)
-        if shift:
-            transposed.append((part, shift))
+        if shift or part.get("id") in turned:
+            transposed.append((part, shift or 0))
             continue
         identity = match_instrument_name(names.get(part.get("id"), "")).identity
         if identity is not None and identity.section != "percussion":

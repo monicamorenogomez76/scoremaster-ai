@@ -11,6 +11,7 @@ import zlib
 
 from backend.parsers.musicxml_parser import parse_musicxml
 from backend.parsers.pdf_alterations import fix_unwritten_alterations
+from backend.parsers.pdf_clefs import fix_clefs
 from backend.parsers.pdf_measures import fit_measures, number_like_the_pdf
 from backend.parsers.pdf_transpositions import add_transpositions, fix_key_signatures
 from backend.parsers.playback import TIMELINE_VERSION, encode_timeline, timeline_has_parts
@@ -44,10 +45,14 @@ def final_musicxml(read: bytes, learned: dict | None, concert_pitch: bool, sourc
     # copista writes the notes in the key of each instrument but no <transpose> (2026-10-29).
     # Each measure keeps the length of its time signature: one read too long made its part sound late.
     # Numbered as the PDF prints them: an upbeat is measure 0 (2026-11-22), before it is completed with silence.
-    content = add_transpositions(fit_measures(number_like_the_pdf(read)), learned, concert_pitch, source)
+    content = fit_measures(number_like_the_pdf(read))
+    # A clef misread on some pages (2026-11-25), before the transpositions: they depend on the first clef of a part.
+    in_c = b"<transpose>" not in add_transpositions(content, learned, concert_pitch, source)
+    content, turned = fix_clefs(content, in_c)
+    content = add_transpositions(content, learned, concert_pitch, source)
     # A key signature the reader missed in a transposed part is taken from the band.
     # An alteration the page does not print is kept only while the band does not disprove it (2026-11-25).
-    return fix_unwritten_alterations(fix_key_signatures(content))
+    return fix_unwritten_alterations(fix_key_signatures(content, turned))
 
 
 def finish_reading(read: bytes, learned: dict | None, concert_pitch: bool, source: str) -> dict:
