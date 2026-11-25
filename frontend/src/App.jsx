@@ -6,6 +6,7 @@ import { AppShell } from './AppShell.jsx';
 import { evaluationWorkFile } from './evaluations.js';
 import { saveBand } from './library.js';
 import { LoginScreen } from './LoginScreen.jsx';
+import { CookieNotice, PrivacyPolicy } from './Privacy.jsx';
 import { initialBandDraft, readBandProfile } from './labels.js';
 import { passageRange } from './rehearsals.js';
 import { FullScoreViewer } from './score/FullScoreViewer.jsx';
@@ -167,5 +168,7 @@ export function App({ session }) {
       scoreViewer={<FullScoreViewer ref={fullScore} session={session} workId={analysis?.data?.work_id}
         onSaved={() => analysis?.data?.work_id && upload.openWork(analysis.data.work_id, { navigate: false })} />} />
     <PassageDialog ref={passage} session={session} />
+    <PrivacyPolicy />
+    <CookieNotice />
   </>;
 }

@@ -3,6 +3,8 @@ import { applyTextSize, applyTheme, loadTextSize, loadTheme, saveTextSize, saveT
 import { applyLanguage, currentLanguage, languages, saveLanguage, t } from './i18n.js';
 import { InstrumentAdmin } from './InstrumentAdmin.jsx';
 import { AiUsageAdmin } from './AiUsageAdmin.jsx';
+import { PrivacyLink } from './Privacy.jsx';
+import { allowYouTube, youTubeAllowed } from './privacy.js';
 import { View } from './View.jsx';
 
 // Configuración (as in its mock-up): the account's visible name and the language, text size and theme of this device.
@@ -11,6 +13,8 @@ export function SettingsView({ active, user, onUserChanged }) {
   const [size, setSize] = useState(loadTextSize);
   const [theme, setTheme] = useState(loadTheme);
   const [language, setLanguageChoice] = useState(currentLanguage);
+  const [youTube, setYouTube] = useState(youTubeAllowed);
+  useEffect(() => { if (active === 'settings') setYouTube(youTubeAllowed()); }, [active]);
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
   useEffect(() => { setName(user?.display_name || ''); }, [user?.email, user?.display_name]);
@@ -56,6 +60,13 @@ export function SettingsView({ active, user, onUserChanged }) {
           </label>)}
         </fieldset>
         <p className="result-supporting">{t('Se guardan en este dispositivo. Automático sigue el modo claro u oscuro del sistema.')}</p>
+      </section>
+      <section className="surface settings-card" aria-labelledby="settings-privacy-title">
+        <h2 id="settings-privacy-title">{t('Privacidad')}</h2>
+        <label className="weekday-option"><input id="settings-youtube" type="checkbox" checked={youTube}
+          onChange={event => { allowYouTube(event.target.checked); setYouTube(event.target.checked); }} />{t('Permitir que se carguen vídeos de YouTube')}</label>
+        <p className="result-supporting">{t('YouTube recibe tu dirección IP y puede guardar datos en tu navegador.')}</p>
+        <PrivacyLink />
       </section>
       {user?.is_admin && <InstrumentAdmin />}
       {user?.is_admin && <AiUsageAdmin />}

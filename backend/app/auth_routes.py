@@ -191,6 +191,8 @@ def update_me(body: ProfileBody, user: User = Depends(authenticated_user),
 def config(mailer: Optional[Mailer] = Depends(get_mailer)):
     return {"google_enabled": google_enabled(), "demo_email": os.environ.get("DEMO_USER_EMAIL") or None,
             "password_reset_enabled": mailer is not None,
+            # Who answers for the personal data, for the privacy policy (2026-11-25).
+            "privacy": {"controller": os.environ.get("PRIVACY_CONTROLLER") or None, "email": os.environ.get("PRIVACY_EMAIL") or None},
             # The email must be confirmed where it is asked (production) and can be (with mail).
             "email_verification": mailer is not None and os.environ.get("APP_ENV") == "production"}
 

@@ -22,6 +22,7 @@ Al arrancar, el contenedor aplica las migraciones (`alembic upgrade head`) y cre
 | `DATABASE_URL` | Cadena de conexión **directa** de Neon, tal cual la da Neon (con `sslmode=require`). Ver «Base de datos en Neon» |
 | `DEMO_USER_PASSWORD` | Contraseña de la cuenta demo (mínimo 10 caracteres). En cada arranque la cuenta toma esta contraseña y, si cambió, se cierran sus sesiones. No reutilizar la de desarrollo; se comparte solo con quien vaya a probar la demo |
 | `ADMIN_EMAILS` | Emails de las cuentas administradoras, separados por comas. Solo ellas crean campañas de valoración y ven los emails y resultados de los músicos. La cuenta tiene que haber confirmado su email. Nunca la cuenta demo |
+| `PRIVACY_CONTROLLER`, `PRIVACY_EMAIL` | Responsable de los datos personales y su contacto: los muestra la política de privacidad de la app. Obligatorios en una instalación pública |
 | `BREVO_API_KEY`, `MAIL_FROM`, `APP_BASE_URL` | Opcionales, las tres o ninguna. Ver «Correo con Brevo» |
 | `GEMINI_API_KEY` | Opcional. Ver «IA con Gemini» |
 | `OMR_GITHUB_REPO`, `OMR_GITHUB_TOKEN` | Opcionales. Ver «Lector de PDF» |

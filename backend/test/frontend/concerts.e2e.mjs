@@ -19,6 +19,7 @@ const minutesOf = (rehearsal, work) => rehearsal.locator('.calendar-slot').evalu
 const waitIdle = () => page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
 try {
   await page.goto(url);
+  await page.locator('#cookie-accept').click();
   await page.locator('#login-mode').click();
   await page.locator('#login-name').fill('Directora de conciertos');
   await page.locator('#login-email').fill('conciertos-' + Date.now() + '@banda.test');

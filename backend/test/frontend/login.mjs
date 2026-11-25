@@ -5,6 +5,7 @@ export const credentials = {
 };
 
 export async function login(page, { email, password } = credentials) {
+  if (await page.locator('#cookie-accept').isVisible()) await page.locator('#cookie-accept').click();
   await page.locator('#login-email').fill(email);
   await page.locator('#login-password').fill(password);
   await page.locator('#login-submit').click();
