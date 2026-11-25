@@ -1588,3 +1588,11 @@ def test_a_scan_of_parts_may_have_a_page_with_a_line_of_text():
              worker.ScanText("Oboes."), '"The Ride of the Valkyries"', "3rd Trombone"]
     assert worker.scan_part_starts(texts) == [0, 2, 9]
     assert worker.scan_part_starts(["Flute 1", "Flute 1", "Oboe"]) is None, "a digital PDF keeps its own grouping"
+
+
+def test_the_numbers_printed_at_the_foot_of_a_page_count_its_bars():
+    from omr.worker import printed_measures
+    assert printed_measures("Picc.\n   3    3    3\n  88   89   90   91  92   93 94   95  96\nv. 2, May 2015") == 9
+    assert printed_measures("  2  3  4\n  2  3  4\n  71  72  73  74  75\n") == 5, "the row of the bars, not the repeated counts"
+    assert printed_measures("Flute 1\n120 bpm\n") is None
+    assert printed_measures(" 5  9  13  17 ") is None, "one number a line is not one a bar"

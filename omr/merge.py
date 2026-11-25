@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections import Counter
 import copy
 from dataclasses import dataclass
+from fractions import Fraction
 import re
 from xml.sax.saxutils import escape
 
@@ -235,6 +236,77 @@ def join_pages(pages: list[bytes], title: str, names: list[str] | None = None, l
         if first_page:
             _first_attributes(part, first_page[0])
     return _write(title, parts)
+
+
+def shorten_upbeat(xml: bytes, printed: int | None) -> bytes:
+    """The bar without number of a page (2026-11-25, «1812» bar 95): the upbeat of a new section, which copista completes to
+    the meter in force. With one bar more than the numbers printed and one place where the key or the meter changes, that bar
+    takes the length of what starts it in most parts, when nothing but silence follows, and the meter comes back after it."""
+    from collections import Counter
+    from xml.etree import ElementTree
+    root = ElementTree.fromstring(xml)
+    parts = [part.findall("measure") for part in root.findall("part")]
+    count = max((len(measures) for measures in parts), default=0)
+    if printed is None or count != printed + 1 or any(len(measures) != count for measures in parts):
+        return xml
+    places = {index for measures in parts for index, measure in enumerate(measures)
+              if index and (measure.find("attributes/key") is not None or measure.find("attributes/time") is not None)}
+    if len(places) != 1 or (index := places.pop()) + 1 >= count:
+        return xml
+    firsts, divisions, sounds, meter = Counter(), {}, False, {}
+    for at, measures in enumerate(parts):
+        divisions[at], meter[at] = 1, None
+        for measure in measures[:index + 1]:
+            for attributes in measure.findall("attributes"):
+                divisions[at] = int(attributes.findtext("divisions") or divisions[at])
+                if attributes.find("time/beats") is not None:
+                    meter[at] = (attributes.findtext("time/beats"), attributes.findtext("time/beat-type"))
+        notes = [element for element in measures[index].findall("note") if element.find("chord") is None and element.find("grace") is None]
+        if not notes or meter[at] is None or measures[index].find("backup") is not None:
+            return xml
+        firsts[Fraction(int(notes[0].findtext("duration") or 0), divisions[at])] += 1
+        sounds = sounds or notes[0].find("rest") is None
+    length, parts_with_it = firsts.most_common(1)[0]
+    if not sounds or length <= 0 or parts_with_it * 2 <= len(parts) or length * 2 > Fraction(int(meter[0][0]) * 4, int(meter[0][1])):
+        return xml
+    for at, measures in enumerate(parts):
+        position = Fraction(0)
+        for element in measures[index].findall("note"):
+            if element.find("grace") is not None:
+                continue
+            if element.find("rest") is None and position >= length and element.find("chord") is None:
+                return xml   # it plays on: a whole bar
+            if element.find("chord") is None:
+                position += Fraction(int(element.findtext("duration") or 0), divisions[at])
+    beats = length / 4
+    for at, measures in enumerate(parts):
+        position = Fraction(0)
+        for element in measures[index].findall("note"):
+            if element.find("grace") is not None:
+                continue
+            if element.find("chord") is None:
+                if position >= length:
+                    measures[index].remove(element)
+                position += Fraction(int(element.findtext("duration") or 0), divisions[at])
+        _hidden_meter(measures[index], str(beats.numerator), str(beats.denominator))
+        if measures[index + 1].find("attributes/time") is None:
+            _hidden_meter(measures[index + 1], *meter[at])
+    return b'<?xml version="1.0" encoding="UTF-8"?>\n' + ElementTree.tostring(root, encoding="utf-8")
+
+
+def _hidden_meter(measure, beats: str, beat_type: str) -> None:
+    from xml.etree import ElementTree
+    attributes = measure.find("attributes")
+    if attributes is None:
+        attributes = ElementTree.Element("attributes")
+        measure.insert(0, attributes)
+    for old in attributes.findall("time"):
+        attributes.remove(old)
+    time = ElementTree.Element("time", {"print-object": "no"})
+    ElementTree.SubElement(time, "beats").text = beats
+    ElementTree.SubElement(time, "beat-type").text = beat_type
+    before = [place for place, child in enumerate(attributes) if child.tag in ("divisions", "key")]
+    attributes.insert(before[-1] + 1 if before else 0, time)
 
 
 def silent_page(xml: bytes, count: int, measures: int | None = None) -> bytes:
