@@ -11,10 +11,34 @@ export function fitScale(widestPage, containerWidth, zoom, minimum = .75) {
   return Math.max(minimum, (containerWidth - 32) / widestPage) * zoom;
 }
 
-// A page of the PDF is drawn whole in one line, this wide a measure to begin with, wider while the engraver breaks it.
+// What one line of the score holds at most, to be read: a longer page of the PDF is shown in several (2026-11-25).
+export const MAX_MEASURES_PER_LINE = 8;
+
+// The first measure of each line: those of the pages, and within a long page those of its even pieces.
+export function splitPages(pages, last, most = MAX_MEASURES_PER_LINE) {
+  return pages.flatMap((start, at) => {
+    const count = (pages[at + 1] ?? last + 1) - start;
+    const lines = Math.max(1, Math.ceil(count / most));
+    return Array.from({ length: lines }, (_, line) => start + Math.ceil(line * count / lines));
+  });
+}
+
+// Where each line starts: by the pages of the PDF, or by the measures the director chose (2026-11-25). None when neither
+// is known: pages of up to four measures, the ones that fit.
+function linesOf({ pages, first, last }, measures) {
+  if (pages?.length) return splitPages(pages, last, measures || MAX_MEASURES_PER_LINE);
+  if (!measures) return null;
+  return Array.from({ length: Math.ceil((last - first + 1) / measures) }, (_, line) => first + line * measures);
+}
+
+// Such a line is this wide a measure to begin with, wider while the engraver breaks it.
 // 400: wide enough for most pages to fit at the first drawing; each drawing of 30 staves stops the page a while.
 const PDF_MEASURE_PIXELS = 400;
 const PDF_LINE_ATTEMPTS = 4;
+
+const ZOOM_STEP = 1.15;
+// From six tenths of the fit to twice the engraver's size, however small the fit is.
+const MIN_ZOOM = .6, MAX_SCALE = 2;
 
 // The page of the PDF a measure is on: the index of the last start not after it (pages: the first measure of each).
 export const pdfPageOf = (pages, measure) => Math.max(0, pages.findLastIndex(start => start <= measure));
@@ -115,7 +139,7 @@ const idle = { visible: false, status: '', busy: false, page: '', canPrevious: f
 
 // Renders the whole ensemble with OpenSheetMusicDisplay, in pages of up to four measures in a single line.
 // React owns the controls; this object owns only the notation inside `container`.
-export function createFullScoreRenderer({ container, session, filter, bounds, createDisplay, onChange, nextFrame, onSave, onDuration }) {
+export function createFullScoreRenderer({ container, session, filter, bounds, createDisplay, onChange, nextFrame, onSave, onDuration, measures = null }) {
   let score = null, rendering = 0, snapshot = idle, overlay = null;
   // Editing on the score: the pending changes, and the note selected by its place and pitch (2026-11-23).
   let editing = false, edits = [], selection = null, selectAfter = null;
@@ -124,13 +148,15 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
   const publish = changes => { snapshot = { ...snapshot, ...changes }; onChange(snapshot); };
   const frame = nextFrame || (() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
-  // The pages of the work's PDF, when it marks them: each shown whole, as small as its width needs.
-  const pdfPages = () => (score?.pages?.length ? score.pages : null);
+  // The lines of the work, when its PDF or the director says them: each shown whole, as small as its width needs.
+  const linesOfWork = () => score?.lines || null;
+
+  const pageWidth = () => Math.max(...score.sizes.map(item => item.width));
+  const scaleAt = zoom => fitScale(pageWidth(), container.clientWidth, zoom, linesOfWork() ? 0 : .75);
 
   function fit() {
     if (!score?.sizes?.length || container.clientWidth <= 32 || container.clientHeight <= 32) return;
-    const width = Math.max(...score.sizes.map(item => item.width));
-    const scale = fitScale(width, container.clientWidth, score.zoom, pdfPages() ? 0 : .75);
+    const width = pageWidth(), scale = scaleAt(score.zoom);
     for (const item of score.sizes) {
       item.svg.style.display = 'block';
       item.svg.style.width = item.width * scale + 'px';
@@ -143,11 +169,11 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
 
   async function renderPage() {
     if (!score) return;
-    const state = score, token = ++rendering, pages = pdfPages();
-    const index = pages ? pdfPageOf(pages, state.pageStart) : 0;
-    let end = pages ? (index + 1 < pages.length ? pages[index + 1] - 1 : state.last)
+    const state = score, token = ++rendering, lines = linesOfWork();
+    const index = lines ? pdfPageOf(lines, state.pageStart) : 0;
+    let end = lines ? (index + 1 < lines.length ? lines[index + 1] - 1 : state.last)
       : Math.min(state.pageStart + MEASURES_PER_PAGE - 1, state.last);
-    const label = () => (pages ? pdfPageLabel(pages, index, state.pageStart, end) : pageLabel(state.first, state.last, state.pageStart, end));
+    const label = () => (state.pages?.length ? pdfPageLabel(state.pages, pdfPageOf(state.pages, state.pageStart), state.pageStart, end) : pageLabel(state.first, state.last, state.pageStart, end));
     publish({ status: t('Cargando partitura · compases {first}–{last}…', { first: state.pageStart, last: end }), busy: true,
       canPrevious: state.pageStart > state.first, canNext: end < state.last, page: label() });
     await frame();
@@ -156,10 +182,10 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
     try {
       let display;
       const count = end - state.pageStart + 1;
-      let width = Math.max(900, container.clientWidth - 24, pages ? count * PDF_MEASURE_PIXELS : 0);
-      // Drawn once with up to four measures; again with the ones that fit when they need a second line. A page of the
-      // PDF is never cut: it is drawn wider until it fits in one line, and shrunk to the screen.
-      for (let attempt = 0; attempt < (pages ? PDF_LINE_ATTEMPTS : 2); attempt++) {
+      let width = Math.max(900, container.clientWidth - 24, lines ? count * PDF_MEASURE_PIXELS : 0);
+      // Drawn once with up to four measures; again with the ones that fit when they need a second line. A line of
+      // the PDF or of the director is never cut: it is drawn wider until it fits, and shrunk to the screen.
+      for (let attempt = 0; attempt < (lines ? PDF_LINE_ATTEMPTS : 2); attempt++) {
         staging?.remove();
         staging = container.ownerDocument.createElement('div');
         staging.style.width = width + 'px';
@@ -167,22 +193,22 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
         container.append(staging);
         const pageXml = applyEdits(filter(state.source, null, state.pageStart + '-' + end), edits);
         const xml = pageXml.trimStart().startsWith('<?xml') ? pageXml : '<?xml version="1.0" encoding="UTF-8"?>\n' + pageXml;
-        // A page of the PDF is one line, the last of what is drawn: stretched to the width, or half of it stayed blank.
+        // Such a line is the last of what is drawn: stretched to the width, or half of it stayed blank.
         display = createDisplay(staging, { autoResize: false, backend: 'svg', drawTitle: false,
-          drawPartNames: true, drawMeasureNumbers: true, cursorsOptions: CURSOR, ...(pages ? { stretchLastSystemLine: true } : {}) });
+          drawPartNames: true, drawMeasureNumbers: true, cursorsOptions: CURSOR, ...(lines ? { stretchLastSystemLine: true } : {}) });
         await display.load(xml);
         if (token !== rendering || state !== score) return;
         display.render();
         const fitting = measuresInFirstLine(display);
         if (!fitting || fitting >= end - state.pageStart + 1) break;
-        if (pages) width = Math.ceil(width * count / fitting * 1.1);
+        if (lines) width = Math.ceil(width * count / fitting * 1.1);
         else end = state.pageStart + fitting - 1;
       }
       state.pageEnd = end;
       publish({ canNext: end < state.last, page: label() });
       staging.style.position = ''; staging.style.visibility = '';
       state.staging = staging; state.display = display;
-      container.replaceChildren(staging); container.scrollTop = 0;
+      container.replaceChildren(staging); container.scrollTop = 0; container.scrollLeft = 0;
       publish({ status: t('Todas las voces · notación original · compases {first}–{last}', { first: state.pageStart, last: end }), busy: false });
       drawn(state);
       if (editing && (selectAfter || !selection)) selectOnPage(selectAfter);
@@ -327,6 +353,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
       const source = await session.loadSource();
       if (version !== session.getVersion()) return;
       score = { source, ...bounds(source), zoom: 1, starts: [] };
+      score.lines = linesOf(score, measures);
       score.pageStart = score.first;
       if (resume) {
         if (resume.pageStart >= score.first && resume.pageStart <= score.last) score.pageStart = resume.pageStart;
@@ -343,11 +370,11 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
   // The next page starts after the last measure shown; the previous one goes back to where it was.
   const turn = delta => {
     if (!score) return;
-    const pages = pdfPages();
-    if (pages) {
-      const index = pdfPageOf(pages, score.pageStart) + delta;
-      if (index < 0 || index >= pages.length) return;
-      score.pageStart = pages[index];
+    const lines = linesOfWork();
+    if (lines) {
+      const index = pdfPageOf(lines, score.pageStart) + delta;
+      if (index < 0 || index >= lines.length) return;
+      score.pageStart = lines[index];
     } else if (delta > 0) {
       if (score.pageEnd >= score.last) return;
       score.starts.push(score.pageStart);
@@ -358,14 +385,64 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
     }
     renderPage();
   };
-  const zoom = delta => { if (score) { score.zoom = Math.max(.6, Math.min(2, score.zoom + delta)); fit(); } };
+  // Zooms keeping in its place what is under the point (the pointer, or the middle of what is seen).
+  function zoomAt(factor, point) {
+    if (!score?.sizes?.length) return;
+    const box = () => score.staging.getBoundingClientRect?.();
+    const before = box(), view = container.getBoundingClientRect?.();
+    const at = point || (view && { x: view.left + container.clientWidth / 2, y: view.top + container.clientHeight / 2 });
+    const most = Math.max(1, MAX_SCALE / scaleAt(1));
+    score.zoom = Math.max(MIN_ZOOM, Math.min(most, score.zoom * factor));
+    fit();
+    const after = box();
+    if (!before?.width || !before.height || !at) return;
+    container.scrollLeft += after.left + (at.x - before.left) / before.width * after.width - at.x;
+    container.scrollTop += after.top + (at.y - before.top) / before.height * after.height - at.y;
+  }
 
   return {
     load, clear, fit, renderPage,
     previous: () => turn(-1),
     next: () => turn(1),
-    zoomIn: () => zoom(.1),
-    zoomOut: () => zoom(-.1),
+    zoomIn: () => zoomAt(ZOOM_STEP),
+    zoomOut: () => zoomAt(1 / ZOOM_STEP),
+    zoomAt,
+    // Opens the line of a measure and marks it; editing, its first note is selected. False when the work has no such measure.
+    async goTo(measure) {
+      if (!score) return false;
+      if (!Number.isInteger(measure) || measure < score.first || measure > score.last) {
+        publish({ status: t('La obra va del compás {first} al {last}.', { first: score.first, last: score.last }) });
+        return false;
+      }
+      const state = score;
+      state.currentMeasure = measure;
+      if (measure >= state.pageStart && measure <= (state.pageEnd ?? -Infinity)) highlightMeasure(state.display, measure, container);
+      else {
+        state.starts = [];
+        state.pageStart = state.lines ? state.lines[pdfPageOf(state.lines, measure)] : pageStartFor(state.first, measure);
+        await renderPage();
+        // The engraver may fit fewer measures than its page: the line after them.
+        while (state === score && state.currentMeasure === measure && state.pageEnd < measure && state.pageEnd >= state.pageStart) {
+          state.starts.push(state.pageStart);
+          state.pageStart = state.pageEnd + 1;
+          await renderPage();
+        }
+      }
+      if (editing && state === score) {
+        const note = inOrder(selection?.staff ?? 0).find(item => item.number === String(measure));
+        if (note) select(note);
+      }
+      return true;
+    },
+    // How many measures a line shows (null: automatic), from the line the measure in view is in.
+    setMeasures(count) {
+      measures = count;
+      if (!score) return;
+      score.lines = linesOf(score, measures);
+      score.starts = [];
+      score.pageStart = score.lines ? score.lines[pdfPageOf(score.lines, score.pageStart)] : pageStartFor(score.first, score.pageStart);
+      return renderPage();
+    },
     resetZoom() { if (score) { score.zoom = 1; fit(); } },
     // Follow playback: turn the page when the sounding measure leaves it, otherwise move the marker.
     follow(measure, playing) {
@@ -376,8 +453,8 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
       score.currentMeasure = measure;
       if (playing && outside) {
         // Playing on, the next page starts with the measure that sounds; a jump goes to the page of four it is in.
-        const pages = pdfPages();
-        if (pages) score.pageStart = pages[pdfPageOf(pages, measure)];
+        const lines = linesOfWork();
+        if (lines) score.pageStart = lines[pdfPageOf(lines, measure)];
         else {
           if (measure === pageEnd + 1) score.starts.push(score.pageStart);
           else score.starts = [];

@@ -162,17 +162,23 @@ export function filterMusicXmlPassage(source, instrumentName, measureRange) {
   return new XMLSerializer().serializeToString(documentXml);
 }
 
-// First and last written measure numbers of a score.
 // The first measure of each page of the work's PDF (2026-11-22, «1812»): the reader marks with MusicXML's page break the
-// measure that starts each page after the first, as engravers export them. Those of the first part; none when the work
-// does not mark them, and it is shown four measures at a time.
+// measure that starts each page after the first, as engravers export them. A page of a score starts in most of its parts;
+// a work joined from its parts carries the pages of each part's sheet, which are not the work's (2026-11-25: 44 measures
+// of the band in one line stopped the browser). Without pages the work is shown four measures at a time.
 export function pageStarts(source) {
-  const part = /<part\s[^>]*>([\s\S]*?)<\/part>/.exec(source)?.[1] ?? '';
-  const measures = [...part.matchAll(/<measure\b[^>]*\bnumber="(-?\d+)"[^>]*>([\s\S]*?)<\/measure>/g)];
-  const starts = measures.filter(([, , body]) => /<print\b[^>]*\bnew-page="yes"/.test(body)).map(([, number]) => Number(number));
-  return starts.length ? [Number(measures[0][1]), ...starts] : [];
+  const parts = [...source.matchAll(/<part\s[^>]*>([\s\S]*?)<\/part>/g)].map(([, body]) =>
+    [...body.matchAll(/<measure\b[^>]*\bnumber="(-?\d+)"[^>]*>([\s\S]*?)<\/measure>/g)]);
+  const marks = new Map();
+  for (const part of parts) for (const [, number, body] of part) {
+    if (/<print\b[^>]*\bnew-page="yes"/.test(body)) marks.set(Number(number), (marks.get(Number(number)) || 0) + 1);
+  }
+  const numbers = (parts[0] || []).map(([, number]) => Number(number));
+  const starts = numbers.filter((number, at) => at > 0 && marks.get(number) > parts.length / 2);
+  return starts.length ? [numbers[0], ...starts] : [];
 }
 
+// First and last written measure numbers of a score, and the pages of its PDF.
 export function measureBounds(source) {
   const xml = new DOMParser().parseFromString(source, 'application/xml');
   const numbers = Array.from(xml.getElementsByTagName('*')).filter(item => item.localName === 'measure')

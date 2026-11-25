@@ -500,9 +500,10 @@ button:disabled { opacity: 0.65; cursor: default; }
 :is(.embedded-score, .score-dialog) .transport-primary:hover { background: var(--primary-strong); }
 #ensemble-time { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
 .loading-status { font-size: .85rem; color: var(--muted); }
-#full-score-rendering { display: flex; justify-content: center; align-items: flex-start; padding: 16px; box-sizing: border-box; height: 70vh; min-height: 320px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--sunken); }
+#full-score-rendering { display: flex; justify-content: safe center; cursor: grab; align-items: flex-start; padding: 16px; box-sizing: border-box; height: 70vh; min-height: 320px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--sunken); }
 #full-score-rendering:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
-#full-score-rendering svg { max-width: none; background: var(--paper); box-shadow: var(--shadow-1); }
+#full-score-rendering[data-panning], #full-score-rendering[data-panning] .score-note { cursor: grabbing; }
+#full-score-rendering svg { user-select: none; max-width: none; background: var(--paper); box-shadow: var(--shadow-1); }
 .family-chart { margin: 24px 0; padding: 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
 .family-chart h2 { margin: 0 0 6px; font-size: 1.05rem; }
 .family-chart p { margin: 0 0 22px; font-size: .85rem; }
@@ -1025,6 +1026,12 @@ button.agenda-work { color: var(--primary); font-weight: 500; }
 .score-edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .score-edit-actions button { min-height: 44px; }
 .score-edit-count { font-weight: 600; }
+.score-measures { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; }
+.score-measures :is(select, input) { padding: 8px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); }
+.score-measures select { cursor: pointer; }
+.score-measures input { width: 88px; }
+.score-measures select:hover { background: var(--control-hover); }
+.score-move-help { margin: 0 0 8px; color: var(--muted); font-size: .85rem; line-height: 1.5; }
 .score-editing:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
 .score-note { cursor: pointer; }
 .score-note:hover path, .score-note:hover rect { fill: var(--primary); stroke: var(--primary); }

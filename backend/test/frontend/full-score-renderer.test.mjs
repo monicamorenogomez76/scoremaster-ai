@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createFullScoreRenderer, fitScale, pageLabel, pageStartFor } from '../../../frontend/src/score/full-score-renderer.js';
+import { createFullScoreRenderer, fitScale, MAX_MEASURES_PER_LINE, pageLabel, pageStartFor, splitPages } from '../../../frontend/src/score/full-score-renderer.js';
 
 class Element {
   constructor() { this.style = {}; this.children = []; this.attributes = {}; this.clientWidth = 800; this.clientHeight = 600; this.ownerDocument = { createElement: () => new Element() }; }
@@ -195,3 +195,145 @@ test('a work with the pages of its PDF turns them where the PDF does, each page 
   assert.equal(view.page, 'Página 2 de 3 · compases 4–5');
 });
 
+// 2026-11-25: pages of 44 measures of the whole band in one line stopped the browser.
+test('a long page of the PDF is cut in even lines of eight measures at most', () => {
+  assert.equal(MAX_MEASURES_PER_LINE, 8);
+  assert.deepEqual(splitPages([1, 9, 15], 20), [1, 9, 15], 'the pages that fit are whole');
+  assert.deepEqual(splitPages([1, 10], 14), [1, 6, 10], 'nine measures: five and four');
+  assert.deepEqual(splitPages([1], 44), [1, 9, 16, 23, 31, 38], 'forty-four: 8, 7, 7, 8, 7 and 7');
+  assert.deepEqual(splitPages([0, 5], 14), [0, 5, 10], 'an upbeat is measure 0');
+});
+
+test('the pieces of a page keep its number, and playback follows them', async () => {
+  const pages = [], container = new Element();
+  let view;
+  const renderer = createFullScoreRenderer({ container, nextFrame: async () => {},
+    session: { getVersion: () => 0, loadSource: async () => '<score/>' },
+    filter: (_, instrument, range) => { pages.push(range); return '<page/>'; },
+    bounds: () => ({ first: 1, last: 18, pages: [1, 13] }),
+    createDisplay: target => ({ async load() {}, render() { const svg = new Element(); svg.attributes = { width: '4000', height: '500' }; target.append(svg); } }),
+    onChange: snapshot => { view = snapshot; } });
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  await renderer.load();
+  assert.equal(view.page, 'Página 1 de 2 · compases 1–6');
+  renderer.next(); await settle();
+  assert.equal(view.page, 'Página 1 de 2 · compases 7–12');
+  renderer.next(); await settle();
+  assert.equal(view.page, 'Página 2 de 2 · compases 13–18');
+  assert.equal(view.canNext, false);
+  renderer.follow(8, true); await settle();
+  assert.equal(view.page, 'Página 1 de 2 · compases 7–12');
+  assert.deepEqual(pages, ['1-6', '7-12', '13-18', '7-12']);
+});
+
+test('a page shrunk to its width can be enlarged until it is read', async () => {
+  const state = setup();
+  await state.renderer.load();
+  for (let i = 0; i < 40; i++) state.renderer.zoomIn();
+  assert.equal(state.view().zoomLabel, '200 %');
+  for (let i = 0; i < 40; i++) state.renderer.zoomOut();
+  assert.equal(state.view().zoomLabel, '46 %', 'no smaller than 60 % of the fit');
+  state.renderer.resetZoom();
+  assert.equal(state.view().zoomLabel, '77 %');
+});
+
+test('zooming keeps under the pointer what was under it', async () => {
+  const state = setup();
+  await state.renderer.load();
+  const staging = state.container.children[0];
+  state.container.scrollLeft = 0; state.container.scrollTop = 0;
+  // The browser's layout: the page starts at the container's corner, moved by its scroll.
+  const size = name => Number.parseFloat(staging.children[0].style[name]);
+  staging.getBoundingClientRect = () => ({ left: -state.container.scrollLeft, top: -state.container.scrollTop, width: size('width'), height: size('height') });
+  state.renderer.zoomAt(2, { x: 384, y: 100 });
+  assert.equal(Math.round(state.container.scrollLeft), 384);
+  assert.equal(Math.round(state.container.scrollTop), 100);
+});
+
+// 2026-11-25: the director chooses how many measures a line shows; «Automático» is what the score showed before.
+function choosing({ pages, last, measures }) {
+  const asked = [], container = new Element();
+  let view;
+  const renderer = createFullScoreRenderer({ container, nextFrame: async () => {}, measures,
+    session: { getVersion: () => 0, loadSource: async () => '<score/>' },
+    filter: (_, instrument, range) => { asked.push(range); return '<page/>'; },
+    bounds: () => ({ first: 1, last, pages }),
+    // The engraver breaks any line wider than its 500 pixels a measure.
+    createDisplay: target => {
+      const [from, to] = asked.at(-1).split('-').map(Number), count = to - from + 1;
+      const fit = Math.max(1, Math.floor(Number.parseFloat(target.style.width) / 500));
+      const lines = count > fit ? [fit, count - fit] : [count];
+      return { async load() {}, GraphicSheet: { MusicPages: [{ MusicSystems: lines.map(n => ({ GraphicalMeasures: Array(n) })) }] },
+        render() { const svg = new Element(); svg.attributes = { width: String(count * 500), height: '500' }; target.append(svg); } };
+    },
+    onChange: snapshot => { view = snapshot; } });
+  return { renderer, container, asked, view: () => view };
+}
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('the chosen measures fill each line of a work without pages, drawn wider rather than cut', async () => {
+  const { renderer, container, asked, view } = choosing({ pages: [], last: 20, measures: 6 });
+  await renderer.load();
+  assert.equal(view().page, 'Compases 1–6 de 20');
+  assert.ok(asked.every(range => range === '1-6'), 'never cut');
+  assert.equal(container.children[0].children.find(child => child.attributes.width).style.width, '768px', 'shrunk to the screen');
+  renderer.next(); await settle();
+  assert.equal(view().page, 'Compases 7–12 de 20');
+  renderer.follow(19, true); await settle();
+  assert.equal(view().page, 'Compases 19–20 de 20');
+  renderer.previous(); await settle();
+  assert.equal(view().page, 'Compases 13–18 de 20');
+});
+
+test('the chosen measures cut the pages of the PDF, or leave them whole', async () => {
+  const { renderer, view } = choosing({ pages: [1, 11], last: 20, measures: 16 });
+  await renderer.load();
+  assert.equal(view().page, 'Página 1 de 2 · compases 1–10');
+  await renderer.setMeasures(4);
+  assert.equal(view().page, 'Página 1 de 2 · compases 1–4');
+  await renderer.setMeasures(null);
+  assert.equal(view().page, 'Página 1 de 2 · compases 1–5', 'automatic: eight at most');
+});
+
+test('changing the measures of a line keeps the place, and is kept for the next work', async () => {
+  const { renderer, view } = choosing({ pages: [], last: 20 });
+  await renderer.setMeasures(2);
+  await renderer.load();
+  assert.equal(view().page, 'Compases 1–2 de 20');
+  renderer.follow(14, true); await settle();
+  assert.equal(view().page, 'Compases 13–14 de 20');
+  await renderer.setMeasures(5);
+  assert.equal(view().page, 'Compases 11–15 de 20');
+  await renderer.setMeasures(null);
+  assert.match(view().page, /^Compases 9–/, 'the page of four measures it is in, cut to what fits');
+});
+
+// Going to a measure (2026-11-25).
+test('going to a measure opens the line that holds it', async () => {
+  const { renderer, view, asked } = choosing({ pages: [1, 11], last: 20 });
+  await renderer.load();
+  assert.equal(await renderer.goTo(18), true);
+  assert.equal(view().page, 'Página 2 de 2 · compases 16–20');
+  const drawn = asked.length;
+  assert.equal(await renderer.goTo(17), true);
+  assert.equal(asked.length, drawn, 'already in view: not drawn again');
+});
+
+test('going to a measure that its page of four could not fit opens the next one', async () => {
+  const { renderer, view } = choosing({ pages: [], last: 20 });
+  await renderer.load();
+  assert.equal(view().page, 'Compases 1–1 de 20', 'one fits in the width of this screen');
+  await renderer.goTo(8);
+  assert.equal(view().page, 'Compases 8–8 de 20');
+});
+
+test('a measure the work does not have says which it has, and moves nothing', async () => {
+  const { renderer, view } = choosing({ pages: [], last: 20, measures: 4 });
+  assert.equal(await renderer.goTo(3), false, 'nothing loaded');
+  await renderer.load();
+  for (const measure of [0, 21, NaN, 2.5]) {
+    assert.equal(await renderer.goTo(measure), false);
+    assert.equal(view().status, 'La obra va del compás 1 al 20.');
+  }
+  assert.equal(view().page, 'Compases 1–4 de 20');
+});
