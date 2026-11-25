@@ -2,6 +2,8 @@ import React, { useEffect, useImperativeHandle, useLayoutEffect, useRef, useStat
 import { loadMusicalAnalysis, pageLanes } from '../musicalAnalysis.js';
 import { createFullScoreRenderer } from './full-score-renderer.js';
 import { filterMusicXmlPassage, measureBounds } from './musicxml-passage.js';
+import { keepMeasures, keptMeasures, MEASURE_CHOICES } from './measures-per-line.js';
+import { attachPanZoom } from './pan-zoom.js';
 import { nextFrame, openSheetMusicDisplay, toggleFullscreen } from './notation.js';
 import { preparePlayback } from './playback.js';
 import { Icon, TransportBar } from './TransportBar.jsx';
@@ -19,6 +21,7 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ text: '', error: false });
   const saveRef = useRef(null);
+  const [measures, setMeasures] = useState(() => keptMeasures());
   const transport = useTransport({
     prepare: onStatus => preparePlayback(session.getFile(), null, onStatus),
     onPosition: (measure, playing) => renderer.current?.follow(measure, playing),
@@ -27,11 +30,13 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
 
   useLayoutEffect(() => {
     renderer.current = createFullScoreRenderer({ container: container.current, session, filter: filterMusicXmlPassage,
-      bounds: measureBounds, createDisplay: openSheetMusicDisplay, onChange: setView, nextFrame, onSave: () => saveRef.current?.(),
+      bounds: measureBounds, createDisplay: openSheetMusicDisplay, onChange: setView, nextFrame, measures: keptMeasures(),
+      onSave: () => saveRef.current?.(),
       onDuration: edit => saveRef.current?.([edit]) });
     const observer = new ResizeObserver(() => renderer.current.fit());
     observer.observe(container.current);
-    return () => observer.disconnect();
+    const detachPanZoom = attachPanZoom(container.current, (factor, point) => renderer.current.zoomAt(factor, point));
+    return () => { observer.disconnect(); detachPanZoom(); };
   }, [session]);
 
   // The analysis behind the map is asked for once per work, only when the director shows it.
@@ -89,6 +94,16 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
     stop,
   }));
 
+  const chooseMeasures = event => {
+    const count = Number(event.target.value) || null;
+    setMeasures(count); keepMeasures(count);
+    renderer.current.setMeasures(count);
+  };
+  const [target, setTarget] = useState('');
+  const goToMeasure = event => {
+    event.preventDefault();
+    renderer.current.goTo(target.trim() === '' ? NaN : Number(target));
+  };
   const fullscreen = async () => {
     try { await toggleFullscreen(section.current); await renderer.current.renderPage(); }
     catch { renderer.current.setStatus(t('La pantalla completa no está disponible en este navegador.')); }
@@ -111,6 +126,17 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
       {tool('score-fit', t('Ajustar al ancho'), () => renderer.current.resetZoom(), <Icon path="M5 2h14v20H5zm2 2v16h10V4zM9 7h6v2H9zm0 4h6v2H9z" />)}
       <output id="score-zoom-label">{view.zoomLabel}</output>
       {tool('score-zoom-in', t('Ampliar zoom'), () => renderer.current.zoomIn(), '+')}
+      <label className="score-measures" htmlFor="score-measures">{t('Compases por pentagrama')}
+        <select id="score-measures" value={measures ?? ''} onChange={chooseMeasures}>
+          <option value="">{t('Automático')}</option>
+          {MEASURE_CHOICES.map(count => <option key={count} value={count}>{count}</option>)}
+        </select></label>
+      <form className="score-measures" onSubmit={goToMeasure} noValidate>
+        <label htmlFor="score-go-to">{t('Ir al compás')}</label>
+        <input id="score-go-to" type="number" inputMode="numeric" step="1" value={target} disabled={!view.loaded}
+          aria-describedby="full-score-status" onChange={event => setTarget(event.target.value)} />
+        <button className="secondary-action" type="submit" disabled={!view.loaded}>{t('Ir')}</button>
+      </form>
       {workId && <button id="score-analysis-toggle" className="secondary-action score-analysis-toggle" type="button" aria-pressed={showAnalysis}
         onClick={() => setShowAnalysis(shown => !shown)}>{showAnalysis ? t('Ocultar el mapa') : t('Ver el mapa de la obra')}</button>}
       {workId && <button id="score-edit-toggle" className="secondary-action score-edit-toggle" type="button" aria-pressed={view.editing}
@@ -126,8 +152,9 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
     </div>}
     {saveMessage.text && <p className={saveMessage.error ? 'score-compare-error' : 'loading-status'} role={saveMessage.error ? 'alert' : 'status'}>{saveMessage.text}</p>}
     {analysisStatus && <p id="score-analysis-status" className="loading-status" role="status" aria-live="polite">{analysisStatus}</p>}
+    <p id="score-move-help" className="score-move-help">{t('Para ampliar, Cmd o Ctrl y la rueda del ratón (o pellizca en el panel táctil). Para moverte por la partitura, arrástrala con el ratón.')}</p>
     {/* It may scroll sideways (beside a PDF, or zoomed in): the keyboard has to reach it. */}
     <div id="full-score-rendering" ref={container} tabIndex={0} role="region" aria-label={t('Partitura completa')}
-      aria-describedby={view.editing ? 'score-edit-help' : undefined} className={view.editing ? 'score-editing' : undefined} />
+      aria-describedby={view.editing ? 'score-edit-help' : 'score-move-help'} className={view.editing ? 'score-editing' : undefined} />
   </section>;
 }
