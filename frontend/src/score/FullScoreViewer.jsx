@@ -104,8 +104,22 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
     event.preventDefault();
     renderer.current.goTo(target.trim() === '' ? NaN : Number(target));
   };
+  // The score is drawn again for the width it gets, also when the whole screen is left with Escape.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    let whole = false;
+    const change = () => {
+      const now = document.fullscreenElement === section.current;
+      if (now === whole) return;
+      whole = now;
+      setIsFullscreen(now);
+      renderer.current.renderPage();
+    };
+    document.addEventListener('fullscreenchange', change);
+    return () => document.removeEventListener('fullscreenchange', change);
+  }, []);
   const fullscreen = async () => {
-    try { await toggleFullscreen(section.current); await renderer.current.renderPage(); }
+    try { await toggleFullscreen(section.current); }
     catch { renderer.current.setStatus(t('La pantalla completa no está disponible en este navegador.')); }
   };
   const tool = (id, label, onClick, content, disabled) =>
@@ -115,7 +129,7 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
     <h2>{t('Partitura completa')}</h2>
     <TransportBar prefix="ensemble" label={t('Reproducción de todas las voces')} volumeLabel={t('Volumen de reproducción')}
       seekLabel={t('Posición de reproducción')} fullscreenId="score-fullscreen" transport={transport}
-      playDisabled={!view.loaded} stopDisabled={!view.loaded} onStop={stop} onFullscreen={fullscreen} />
+      playDisabled={!view.loaded} stopDisabled={!view.loaded} onStop={stop} onFullscreen={fullscreen} isFullscreen={isFullscreen} />
     <p id="ensemble-status" className="loading-status" role="status" aria-live="polite" aria-busy={transport.loading}>{transport.status}</p>
     <p id="full-score-status" className="loading-status" role="status" aria-live="polite" aria-busy={view.busy}>{view.status}</p>
     <div className="score-toolbar" aria-label={t('Navegación de la partitura completa')}>

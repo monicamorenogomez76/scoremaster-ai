@@ -1234,6 +1234,7 @@ export const en = {
   '1 cambio guardado. La obra se ha vuelto a analizar.': '1 change saved. The work has been analysed again.',
   '1 cambio sin guardar': '1 unsaved change',
   'Editar notas': 'Edit notes',
+  'Salir de pantalla completa': 'Leave full screen',
   'Ir al compás': 'Go to measure',
   'La obra va del compás {first} al {last}.': 'The work runs from measure {first} to {last}.',
   'Ir': 'Go',

@@ -265,7 +265,11 @@ input[type=range] { background: transparent; }
 .score-rendering { max-height: 72vh; overflow: auto; background: var(--paper); border: 1px solid var(--line-strong); }
 .score-rendering svg { max-width: none; height: auto; }
 
-.embedded-score:fullscreen { overflow: auto; padding: 24px; }
+.embedded-score:fullscreen { display: flex; flex-direction: column; overflow: auto; margin: 0; padding: 8px 16px 16px; border-radius: 0; box-sizing: border-box; }
+.embedded-score:fullscreen > * { flex: none; }
+.embedded-score:fullscreen > :is(h2, .score-move-help) { display: none; }
+.embedded-score:fullscreen > :is(.loading-status, .score-toolbar) { margin: 0 0 4px; }
+.embedded-score:fullscreen > #full-score-rendering { flex: 1 1 0; height: auto; min-height: 240px; }
 .embedded-score h2 { margin: 0 0 14px; }
 .instrument-assignment { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; }
 .instrument-assignment[hidden] { display: none; }
