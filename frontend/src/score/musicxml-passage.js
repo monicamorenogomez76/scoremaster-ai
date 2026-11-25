@@ -178,12 +178,25 @@ export function pageStarts(source) {
   return starts.length ? [numbers[0], ...starts] : [];
 }
 
-// First and last written measure numbers of a score, and the pages of its PDF.
+// The measures of each part when they are not the same in all (2026-11-25): parts read from their own sheets, without a
+// score, lose or gain measures and sound out of step. Null when they match.
+export function unevenParts(source) {
+  const plain = text => text.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&').trim();
+  const names = new Map([...source.matchAll(/<score-part\b[^>]*\bid="([^"]*)"[^>]*>([\s\S]*?)<\/score-part>/g)]
+    .map(([, id, body]) => [id, plain(/<part-name\b[^>]*>([\s\S]*?)<\/part-name>/.exec(body)?.[1] ?? '')]));
+  const parts = [...source.matchAll(/<part\s[^>]*\bid="([^"]*)"[^>]*>([\s\S]*?)<\/part>/g)]
+    .map(([, id, body]) => ({ name: names.get(id) || id, measures: (body.match(/<measure\b/g) || []).length }));
+  const counts = parts.map(part => part.measures);
+  const least = Math.min(...counts), most = Math.max(...counts);
+  return parts.length > 1 && least < most ? { least, most, parts } : null;
+}
+
+// First and last written measure numbers of a score, the pages of its PDF and the parts out of step.
 export function measureBounds(source) {
   const xml = new DOMParser().parseFromString(source, 'application/xml');
   const numbers = Array.from(xml.getElementsByTagName('*')).filter(item => item.localName === 'measure')
     .map(item => Number.parseInt(item.getAttribute('number'), 10)).filter(Number.isFinite);
   if (!numbers.length) throw new Error(t('La partitura no contiene compases.'));
   return { first: numbers.reduce((a, b) => Math.min(a, b)), last: numbers.reduce((a, b) => Math.max(a, b)),
-    pages: pageStarts(source) };
+    pages: pageStarts(source), uneven: unevenParts(source) };
 }

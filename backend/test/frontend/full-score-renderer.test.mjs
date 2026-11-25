@@ -346,3 +346,17 @@ test('an enlarged line of fewer measures does not go past the largest zoom', asy
   await renderer.setMeasures(2);
   assert.equal(view().zoomLabel, '200 %');
 });
+
+test('a work whose parts have other measures says so while it is open', async () => {
+  const uneven = { least: 9, most: 14, parts: [] };
+  const container = new Element();
+  let view;
+  const renderer = createFullScoreRenderer({ container, nextFrame: async () => {}, filter: () => '<page/>',
+    session: { getVersion: () => 0, loadSource: async () => '<score/>' }, bounds: () => ({ first: 1, last: 4, pages: [], uneven }),
+    createDisplay: target => ({ async load() {}, render() { const svg = new Element(); svg.attributes = { width: '900', height: '500' }; target.append(svg); } }),
+    onChange: snapshot => { view = snapshot; } });
+  await renderer.load();
+  assert.equal(view.uneven, uneven);
+  renderer.clear();
+  assert.equal(view.uneven, null);
+});
