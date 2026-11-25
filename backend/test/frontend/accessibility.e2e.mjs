@@ -105,6 +105,9 @@ try {
   await admin.locator('#instrument-learned-title').waitFor({ state: 'visible' });
   assert.match(await admin.locator('.instrument-learned').textContent(), /Melodía → Clarinete en Si bemol/);
   await audit(admin, 'Configuración › Instrumentos');
+  await admin.locator('#account-delete').click();
+  await audit(admin, 'Configuración › Borrar la cuenta');
+  await admin.locator('.account-delete .secondary-action').click();
   // Configuración › Uso de la IA (M5), also only for the administration.
   await admin.locator('#settings-ai-usage-title').waitFor({ state: 'visible' });
   await admin.locator('.ai-usage [role=status]').waitFor({ state: 'detached' });

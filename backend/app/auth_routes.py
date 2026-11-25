@@ -7,6 +7,7 @@ import os
 import logging
 import secrets
 from datetime import timedelta
+from tempfile import TemporaryFile
 from typing import Optional
 from urllib.parse import urlencode
 
@@ -14,7 +15,7 @@ import httpx
 from authlib.jose import JsonWebKey, jwt
 from authlib.jose.errors import JoseError
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
 from backend.application.accounts import AccountRepository, User
@@ -22,8 +23,10 @@ from backend.application.auth import (
     RESET_MINUTES, SESSION_DAYS, VERIFY_HOURS, AuthService, InvalidCredentials, InvalidRegistration, InvalidResetLink, LoginLimiter,
     SignedIn, TooManyAttempts,
 )
+from backend.infrastructure.personal_data import PostgresPersonalData
 from backend.application.mail import Mailer
-from backend.app.dependencies import SESSION_COOKIE, authenticated_user, get_account_repository, get_mailer, is_admin
+from backend.app.dependencies import (SESSION_COOKIE, authenticated_user, get_account_repository, get_mailer, get_personal_data, invitation_email,
+                                      is_admin)
 from backend.app.i18n import language, translate
 
 router = APIRouter(prefix="/auth")
@@ -65,6 +68,12 @@ class ResetBody(BaseModel):
     password: str = Field(max_length=256)
 
 
+class DeleteBody(BaseModel):
+    """The password, or the email of an account that only signs in with Google."""
+    password: str = Field("", max_length=256)
+    email: str = Field("", max_length=254)
+
+
 class LoginBody(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=256)
@@ -92,7 +101,7 @@ def _ip(request: Request) -> str:
 
 def _user(user: User, display_name: Optional[str] = None) -> dict:
     return {"email": user.email, "display_name": user.display_name if display_name is None else display_name,
-            "is_admin": is_admin(user), "email_verified": user.email_verified}
+            "is_admin": is_admin(user), "email_verified": user.email_verified, "has_password": user.password_hash is not None}
 
 
 def _public(signed_in: SignedIn) -> dict:
@@ -185,6 +194,46 @@ def update_me(body: ProfileBody, user: User = Depends(authenticated_user),
     """The name shown in the app (Configuración); the email cannot be changed here."""
     accounts.rename_user(user.id, body.display_name)
     return {"user": _user(user, body.display_name)}
+
+
+@router.get("/me/data")
+def my_data(user: User = Depends(authenticated_user), personal: PostgresPersonalData = Depends(get_personal_data)):
+    """Everything the account keeps (2026-11-25), written to disk and not to the 512 MB of memory."""
+    file = TemporaryFile()
+    try:
+        personal.export(user, invitation_email(user), file)
+        file.seek(0)
+    except Exception:
+        file.close()
+        raise
+
+    def chunks():
+        with file:
+            while chunk := file.read(64 * 1024):
+                yield chunk
+    return StreamingResponse(chunks(), media_type="application/zip", headers={
+        "Content-Disposition": 'attachment; filename="scoremaster-mis-datos.zip"', "Cache-Control": "no-store"})
+
+
+@router.delete("/me", status_code=204)
+def delete_me(body: DeleteBody, request: Request, user: User = Depends(authenticated_user), service: AuthService = Depends(_service),
+              personal: PostgresPersonalData = Depends(get_personal_data)):
+    """The account with everything it keeps. The password is asked again, with the limits of signing in."""
+    if user.email == (os.environ.get("DEMO_USER_EMAIL") or "").strip().lower():
+        raise HTTPException(status_code=403, detail="La cuenta de demostración no se puede borrar.")
+    ip = _ip(request)
+    if service.limiter.blocked(user.email, ip):
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espera unos minutos.")
+    if user.password_hash is None:
+        if body.email.strip().lower() != user.email:
+            raise HTTPException(status_code=403, detail="El email no es el de tu cuenta.")
+    elif not service.matches(user, body.password):
+        service.limiter.failed(user.email, ip)
+        raise HTTPException(status_code=403, detail="La contraseña no es correcta.")
+    personal.delete(user, invitation_email(user))
+    response = Response(status_code=204)
+    response.delete_cookie(SESSION_COOKIE, path="/", httponly=True, samesite="lax", secure=cookie_secure())
+    return response
 
 
 @router.get("/config")

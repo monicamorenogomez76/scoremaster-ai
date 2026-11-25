@@ -1162,3 +1162,4 @@ body:has(.cookie-notice) { padding-bottom: 240px; }
 .privacy-dialog h3 { margin: 24px 0 8px; font-size: 1.05rem; }
 .privacy-dialog ul { margin: 0 0 8px; padding-left: 24px; }
 .video-permission { margin: 8px 0 16px; padding: 16px; border: 1px solid var(--line-strong); border-radius: 12px; line-height: 1.5; }
+.account-delete { margin-top: 16px; padding: 16px; border: 1px solid var(--line-strong); border-radius: 12px; line-height: 1.5; }

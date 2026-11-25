@@ -20,7 +20,7 @@ const views = () => [
 ];
 
 export function AppShell({ hidden, user, notice, view, onNavigate, onSignOut, upload, analysis, repertoireMode, onRepertoireModeChange, workTab, onWorkTabChange, bandDraft, onBandDraftChange, minutes, onMinutesChange, onRecalculate, onUpdateBand, onConfirmInstruments, onBandActivated, onOpenWork, onOpenPassage, scoreViewer, rehearsalEditing, onEditRehearsal, onCloseRehearsal, onOpenBlock, onOpenEvaluationPassage,
-  rehearsalReviewing, onReviewRehearsal, onCloseReview, onUserChanged }) {
+  rehearsalReviewing, onReviewRehearsal, onCloseReview, onUserChanged, onAccountDeleted }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = analysis?.data;
   const go = name => { setMenuOpen(false); onNavigate(name); };
@@ -59,7 +59,7 @@ export function AppShell({ hidden, user, notice, view, onNavigate, onSignOut, up
           onModeChange={onRepertoireModeChange} tab={workTab} onTabChange={onWorkTabChange} upload={upload}
           onOpenWork={onOpenWork} onOpenPassage={onOpenPassage} scoreViewer={scoreViewer} minutes={minutes} />
         <BandView active={view} hidden={hidden} onBandActivated={onBandActivated} data={data} draft={bandDraft} onDraftChange={onBandDraftChange} onUpdate={onUpdateBand} onConfirm={onConfirmInstruments} busy={busy} />
-        <SettingsView active={view} user={user} onUserChanged={onUserChanged} />
+        <SettingsView active={view} user={user} onUserChanged={onUserChanged} onAccountDeleted={onAccountDeleted} />
         <ConcertsView active={view} hidden={hidden} onOpenBlock={onOpenBlock} />
         <EvaluationView active={view} hidden={hidden} onOpenBlock={onOpenBlock} onOpenEvaluationPassage={onOpenEvaluationPassage} />
         <RehearsalView active={view} hidden={hidden} onOpenBlock={onOpenBlock} reviewing={rehearsalReviewing}

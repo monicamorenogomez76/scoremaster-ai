@@ -42,8 +42,10 @@ export function policy(privacy) {
       t('YouTube: solo si permites cargar sus vídeos. Al buscarlos, el servidor envía a YouTube el texto de la búsqueda.'),
     ], t('Algunos de estos proveedores son de Estados Unidos y pueden tratar los datos fuera del Espacio Económico Europeo.')]],
     [t('Cuánto tiempo'), [
-      t('Tus datos se conservan mientras exista tu cuenta. La sesión caduca a los 7 días, el enlace de recuperación a los 30 minutos y el de confirmación a las 24 horas.')]],
+      t('Tus datos se conservan mientras exista tu cuenta y el registro de seguridad, un año como máximo. La sesión caduca a los 7 días, el enlace de recuperación a los 30 minutos y el de confirmación a las 24 horas.'),
+      t('Al borrar la cuenta se borran en el momento. Las copias de seguridad ya hechas pueden conservarlos hasta que se eliminen.')]],
     [t('Tus derechos'), [
+      t('En Configuración › Privacidad puedes descargar tus datos y borrar tu cuenta.'),
       t('Puedes pedir el acceso a tus datos, su rectificación, supresión o portabilidad, y oponerte a su uso o limitarlo, escribiendo al contacto de esta página. También puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).')]],
     [t('Cookies y lo que se guarda en tu navegador'), [[
       t('scoremaster_session: mantiene tu sesión abierta. Técnica; 7 días o hasta que cierres la sesión.'),

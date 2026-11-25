@@ -31,6 +31,7 @@ from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
 from backend.infrastructure.ai.gemini_provider import shared_provider, shared_analysis_provider, shared_review_provider
 from backend.infrastructure.explanation_cache import PostgresExplanationCache
 from backend.infrastructure.prepared_store import PostgresPreparedStore
+from backend.infrastructure.personal_data import PostgresPersonalData
 from backend.infrastructure.rehearsal_repository import PostgresRehearsalRepository
 from backend.infrastructure.database import database_engine
 
@@ -69,6 +70,13 @@ def get_mailer() -> Optional[Mailer]:
 def get_account_repository() -> AccountRepository:
     try:
         return PostgresAccountRepository(analysis_engine())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=ACCOUNTS_UNAVAILABLE) from exc
+
+
+def get_personal_data() -> PostgresPersonalData:
+    try:
+        return PostgresPersonalData(analysis_engine())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=ACCOUNTS_UNAVAILABLE) from exc
 
