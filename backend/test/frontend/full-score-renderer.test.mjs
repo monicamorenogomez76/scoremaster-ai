@@ -337,3 +337,12 @@ test('a measure the work does not have says which it has, and moves nothing', as
   }
   assert.equal(view().page, 'Compases 1–4 de 20');
 });
+
+test('an enlarged line of fewer measures does not go past the largest zoom', async () => {
+  const { renderer, view } = choosing({ pages: [], last: 20, measures: 6 });
+  await renderer.load();
+  for (let i = 0; i < 40; i++) renderer.zoomIn();
+  assert.equal(view().zoomLabel, '200 %');
+  await renderer.setMeasures(2);
+  assert.equal(view().zoomLabel, '200 %');
+});

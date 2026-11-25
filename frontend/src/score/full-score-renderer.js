@@ -153,9 +153,11 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
 
   const pageWidth = () => Math.max(...score.sizes.map(item => item.width));
   const scaleAt = zoom => fitScale(pageWidth(), container.clientWidth, zoom, linesOfWork() ? 0 : .75);
+  const mostZoom = () => Math.max(1, MAX_SCALE / scaleAt(1));
 
   function fit() {
     if (!score?.sizes?.length || container.clientWidth <= 32 || container.clientHeight <= 32) return;
+    score.zoom = Math.min(score.zoom, mostZoom());   // a line of fewer measures starts larger
     const width = pageWidth(), scale = scaleAt(score.zoom);
     for (const item of score.sizes) {
       item.svg.style.display = 'block';
@@ -391,8 +393,7 @@ export function createFullScoreRenderer({ container, session, filter, bounds, cr
     const box = () => score.staging.getBoundingClientRect?.();
     const before = box(), view = container.getBoundingClientRect?.();
     const at = point || (view && { x: view.left + container.clientWidth / 2, y: view.top + container.clientHeight / 2 });
-    const most = Math.max(1, MAX_SCALE / scaleAt(1));
-    score.zoom = Math.max(MIN_ZOOM, Math.min(most, score.zoom * factor));
+    score.zoom = Math.max(MIN_ZOOM, Math.min(mostZoom(), score.zoom * factor));
     fit();
     const after = box();
     if (!before?.width || !before.height || !at) return;

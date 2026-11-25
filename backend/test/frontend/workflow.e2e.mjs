@@ -134,6 +134,33 @@ try {
   await page.locator('#score-measures').selectOption('');
   await drawn();
   console.log('PASS: the measures of a line are chosen, a measure is gone to and the enlarged score is dragged');
+  // The whole screen (2026-11-25): the controls stay in view above the score, which takes the rest; also when editing.
+  assert.equal(await page.locator('#score-fullscreen').getAttribute('aria-label'), 'Pantalla completa');
+  await page.locator('#score-fullscreen').click();
+  await page.locator('#score-fullscreen[aria-label="Salir de pantalla completa"]').waitFor();
+  const fullScreen = () => page.evaluate(() => {
+    const section = document.querySelector('#embedded-score'), rendering = document.querySelector('#full-score-rendering').getBoundingClientRect();
+    const seen = id => { const box = document.querySelector(id).getBoundingClientRect(); return box.width > 0 && box.top >= 0 && box.bottom <= rendering.top; };
+    return { whole: document.fullscreenElement === section, beyond: section.scrollHeight - section.clientHeight,
+      bottom: innerHeight - rendering.bottom, share: rendering.height / innerHeight,
+      controls: ['#ensemble-play', '#score-fullscreen', '#score-prev', '#score-zoom-in', '#score-measures', '#score-go-to', '#score-edit-toggle'].every(seen) };
+  });
+  for (const editing of [false, true]) {
+    if (editing) await page.locator('#score-edit-toggle').click();
+    await drawn();
+    const layout = await fullScreen();
+    assert.equal(layout.whole, true);
+    assert.equal(layout.beyond, 0, 'nothing is left below the screen');
+    assert.ok(layout.bottom >= 0 && layout.bottom <= 24, 'the score reaches the bottom');
+    assert.ok(layout.share >= (editing ? .5 : .65), `the score takes most of the screen: ${layout.share}`);
+    assert.equal(layout.controls, true, 'every control is in view');
+  }
+  await page.screenshot({ path: '/tmp/scoremaster-fullscreen.png', animations: 'disabled' });
+  await page.locator('#score-edit-toggle').click();
+  await page.locator('#score-fullscreen').click();
+  await page.locator('#score-fullscreen[aria-label="Pantalla completa"]').waitFor();
+  await drawn();
+  console.log('PASS: the whole screen keeps the controls above the score');
   if (!(await page.locator('#upload-form').isVisible())) await page.locator('#add-work').click();
   await page.locator('#file').setInputFiles({ name: 'high_register.musicxml', mimeType: 'application/xml', buffer: readFileSync(new URL('../../../test-scores/high_register.musicxml', import.meta.url)) });
   await page.waitForFunction(() => !document.querySelector('#upload-form button[type=submit]').disabled);
