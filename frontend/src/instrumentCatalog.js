@@ -1,6 +1,7 @@
 // The instrument catalog in the database (2026-10-28): the administration adds the names an instrument is written
 // with and new common instruments from Configuración. API helpers and pure functions only.
 import { apiFetch, apiJson } from './api.js';
+import { aiFailure } from './aiFailures.js';
 import { t } from './i18n.js';
 
 export const instrumentSections = [['woodwinds', 'Viento madera'], ['brass', 'Viento metal'], ['percussion', 'Percusión'],
@@ -87,9 +88,7 @@ export async function proposeInstruments(workId) {
   const body = await response.json().catch(() => ({}));
   if (response.ok) return body;
   // Why it failed, as the server says it (2026-11-03: a bare «could not» told nothing), or the status of a cut request.
-  const reasons = { timeout: t('La IA no respondió a tiempo'), rate_limit: t('La IA ha alcanzado su límite de uso'),
-    invalid: t('La IA dio una respuesta que no coincidía con el análisis'), error: t('La IA no está disponible') };
-  if (body.reason) throw new Error(t('{reason}. Elige los instrumentos tú o vuelve a intentarlo más tarde.', { reason: reasons[body.reason] || reasons.error }));
+  if (body.reason) throw new Error(t('{reason}. Elige los instrumentos tú o vuelve a intentarlo más tarde.', { reason: aiFailure(body.reason, 'analysis') }));
   if (typeof body.detail === 'string') throw new Error(body.detail);
   throw new Error(t('El servidor no respondió (error {status}). Elige los instrumentos tú o vuelve a intentarlo más tarde.', { status: response.status }));
 }

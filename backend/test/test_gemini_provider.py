@@ -65,7 +65,14 @@ def test_a_pydantic_answer_is_returned_as_a_plain_dict():
     (TimeoutError("read timed out"), "timeout"),
     (Exception("504 Deadline Exceeded"), "timeout"),
     (Exception("429 RESOURCE_EXHAUSTED: quota exceeded"), "rate_limit"),
-    (Exception("400 API key not valid"), "error"),
+    (Exception("400 API key not valid"), "key"),
+    # 2026-11-25: «generateContent» holds «rate», and a model that Google no longer has was told as a quota used up.
+    (Exception("404 NOT_FOUND. models/x is not found for API version v1beta, or is not supported for generateContent"), "model"),
+    (Exception("403 PERMISSION_DENIED: generateContent"), "key"),
+    (Exception("503 UNAVAILABLE. The model is overloaded"), "overloaded"),
+    (Exception("You exceeded your rate limit"), "rate_limit"),
+    (Exception("500 INTERNAL while calling generateContent"), "error"),
+    (Exception("400 INVALID_ARGUMENT: temperature"), "error"),
 ])
 def test_failures_become_provider_failures_without_the_key_in_the_logs(failure, reason, caplog):
     with caplog.at_level(logging.WARNING):
@@ -115,7 +122,7 @@ def test_a_model_google_does_not_find_is_named_in_the_log(caplog):
     class NotFound(Exception):
         pass
     with caplog.at_level(logging.WARNING):
-        with pytest.raises(ProviderFailure, match="^error$"):
+        with pytest.raises(ProviderFailure, match="^model$"):
             provider(FakeChat(failure=NotFound("404 models/gemini-test is not found"))).explain_difficulty(EVIDENCE)
     assert "gemini-test" in caplog.text and "GEMINI_MODEL" in caplog.text
     assert "secret-gemini-key" not in caplog.text

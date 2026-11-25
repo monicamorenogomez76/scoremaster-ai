@@ -15,8 +15,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, ValidationError
 
-from backend.application.ai import ProviderFailure
-from backend.application.explanations import InvalidExplanation, run_explanation
+from backend.application.explanations import InvalidExplanation, failure_reason, run_explanation
 from backend.domain.instrument_catalog import english_label
 from backend.domain.text import evidence_text
 
@@ -206,10 +205,6 @@ def _calls(chosen) -> list[dict]:
     return found
 
 
-def fallback_of(error: Exception) -> str:
-    return str(error) if isinstance(error, ProviderFailure) and str(error) in ("timeout", "rate_limit") else "error"
-
-
 def answer_with_tools(question: str, suggestion: Optional[str], *, scope: str, specs: list[dict], rules, recognise_topic,
                       run, evidence: dict, answer, validate, cited_index, provider, demo, cache, language: str,
                       prompt_version: str, purpose: str) -> dict:
@@ -221,7 +216,7 @@ def answer_with_tools(question: str, suggestion: Optional[str], *, scope: str, s
         try:
             calls, writer = _calls(provider.choose_tools(question, specs, language, scope)), provider
         except Exception as error:
-            fallback_reason = fallback_of(error)
+            fallback_reason = failure_reason(error)
     if writer is demo:
         topic = topic or recognise_topic(question)
         calls = rules(topic) if topic else []
