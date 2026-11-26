@@ -29,7 +29,7 @@ from xml.sax.saxutils import escape
 import httpx
 
 from omr.margin import PageText, names_at, names_by_staff, one_system, tempo_marks, page_words, split_capitals, words_of
-from omr.merge import add_instrumentation, add_tempo, check_with_parts, combine_parts, fill_lost_rests, join_pages, measure_count, silent_page, staff_of
+from omr.merge import add_instrumentation, add_tempo, check_with_parts, combine_parts, fill_lost_rests, join_pages, measure_count, shorten_upbeat, silent_page, staff_of
 
 try:
     # ScoreMaster's instrument catalog (2026-10-28), checked out with the reader; an older workflow brings only omr/.
@@ -1094,7 +1094,7 @@ def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str]
         if staves(xml) > joined or (found and typical and measure_count(xml) >= SPLIT_MEASURES * typical):
             return True
         return not found and _misread(xml, text, joined, typical)
-    pages = [(_silent(xml, joined, typical) if misread(xml, text, found) else xml, text)
+    pages = [(_silent(xml, joined, typical) if misread(xml, text, found) else shorten_upbeat(xml, printed_measures(text)), text)
              for (xml, text), found in zip(pages, beside)]
     count = staves(pages[0][0]) if pages else 0
     names = score_names(pages[0][1]) if pages else []
@@ -1109,6 +1109,13 @@ def _score(pages: list[tuple[bytes, str]], title: str) -> tuple[bytes, list[str]
     # The names beside the staves place the staves of a page that shows fewer of them (2026-11-02).
     labels = [found or staff_labels(text, staves(xml)) for found, (xml, text) in zip(beside, pages)]
     return join_pages([xml for xml, _ in pages], title, named, labels, same_part), named
+
+
+def printed_measures(text: str) -> int | None:
+    """How many bars the page numbers one by one («88 89 90 …», as at the foot of «1812»); None when it does not."""
+    rows = [[int(number) for number in line.split()] for line in text.splitlines() if re.fullmatch(r"\s*\d{1,4}(?:\s+\d{1,4})+\s*", line)]
+    rows = [row for row in rows if len(row) >= 3 and all(after == before + 1 for before, after in zip(row, row[1:]))]
+    return len(max(rows, key=lambda row: (len(row), row[0]))) if rows else None
 
 
 def _first_pages(saved: list[tuple[str, str]], pages: list[int], texts: dict, numbered: dict) -> frozenset:

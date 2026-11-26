@@ -2,6 +2,8 @@
 page; omr/merge.py joins the pages of a score staff by staff, and the parts read from several PDFs into one work."""
 from xml.etree import ElementTree as ET
 
+import pytest
+
 from backend.parsers.musicxml_parser import parse_musicxml
 from omr.merge import combine_parts, join_pages, staff_of
 
@@ -521,3 +523,66 @@ def test_a_tempo_is_written_in_the_measure_where_it_starts_and_kept_when_the_pag
     tempos = [index for index, bar in enumerate(joined[0]) if bar.find(".//metronome") is not None]
     assert tempos == [4], "the third measure of the second page"
 
+
+
+# A bar without number inside a score (2026-11-25, «1812» bar 95): the upbeat of a new section, an eighth long. copista gave it the
+# four beats of the meter in force, and the whole band fell silent three and a half beats in the middle of the work.
+def pickup_page(*bars, parts=2, fifths_at=None):
+    """Bars of a page as lists of (step or None, duration in eighths) per part, in 4/4 with two divisions a beat."""
+    body = ""
+    for part in range(parts):
+        body += f'<part id="P{part}">'
+        for index, bar in enumerate(bars, 1):
+            attributes = ('<attributes><divisions>2</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>' if index == 1
+                          else '<attributes><key><fifths>-6</fifths></key></attributes>' if index == fifths_at else "")
+            notes = "".join(f"<note>{'<rest/>' if step is None else f'<pitch><step>{step}</step><octave>4</octave></pitch>'}<duration>{length}</duration></note>"
+                            for step, length in bar[part])
+            body += f'<measure number="{index}">{attributes}{notes}</measure>'
+        body += "</part>"
+    names = "".join(f'<score-part id="P{part}"><part-name/></score-part>' for part in range(parts))
+    return f"<score-partwise><part-list>{names}</part-list>{body}</score-partwise>".encode()
+
+
+FULL = [[("C", 8)], [(None, 8)]]
+UPBEAT = [[("C", 1), (None, 7)], [(None, 1), (None, 7)]]
+
+
+def meters_and_lengths(xml, part=0):
+    from xml.etree import ElementTree
+    found = []
+    for measure in ElementTree.fromstring(xml).findall("part")[part].findall("measure"):
+        time = measure.find("attributes/time")
+        found.append((f"{time.findtext('beats')}/{time.findtext('beat-type')}" if time is not None else None,
+                      sum(int(note.findtext("duration")) for note in measure.findall("note"))))
+    return found
+
+
+def test_the_upbeat_of_a_section_takes_its_length_and_the_meter_comes_back():
+    from omr.merge import shorten_upbeat
+    fixed = shorten_upbeat(pickup_page(FULL, UPBEAT, FULL, fifths_at=2), printed=2)
+    assert meters_and_lengths(fixed) == [("4/4", 8), ("1/8", 1), ("4/4", 8)]
+    assert meters_and_lengths(fixed, 1) == [("4/4", 8), ("1/8", 1), ("4/4", 8)]
+    assert b"<fifths>-6</fifths>" in fixed and b'print-object="no"' in fixed
+
+
+@pytest.mark.parametrize("page_xml, printed", [
+    (pickup_page(FULL, UPBEAT, FULL, fifths_at=2), 3),                  # as many numbers as bars
+    (pickup_page(FULL, UPBEAT, FULL, fifths_at=2), None),               # the page prints none
+    (pickup_page(FULL, UPBEAT, FULL, fifths_at=2), 1),                  # more than one bar without number
+    (pickup_page(FULL, UPBEAT, FULL), 2),                               # nothing starts there
+    (pickup_page(FULL, [[("C", 1), ("D", 7)], [(None, 8)]], FULL, fifths_at=2), 2),   # its notes fill it
+    (pickup_page(FULL, [[(None, 8)], [(None, 8)]], FULL, fifths_at=2), 2),            # a bar of rest
+])
+def test_any_other_bar_is_left_as_it_was_read(page_xml, printed):
+    from omr.merge import shorten_upbeat
+    assert shorten_upbeat(page_xml, printed) == page_xml
+
+
+def test_the_upbeat_stays_short_in_the_finished_work():
+    from backend.parsers.prepare import final_musicxml
+    from omr.merge import join_pages, shorten_upbeat
+    joined = join_pages([shorten_upbeat(pickup_page(FULL, UPBEAT, FULL, fifths_at=2), printed=2)], "Obra")
+    _, _, measures = parts_of(final_musicxml(joined, None, False, "score"))
+    from music21 import converter
+    score = converter.parseData(final_musicxml(joined, None, False, "score").decode(), format="musicxml")
+    assert [measure.offset for measure in score.parts[0].getElementsByClass("Measure")] == [0.0, 4.0, 4.5]
