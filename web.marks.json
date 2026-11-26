@@ -1,0 +1,94 @@
+[
+ {
+  "t": 0.001,
+  "title": "Web · Acceso con tu cuenta"
+ },
+ {
+  "t": 13.23,
+  "title": "Web · Resumen"
+ },
+ {
+  "t": 38.712,
+  "title": "Web · Repertorio"
+ },
+ {
+  "t": 52.527,
+  "title": "Web · Preguntar al repertorio"
+ },
+ {
+  "t": 83.561,
+  "title": "Web · Abrir la Obertura 1812"
+ },
+ {
+  "t": 94.4,
+  "title": "Web · Reproducir la partitura"
+ },
+ {
+  "t": 118.049,
+  "title": "Web · Navegar por la partitura"
+ },
+ {
+  "t": 143.384,
+  "title": "Web · El mapa de la obra sobre la partitura"
+ },
+ {
+  "t": 171.87,
+  "title": "Web · Editar notas sobre la partitura"
+ },
+ {
+  "t": 197.791,
+  "title": "Web · Dificultad (ScoreLint)"
+ },
+ {
+  "t": 212.867,
+  "title": "Web · Explicar la dificultad (IA)"
+ },
+ {
+  "t": 244.105,
+  "title": "Web · De la familia al instrumento y al pasaje"
+ },
+ {
+  "t": 261.874,
+  "title": "Web · Grado publicado por la editorial"
+ },
+ {
+  "t": 270.188,
+  "title": "Web · Análisis musical"
+ },
+ {
+  "t": 330.235,
+  "title": "Web · Preguntar a la obra"
+ },
+ {
+  "t": 369.515,
+  "title": "Web · Grabaciones en YouTube"
+ },
+ {
+  "t": 418.576,
+  "title": "Web · Mi banda (BandFit)"
+ },
+ {
+  "t": 457.456,
+  "title": "Web · Conciertos y planificación"
+ },
+ {
+  "t": 487.973,
+  "title": "Web · Ensayos"
+ },
+ {
+  "t": 509.735,
+  "title": "Web · Valoraciones (vista de directora)"
+ },
+ {
+  "t": 539.442,
+  "title": "Web · Añadir una obra (MusicXML o PDF)"
+ },
+ {
+  "t": 558.769,
+  "title": "Web · Configuración: idioma, texto, tema e instrumentos"
+ },
+ {
+  "t": 592.524,
+  "title": "Web · Fin"
+ }
+]
