@@ -452,3 +452,22 @@ def test_each_section_gives_the_share_of_its_articulations():
     first, middle, _ = found["sections"]
     assert first["articulation"] == {"staccato": 0.0, "accent": 0.0, "tenuto": 0.0}
     assert middle["articulation"]["staccato"] > 0.5 and middle["articulation"]["accent"] == 0.0
+
+
+# The analysis is asked for when a work opens (2026-11-26): the map over the score, the tab, the commentary and the other language
+# reuse the one calculated, and a work whose notes change is analysed again.
+@pytest.mark.real_auth
+def test_the_analysis_of_a_work_is_calculated_once(clients, monkeypatch):
+    import backend.app.library_routes as routes
+    ana, _ = clients
+    work_id = analyze(ana).json()["work_id"]
+    calculated = []
+    routes._analyses.clear()   # other tests analysed the same files
+    monkeypatch.setattr(routes, "analyse", lambda score: calculated.append(score) or analyse(score))
+    assert ana.get("/works/" + work_id + "/musical-analysis").status_code == 200
+    assert ana.get("/works/" + work_id + "/musical-analysis", headers={"Accept-Language": "en"}).status_code == 200
+    assert ana.get("/works/" + work_id + "/musical-analysis/commentary").status_code == 200
+    assert len(calculated) == 1
+    other = analyze(ana, "high_density.musicxml").json()["work_id"]
+    assert ana.get("/works/" + other + "/musical-analysis").status_code == 200
+    assert len(calculated) == 2, "another work is analysed"

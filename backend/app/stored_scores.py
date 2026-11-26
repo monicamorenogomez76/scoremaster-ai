@@ -5,6 +5,7 @@ the uploaded file (2026-10-07: every proposal read every work of the programme w
 minutes with Persis on Render's free plan). The confirmed instruments are applied on top."""
 from collections import OrderedDict
 from dataclasses import replace
+import json
 from hashlib import sha256
 import logging
 from pathlib import Path
@@ -131,6 +132,13 @@ def parse_source(content: bytes, overrides: Optional[dict[str, str]] = None,
 def stored_score(library: LibraryRepository, user_id: UUID, work_id: UUID,
                  store: Optional[PreparedStore] = None) -> Optional[tuple[str, Score]]:
     """(title, score) of one of the user's works, or None when it is not theirs."""
+    found = keyed_score(library, user_id, work_id, store)
+    return found[:2] if found else None
+
+
+def keyed_score(library: LibraryRepository, user_id: UUID, work_id: UUID,
+                store: Optional[PreparedStore] = None) -> Optional[tuple[str, Score, str]]:
+    """(title, score, key): the key changes with the file and the confirmed instruments, whatever changes the music."""
     work = library.get_work(user_id, work_id)
     found = library.work_file(user_id, work_id) if work else None
     if found is None:
@@ -138,7 +146,8 @@ def stored_score(library: LibraryRepository, user_id: UUID, work_id: UUID,
     latest = library.latest_analysis(user_id, work_id)
     overrides = (latest.configuration or {}).get("instrument_overrides", {}) if latest else {}
     score = parse_source(found[0], overrides, store)
-    return work.title, replace(score, title=work.title, composer=work.composer) if work.title_edited else score
+    key = sha256(found[0]).hexdigest() + "|" + json.dumps(overrides, sort_keys=True)
+    return work.title, replace(score, title=work.title, composer=work.composer) if work.title_edited else score, key
 
 
 def _in_own_process(kind: str, source: bytes) -> bytes:
