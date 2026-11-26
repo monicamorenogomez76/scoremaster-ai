@@ -557,12 +557,21 @@ def meters_and_lengths(xml, part=0):
     return found
 
 
-def test_the_upbeat_of_a_section_takes_its_length_and_the_meter_comes_back():
+# The numbers of the PDF (2026-11-26): the upbeat joins the bar it starts, bar 95, which lasts half a beat more, so that every
+# bar after it has the number printed. The barline that ends the section stays.
+def test_the_upbeat_of_a_section_joins_the_bar_it_starts():
     from omr.merge import shorten_upbeat
-    fixed = shorten_upbeat(pickup_page(FULL, UPBEAT, FULL, fifths_at=2), printed=2)
-    assert meters_and_lengths(fixed) == [("4/4", 8), ("1/8", 1), ("4/4", 8)]
-    assert meters_and_lengths(fixed, 1) == [("4/4", 8), ("1/8", 1), ("4/4", 8)]
+    fixed = shorten_upbeat(pickup_page(FULL, UPBEAT, FULL, FULL, fifths_at=2), printed=3)
+    assert meters_and_lengths(fixed) == [("4/4", 8), ("9/8", 9), ("4/4", 8)]
+    assert meters_and_lengths(fixed, 1) == [("4/4", 8), ("9/8", 9), ("4/4", 8)]
     assert b"<fifths>-6</fifths>" in fixed and b'print-object="no"' in fixed
+
+
+def test_the_upbeat_is_not_joined_to_a_bar_that_opens_a_repeat():
+    from omr.merge import shorten_upbeat
+    page_xml = pickup_page(FULL, UPBEAT, FULL, fifths_at=2).replace(
+        b'<measure number="3">', b'<measure number="3"><barline location="left"><repeat direction="forward"/></barline>')
+    assert meters_and_lengths(shorten_upbeat(page_xml, printed=2)) == [("4/4", 8), ("1/8", 1), ("4/4", 8)]
 
 
 @pytest.mark.parametrize("page_xml, printed", [
@@ -581,8 +590,9 @@ def test_any_other_bar_is_left_as_it_was_read(page_xml, printed):
 def test_the_upbeat_stays_short_in_the_finished_work():
     from backend.parsers.prepare import final_musicxml
     from omr.merge import join_pages, shorten_upbeat
-    joined = join_pages([shorten_upbeat(pickup_page(FULL, UPBEAT, FULL, fifths_at=2), printed=2)], "Obra")
+    joined = join_pages([shorten_upbeat(pickup_page(FULL, UPBEAT, FULL, FULL, fifths_at=2), printed=3)], "Obra")
     _, _, measures = parts_of(final_musicxml(joined, None, False, "score"))
     from music21 import converter
     score = converter.parseData(final_musicxml(joined, None, False, "score").decode(), format="musicxml")
-    assert [measure.offset for measure in score.parts[0].getElementsByClass("Measure")] == [0.0, 4.0, 4.5]
+    assert [measure.offset for measure in score.parts[0].getElementsByClass("Measure")] == [0.0, 4.0, 8.5]
+    assert [measure.number for measure in score.parts[0].getElementsByClass("Measure")] == [1, 2, 3]

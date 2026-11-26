@@ -241,7 +241,8 @@ def join_pages(pages: list[bytes], title: str, names: list[str] | None = None, l
 def shorten_upbeat(xml: bytes, printed: int | None) -> bytes:
     """The bar without number of a page (2026-11-25, «1812» bar 95): the upbeat of a new section, which copista completes to
     the meter in force. With one bar more than the numbers printed and one place where the key or the meter changes, that bar
-    takes the length of what starts it in most parts, when nothing but silence follows, and the meter comes back after it."""
+    takes the length of what starts it in most parts, when nothing but silence follows, and joins the bar it starts (2026-11-26),
+    which lasts that much more under a hidden meter: the bars keep the numbers of the PDF."""
     from collections import Counter
     from xml.etree import ElementTree
     root = ElementTree.fromstring(xml)
@@ -288,9 +289,42 @@ def shorten_upbeat(xml: bytes, printed: int | None) -> bytes:
                 if position >= length:
                     measures[index].remove(element)
                 position += Fraction(int(element.findtext("duration") or 0), divisions[at])
-        _hidden_meter(measures[index], str(beats.numerator), str(beats.denominator))
-        if measures[index + 1].find("attributes/time") is None:
-            _hidden_meter(measures[index + 1], *meter[at])
+    # The bar it starts takes it (2026-11-26), so that every bar after it has the number the PDF prints; not a bar that opens a
+    # repeat, whose barline must come first.
+    joined = all(measures[index + 1].find("barline[@location='left']") is None for measures in parts)
+    for at, measures in enumerate(parts):
+        upbeat, bar = measures[index], measures[index + 1]
+        if not joined:
+            _hidden_meter(upbeat, str(beats.numerator), str(beats.denominator))
+            if bar.find("attributes/time") is None:
+                _hidden_meter(bar, *meter[at])
+            continue
+        whole = beats + Fraction(int(meter[at][0]), int(meter[at][1]))
+        after = measures[index + 2] if index + 2 < len(measures) else None
+        if after is not None and after.find("attributes/time") is None:
+            _hidden_meter(after, *meter[at])
+        for item in bar.findall("print"):
+            bar.remove(item)
+            upbeat.insert(0, item)
+        own = bar.find("attributes")
+        if own is not None and list(bar).index(own) == 0 and own.find("divisions") is None:
+            # A key or a clef of the bar goes with the upbeat's.
+            target = upbeat.find("attributes")
+            if target is None:
+                target = ElementTree.Element("attributes")
+                upbeat.insert(0, target)
+            for child in list(own):
+                target.append(child)
+            bar.remove(own)
+        for child in list(bar):
+            upbeat.append(child)
+        upbeat.set("number", bar.get("number", upbeat.get("number", "")))
+        upbeat.attrib.pop("width", None)
+        beat_type = max(whole.denominator, int(meter[at][1]))
+        _hidden_meter(upbeat, str(whole * beat_type), str(beat_type))
+        measures[index + 1] = upbeat
+        part = next(item for item in root.findall("part") if bar in list(item))
+        part.remove(bar)
     return b'<?xml version="1.0" encoding="UTF-8"?>\n' + ElementTree.tostring(root, encoding="utf-8")
 
 
