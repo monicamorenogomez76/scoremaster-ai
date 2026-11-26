@@ -192,3 +192,12 @@ def test_over_http_the_commentary_of_a_work_is_its_owners(clients):
     finally:
         app.dependency_overrides.clear()
         app.dependency_overrides.update(saved)
+
+
+def test_citations_beyond_the_bound_are_dropped_instead_of_the_whole_commentary():
+    """2026-11-26: with many sections Gemini cited more themes than the schema allows and the commentary was lost."""
+    from backend.application.musical_analysis_text import MAX_SECTIONS
+    data = evidence()
+    too_many = ["S1"] * (MAX_SECTIONS + 5)
+    text = validate_text(answer(form=topic("Forma.", sections=too_many)), data)
+    assert len(text.form.sections) == MAX_SECTIONS
