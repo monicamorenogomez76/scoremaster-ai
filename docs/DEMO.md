@@ -6,8 +6,9 @@ Recorrido de unos nueve minutos por ScoreMasterAI y qué mirar en cada paso.
 
 - **Demo publicada:** https://scoremaster-iz4j.onrender.com
 - **Cuenta:** `demo@scoremaster.local`. La contraseña de la demo publicada no está en el repositorio.
-- **Primer acceso:** el plan gratuito de Render duerme el servicio sin uso; un aviso cada 10 minutos lo mantiene
-  despierto. Si aun así tarda, espera un minuto y recarga.
+- **Primer acceso:** el plan gratuito de Render duerme el servicio tras 15 minutos sin uso. Si tarda, espera un minuto
+  y recarga.
+- **Al entrar:** el aviso de cookies dice que solo hay cookies técnicas; «Privacidad y cookies» abre la política.
 - **Sin Internet o sin la demo publicada:** `docker compose up --build` levanta lo mismo en
   http://127.0.0.1:8000 con la contraseña `scoremaster-demo` (ver el [README](../README.md)).
 
@@ -32,8 +33,8 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
 | 11 | **Conciertos → Planificación** | Abrir el concierto de demostración | Serie de ensayos por fases hasta el ensayo general, con bloques por línea común, sección y tutti |
 | 12 | **Ensayos → «¿Por qué este plan?»** | Pedir la explicación de un ensayo | Razones citando bloques concretos, comprobados contra la agenda guardada |
 | 13 | **Valoraciones** | Pulsar «Empezar» en la campaña de demostración | La vista del músico: su perfil, cada pasaje con partitura y audio, y su valoración, sin la predicción de ScoreLint ni lo que han valorado otros. La vista de la directora (predicción, invitaciones, valoración con IA y exportación) es solo de las cuentas de `ADMIN_EMAILS`; la muestra la captura del README |
-| 14 | **Repertorio → Añadir obra** | Subir [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](../demo/para-subir/pasodoble-de-las-fiestas.mxl) | El recorrido completo con una obra nueva. En el plan gratuito, leerla puede tardar uno o dos minutos la primera vez |
-| 15 | **Configuración → Tema** | Elegir «Oscuro» | Paleta propia en los dos temas; la partitura conserva el papel blanco |
+| 14 | **Repertorio → Añadir obra** | Subir [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](../demo/para-subir/pasodoble-de-las-fiestas.mxl) y después «Cambiar título» | El recorrido completo con una obra nueva. En el plan gratuito, leerla puede tardar uno o dos minutos la primera vez. El título y el compositor se corrigen a mano, y la búsqueda de grabaciones usa los nuevos |
+| 15 | **Configuración** | Elegir el tema «Oscuro» y bajar a «Privacidad» | Paleta propia en los dos temas; la partitura conserva el papel blanco. «Descargar mis datos» da un zip con todo lo de la cuenta, y «Borrar mi cuenta» lo borra |
 
 ## Ideas clave
 
@@ -48,7 +49,7 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
   ([evaluation/README.md](../evaluation/README.md)).
 - **Seguridad.** Medidas de OWASP aplicadas desde el diseño ([SECURITY.md](SECURITY.md)): cada dato
   pertenece a su usuario y una obra ajena responde 404.
-- **Calidad.** TDD, más de 1.600 pruebas Python con PostgreSQL real, pruebas de Node, recorridos Playwright y
+- **Calidad.** TDD, más de 1.900 pruebas Python con PostgreSQL real, pruebas de Node, recorridos Playwright y
   auditoría de dependencias en cada pull request.
 
 ## Si algo no va como se espera
@@ -56,6 +57,8 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
 - **Tarda mucho en abrir:** el servicio se había dormido. Esperar un minuto y recargar.
 - **Un pasaje tarda en sonar la primera vez:** el servidor está preparando el audio de la obra, y la
   pantalla dice cuánto lleva.
+- **«Respuesta del servidor: 502» al reproducir, o el mapa tarda:** tras un cambio de versión o una restauración de la
+  base, el servidor vuelve a preparar todas las obras al arrancar. Esperar unos minutos y volver a probar.
 - **En Safari avanza el tiempo pero no se oye nada:** cerrar Safari con ⌘Q y volver a abrirlo.
 - **«Modo demo» en vez de Gemini:** la clave no está configurada o se ha agotado el cupo gratuito del día.
   La interfaz dice el motivo.

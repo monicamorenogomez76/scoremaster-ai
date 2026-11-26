@@ -32,9 +32,11 @@ le entrega el PDF y recibe la obra.
 4. **Unión.** Las páginas de un guion se unen pentagrama a pentagrama. Los instrumentos se reconocen por el texto del margen o
    por OCR, con el catálogo de ScoreMaster.
 5. **Guion y particellas.** Si el PDF trae ambos, la obra sale del guion y cada particella sirve para comprobarlo: los compases
-   en los que no coinciden se entregan como dudosos, para que los revise el director.
+   en los que no coinciden se entregan como dudosos, para que los revise el director. Una página suelta de varios
+   pentagramas con menos de la mitad de compases que las particellas no se toma por el guion.
 6. **Correcciones.** Compases con la duración de su cifra, transposición de cada instrumento, armaduras que faltan, claves
-   confundidas y alteraciones que la página no escribe. Las claves y esas alteraciones solo se cambian si lo que toca el
+   confundidas, alteraciones que la página no escribe y la anacrusa de una sección, que se une al compás que empieza para
+   que cada compás conserve el número del PDF. Las claves y esas alteraciones solo se cambian si lo que toca el
    resto de la banda lo demuestra.
 7. **Entrega.** La obra vuelve con su modelo y su audio ya preparados.
 
