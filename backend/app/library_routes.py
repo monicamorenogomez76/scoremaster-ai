@@ -1,6 +1,8 @@
 """Works and band template of the signed-in user. Every query is scoped to the owner: another
 user's work answers 404, the same as a work that does not exist."""
 import logging
+from collections import OrderedDict
+from threading import Lock
 from hashlib import sha256
 from datetime import date
 from typing import Optional
@@ -20,7 +22,7 @@ from backend.app.dependencies import (authenticated_user, get_analysis_provider,
                                       get_rehearsal_repository, get_score_store)
 from backend.analyzers.rubric_grade import english_reasons
 from backend.app.i18n import language, translate
-from backend.app.stored_scores import stored_score
+from backend.app.stored_scores import keyed_score, stored_score
 from backend.application.ai import ProviderFailure
 from backend.application.instrument_proposals import InvalidProposals, NotAvailable, propose_instruments
 from backend.analyzers.rubric_grade import part_label
@@ -28,7 +30,8 @@ from backend.application.musical_analysis_text import analysis_evidence, explain
 from backend.application.difficulty_explanation import difficulty_evidence
 from backend.application.work_questions import MAX_QUESTION, SUGGESTIONS, WorkTools, ask_work, band_tool, instrument_tool, schedule_tool
 from backend.application.substitutes_explanation import explain_substitutes
-from backend.analyzers.musical_analysis import analyse
+from backend.analyzers.musical_analysis import MUSICAL_ANALYSIS_VERSION, analyse
+from backend.domain.models import Score
 from backend.analyzers.substitutes import substitute_candidates
 from backend.application.difficulty_explanation import explain_difficulty
 from backend.infrastructure.ai.demo_provider import DemoExplanationProvider
@@ -272,17 +275,43 @@ def work_substitutes(work_id: str, user: User = Depends(authenticated_user),
     return explain_substitutes(missing, provider, DemoExplanationProvider(), cache, language(accept_language))
 
 
+# The musical analysis of the last works asked for (2026-11-26): the page asks for it when a work opens, and the map over the
+# score, the tab, the commentary, the questions and the other language reuse it. Keyed by the file and the confirmed instruments.
+KEPT_ANALYSES = 8
+_analyses: "OrderedDict[str, dict]" = OrderedDict()
+_analyses_lock = Lock()
+
+
+def _analysed(library, user_id, work_id, score_store) -> Optional[tuple[Score, dict]]:
+    found = keyed_score(library, user_id, work_id, score_store)
+    if found is None:
+        return None
+    _, score, key = found
+    key += "|" + MUSICAL_ANALYSIS_VERSION
+    with _analyses_lock:
+        kept = _analyses.get(key)
+        if kept is not None:
+            _analyses.move_to_end(key)
+            return score, kept
+    calculated = analyse(score)
+    with _analyses_lock:
+        _analyses[key] = calculated
+        while len(_analyses) > KEPT_ANALYSES:
+            _analyses.popitem(last=False)
+    return score, calculated
+
+
 @router.get("/works/{work_id}/musical-analysis")
 def work_musical_analysis(work_id: str, user: User = Depends(authenticated_user),
                           library: LibraryRepository = Depends(get_library_repository), score_store=Depends(get_score_store),
                           accept_language: Optional[str] = Header(None)):
     """The analysis of the work as in a conservatory (2026-11-18): form, keys, cadences and who plays what, calculated;
     the parts by their catalog name in the language of the interface."""
-    found = stored_score(library, user.id, _work_id(work_id), score_store)
+    found = _analysed(library, user.id, _work_id(work_id), score_store)
     if found is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     lang = language(accept_language)
-    return labelled(analyse(found[1]), {part.name: part_label(part, lang) for part in found[1].parts})
+    return labelled(found[1], {part.name: part_label(part, lang) for part in found[0].parts})
 
 
 @router.get("/works/{work_id}/musical-analysis/commentary")
@@ -291,12 +320,12 @@ def work_musical_commentary(work_id: str, user: User = Depends(authenticated_use
                             provider=Depends(get_analysis_provider), cache=Depends(get_explanation_cache),
                             accept_language: Optional[str] = Header(None)):
     """The teacher's commentary of the musical analysis (2026-11-19), written by the AI about the calculated facts."""
-    found = stored_score(library, user.id, _work_id(work_id), score_store)
+    found = _analysed(library, user.id, _work_id(work_id), score_store)
     if found is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     lang = language(accept_language)
-    labels = {part.name: part_label(part, lang) for part in found[1].parts}
-    return explain_analysis(analyse(found[1]), found[1].title, provider, DemoExplanationProvider(), cache, lang, labels)
+    labels = {part.name: part_label(part, lang) for part in found[0].parts}
+    return explain_analysis(found[1], found[0].title, provider, DemoExplanationProvider(), cache, lang, labels)
 
 
 @router.post("/works/{work_id}/questions")
@@ -315,11 +344,11 @@ def ask_the_work(work_id: str, asked: QuestionIn, user: User = Depends(authentic
     title = record.result.get("title") or ""
 
     def analysis() -> dict:
-        found = stored_score(library, user.id, work, score_store)
+        found = _analysed(library, user.id, work, score_store)
         if found is None:
             return {}
-        labels = {part.name: part_label(part, lang) for part in found[1].parts}
-        return analysis_evidence(analyse(found[1]), title, lang, labels)
+        labels = {part.name: part_label(part, lang) for part in found[0].parts}
+        return analysis_evidence(found[1], title, lang, labels)
 
     tools = WorkTools(
         title, lambda: difficulty_evidence(record.result, lang),
