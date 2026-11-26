@@ -259,6 +259,12 @@ def validate_answer(answer, evidence: dict) -> WorkAnswer:
         fields = sorted({".".join(str(part) for part in item["loc"]) + f" ({item['type']})"
                          for item in error.errors() if item.get("loc")})[:6]
         raise InvalidExplanation("Respuesta fuera del esquema: " + ", ".join(fields or ["?"])) from None
+    # The AI sometimes cites a part by its MusicXML name instead of an id: the name is in the results, so it is
+    # dropped from the citations instead of throwing the whole answer away (2026-11-26).
+    names = {passage.get("instrument") for result in evidence["results"].values() if isinstance(result, dict)
+             for passage in result.get("passages", []) if isinstance(passage, dict)}
+    names |= {part.get("name") for part in (evidence["results"].get("instrument") or {}).get("parts", []) if isinstance(part, dict)}
+    found.cites = [code for code in found.cites if code not in names]
     unknown = sorted(set(found.cites) - set(cited(evidence["results"])))
     if unknown:
         raise InvalidExplanation("Cita que no está en las evidencias: " + ", ".join(unknown))

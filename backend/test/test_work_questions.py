@@ -292,3 +292,20 @@ def test_an_instrument_without_passages_says_what_weighs_most_in_it():
 def test_what_the_band_lacks_is_still_asked_of_the_band():
     calls = []
     assert ask("¿Me falta algún clarinete?", calls=calls)["tools"] == ["band"]
+
+
+def test_a_part_name_in_the_citations_is_dropped_instead_of_rejecting_the_answer():
+    """2026-11-26: Gemini cited «B♭ Trumpet 1» (a part, not an id) and the answer fell back to the demo."""
+    from backend.application.work_questions import validate_answer
+    evidence = {"results": {"difficulty": DIFFICULTY}}
+    found = validate_answer({"answer": "La trompeta 1 tiene el pasaje más agudo.", "answered": True,
+                             "cites": ["P1", "Trumpet 1"]}, evidence)
+    assert found.cites == ["P1"]
+
+
+def test_a_long_demo_answer_still_fits_the_schema():
+    """2026-11-26: the rules wrote more than 1200 characters and the question failed with a 500."""
+    from backend.infrastructure.ai.demo_questions import MAX_ANSWER, _fit
+    texts = ["Frase número {} del texto de reglas, bastante larga para llenar.".format(i) for i in range(60)]
+    assert len(_fit(texts)) <= MAX_ANSWER
+    assert len(_fit(["palabra " * 400])) <= MAX_ANSWER

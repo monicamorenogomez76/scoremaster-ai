@@ -147,3 +147,11 @@ def test_the_text_never_shows_internal_ids_or_part_names_in_english(result):
     assert shown["summary"] == "Lo más difícil está en {} ({}); estudia {} despacio.".format(instrument["label"], readable, readable)
     assert shown["study_tip"] == "Empieza por " + readable + "."
     assert shown["factors"][0]["passages"] == [passage["id"]], "the citation fields keep the ids"
+
+
+def test_a_part_of_a_cited_passage_is_in_the_analysis_even_if_not_among_the_most_demanding(result):
+    """2026-11-26: Gemini cited «Clarinet 1 in Bb», the part of a passage, and the whole answer was thrown away."""
+    evidence = difficulty_evidence(result)
+    evidence["instruments"] = [item for item in evidence["instruments"] if item["name"] != evidence["passages"][0]["instrument"]]
+    explanation = validate_explanation(valid_answer(evidence), evidence)
+    assert explanation.factors[0].instruments == [evidence["passages"][0]["instrument"]]

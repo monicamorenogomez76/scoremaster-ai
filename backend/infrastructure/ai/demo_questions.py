@@ -143,6 +143,22 @@ def _schedule(found: dict, say) -> tuple[str, list]:
     return text, [item["id"] for item in rehearsals] + [item["id"] for item in concerts]
 
 
+MAX_ANSWER = 1200   # WorkAnswer.answer (2026-11-26): a long demo answer made the question fail with a 500
+
+
+def _fit(texts: list, limit: int = MAX_ANSWER) -> str:
+    """The texts that fit whole; if not even the first does, it is cut at its last full sentence (or word)."""
+    kept = []
+    for text in texts:
+        if len(" ".join(kept + [text])) <= limit:
+            kept.append(text)
+        elif not kept:
+            cut = text[:limit - 1]
+            end = cut.rfind(". ")
+            kept.append(cut[:end + 1] if end > limit // 2 else cut[:cut.rfind(" ")] + "…")
+    return " ".join(kept)
+
+
 def work_answer(evidence: dict) -> dict:
     say = TEXTS["en" if evidence.get("language") == "en" else "es"]
     results, topic = evidence["results"], evidence.get("topic")
@@ -161,7 +177,7 @@ def work_answer(evidence: dict) -> dict:
             text, cited = write(results[name], say)
             texts.append(text)
             cites += cited
-    return {"answer": " ".join(texts), "answered": True, "cites": cites[:12]}
+    return {"answer": _fit(texts), "answered": True, "cites": cites[:12]}
 
 
 # Asking the repertoire (M6, 2026-11-20): the rules write from the results of the calls they made, or of the AI's.
@@ -300,4 +316,4 @@ def repertoire_answer(evidence: dict) -> dict:
             text, cited = _lineup(result, say), []
         texts.append(text)
         cites += cited
-    return {"answer": " ".join(texts), "answered": True, "cites": list(dict.fromkeys(cites))[:12]}
+    return {"answer": _fit(texts), "answered": True, "cites": list(dict.fromkeys(cites))[:12]}

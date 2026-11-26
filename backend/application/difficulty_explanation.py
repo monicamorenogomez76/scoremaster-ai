@@ -134,7 +134,8 @@ def validate_explanation(answer, evidence: dict) -> DifficultyExplanation:
     except ValidationError as error:
         fields = sorted({str(item["loc"][0]) for item in error.errors() if item.get("loc")})
         raise InvalidExplanation("Respuesta fuera del esquema: " + ", ".join(fields or ["?"]) + " " + str(error)) from None
-    instruments = {item["name"] for item in evidence["instruments"]}
+    # The parts of the cited passages are in the analysis too, not only the most demanding instruments (2026-11-26).
+    instruments = {item["name"] for item in evidence["instruments"]} | {item["instrument"] for item in evidence["passages"]}
     passages = {item["id"] for item in evidence["passages"]}
     for factor in explanation.factors:
         unknown = [name for name in factor.instruments if name not in instruments] + \
@@ -148,6 +149,7 @@ def readable_difficulty(explanation: DifficultyExplanation, evidence: dict) -> D
     """Ids and MusicXML names belong in the citations; the text uses Spanish names and measures."""
     measures = "measures" if evidence.get("language") == "en" else "compases"
     terms = {item["id"]: "{} ({} {})".format(item["label"], measures, item["measures"]) for item in evidence["passages"]}
+    terms.update({item["instrument"]: item["label"] for item in evidence["passages"] if item.get("instrument")})
     terms.update({item["name"]: item["label"] for item in evidence["instruments"]})
     fix = lambda text: replace_terms(text, terms)
     return explanation.model_copy(update={

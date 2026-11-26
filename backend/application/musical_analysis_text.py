@@ -137,7 +137,25 @@ def analysis_evidence(analysis: dict, title: str, language: str = "es", labels: 
     return evidence
 
 
+def _clipped(answer):
+    """A long work (the 1812 has 30 sections) gave lists of citations longer than the schema allows and the whole
+    commentary was thrown away (2026-11-26): the citations beyond the bound are dropped, the text stays checked."""
+    if not isinstance(answer, dict):
+        return answer
+    answer = dict(answer)
+    for name in TOPICS:
+        topic = answer.get(name)
+        if isinstance(topic, dict):
+            answer[name] = {**topic, **{kind: topic[kind][:limit] for kind, limit in
+                                         (("sections", MAX_SECTIONS), ("cadences", MAX_CADENCES), ("themes", MAX_SECTIONS))
+                                         if isinstance(topic.get(kind), list)}}
+    if isinstance(answer.get("by_section"), list):
+        answer["by_section"] = answer["by_section"][:MAX_SECTIONS]
+    return answer
+
+
 def validate_text(answer, evidence: dict) -> MusicalAnalysisText:
+    answer = _clipped(answer)
     try:
         text = MusicalAnalysisText.model_validate(answer)
     except ValidationError as error:
