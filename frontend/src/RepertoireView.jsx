@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DifficultyPanel, PublishedGrades, WorkExplanation } from './DifficultyView.jsx';
 import { MusicalAnalysis } from './MusicalAnalysis.jsx';
+import { forgetMusicalAnalysis } from './musicalAnalysis.js';
 import { OverviewPanel } from './OverviewView.jsx';
 import { PdfUpload } from './PdfUpload.jsx';
 import { PdfCompare } from './score/PdfCompare.jsx';
@@ -62,7 +63,7 @@ export function RepertoireView({ active, user, hidden, analysis, mode, onModeCha
         {data?.work_id && <ReadingDoubts workId={data.work_id} doubts={data.reading_doubts} onOpenPassage={onOpenPassage}
           onCorrect={(part, passage) => setCorrecting({ workId: data.work_id, part, passage })} />}
         {data?.work_id && <NoteCorrections key={data.work_id} workId={data.work_id} target={correcting?.workId === data.work_id ? correcting : null}
-          onCorrected={() => onOpenWork(data.work_id)} />}
+          onCorrected={() => { forgetMusicalAnalysis(data.work_id); onOpenWork(data.work_id); }} />}
         <PdfCompare workId={data?.work_id}>{scoreViewer}</PdfCompare></div>
       <div id="work-panel-difficulty" role="tabpanel" aria-labelledby="work-tab-difficulty" hidden={tab !== 'difficulty'}>
         {/* First in the tab, where it is seen without scrolling (2026-10-07: «¿dónde lo veo?»). */}

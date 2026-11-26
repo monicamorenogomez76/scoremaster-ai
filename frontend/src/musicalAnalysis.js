@@ -6,6 +6,27 @@ import { currentLanguage, t } from './i18n.js';
 export const loadMusicalAnalysis = workId => apiJson('/works/' + encodeURIComponent(workId) + '/musical-analysis', {},
   t('No se pudo cargar el análisis musical.'));
 
+// The analysis is asked for when the work opens (2026-11-26): a long work takes the server a while, and the map over the score
+// and the analysis tab share that one request. Kept for the last works opened, in the language of the interface; a failure is
+// asked again.
+const KEPT_ANALYSES = 6;
+const analyses = new Map();
+export function musicalAnalysisOf(workId, load = loadMusicalAnalysis) {
+  const key = workId + '|' + currentLanguage();
+  if (!analyses.has(key)) {
+    const pending = load(workId);
+    pending.catch(() => { if (analyses.get(key) === pending) analyses.delete(key); });
+    analyses.set(key, pending);
+    while (analyses.size > KEPT_ANALYSES) analyses.delete(analyses.keys().next().value);
+  }
+  return analyses.get(key);
+}
+
+// Its notes changed: the next request analyses it again.
+export function forgetMusicalAnalysis(workId) {
+  for (const key of [...analyses.keys()]) if (key.startsWith(workId + '|')) analyses.delete(key);
+}
+
 // The commentary written about the analysis (2026-11-19): by the AI, or by the demo when it fails.
 export const loadAnalysisCommentary = workId => apiJson('/works/' + encodeURIComponent(workId) + '/musical-analysis/commentary', {},
   t('No se pudo redactar el comentario del análisis.'));

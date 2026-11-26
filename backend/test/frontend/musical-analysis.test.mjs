@@ -231,3 +231,25 @@ test('the map is wide enough for the text of its shortest section', async () => 
   assert.equal(width([28, 4, 28]), 96 + 60 * 22, 'a section of 4 measures gets 88 px');
   assert.equal(width([196, 2, 2]), 4000, 'never wider than this');
 });
+
+// The analysis is asked for when the work opens (2026-11-26): the map over the score and the analysis tab share that one request.
+test('the analysis of a work is asked for once and shared, again after a failure or a change', async () => {
+  const { musicalAnalysisOf, forgetMusicalAnalysis } = await import('../../../frontend/src/musicalAnalysis.js');
+  setLanguage('es');
+  let asked = 0;
+  const load = async workId => { asked += 1; if (workId === 'falla' && asked === 1) throw new Error('caído'); return { workId }; };
+  const first = musicalAnalysisOf('obra-1', load);
+  assert.equal(musicalAnalysisOf('obra-1', load), first, 'one request for the map and the tab');
+  assert.deepEqual(await first, { workId: 'obra-1' });
+  assert.equal(asked, 1);
+  setLanguage('en');
+  await musicalAnalysisOf('obra-1', load);
+  assert.equal(asked, 2, 'the parts are named in the new language');
+  setLanguage('es');
+  forgetMusicalAnalysis('obra-1');
+  await musicalAnalysisOf('obra-1', load);
+  assert.equal(asked, 3, 'asked again once its notes change');
+  asked = 0;
+  await assert.rejects(musicalAnalysisOf('falla', load));
+  assert.deepEqual(await musicalAnalysisOf('falla', load), { workId: 'falla' }, 'a failure is asked again');
+});

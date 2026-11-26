@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SectionSheet, WorkMap } from './AnalysisMap.jsx';
-import { articulationText, cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, loadMusicalAnalysis, markText, meterText, modulationText,
+import { articulationText, cadenceText, durationText, harmonyDetailsText, keyName, listText, loadAnalysisCommentary, markText, musicalAnalysisOf, meterText, modulationText,
   orchestrationText, periodText, phrasesText, relationText, rhythmText, tempoText, textureKindText, textureText,
   themeShapeText, themeText, workMap } from './musicalAnalysis.js';
 import { sourceText } from './explanations.js';
@@ -58,7 +58,7 @@ const COMMENTARY_TOPICS = () => [['form', t('Forma')], ['themes', t('Temas')], [
 // The analysis of the work as in a conservatory (2026-11-18), topic by topic: the facts ScoreMaster calculates and,
 // when the director asks for it, the commentary the AI (or the demo) writes about them (2026-11-19).
 export function MusicalAnalysis({ workId, visible, fromPdf }) {
-  const analysis = useWorkRequest(workId, visible, loadMusicalAnalysis);
+  const analysis = useWorkRequest(workId, visible, musicalAnalysisOf);
   const [asking, setAsking] = useState(false);
   useEffect(() => setAsking(false), [workId]);
   const commentary = useWorkRequest(workId, asking, loadAnalysisCommentary);
