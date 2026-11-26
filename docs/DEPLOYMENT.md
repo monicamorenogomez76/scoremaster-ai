@@ -3,7 +3,7 @@
 | Pieza | Servicio | Plan |
 |---|---|---|
 | Aplicación (FastAPI + React) | [Render](https://render.com), servicio web `scoremaster` en Frankfurt, con la misma imagen Docker que `docker compose up`. Configuración en [`render.yaml`](../render.yaml) | Gratuito |
-| Base de datos | PostgreSQL 18 en [Neon](https://neon.com), AWS Europe Central 1 (Frankfurt) | Gratuito |
+| Base de datos | PostgreSQL 18 en [Neon](https://neon.com), AWS Europe Central 1 (Frankfurt). Desde el 26 de noviembre de 2026, mientras Neon está sin cupo de transferencia, PostgreSQL en [Supabase](https://supabase.com), Central EU (Frankfurt). Ver «Transferencia de la base» | Gratuito |
 | Lector de PDF | GitHub Actions en el repositorio público `scoremaster-omr` | Gratuito (sin tope de minutos en un repositorio público) |
 | Correo (recuperación de contraseña y confirmación del email) | [Brevo](https://www.brevo.com), API transaccional | Gratuito (300 correos al día) |
 | IA | Gemini (Google AI Studio) | Gratuito |
@@ -19,7 +19,7 @@ Al arrancar, el contenedor aplica las migraciones (`alembic upgrade head`) y cre
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | Cadena de conexión **directa** de Neon, tal cual la da Neon (con `sslmode=require`). Ver «Base de datos en Neon» |
+| `DATABASE_URL` | Cadena de conexión de la base, con `sslmode=require`: la **directa** de Neon o la *Session pooler* de Supabase. Ver «Base de datos en Neon» y «Base de datos en Supabase» |
 | `DEMO_USER_PASSWORD` | Contraseña de la cuenta demo (mínimo 10 caracteres). En cada arranque la cuenta toma esta contraseña y, si cambió, se cierran sus sesiones. No reutilizar la de desarrollo; se comparte solo con quien vaya a probar la demo |
 | `ADMIN_EMAILS` | Emails de las cuentas administradoras, separados por comas. Solo ellas crean campañas de valoración y ven los emails y resultados de los músicos. La cuenta tiene que haber confirmado su email. Nunca la cuenta demo |
 | `PRIVACY_CONTROLLER`, `PRIVACY_EMAIL` | Responsable de los datos personales y su contacto: los muestra la política de privacidad de la app. Obligatorios en una instalación pública |
@@ -76,7 +76,9 @@ plan gratuito de Render no tiene IP fija). Si la búsqueda falla, los logs de Re
 - `APP_ENV=production`: cookies `Secure`, HSTS y sin documentación interactiva de la API. Render sirve HTTPS y uvicorn
   confía en sus cabeceras de proxy (`--proxy-headers`).
 - El contenedor se ejecuta con un usuario sin privilegios.
-- La conexión con Neon va cifrada (`sslmode=require` y `channel_binding=require`); la URL es un secreto de Render.
+- La conexión con la base va cifrada (`sslmode=require`, y en Neon también `channel_binding=require`); la URL es un
+  secreto de Render. En Supabase, el *Data API* está desactivado: si no, publicaría las tablas por HTTP a quien tenga la
+  clave pública del proyecto.
 - El registro de cuentas está abierto: cada usuario solo ve sus datos y los intentos de acceso están limitados. La
   administración y las invitaciones exigen el email confirmado.
 - Ningún secreto está en el repositorio. Más detalle en [SECURITY.md](SECURITY.md).
@@ -85,10 +87,13 @@ plan gratuito de Render no tiene IP fija). Si la búsqueda falla, los logs de Re
 
 | Limitación | Consecuencia | Qué hacer |
 |---|---|---|
-| Render duerme el servicio tras 15 min sin uso | El primer acceso tardaba alrededor de un minuto | El *workflow* `despertar.yml` pide `/health` cada 10 minutos desde este repositorio, que es público y no gasta minutos de Actions; las 750 horas al mes del plan cubren un servicio siempre encendido. GitHub puede retrasar unos minutos una ejecución programada y la desactiva tras 60 días sin actividad en el repositorio: si vuelve a dormirse, se reactiva en Actions › Despertar Render |
+| Render duerme el servicio tras 15 min sin uso | El primer acceso tarda alrededor de un minuto | El *workflow* `despertar.yml` pide `/health` desde este repositorio, que es público y no gasta minutos de Actions. Está programado cada 10 minutos, pero GitHub retrasa o salta las ejecuciones programadas y en la práctica llega pocas veces al día, así que el servicio se duerme a menudo. GitHub también lo desactiva tras 60 días sin actividad en el repositorio: se reactiva en Actions › Despertar Render. Un servicio de avisos externo lo mantendría despierto, a costa de más uso de la base |
 | 512 MB de memoria | Leer una obra grande con music21 usa ~330-450 MB en su pico | El lector termina la obra en GitHub y la envía comprimida (12 MB son 347 KB). Las obras pendientes al arrancar se leen en un proceso aparte, por turnos con las lecturas de PDF: si no le toca, el lector recibe 503 antes de enviar nada y reintenta unos 19 minutos. Al recibir una lectura, las pendientes siguen en el próximo arranque. Con obras muy grandes, subir de plan |
-| CPU muy limitada | Leer una obra grande con music21 tarda unos 3 minutos | Cada obra se lee una sola vez: su modelo musical y su audio se guardan en la tabla `prepared_works` y sobreviven a reinicios y despliegues. Al arrancar se preparan en segundo plano las que falten. Si se pide un pasaje antes, el navegador muestra el avance y espera hasta 15 minutos. Con la obra preparada, un pasaje suena en ~2 s, una propuesta de ensayo tarda ~13 s y la planificación de un concierto ~22 s |
+| CPU muy limitada | Leer una obra grande con music21 tarda unos 3 minutos | Cada obra se lee una sola vez: su modelo musical y su audio se guardan en la tabla `prepared_works` y sobreviven a reinicios y despliegues. Al arrancar se preparan en segundo plano las que falten. Cambiar `SCORE_VERSION` o `TIMELINE_VERSION` obliga a prepararlas todas otra vez: con `score-v6` Render se quedó sin memoria con «1812» (que solo cabe preparada por el lector) y se reiniciaba cada minuto, así que una versión nueva es solo para un cambio que necesitan todas las obras. Una nota corregida por el director cambia el modelo y el audio guardados sin music21 (tabla `work_corrections`, migración 0028, que guarda cada corrección para listarla y deshacer la última). Si se pide un pasaje antes, el navegador muestra el avance y espera hasta 15 minutos. Con la obra preparada, un pasaje suena en ~2 s, una propuesta de ensayo tarda ~13 s y la planificación de un concierto ~22 s |
 | Neon suspende la base tras 5 min sin uso | La primera consulta espera a que despierte (el servidor espera hasta 10 s al conectar) | Nada: se reanuda sola. El plan da 1 GB y 100 horas de cómputo al mes |
+| 5 GB de transferencia al mes, en Neon y en Supabase | Al agotarse, la base rechaza las conexiones («exceeded the quota») y Render no arranca hasta el periodo siguiente o hasta pagar. En Neon el bloqueo alcanza también a los proyectos nuevos de la cuenta | Ver «Transferencia de la base» |
+| Supabase pausa el proyecto tras una semana sin uso | La base deja de responder | Reactivarlo desde el panel de Supabase (se puede durante 90 días) |
+| Tras restaurar una copia antigua o cambiar las versiones del modelo o del audio | Al arrancar, el servidor vuelve a preparar todas las obras, una a una; mientras tanto, reproducir puede dar 502 y el análisis tarda | Esperar a que termine (unos minutos por obra) |
 
 Para cambiar de plan basta con editar `plan:` en `render.yaml` o hacerlo desde el panel de Render.
 
@@ -102,6 +107,34 @@ Para cambiar de plan basta con editar `plan:` en `render.yaml` o hacerlo desde e
 
 Neon guarda 6 horas de historial para volver a un momento anterior desde su panel.
 
+## Base de datos en Supabase
+
+Es la base mientras Neon está sin cupo de transferencia (desde el 26 de noviembre de 2026).
+
+1. **New project** en la región **Central EU (Frankfurt)**, con una contraseña de **solo letras y números**: una `@`,
+   `:`, `/`, `?`, `#` o `%` rompe la URL de conexión.
+2. **Project Settings → Data API**: desactivado. La app no lo usa.
+3. **Connect → Session pooler** (puerto 5432) y añadir `?sslmode=require` al final. La conexión directa de Supabase solo
+   funciona por IPv6, que Render no tiene, y el *Transaction pooler* (puerto 6543) no sirve para las migraciones.
+4. Restaurar la última copia (`scripts/restore_db.sh`, ver abajo) y poner la URL en `DATABASE_URL` de Render.
+
+## Transferencia de la base
+
+Cada byte que la app lee de la base cuenta para los 5 GB del mes. Una base de 40 MB llegó a mover 7,33 GB en un mes
+(2026-11-06): el avance de una lectura de PDF traía cada 4 segundos sus 12 MB, y la lista de obras, todos los archivos.
+Desde entonces los archivos solo viajan cuando se piden. El 26 de noviembre se agotó de nuevo: cada petición sobre una
+obra (análisis, pasajes, preguntas, correcciones, la partitura) traía su MusicXML entero, varios MB en «1812». Ahora:
+
+- El servidor guarda en memoria los archivos de las últimas obras usadas (32 MB) y a la base solo le pide su huella
+  (`source_sha256`) para saber si cambiaron.
+- `GET /works/{id}/file` envía `ETag`: el navegador guarda la partitura y, si no cambió, recibe un 304 vacío.
+- El análisis musical de las últimas 8 obras se guarda en memoria y lo reutilizan el mapa, la pestaña, el comentario,
+  las preguntas y el otro idioma.
+
+El consumo se ve en el panel de la base (Neon: **Usage**; Supabase: **Usage**). Para volver de Supabase a Neon cuando
+Neon renueve el cupo: copiar la base de Neon (conserva lo hecho hasta el bloqueo), copiar la de Supabase, restaurar
+esta en Neon y cambiar `DATABASE_URL` en Render.
+
 ## Copia de seguridad y restauración
 
 Los scripts usan la imagen `postgres:18` de Docker, que copia y restaura bases 17 y 18: no hay que instalar PostgreSQL. La URL se lee de
@@ -110,16 +143,16 @@ Los scripts usan la imagen `postgres:18` de Docker, que copia y restaura bases 1
 
 **Copiar** (sobre todo tras cerrar una campaña de valoración)
 
-1. En Neon, **Connect** → cadena directa.
+1. La URL de la base: en Neon, **Connect** → cadena directa; en Supabase, **Connect** → *Session pooler*.
 2. En la raíz del repositorio, `scripts/backup_db.sh` y pegar la URL. Imprime las filas copiadas de cada tabla.
 3. Exportar además cada campaña desde «Valoraciones → Exportar resultados» y guardar el JSON en `evaluation/exports/`
    (no se versiona): es lo que lee `python -m evaluation.campaign_report`.
 
-**Restaurar** (en Neon, en otra base vacía o en la de Compose para comprobar la copia)
+**Restaurar** (en Neon, en Supabase, en otra base vacía o en la de Compose para comprobar la copia)
 
 1. `scripts/restore_db.sh backups/<archivo>.dump` con la URL de destino. Imprime las mismas filas, para compararlas.
-2. Si es una base nueva, cambiar `DATABASE_URL` en Render. Al arrancar no hay migraciones que aplicar: la versión
-   viaja con la copia.
+2. Si es una base nueva, cambiar `DATABASE_URL` en Render. Al arrancar se aplican las migraciones posteriores a la
+   copia, y las obras preparadas con versiones anteriores se vuelven a preparar.
 
 ## Lector de PDF
 
@@ -228,6 +261,14 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 - **Nombres repetidos:** si los nombres del margen del guion se repiten (los nombres largos ocupan dos líneas y las
   percusiones listan sus instrumentos), no son uno por pentagrama y no se usan. Los pentagramas se nombran entonces con
   las particellas.
+- **Una página suelta de varios pentagramas entre particellas** (el PDF de metales y percusión de «1812»): no se toma
+  por el guion si tiene menos de la mitad de compases que la particella más larga. La obra sale entonces de las
+  particellas, y esa página tampoco se usa para completar sus silencios.
+- **Anacrusa de una sección** («1812», antes del compás 95): un compás sin número, entre dos números seguidos del PDF y
+  donde cambia la armadura o el compás, es la anacrusa de la sección siguiente. copista la completa con silencio hasta
+  el compás entero y la banda callaba tres tiempos y medio; ahora dura lo que empieza la mayoría de las partes y se une
+  al compás que empieza, que dura eso de más con un compás oculto (9/8 en un 4/4). Así cada compás conserva el número
+  del PDF. Si el compás siguiente abre una repetición, la anacrusa queda aparte.
 - **Escritura de la obra:** si music21 falla al retocar la notación (una figura imposible o un error al completar
   tresillos), la obra se escribe tal como se leyó, con las figuras imposibles corregidas y las notas demasiado largas
   partidas en figuras que MusicXML puede escribir.
@@ -266,9 +307,11 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
   la particella anterior cuando el nombre la abrevia con su mismo número («Fl. 1» de «Flute 1», «Hn. 1» de «F Horn 1»);
   una primera página siempre empieza particella. Una página que nombra varios instrumentos entre dos páginas de
   particella, como la percusión, es de esa particella y no de la partitura general.
-- **Instrumentos:** las particellas y los pentagramas de la partitura general se nombran con el catálogo (78
+- **Instrumentos:** las particellas y los pentagramas de la partitura general se nombran con el catálogo (79
   instrumentos, con los de las bandas de concierto, las españolas y las brass bands, la percusión habitual y las
-  abreviaturas de las particellas). El número de parte puede ir antes de la tonalidad («Trompa 1ª en Fa», «Clarinete 1
+  abreviaturas de las particellas). Desde el catálogo v11 (migración 0029) conoce también los nombres de las ediciones
+  americanas de hace un siglo («The Ride of the Valkyries», arr. Laurendeau): el flautín en Re♭, «Solo B♭ Clarinet»,
+  «Cornets», «Altos» (trompas altas en Mi♭), «Tenors» (bombardinos en Si♭), «Basses» y «Timpany». El número de parte puede ir antes de la tonalidad («Trompa 1ª en Fa», «Clarinete 1
   Sib»), y «T.C.» o «B.C.» solo indican la clave. Si una particella no se puede leer, toma su pentagrama de la partitura
   general.
 - **Transposición:** copista lee las notas tal como están impresas, pero no escribe `<transpose>`. ScoreMaster añade
@@ -285,6 +328,14 @@ enmascarado. Nadie de fuera puede lanzar una lectura: el evento `read-pdf` solo 
 - **Compases:** cada compás toma la duración de su compás (`backend/parsers/pdf_measures.py`). Si se pasa, se quita
   primero el silencio de compás entero leído junto a otras notas y después lo que sobrepasa la barra; si se queda
   corto, se completa con silencio (antes de las notas en el primer compás, que es una anacrusa).
+- **Numeración:** los compases se numeran como en el PDF. Si el primero es más corto que su compás en todas las partes
+  que tocan en él, es una anacrusa: compás 0 (`implicit` en MusicXML) y el primero completo es el 1
+  (`number_like_the_pdf`). Así «compás 20» es el mismo en la app y en el papel.
 - **Armaduras:** la tonalidad de cada compás es la que comparten la mayoría de las partes no transpositoras (al menos
   dos). Una parte transpuesta que no lleve esa tonalidad más el intervalo de su instrumento la toma
   (`fix_key_signatures`); sus alteraciones impresas se respetan hasta la barra.
+- **Alteraciones que la página no escribe:** copista da a una nota la alteración que oye su modelo aunque no vea el
+  signo (en «1812», compás 20, el sol del segundo saxo alto salía sol♯). La banda decide
+  (`backend/parsers/pdf_alterations.py`): la nota toma la altura que le dan su armadura, las alteraciones de su compás y
+  sus ligaduras cuando al menos tres partes atacan esa altura con ella y ninguna toca la leída. En trece páginas de
+  «1812», 226 de 8.903 notas tenían una alteración así, y la banda demostró que 111 sobraban.

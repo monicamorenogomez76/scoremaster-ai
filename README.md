@@ -8,9 +8,9 @@ sustituye los datos musicales.
 
 Licencia [MIT](LICENSE).
 
-**Demo publicada:** https://scoremaster-iz4j.onrender.com (plan gratuito de Render, que se mantiene despierto con
-un aviso cada 10 minutos). La contraseña de esa cuenta demo no está publicada; para probarla
-sin ella, `docker compose up --build` la levanta en local. El [recorrido por la demo](docs/DEMO.md) dura unos cinco minutos.
+**Demo publicada:** https://scoremaster-iz4j.onrender.com (plan gratuito de Render, que duerme el servicio sin uso:
+el primer acceso puede tardar un minuto). La contraseña de esa cuenta demo no está publicada; para probarla
+sin ella, `docker compose up --build` la levanta en local. El [recorrido por la demo](docs/DEMO.md) dura unos nueve minutos.
 
 ![Resumen: próximo concierto con su programa, ensayo de hoy con su agenda por bloques, dónde trabajar, cobertura de los ensayos hasta el concierto, prioridades por sección y obras en preparación](docs/img/resumen.png)
 
@@ -33,15 +33,16 @@ Y a todo eso se le puede **preguntar** con sus palabras, sobre una obra o sobre 
 
 | Área | Qué hace |
 |---|---|
-| **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`) o de **PDF** (partitura general, particellas o las dos cosas en el mismo PDF, que se separan solas; leídas con copista-2m en GitHub Actions; con guion, la obra sale del guion comprobado compás a compás con las particellas, y los compases dudosos se muestran por parte para revisarlos junto al PDF; el director corrige notas directamente sobre la partitura, como en un programa de notación (clic en la nota y teclado: altura, alteración, octava, silencio y figura con o sin puntillo, sin pasar de la barra de compás), las guarda juntas, la obra se vuelve a analizar sin volver a leerla y la última corrección se deshace; grado provisional y fuera de la evaluación), análisis de ScoreLint guardado por obra, estado de preparación, partitura completa con todas las voces y audio (grabaciones reales que arrancan ya plenas, trinos, mordentes y grupetos que suenan con sus notas y todas las partes en los mismos compases aunque la lectura de un PDF deje alguno con un tiempo de más o de menos), comparación de la partitura con un PDF del ordenador (sin subirlo), búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
-| **Análisis musical** | Pestaña «Análisis» de cada obra, calculada sin IA: datos generales, forma por secciones (con repeticiones, casillas y saltos), plan tonal con modulaciones, cadencias (auténtica, semicadencia, plagal y rota), ritmo armónico, dominantes secundarias y pedales, frases y periodos, temas con su ámbito, perfil, vueltas y desarrollo, textura, orquestación (melodía, doblajes, solos y registros), ritmo y métrica (síncopas, ostinatos, hemiolias), dinámicas, articulación y clímax. Se ve como un **mapa de la obra** en un solo eje de compases, con la ficha de cada sección, y el mismo mapa se puede mostrar **encima de la partitura completa**. «Redactar el comentario»: la IA escribe el comentario de cada apartado y de cada sección, como un profesor de Análisis, con las secciones, cadencias y temas que cita comprobados |
+| **Repertorio** | Subida de MusicXML (`.musicxml`, `.xml` o `.mxl`) o de **PDF** (partitura general, particellas o las dos cosas en el mismo PDF, que se separan solas; leídas con copista-2m en GitHub Actions; con guion, la obra sale del guion comprobado compás a compás con las particellas, cada indicación de tempo va a su compás, una alteración que la página no escribe se quita cuando el resto de la banda demuestra que sobra, y los compases dudosos se muestran por parte para revisarlos junto al PDF; el director corrige notas directamente sobre la partitura, como en un programa de notación (clic en la nota y teclado: altura, alteración, octava, silencio y figura con o sin puntillo, sin pasar de la barra de compás), las guarda juntas, la obra se vuelve a analizar sin volver a leerla y la última corrección se deshace; grado provisional y fuera de la evaluación), análisis de ScoreLint guardado por obra, título y compositor editables («Cambiar título»; la búsqueda en YouTube usa los nuevos), estado de preparación, partitura completa con todas las voces (la de un PDF, página a página como el PDF, con sus compases numerados igual, la anacrusa inicial como compás 0 y la de una sección dentro del compás que empieza; un aviso cuando las partes no tienen los mismos compases; compases por pentagrama a elegir, desplazamiento arrastrando con el ratón, «Ir al compás» y pantalla completa con los controles a la vista) y audio (grabaciones reales que arrancan ya plenas, trinos, mordentes y grupetos que suenan con sus notas y todas las partes en los mismos compases aunque la lectura de un PDF deje alguno con un tiempo de más o de menos), comparación de la partitura con un PDF del ordenador (sin subirlo), búsqueda de grabaciones en YouTube y **grado publicado por las editoriales** registrado a mano para compararlo con ScoreLint |
+| **Análisis musical** | Pestaña «Análisis» de cada obra, calculada sin IA: datos generales, forma por secciones (con repeticiones, casillas y saltos), plan tonal con modulaciones, cadencias (auténtica, semicadencia, plagal y rota), ritmo armónico, dominantes secundarias y pedales, frases y periodos, temas con su ámbito, perfil, vueltas y desarrollo, textura, orquestación (melodía, doblajes, solos y registros), ritmo y métrica (síncopas, ostinatos, hemiolias), dinámicas, articulación y clímax. Se calcula al abrir la obra y se ve como un **mapa de la obra** en un solo eje de compases, con la ficha de cada sección, y el mismo mapa se puede mostrar **encima de la partitura completa**. «Redactar el comentario»: la IA escribe el comentario de cada apartado y de cada sección, como un profesor de Análisis, con las secciones, cadencias y temas que cita comprobados |
 | **Dificultad (ScoreLint)** | **Grado según las tablas de grados** (Federación Galega de Bandas de Música, American Band College y FJH): armadura, compás, tempo, duración, dinámicas y, por instrumento, tesitura, figuras, grupos irregulares, síncopas, articulaciones y adornos, con el criterio que fija el grado. Índice técnico con seis dimensiones (densidad rítmica, tempo, tesitura, registro, intervalos y resistencia), reglas SL002 registro agudo, SL003 alta densidad rítmica, SL004 intervalos amplios y SL005 pasaje prolongado sin descanso, y detector de **pasajes críticos** (puede no haber ninguno). Árbol de familia a instrumento y «Ver pasaje» con la notación y el audio de esa parte |
 | **Mi banda (BandFit)** | Varias bandas por director con su plantilla por instrumento, nivel por sección y días de ensayo; adecuación de la obra abierta a la banda activa y confirmación humana de instrumentos dudosos, con la propuesta de la IA para las partes que el catálogo no reconoce; sustitutos para las partes sin músico: ScoreLint busca en la plantilla los instrumentos con músicos libres que alcanzan su tesitura y la IA (o, sin ella, la demo) elige y explica cómo adaptar la parte |
 | **Conciertos** | Programa, patrón semanal y propuesta de la serie de ensayos por fases (lectura y pasajes, integración y ensayo general); calendario mensual; en el Resumen, cobertura de la serie: ensayos hechos y, por obra, tiempo ensayado y pasajes resueltos |
-| **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen; hoja de cada ensayo para imprimir o guardar en PDF |
-| **IA explicativa** | «¿Por qué esta dificultad?», «¿Por qué este plan?» y el comentario del análisis musical, redactados por **Gemini** a partir de las evidencias del análisis, con citas y cifras comprobadas. **Preguntar a la obra**: la IA elige con *function calling* qué datos de solo lectura de la obra leer (dificultad, banda, análisis, ensayos y conciertos) y responde citándolos. **Preguntar al repertorio**: ScoreMaster elige las obras (filtra y ordena los análisis guardados) y la IA solo rellena los filtros y explica el resultado. En las dos, las preguntas sugeridas se responden con reglas. Sin clave responde un **modo demo identificado** como tal |
+| **Ensayos** | Agenda por bloques editable con varias obras; revisión bloque a bloque (resuelto, mejorable, pendiente) que alimenta las prioridades del Resumen, salvo la de un concierto ya celebrado; hoja de cada ensayo para imprimir o guardar en PDF |
+| **IA explicativa** | «¿Por qué esta dificultad?», «¿Por qué este plan?» y el comentario del análisis musical, redactados por **Gemini** a partir de las evidencias del análisis, con citas y cifras comprobadas. **Preguntar a la obra**: la IA elige con *function calling* qué datos de solo lectura de la obra leer (dificultad, banda, análisis, ensayos, conciertos y lo que tiene que preparar cada instrumento) y responde citándolos. **Preguntar al repertorio**: ScoreMaster elige las obras (filtra y ordena los análisis guardados) y la IA solo rellena los filtros y explica el resultado. En las dos, las preguntas sugeridas se responden con reglas. Sin clave responde un **modo demo identificado** como tal, y si Gemini falla la interfaz dice por qué (modelo, clave, cupo o servicio saturado) |
 | **Valoraciones** | Campañas en las que músicos invitados valoran pasajes (grado, criticidad y prioridad) sin ver la predicción ni las valoraciones de los demás; solo una cuenta administradora las crea y ve los resultados; valoración independiente con IA (método B); exportación anónima e informe reproducible |
-| **Configuración** | Nombre visible, **idioma (español o inglés)**, tamaño del texto y **tema claro, oscuro o automático** |
+| **Configuración** | Nombre visible, **idioma (español o inglés)**, tamaño del texto, **tema claro, oscuro o automático**, «Descargar mis datos» (un zip con los datos y las partituras de la cuenta) y «Borrar mi cuenta» con todo lo suyo |
+| **Privacidad** | Aviso de cookies (solo las necesarias para la sesión), política de privacidad con el responsable de los datos, y YouTube solo se carga con permiso: al entrar, la app no pide nada a otros sitios |
 
 <table>
 <tr><td><img src="docs/img/dificultad.png" alt="Pestaña Dificultad con la explicación en modo demo identificado y los pasajes citados"></td>
@@ -83,7 +84,8 @@ flowchart LR
   construye para la directora con la sesión iniciada (dificultad, banda, análisis, agenda; en el repertorio, buscar y
   filtrar obras). No puede cambiar nada ni leer datos de otra cuenta, y las obras del repertorio las elige ScoreMaster.
 - **Cada obra se lee una sola vez**: music21 es lento con una partitura de banda (minutos en el plan
-  gratuito), así que el modelo leído y la línea de tiempo del audio se guardan por el hash del archivo.
+  gratuito), así que el modelo leído y la línea de tiempo del audio se guardan por el hash del archivo. Una nota que
+  corrige el director cambia el archivo, el modelo guardado y el audio a la vez, sin volver a leer la obra.
 
 Cómo se calculan el grado y los pasajes críticos: [docs/DIFICULTAD.md](docs/DIFICULTAD.md).
 
@@ -96,7 +98,7 @@ Cómo se calculan el grado y los pasajes críticos: [docs/DIFICULTAD.md](docs/DI
 | IA | Google Gemini mediante LangChain (`langchain-google-genai` 4.4), opcional; modo demo determinista |
 | Frontend | React 19 y Vite 8, CSS propio con tokens (tema claro y oscuro), OpenSheetMusicDisplay 1.9 para la notación y smplr 1.1 para el audio |
 | Calidad | pytest (con PostgreSQL real), pruebas de Node, recorridos Playwright, **auditoría de accesibilidad WCAG 2.1 A y AA con axe-core** en todas las pantallas (claro, oscuro y móvil), comprobación de que a 320 px ninguna pantalla se desplaza en horizontal y auditoría de dependencias en GitHub Actions |
-| Despliegue | Docker y Docker Compose; Render (Blueprint `render.yaml`) con la base en Neon |
+| Despliegue | Docker y Docker Compose; Render (Blueprint `render.yaml`) con la base en PostgreSQL gestionado: Neon y, mientras Neon está sin cupo, Supabase |
 
 ## Arranque en un paso
 
@@ -191,7 +193,7 @@ comprueba que el comportamiento heredado sigue siendo el capturado.
 
 ```sh
 export TEST_DATABASE_URL=$(grep ^DATABASE_URL .env | cut -d= -f2-)
-.venv/bin/python -m pytest -q backend/test        # más de 1.600 pruebas, con PostgreSQL real
+.venv/bin/python -m pytest -q backend/test        # más de 1.900 pruebas, con PostgreSQL real
 node --test backend/test/frontend/*.test.mjs       # módulos del frontend
 ```
 
@@ -202,9 +204,10 @@ pytest, las pruebas de Node, la construcción de la imagen Docker y la auditorí
 
 ## Despliegue
 
-Render con la misma imagen Docker y la base en el PostgreSQL gratuito de Neon, que no caduca:
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), con los pasos, las limitaciones del plan gratuito y los scripts probados
-de copia y restauración.
+Render con la misma imagen Docker y la base en el PostgreSQL gratuito de Neon, que no caduca. El 26 de noviembre de
+2026 se agotó su transferencia del mes (5 GB) y la base pasó, hasta el periodo siguiente, a Supabase con la última
+copia: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), con los pasos, las limitaciones del plan gratuito y los scripts
+probados de copia y restauración.
 
 ## Seguridad
 
@@ -248,14 +251,15 @@ asistente de IA usado durante el desarrollo.
   sin expresión ni repeticiones. Si en Safari avanza el tiempo pero no se oye nada, cerrar Safari con ⌘Q y
   volver a abrirlo suele resolverlo.
 - **Plan gratuito de Render**: la CPU es lenta (una obra grande tarda unos
-  minutos en leerse la primera vez). La base de Neon se suspende tras 5 minutos sin uso y despierta sola.
+  minutos en leerse la primera vez). La base de Neon se suspende tras 5 minutos sin uso y despierta sola, y Neon y
+  Supabase dan 5 GB de transferencia al mes: si se agotan, la base deja de responder hasta el mes siguiente.
 - **PDF con reconocimiento óptico**: copista-2m acierta el 87–99 % de las notas en particellas y el 73–91 % en
   partituras generales (prueba con PDF digitales, 2026-10-27), pero una sola nota extrema mal leída puede subir el
   grado. Por eso la obra leída de PDF lleva el grado como provisional y no entra en la evaluación. Sin OCR, las partes
   de una partitura general llegan sin nombre de instrumento y se confirman en «Mi banda». Cada lectura tarda 1–2
   minutos en arrancar.
-- **Instrumentos populares**: el catálogo tiene 78 instrumentos de banda (de concierto, española y brass band, con la
-  percusión habitual), pero no la tenora, el tible, el txistu, la dolçaina ni la gaita: no hay una fuente fiable de cómo
+- **Instrumentos populares**: el catálogo tiene 79 instrumentos de banda (de concierto, española y brass band, con la
+  percusión habitual y los nombres de las ediciones americanas antiguas), pero no la tenora, el tible, el txistu, la dolçaina ni la gaita: no hay una fuente fiable de cómo
   se escriben en particella, así que las partes que los nombran se confirman en «Mi banda».
 - **Análisis musical aproximado**: la tonalidad, las cadencias, las frases y los temas salen de reglas sobre las notas,
   sin un analista que las revise; en obras leídas de PDF el análisis es tan provisional como su grado.

@@ -1,13 +1,14 @@
 # Recorrido por la demo
 
-Recorrido de unos ocho minutos por ScoreMasterAI y qué mirar en cada paso.
+Recorrido de unos nueve minutos por ScoreMasterAI y qué mirar en cada paso.
 
 ## Acceso
 
 - **Demo publicada:** https://scoremaster-iz4j.onrender.com
 - **Cuenta:** `demo@scoremaster.local`. La contraseña de la demo publicada no está en el repositorio.
-- **Primer acceso:** el plan gratuito de Render duerme el servicio sin uso; un aviso cada 10 minutos lo mantiene
-  despierto. Si aun así tarda, espera un minuto y recarga.
+- **Primer acceso:** el plan gratuito de Render duerme el servicio tras 15 minutos sin uso. Si tarda, espera un minuto
+  y recarga.
+- **Al entrar:** el aviso de cookies dice que solo hay cookies técnicas; «Privacidad y cookies» abre la política.
 - **Sin Internet o sin la demo publicada:** `docker compose up --build` levanta lo mismo en
   http://127.0.0.1:8000 con la contraseña `scoremaster-demo` (ver el [README](../README.md)).
 
@@ -25,14 +26,15 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
 | 4 | **Dificultad → Grado publicado** | Ver la tarjeta | El grado de una editorial se escribe a mano con su fuente y se compara con ScoreLint. La aplicación no lo busca ni se lo pide a la IA |
 | 5 | **Análisis** | Abrir la pestaña y pulsar una sección del mapa; después «Redactar el comentario» | Mapa de la obra en un solo eje de compases: forma, tonalidades, frases, temas, cadencias, dinámica y partes que tocan. Cada sección abre su ficha (material, frases, armonía, textura, orquestación, ritmo y dinámica). El comentario lo escribe la IA, o la demo identificada, a partir de esos datos |
 | 6 | **Partitura → «Ver el mapa de la obra»** | Activar el mapa y pasar de página | Las mismas franjas del mapa, recortadas a los compases de cada página, encima de la partitura |
-| 7 | **Preguntar** | Pulsar «¿Qué pasajes son los más difíciles?» y después escribir una pregunta propia | Las sugeridas responden con reglas, sin gastar cupo; la pregunta libre la responde la IA a partir de los datos que eligió leer, y dice cuáles. Los pasajes citados abren la partitura |
-| 8 | **Mi banda** | Ver la plantilla de la banda activa | Adecuación de la obra abierta: instrumentos que faltan o partes sin intérprete y, para las partes sin músico, qué instrumentos libres de la banda alcanzan su tesitura |
-| 9 | **Repertorio → «Preguntar al repertorio»** | Pulsar «¿Cuáles son las obras más fáciles?» y después preguntar, por ejemplo, «¿Qué obras de grado 3 puede tocar mi banda?» | ScoreMaster elige las obras filtrando sus análisis; la IA solo interpreta la pregunta y explica el resultado. Las obras citadas abren su ficha |
-| 10 | **Conciertos → Planificación** | Abrir el concierto de demostración | Serie de ensayos por fases hasta el ensayo general, con bloques por línea común, sección y tutti |
-| 11 | **Ensayos → «¿Por qué este plan?»** | Pedir la explicación de un ensayo | Razones citando bloques concretos, comprobados contra la agenda guardada |
-| 12 | **Valoraciones** | Pulsar «Empezar» en la campaña de demostración | La vista del músico: su perfil, cada pasaje con partitura y audio, y su valoración, sin la predicción de ScoreLint ni lo que han valorado otros. La vista de la directora (predicción, invitaciones, valoración con IA y exportación) es solo de las cuentas de `ADMIN_EMAILS`; la muestra la captura del README |
-| 13 | **Repertorio → Añadir obra** | Subir [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](../demo/para-subir/pasodoble-de-las-fiestas.mxl) | El recorrido completo con una obra nueva. En el plan gratuito, leerla puede tardar uno o dos minutos la primera vez |
-| 14 | **Configuración → Tema** | Elegir «Oscuro» | Paleta propia en los dos temas; la partitura conserva el papel blanco |
+| 7 | **Partitura → «Editar notas»** | Pulsar una nota, subirla con ↑ y cambiar su figura con 3–7; después «Descartar» | Las notas se corrigen sobre la misma partitura, como en un programa de notación; al guardar, la obra se vuelve a analizar sin leerla otra vez, y la última corrección se deshace. Al lado, «Compases por pentagrama», «Ir al compás», arrastrar con el ratón y pantalla completa |
+| 8 | **Preguntar** | Pulsar «¿Qué pasajes son los más difíciles?» y después escribir una pregunta propia | Las sugeridas responden con reglas, sin gastar cupo; la pregunta libre la responde la IA a partir de los datos que eligió leer, y dice cuáles. Los pasajes citados abren la partitura |
+| 9 | **Mi banda** | Ver la plantilla de la banda activa | Adecuación de la obra abierta: instrumentos que faltan o partes sin intérprete y, para las partes sin músico, qué instrumentos libres de la banda alcanzan su tesitura |
+| 10 | **Repertorio → «Preguntar al repertorio»** | Pulsar «¿Cuáles son las obras más fáciles?» y después preguntar, por ejemplo, «¿Qué obras de grado 3 puede tocar mi banda?» | ScoreMaster elige las obras filtrando sus análisis; la IA solo interpreta la pregunta y explica el resultado. Las obras citadas abren su ficha |
+| 11 | **Conciertos → Planificación** | Abrir el concierto de demostración | Serie de ensayos por fases hasta el ensayo general, con bloques por línea común, sección y tutti |
+| 12 | **Ensayos → «¿Por qué este plan?»** | Pedir la explicación de un ensayo | Razones citando bloques concretos, comprobados contra la agenda guardada |
+| 13 | **Valoraciones** | Pulsar «Empezar» en la campaña de demostración | La vista del músico: su perfil, cada pasaje con partitura y audio, y su valoración, sin la predicción de ScoreLint ni lo que han valorado otros. La vista de la directora (predicción, invitaciones, valoración con IA y exportación) es solo de las cuentas de `ADMIN_EMAILS`; la muestra la captura del README |
+| 14 | **Repertorio → Añadir obra** | Subir [`demo/para-subir/pasodoble-de-las-fiestas.mxl`](../demo/para-subir/pasodoble-de-las-fiestas.mxl) y después «Cambiar título» | El recorrido completo con una obra nueva. En el plan gratuito, leerla puede tardar uno o dos minutos la primera vez. El título y el compositor se corrigen a mano, y la búsqueda de grabaciones usa los nuevos |
+| 15 | **Configuración** | Elegir el tema «Oscuro» y bajar a «Privacidad» | Paleta propia en los dos temas; la partitura conserva el papel blanco. «Descargar mis datos» da un zip con todo lo de la cuenta, y «Borrar mi cuenta» lo borra |
 
 ## Ideas clave
 
@@ -47,7 +49,7 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
   ([evaluation/README.md](../evaluation/README.md)).
 - **Seguridad.** Medidas de OWASP aplicadas desde el diseño ([SECURITY.md](SECURITY.md)): cada dato
   pertenece a su usuario y una obra ajena responde 404.
-- **Calidad.** TDD, más de 1.600 pruebas Python con PostgreSQL real, pruebas de Node, recorridos Playwright y
+- **Calidad.** TDD, más de 1.900 pruebas Python con PostgreSQL real, pruebas de Node, recorridos Playwright y
   auditoría de dependencias en cada pull request.
 
 ## Si algo no va como se espera
@@ -55,6 +57,8 @@ administradora (su contraseña es pública): valora como un músico y no ve emai
 - **Tarda mucho en abrir:** el servicio se había dormido. Esperar un minuto y recargar.
 - **Un pasaje tarda en sonar la primera vez:** el servidor está preparando el audio de la obra, y la
   pantalla dice cuánto lleva.
+- **«Respuesta del servidor: 502» al reproducir, o el mapa tarda:** tras un cambio de versión o una restauración de la
+  base, el servidor vuelve a preparar todas las obras al arrancar. Esperar unos minutos y volver a probar.
 - **En Safari avanza el tiempo pero no se oye nada:** cerrar Safari con ⌘Q y volver a abrirlo.
 - **«Modo demo» en vez de Gemini:** la clave no está configurada o se ha agotado el cupo gratuito del día.
   La interfaz dice el motivo.
