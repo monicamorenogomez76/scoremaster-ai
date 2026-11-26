@@ -7,7 +7,7 @@ import { W, H, cursorScript, makeHuman } from './human.mjs';
 import { tapScript, exportAudio } from './audiotap.mjs';
 const OUT = process.env.OUT || '/tmp/claude-0/out'; fs.mkdirSync(OUT, { recursive: true });
 const PASODOBLE = process.env.PASODOBLE || '/home/user/scoremaster-ai/demo/para-subir/pasodoble-de-las-fiestas.mxl';
-const WORK = /^1812/i;
+const WORK = /1812/i;
 
 const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'], ...(process.env.CHANNEL ? { channel: process.env.CHANNEL } : {}) });
 const c = await b.newContext({ viewport: { width: W, height: H }, locale: 'es-ES', timezoneId: 'Europe/Madrid',
@@ -93,15 +93,17 @@ await scene('Web · Preguntar al repertorio', async () => {
 });
 
 // ---------- 4. 1812: partitura
-if (await p.locator('h3.works-title', { hasText: WORK }).count()) await scene('Web · Abrir 1812 · partitura leída de PDF', async () => {
+if (await p.locator('h3.works-title', { hasText: WORK }).count()) await scene(process.env.PDF1812 ? 'Web · Abrir 1812 · partitura leída de PDF' : 'Web · Abrir la Obertura 1812', async () => {
   const row = p.locator('h3.works-title', { hasText: WORK }).first().locator('xpath=ancestor::*[.//button[normalize-space()="Abrir"]][1]');
   await click(row.getByRole('button', { name: 'Abrir' }), 1500);
   await idleUntil(() => /compases \d+–\d+$/.test(document.querySelector('#full-score-status')?.textContent?.trim() || ''), 120000);
   await hover('#work-detail-title', 1500);
-  await hover(p.locator('main').getByText(/Leída de PDF/).first(), 3000);
-  const corr = p.locator('summary', { hasText: 'Corregir notas' });
-  await click(corr, 2500); await hover(corr, 800); await click(corr, 800);
-  await hover(p.locator('label', { hasText: 'Comparar con un PDF' }), 2500);
+  if (process.env.PDF1812) {
+    await hover(p.locator('main').getByText(/Leída de PDF/).first(), 3000);
+    const corr = p.locator('summary', { hasText: 'Corregir notas' });
+    await click(corr, 2500); await hover(corr, 800); await click(corr, 800);
+    await hover(p.locator('label', { hasText: 'Comparar con un PDF' }), 2500);
+  } else await drift(2500);
 });
 if (process.env.MAIN2) await scene('Web · Abrir Persis Overture', async () => {
   await top(); await click('#back-to-list', 1500);
@@ -237,7 +239,9 @@ await scene('Web · Grabaciones en YouTube', async () => {
     const r = await ifr.boundingBox(); await moveTo(r.x + r.width / 2, r.y + r.height / 2); await p.mouse.click(r.x + r.width / 2, r.y + r.height / 2);
     await p.waitForTimeout(+(process.env.YT_SECS || 22) * 1000);
     await p.mouse.click(r.x + r.width / 2, r.y + r.height / 2); await wait(1500);
-    ytFrame = p.frames().find(f => /youtube/.test(f.url())) || null;
+    const yf = p.frames().find(f => /youtube/.test(f.url()));
+    if (yf) { const yi = await exportAudio(yf, `${OUT}/web.yt.webm`, fs).catch(e => { console.log('YT AUDIO FAIL', e.message); return null; });
+      if (yi) fs.writeFileSync(`${OUT}/web.yt.json`, JSON.stringify({ offset: (yi.start - start) / 1000, size: yi.size })); console.log('yt audio', JSON.stringify(yi)); }
   }
   await wait(1500); await top();
 });
@@ -301,10 +305,12 @@ await scene('Web · Valoraciones (vista de directora)', async () => {
 await scene('Web · Añadir una obra (MusicXML o PDF)', async () => {
   await nav('repertoire'); await wait(800);
   await click('#add-work', 2000);
-  await hover(p.getByText('Desde un PDF'), 1500);
-  const radios = p.locator('label', { hasText: /Detectar solo|Solo partitura general|Solo particellas/ });
-  for (let i = 0; i < await radios.count(); i++) await hover(radios.nth(i), 1000);
-  await hover(btn('Leer PDF'), 1500);
+  if (await exists(p.getByText('Desde un PDF'))) {
+    await hover(p.getByText('Desde un PDF'), 1500);
+    const radios = p.locator('label', { hasText: /Detectar solo|Solo partitura general|Solo particellas/ });
+    for (let i = 0; i < await radios.count(); i++) await hover(radios.nth(i), 1000);
+    await hover(btn('Leer PDF'), 1500);
+  }
   await hover('#new-score', 1500);
   const file = p.locator('#file'); await hover(p.locator('label.file-field').first(), 1000);
   if (!process.env.UPLOAD) { await click(p.locator('#add-work'), 1500); return; }
@@ -337,8 +343,6 @@ await scene('Web · Configuración: idioma, texto, tema e instrumentos', async (
 });
 h.mark('Web · Fin');
 await wait(1500);
-if (ytFrame) { const yi = await exportAudio(ytFrame, `${OUT}/web.yt.webm`, fs).catch(e => { console.log('YT AUDIO FAIL', e.message); return null; });
-  if (yi) fs.writeFileSync(`${OUT}/web.yt.json`, JSON.stringify({ offset: (yi.start - start) / 1000, size: yi.size })); console.log('yt audio', JSON.stringify(yi)); }
 const ainfo = await exportAudio(p, `${OUT}/web.audio.webm`, fs).catch(e => { console.log('AUDIO FAIL', e.message); return null; });
 if (ainfo) fs.writeFileSync(`${OUT}/web.audio.json`, JSON.stringify({ offset: (ainfo.start - start) / 1000, size: ainfo.size }));
 console.log('audio', JSON.stringify(ainfo));
