@@ -1,6 +1,9 @@
+from collections import OrderedDict
 from dataclasses import replace
 from datetime import date, datetime
 from hashlib import sha256
+from threading import Lock
+from weakref import WeakKeyDictionary
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -99,6 +102,50 @@ _PRIORITIES = text("""
 _PASSAGE_FIELDS = ("instrument", "instrument_label_es", "family", "family_label_es", "measure_range", "findings")
 
 
+class RecentFiles:
+    """The files of the works used last, by their sha256, up to a size (2026-11-25): Neon's free plan transfers 5 GB a
+    month, and every request about a work brought its whole file again."""
+
+    def __init__(self, limit_bytes: int):
+        self.limit_bytes = limit_bytes
+        self.files: OrderedDict[str, bytes] = OrderedDict()
+        self.size = 0
+        self.lock = Lock()
+
+    def get(self, key: str) -> Optional[bytes]:
+        with self.lock:
+            found = self.files.get(key)
+            if found is not None:
+                self.files.move_to_end(key)
+            return found
+
+    def put(self, key: str, content: bytes) -> None:
+        if len(content) > self.limit_bytes:
+            return
+        with self.lock:
+            if key in self.files:
+                self.size -= len(self.files.pop(key))
+            self.files[key] = content
+            self.size += len(content)
+            while self.size > self.limit_bytes:
+                _, oldest = self.files.popitem(last=False)
+                self.size -= len(oldest)
+
+
+# A band score read from a PDF is up to 12 MB; the server has 512 MB.
+RECENT_FILES_BYTES = 32 * 1024 * 1024
+# One per database, so that the tests' schemas never share files.
+_recent_files: "WeakKeyDictionary[Engine, RecentFiles]" = WeakKeyDictionary()
+_recent_files_lock = Lock()
+
+
+def _recent(engine: Engine) -> RecentFiles:
+    with _recent_files_lock:
+        if engine not in _recent_files:
+            _recent_files[engine] = RecentFiles(RECENT_FILES_BYTES)
+        return _recent_files[engine]
+
+
 class PostgresLibraryRepository:
     def __init__(self, engine: Engine):
         self.engine = engine
@@ -133,10 +180,22 @@ class PostgresLibraryRepository:
             return _work(row) if row else None
 
     def work_file(self, user_id: UUID, work_id: UUID) -> Optional[tuple[bytes, str]]:
+        # Only its fingerprint travels when the server has the file already (2026-11-25).
+        recent = _recent(self.engine)
         with Session(self.engine) as session:
-            row = session.execute(select(StoredWork.source, StoredWork.file_name)
+            row = session.execute(select(StoredWork.source_sha256, StoredWork.file_name)
                                   .where(StoredWork.id == work_id, StoredWork.user_id == user_id)).first()
-            return (bytes(row.source), row.file_name) if row else None
+            if row is None:
+                return None
+            kept = recent.get(row.source_sha256)
+            if kept is not None:
+                return kept, row.file_name
+            source = session.scalar(select(StoredWork.source).where(StoredWork.id == work_id, StoredWork.user_id == user_id))
+        if source is None:
+            return None
+        content = bytes(source)
+        recent.put(row.source_sha256, content)
+        return content, row.file_name
 
     def replace_source(self, user_id: UUID, work_id: UUID, source: bytes) -> bool:
         try:

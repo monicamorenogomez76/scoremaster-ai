@@ -1,12 +1,13 @@
 """Works and band template of the signed-in user. Every query is scoped to the owner: another
 user's work answers 404, the same as a work that does not exist."""
 import logging
+from hashlib import sha256
 from datetime import date
 from typing import Optional
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -329,7 +330,7 @@ def ask_the_work(work_id: str, asked: QuestionIn, user: User = Depends(authentic
 
 
 @router.get("/works/{work_id}/file")
-def work_file(work_id: str, background: BackgroundTasks, user: User = Depends(authenticated_user),
+def work_file(work_id: str, request: Request, background: BackgroundTasks, user: User = Depends(authenticated_user),
               library: LibraryRepository = Depends(get_library_repository), playback_store=Depends(get_playback_store)):
     found = library.work_file(user.id, _work_id(work_id))
     if found is None:
@@ -338,9 +339,14 @@ def work_file(work_id: str, background: BackgroundTasks, user: User = Depends(au
     # Opening a saved work also prepares its audio: a restarted server has forgotten it.
     if preparation_enabled():
         background.add_task(prepare_playback, content, playback_store)
+    # The browser keeps the file and asks whether it changed (2026-11-25): Neon's free plan transfers 5 GB a month.
+    tag = '"{}"'.format(sha256(content).hexdigest())
+    cache = {"ETag": tag, "Cache-Control": "private, no-cache"}
+    if tag in [item.strip() for item in (request.headers.get("if-none-match") or "").split(",")]:
+        return Response(status_code=304, headers=cache)
     safe_name = "".join(character for character in file_name if character.isalnum() or character in "._- ") or "obra.musicxml"
     return Response(content=content, media_type="application/octet-stream",
-                    headers={"Content-Disposition": 'attachment; filename="{}"'.format(safe_name)})
+                    headers={"Content-Disposition": 'attachment; filename="{}"'.format(safe_name), **cache})
 
 
 @router.delete("/works/{work_id}", status_code=204)

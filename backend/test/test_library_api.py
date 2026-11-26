@@ -75,6 +75,9 @@ def test_a_saved_work_reopens_without_uploading_it_again(clients):
     original = ana.get("/works/" + work_id + "/file")
     assert original.content == (SCORES / "high_register.musicxml").read_bytes()
     assert "high_register.musicxml" in original.headers["content-disposition"]
+    # The browser keeps the file and asks whether it changed (2026-11-25): an unchanged file does not travel again.
+    again = ana.get("/works/" + work_id + "/file", headers={"If-None-Match": original.headers["etag"]})
+    assert again.status_code == 304 and again.content == b""
 
 
 def test_analysing_the_same_file_again_updates_the_work(clients):
