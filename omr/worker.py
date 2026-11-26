@@ -1177,7 +1177,8 @@ def _auto(read: list[tuple[str, list[tuple[tuple[int, int], bytes | None, str]]]
         if checked is not None:
             return checked
         # Parts of different lengths: copista skipped multi-measure rests (2026-10-29); the score keeps every measure.
-        if len({measure_count(xml) for _, xml in files}) > 1 and score_pages():
+        if len({measure_count(xml) for _, xml in files}) > 1 and score_pages() \
+                and not _too_short(_score(score_pages(), title)[0], files):
             files = fill_lost_rests(files, _score(score_pages(), title)[0], same_part)
         pages_of_parts = sum(len(found) for _, found, _ in groups)
         print(f"La obra se saca de {len(files)} particellas ({pages_of_parts} {'página' if pages_of_parts == 1 else 'páginas'}).",
@@ -1208,6 +1209,10 @@ def _checked_score(pages: list[tuple[bytes, str]], files: list[tuple[str, bytes]
     if not pages:
         return None
     joined, _ = _score(pages, title)
+    if _too_short(joined, files):
+        print(f"Las páginas de varios pentagramas ({len(pages)}) no son la partitura general: tienen muchos menos compases que "
+              "las particellas.", flush=True)
+        return None
     checked = check_with_parts(joined, files, title, same_part)
     if checked.agreement is None:
         print("La partitura general no se pudo comparar con las particellas.", flush=True)
@@ -1218,6 +1223,13 @@ def _checked_score(pages: list[tuple[bytes, str]], files: list[tuple[str, bytes]
     print(f"La obra se saca de la partitura general ({len(pages)} páginas), comprobada con {len(files)} particellas.", flush=True)
     return (checked.musicxml, "score", any(at_concert_pitch(text) for _, text in pages),
             _doubts(checked.musicxml, checked.dubious))
+
+
+def _too_short(score: bytes, files: list[tuple[str, bytes]]) -> bool:
+    """A score with less than half the measures of its longest part is no score (2026-11-25): one page of several staves
+    among the brass and percussion parts of «1812» gave the work 5 measures and left out its 19 parts."""
+    longest = max((measure_count(xml) for _, xml in files), default=0)
+    return measure_count(score) * 2 < longest
 
 
 def _from_score(missing: list[str], order: list[str], score: list[tuple[bytes, str]], title: str) -> dict[str, bytes]:

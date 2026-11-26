@@ -1218,6 +1218,25 @@ def test_a_score_is_the_work_even_when_its_parts_disagree_with_it():
     assert worker._checked_score([], [("Flauta", work(list("hhqq")))], "Obra") is None
 
 
+# A PDF of parts with one page of several staves (2026-11-25, the brass and percussion of «1812»: 5 measures for parts of
+# 300): that page is no score, and the work is its parts'.
+def test_a_page_with_far_fewer_measures_than_the_parts_is_no_score(capsys):
+    from backend.test.test_omr_merge import work
+    score = [(work(list("hh"), list("qq")), "")]
+    parts = [("Flauta", work(list("hhqqhhqq"))), ("Tuba", work(list("qqhhqqhh")))]
+    assert worker._checked_score(score, parts, "Obra") is None
+    assert "no son la partitura general" in capsys.readouterr().out
+
+
+def test_parts_with_one_page_of_several_staves_give_the_work_of_the_parts(capsys):
+    from backend.test.test_omr_merge import work
+    flute, tuba = work(list("hhqqhhqq")), work(list("qqhhqqhh"))
+    read = [("parts.pdf", [((1, 1), flute, "Flauta"), ((1, 2), work(list("hh"), list("qq"), list("hq")), ""),
+                           ((1, 3), tuba, "Tuba")])]
+    musicxml, source, _, _ = worker._auto(read, "Obra")
+    assert source == "parts" and worker.measure_count(musicxml) == 8
+
+
 # A misread page repeats its measures in blocks (2026-11-18, «Pirates of the Caribbean» page 35: ten measures for five;
 # page 40: five, an empty one and five; «The Lion King» page 4: three blocks of an empty one and three). Its true measures
 # are what is left without the empty ones, divided by the blocks: the count nearest the pages read well.
