@@ -226,7 +226,7 @@ await scene('Web · Preguntar a la obra', async () => {
 await scene('Web · Grabaciones en YouTube', async () => {
   await click('#work-tab-recordings', 2000);
   const q = p.locator('.video-search-form input[type=search]');
-  await click(q, 300); await p.keyboard.press('Control+A'); await typeText(process.env.MAIN2 ? 'Persis Hosay' : '1812 Overture Tchaikovsky concert band'); await wait(500);
+  await click(q, 300); await p.keyboard.press('ControlOrMeta+A'); await typeText(process.env.MAIN2 ? 'Persis Hosay' : '1812 Overture Tchaikovsky concert band'); await wait(500);
   await click(btn('Buscar'), 500);
   await idleUntil(() => document.querySelectorAll('.video-result').length > 0 || /No se encontr|no está configurada/i.test(document.body.innerText), 30000); await wait(1500);
   const res = p.locator('.video-result'); const n = await res.count();
