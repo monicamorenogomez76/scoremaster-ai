@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
-import { loadMusicalAnalysis, pageLanes } from '../musicalAnalysis.js';
+import { forgetMusicalAnalysis, musicalAnalysisOf, pageLanes } from '../musicalAnalysis.js';
 import { createFullScoreRenderer } from './full-score-renderer.js';
 import { filterMusicXmlPassage, measureBounds } from './musicxml-passage.js';
 import { keepMeasures, keptMeasures, MEASURE_CHOICES } from './measures-per-line.js';
@@ -39,22 +39,16 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
     return () => { observer.disconnect(); detachPanZoom(); };
   }, [session]);
 
-  // The analysis behind the map is asked for once per work, only when the director shows it.
+  // The analysis behind the map is asked for as soon as the work opens (2026-11-26), and drawn when the director shows it.
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState('');
-  const analyses = useRef(new Map());
   const language = currentLanguage();
+  useEffect(() => { if (workId) musicalAnalysisOf(workId).catch(() => {}); }, [workId, language]);
   useEffect(() => {
     if (!showAnalysis || !workId) { renderer.current.setOverlay(null); setAnalysisStatus(''); return; }
     let current = true;
-    const key = workId + '|' + language;   // the parts are named in the language of the interface
-    if (!analyses.current.has(key)) {
-      const pending = loadMusicalAnalysis(workId);
-      pending.catch(() => analyses.current.delete(key));
-      analyses.current.set(key, pending);
-    }
     setAnalysisStatus(t('Cargando el análisis…'));
-    analyses.current.get(key).then(analysis => {
+    musicalAnalysisOf(workId).then(analysis => {
       if (!current) return;
       renderer.current.setOverlay(cells => pageLanes(analysis, cells), t('Mapa de la obra en estos compases'));
       setAnalysisStatus(t('Sobre la partitura, el mapa de la obra en estos compases: sección, tonalidad, frase, tema, cadencias y dinámica.'));
@@ -72,6 +66,7 @@ export function FullScoreViewer({ ref, session, workId, onSaved }) {
     setSaving(true); setSaveMessage({ text: '', error: false });
     try {
       await saveEdits(workId, edits);
+      forgetMusicalAnalysis(workId);
       renderer.current.saved();
       setSaveMessage({ text: edits.length === 1 ? t('1 cambio guardado. La obra se ha vuelto a analizar.')
         : t('{count} cambios guardados. La obra se ha vuelto a analizar.', { count: edits.length }), error: false });
