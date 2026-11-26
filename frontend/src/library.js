@@ -55,6 +55,10 @@ export const updatePreparation = (id, status) => json('/works/' + encodeURICompo
   method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preparation_status: status }),
 }, t('No se pudo cambiar el estado de la obra.'));
 
+export const renameWork = (id, title, composer) => json('/works/' + encodeURIComponent(id), {
+  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, composer }),
+}, t('No se pudo cambiar el título de la obra.'));
+
 // A work read from a PDF says so: its grade is provisional (2026-10-27).
 export const analysisStatusText = work => (work?.summary?.grade == null ? t('Sin analizar')
   : work.source_format === 'pdf' ? t('Disponible · leída de PDF') : t('Disponible'));

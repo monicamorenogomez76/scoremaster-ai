@@ -84,7 +84,7 @@ export function LoginScreen({ hidden, onSignedIn, notice }) {
         <button id="login-mode" className="login-switch" type="button"
           onClick={() => switchTo(mode === 'login' ? 'register' : 'login')}>
           {mode === 'login' ? t('Crear una cuenta') : creating ? t('Ya tengo cuenta') : t('Volver a entrar')}</button>
-        {mode === 'login' && config.demo_email && <div className="login-note">{t('Usuario de prueba:')} <strong>{config.demo_email}</strong>. {t('La contraseña está en el README.')}</div>}
+        {mode === 'login' && config.demo_email && <div className="login-note">{t('Usuario de prueba:')} <strong>{config.demo_email}</strong>.{config.demo_password_in_readme && ' ' + t('La contraseña está en el README.')}</div>}
         <PrivacyLink />
       </form>
     </div>

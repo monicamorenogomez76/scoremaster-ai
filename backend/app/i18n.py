@@ -60,6 +60,8 @@ EN = {
     "Indica la editorial o el catálogo.": "Give the publisher or the catalogue.",
     "Escribe una pregunta o elige una sugerida.": "Write a question or choose a suggested one.",
     "Escribe una pregunta.": "Write a question.",
+    "Escribe el título de la obra.": "Write the title of the work.",
+    "Indica el título o el estado de preparación.": "Give the title or the preparation status.",
     "Pregunta sugerida desconocida.": "Unknown suggested question.",
     "El enlace debe empezar por http:// o https://.": "The link must start with http:// or https://.",
     "Escala desconocida: grade o pepper.": "Unknown scale: grade or pepper.",

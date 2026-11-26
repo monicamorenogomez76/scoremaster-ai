@@ -137,7 +137,8 @@ def stored_score(library: LibraryRepository, user_id: UUID, work_id: UUID,
         return None
     latest = library.latest_analysis(user_id, work_id)
     overrides = (latest.configuration or {}).get("instrument_overrides", {}) if latest else {}
-    return work.title, parse_source(found[0], overrides, store)
+    score = parse_source(found[0], overrides, store)
+    return work.title, replace(score, title=work.title, composer=work.composer) if work.title_edited else score
 
 
 def _in_own_process(kind: str, source: bytes) -> bytes:

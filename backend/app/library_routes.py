@@ -53,14 +53,36 @@ class BandUpdate(BaseModel):
 
 
 class WorkUpdate(BaseModel):
-    preparation_status: str
+    """What the director says of a work: how far the band is with it, and its title and composer (2026-11-25)."""
+    preparation_status: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=300)
+    composer: Optional[str] = Field(default=None, max_length=300)
 
     @field_validator("preparation_status")
     @classmethod
-    def known_status(cls, value: str) -> str:
+    def known_status(cls, value: Optional[str]) -> Optional[str]:
         if value not in PREPARATION_STATUSES:
             raise ValueError("Estado de preparación desconocido.")
         return value
+
+    @field_validator("title")
+    @classmethod
+    def a_title(cls, value: Optional[str]) -> str:
+        value = " ".join((value or "").split())
+        if not value:
+            raise ValueError("Escribe el título de la obra.")
+        return value
+
+    @field_validator("composer")
+    @classmethod
+    def a_composer(cls, value: Optional[str]) -> Optional[str]:
+        return " ".join((value or "").split()) or None
+
+    @model_validator(mode="after")
+    def something(self):
+        if not self.model_fields_set & {"preparation_status", "title"}:
+            raise ValueError("Indica el título o el estado de preparación.")
+        return self
 
 
 class ExternalGradeIn(BaseModel):
@@ -145,7 +167,12 @@ def preparation_priorities(user: User = Depends(authenticated_user),
 @router.patch("/works/{work_id}")
 def update_work(work_id: str, update: WorkUpdate, user: User = Depends(authenticated_user),
                 library: LibraryRepository = Depends(get_library_repository)):
-    work = library.update_preparation(user.id, _work_id(work_id), update.preparation_status)
+    work = library.get_work(user.id, _work_id(work_id))
+    if work is not None and update.title is not None:
+        composer = update.composer if "composer" in update.model_fields_set else work.composer
+        work = library.rename_work(user.id, work.id, update.title, composer)
+    if work is not None and update.preparation_status is not None:
+        work = library.update_preparation(user.id, work.id, update.preparation_status)
     if work is None:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return _public(work)
